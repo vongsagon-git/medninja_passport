@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedNinja Product Banners</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans Thai', sans-serif;
+    background: #0f172a;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 48px;
+  }
+
+  .banner {
+    width: 720px;
+    height: 280px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .banner:hover {
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  /* === SYNAPSE — Purple/Violet === */
+  .banner-synapse {
+    background: linear-gradient(135deg, #150e26 0%, #1e1048 40%, #2d1a6e 100%);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.25);
+  }
+  .banner-synapse:hover {
+    box-shadow: 0 12px 48px rgba(139, 92, 246, 0.4);
+  }
+  .banner-synapse .glow {
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%);
+    top: -100px; right: -80px;
+  }
+  .banner-synapse .accent-line {
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #8b5cf6, #a78bfa, #8b5cf6);
+  }
+  .banner-synapse .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(139,92,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,92,246,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .banner-synapse .icon-area {
+    width: 200px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .banner-synapse .icon-box {
+    width: 110px; height: 110px;
+    background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05));
+    border: 2px solid rgba(139,92,246,0.3);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    backdrop-filter: blur(8px);
+  }
+  .banner-synapse .content { flex: 1; padding-right: 40px; position: relative; z-index: 1; }
+  .banner-synapse .badge {
+    display: inline-block;
+    background: rgba(139,92,246,0.15);
+    border: 1px solid rgba(139,92,246,0.3);
+    color: #a78bfa;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .banner-synapse .title {
+    font-size: 36px; font-weight: 900;
+    background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
+    line-height: 1.1;
+  }
+  .banner-synapse .title .ninja {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 2px;
+    background: linear-gradient(135deg, rgba(167,139,250,0.8), rgba(139,92,246,0.8));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .banner-synapse .subtitle {
+    color: rgba(255,255,255,0.6);
+    font-size: 15px; font-weight: 400;
+    margin-top: 8px;
+  }
+  .banner-synapse .subtitle strong {
+    color: #a78bfa; font-weight: 700;
+  }
+  .banner-synapse .corner-dots {
+    position: absolute; bottom: 16px; right: 20px;
+    display: flex; gap: 6px;
+  }
+  .banner-synapse .corner-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(139,92,246,0.3);
+  }
+  .banner-synapse .corner-dots span:last-child {
+    background: #8b5cf6;
+  }
+
+  /* === NLEX — Cyan === */
+  .banner-nlex {
+    background: linear-gradient(135deg, #0e1726 0%, #0c2d48 40%, #0e4a6e 100%);
+    box-shadow: 0 8px 32px rgba(6, 182, 212, 0.25);
+  }
+  .banner-nlex:hover {
+    box-shadow: 0 12px 48px rgba(6, 182, 212, 0.4);
+  }
+  .banner-nlex .glow {
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%);
+    top: -100px; right: -80px;
+  }
+  .banner-nlex .accent-line {
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #06b6d4, #22d3ee, #06b6d4);
+  }
+  .banner-nlex .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(6,182,212,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(6,182,212,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .banner-nlex .icon-area {
+    width: 200px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .banner-nlex .icon-box {
+    width: 110px; height: 110px;
+    background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(6,182,212,0.05));
+    border: 2px solid rgba(6,182,212,0.3);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    backdrop-filter: blur(8px);
+  }
+  .banner-nlex .content { flex: 1; padding-right: 40px; position: relative; z-index: 1; }
+  .banner-nlex .badge {
+    display: inline-block;
+    background: rgba(6,182,212,0.15);
+    border: 1px solid rgba(6,182,212,0.3);
+    color: #22d3ee;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .banner-nlex .title {
+    font-size: 36px; font-weight: 900;
+    background: linear-gradient(135deg, #22d3ee, #06b6d4);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
+    line-height: 1.1;
+  }
+  .banner-nlex .title .ninja {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 2px;
+    background: linear-gradient(135deg, rgba(34,211,238,0.8), rgba(6,182,212,0.8));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .banner-nlex .subtitle {
+    color: rgba(255,255,255,0.6);
+    font-size: 15px; font-weight: 400;
+    margin-top: 8px;
+  }
+  .banner-nlex .subtitle strong {
+    color: #22d3ee; font-weight: 700;
+  }
+  .banner-nlex .corner-dots {
+    position: absolute; bottom: 16px; right: 20px;
+    display: flex; gap: 6px;
+  }
+  .banner-nlex .corner-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(6,182,212,0.3);
+  }
+  .banner-nlex .corner-dots span:last-child {
+    background: #06b6d4;
+  }
+
+  /* === DDx — Orange === */
+  .banner-ddx {
+    background: linear-gradient(135deg, #1a0f07 0%, #2d1810 40%, #3d1f0e 100%);
+    box-shadow: 0 8px 32px rgba(249, 115, 22, 0.25);
+  }
+  .banner-ddx:hover {
+    box-shadow: 0 12px 48px rgba(249, 115, 22, 0.4);
+  }
+  .banner-ddx .glow {
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%);
+    top: -100px; right: -80px;
+  }
+  .banner-ddx .accent-line {
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #f97316, #fb923c, #f97316);
+  }
+  .banner-ddx .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(249,115,22,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(249,115,22,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .banner-ddx .icon-area {
+    width: 200px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .banner-ddx .icon-box {
+    width: 110px; height: 110px;
+    background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.05));
+    border: 2px solid rgba(249,115,22,0.3);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    backdrop-filter: blur(8px);
+  }
+  .banner-ddx .content { flex: 1; padding-right: 40px; position: relative; z-index: 1; }
+  .banner-ddx .badge {
+    display: inline-block;
+    background: rgba(249,115,22,0.15);
+    border: 1px solid rgba(249,115,22,0.3);
+    color: #fb923c;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .banner-ddx .title {
+    font-size: 36px; font-weight: 900;
+    background: linear-gradient(135deg, #fb923c, #f97316);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
+    line-height: 1.1;
+  }
+  .banner-ddx .title .ninja {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 2px;
+    background: linear-gradient(135deg, rgba(251,146,60,0.8), rgba(249,115,22,0.8));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .banner-ddx .subtitle {
+    color: rgba(255,255,255,0.6);
+    font-size: 15px; font-weight: 400;
+    margin-top: 8px;
+  }
+  .banner-ddx .subtitle strong {
+    color: #fb923c; font-weight: 700;
+  }
+  .banner-ddx .corner-dots {
+    position: absolute; bottom: 16px; right: 20px;
+    display: flex; gap: 6px;
+  }
+  .banner-ddx .corner-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(249,115,22,0.3);
+  }
+  .banner-ddx .corner-dots span:last-child {
+    background: #f97316;
+  }
+
+  /* === OSCE — Emerald Green === */
+  .banner-osce {
+    background: linear-gradient(135deg, #071a12 0%, #0c2d1e 40%, #0e3d28 100%);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.25);
+  }
+  .banner-osce:hover {
+    box-shadow: 0 12px 48px rgba(16, 185, 129, 0.4);
+  }
+  .banner-osce .glow {
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%);
+    top: -100px; right: -80px;
+  }
+  .banner-osce .accent-line {
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+  }
+  .banner-osce .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(16,185,129,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16,185,129,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .banner-osce .icon-area {
+    width: 200px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .banner-osce .icon-box {
+    width: 110px; height: 110px;
+    background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05));
+    border: 2px solid rgba(16,185,129,0.3);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    backdrop-filter: blur(8px);
+  }
+  .banner-osce .content { flex: 1; padding-right: 40px; position: relative; z-index: 1; }
+  .banner-osce .badge {
+    display: inline-block;
+    background: rgba(16,185,129,0.15);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: #34d399;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .banner-osce .title {
+    font-size: 36px; font-weight: 900;
+    background: linear-gradient(135deg, #34d399, #10b981);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
+    line-height: 1.1;
+  }
+  .banner-osce .title .ninja {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 2px;
+    background: linear-gradient(135deg, rgba(52,211,153,0.8), rgba(16,185,129,0.8));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .banner-osce .subtitle {
+    color: rgba(255,255,255,0.6);
+    font-size: 15px; font-weight: 400;
+    margin-top: 8px;
+  }
+  .banner-osce .subtitle strong {
+    color: #34d399; font-weight: 700;
+  }
+  .banner-osce .corner-dots {
+    position: absolute; bottom: 16px; right: 20px;
+    display: flex; gap: 6px;
+  }
+  .banner-osce .corner-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(16,185,129,0.3);
+  }
+  .banner-osce .corner-dots span:last-child {
+    background: #10b981;
+  }
+
+  /* EKG line decoration */
+  .ekg-lines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .ekg-lines svg {
+    position: absolute;
+    width: 100%; height: 100%;
+    opacity: 0.1;
+  }
+
+  /* Pulse animation for active dots */
+  .corner-dots span:last-child {
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Floating particles */
+  .particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .particle {
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: float 6s ease-in-out infinite;
+  }
+  .banner-synapse .particle { background: #8b5cf6; }
+  .banner-nlex .particle { background: #06b6d4; }
+  .banner-ddx .particle { background: #f97316; }
+  .banner-osce .particle { background: #10b981; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
+    50% { transform: translateY(-30px) scale(1.5); opacity: 0.6; }
+  }
+
+  /* Scan line effect */
+  .scan-line {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.02) 50%, transparent 100%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  /* Synapse neural connections decoration */
+  .neural-lines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .neural-lines svg {
+    position: absolute;
+    width: 100%; height: 100%;
+    opacity: 0.08;
+  }
+
+  /* Label */
+  h2 {
+    color: rgba(255,255,255,0.3);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: -20px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== NINJA SYNAPSE ===== -->
+<h2>Synapse Banner</h2>
+<div class="banner banner-synapse">
+  <div class="accent-line"></div>
+  <div class="grid-bg"></div>
+  <div class="glow"></div>
+  <div class="scan-line"></div>
+  <div class="neural-lines">
+    <svg viewBox="0 0 720 280">
+      <circle cx="580" cy="60" r="4" fill="#a78bfa"/>
+      <circle cx="620" cy="140" r="3" fill="#a78bfa"/>
+      <circle cx="560" cy="200" r="3.5" fill="#a78bfa"/>
+      <circle cx="650" cy="220" r="2.5" fill="#a78bfa"/>
+      <circle cx="500" cy="100" r="3" fill="#a78bfa"/>
+      <line x1="580" y1="60" x2="620" y2="140" stroke="#a78bfa" stroke-width="1"/>
+      <line x1="620" y1="140" x2="560" y2="200" stroke="#a78bfa" stroke-width="1"/>
+      <line x1="560" y1="200" x2="650" y2="220" stroke="#a78bfa" stroke-width="1"/>
+      <line x1="500" y1="100" x2="580" y2="60" stroke="#a78bfa" stroke-width="1"/>
+      <line x1="500" y1="100" x2="620" y2="140" stroke="#a78bfa" stroke-width="0.5"/>
+    </svg>
+  </div>
+  <div class="particles">
+    <div class="particle" style="top:20%;left:15%;animation-delay:0s"></div>
+    <div class="particle" style="top:60%;left:70%;animation-delay:1s"></div>
+    <div class="particle" style="top:40%;left:45%;animation-delay:2s"></div>
+    <div class="particle" style="top:80%;left:85%;animation-delay:3s"></div>
+  </div>
+  <div class="icon-area">
+    <div class="icon-box">🧠</div>
+  </div>
+  <div class="content">
+    <div class="badge">E-Learning System</div>
+    <div class="title"><span class="ninja">NINJA</span>SYNAPSE</div>
+    <div class="subtitle">ระบบ E-Learning <strong>เชื่อมโยง Anatomy Biochem Patho</strong></div>
+  </div>
+  <div class="corner-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- ===== NINJA NLEX ===== -->
+<h2>NLEX Banner</h2>
+<div class="banner banner-nlex">
+  <div class="accent-line"></div>
+  <div class="grid-bg"></div>
+  <div class="glow"></div>
+  <div class="scan-line"></div>
+  <div class="particles">
+    <div class="particle" style="top:20%;left:15%;animation-delay:0s"></div>
+    <div class="particle" style="top:60%;left:70%;animation-delay:1s"></div>
+    <div class="particle" style="top:40%;left:45%;animation-delay:2s"></div>
+    <div class="particle" style="top:80%;left:85%;animation-delay:3s"></div>
+  </div>
+  <div class="icon-area">
+    <div class="icon-box">📋</div>
+  </div>
+  <div class="content">
+    <div class="badge">National License Exam</div>
+    <div class="title"><span class="ninja">NINJA</span>NLEX</div>
+    <div class="subtitle">ระบบทำข้อสอบ NL กว่า <strong>10,000+</strong> ข้อ พร้อมเฉลยละเอียด</div>
+  </div>
+  <div class="corner-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- ===== NINJA DDx ===== -->
+<h2>DDx Banner</h2>
+<div class="banner banner-ddx">
+  <div class="accent-line"></div>
+  <div class="grid-bg"></div>
+  <div class="glow"></div>
+  <div class="scan-line"></div>
+  <div class="particles">
+    <div class="particle" style="top:30%;left:25%;animation-delay:0.5s"></div>
+    <div class="particle" style="top:70%;left:60%;animation-delay:1.5s"></div>
+    <div class="particle" style="top:50%;left:40%;animation-delay:2.5s"></div>
+    <div class="particle" style="top:15%;left:80%;animation-delay:3.5s"></div>
+  </div>
+  <div class="icon-area">
+    <div class="icon-box">🩺</div>
+  </div>
+  <div class="content">
+    <div class="badge">Differential Diagnosis</div>
+    <div class="title"><span class="ninja">NINJA</span>DDx</div>
+    <div class="subtitle">ระบบฝึก<strong>วินิจฉัยแยกโรค</strong> เพื่อใช้ในการสอบ NL และ MEQ โดยเฉพาะ</div>
+  </div>
+  <div class="corner-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- ===== NINJA OSCE ===== -->
+<h2>OSCE Banner</h2>
+<div class="banner banner-osce">
+  <div class="accent-line"></div>
+  <div class="grid-bg"></div>
+  <div class="glow"></div>
+  <div class="scan-line"></div>
+  <div class="ekg-lines">
+    <svg viewBox="0 0 720 280">
+      <!-- EKG rhythm line -->
+      <polyline
+        fill="none"
+        stroke="#34d399"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        points="
+          460,140
+          480,140
+          490,140
+          495,138
+          500,142
+          505,140
+          515,140
+          520,120
+          525,170
+          528,90
+          532,190
+          535,110
+          540,140
+          555,140
+          565,135
+          575,140
+          590,140
+          600,140
+          610,140
+          615,138
+          620,142
+          625,140
+          635,140
+          640,120
+          645,170
+          648,90
+          652,190
+          655,110
+          660,140
+          675,140
+          685,135
+          695,140
+          720,140
+        "
+      />
+      <!-- Small heartbeat dots -->
+      <circle cx="528" cy="90" r="2.5" fill="#34d399" opacity="0.6"/>
+      <circle cx="648" cy="90" r="2.5" fill="#34d399" opacity="0.6"/>
+    </svg>
+  </div>
+  <div class="particles">
+    <div class="particle" style="top:25%;left:20%;animation-delay:0.3s"></div>
+    <div class="particle" style="top:65%;left:55%;animation-delay:1.3s"></div>
+    <div class="particle" style="top:45%;left:75%;animation-delay:2.3s"></div>
+    <div class="particle" style="top:85%;left:35%;animation-delay:3.3s"></div>
+  </div>
+  <div class="icon-area">
+    <div class="icon-box">🩺</div>
+  </div>
+  <div class="content">
+    <div class="badge">Clinical Skills System</div>
+    <div class="title"><span class="ninja">NINJA</span>OSCE</div>
+    <div class="subtitle">ระบบจำลองสถานการณ์สอบ <strong>OSCE</strong> พาซ้อมซักประวัติและหัตถการเสมือนจริง</div>
+  </div>
+  <div class="corner-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+</body>
+</html>

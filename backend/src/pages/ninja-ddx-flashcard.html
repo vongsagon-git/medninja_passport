@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>NINJA DDx — เกมส์ฝึก RECALL C/C DDx</title>
+<meta name="description" content="NINJA DDx — เกมส์ฝึก RECALL C/C DDx ฟรี 700+ การ์ด 3 โหมด CC→DDx · DDx→CC · Pattern→DDx" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="NINJA DDx" />
+<meta property="og:description" content="เกมส์ฝึก RECALL C/C DDx ฟรี 700+ การ์ด" />
+<meta property="og:image" content="https://medninja.b-cdn.net/ninja-dd-howto.png" />
+<meta property="og:url" content="https://liff.line.me/2009259048-lwEXYc0q" />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans Thai',sans-serif;background:#0c111b;color:#e2e8f0;height:100dvh;display:flex;flex-direction:column;overflow:hidden;-webkit-user-select:none;user-select:none}
+
+/* ═══ Gate / Promo ═══ */
+.gate{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 16px;background:radial-gradient(ellipse at 50% 30%,rgba(139,92,246,.08),transparent 60%);overflow:hidden}
+.gate-inner{max-width:480px;width:100%;padding:0 6px 0;margin:0 auto}
+.gate-badge{display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(139,92,246,.15);color:#a78bfa;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.gate-title{font-size:36px;font-weight:900;color:#fff;margin-bottom:4px;line-height:1.2}
+.gate-title span{background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gate-rules{margin-bottom:18px;padding:12px 16px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.1);border-radius:12px;text-align:left}
+.gate-rules p{font-size:12px;color:#94a3b8;line-height:1.7;margin:0}
+.gate-rules p:first-child{color:#a78bfa;font-weight:600;margin-bottom:6px;text-align:center}
+.gate-sub{font-size:15px;font-weight:700;color:#fff;margin-bottom:20px;line-height:1.6}
+.line-card{display:flex;align-items:center;gap:16px;background:rgba(6,199,85,.06);border:1px solid rgba(6,199,85,.2);border-radius:16px;padding:16px;margin:0 auto 16px;text-align:left;max-width:360px}
+.line-card-qr{flex-shrink:0;text-align:center}
+.qr-img{width:80px;height:80px;border-radius:8px;background:#fff;padding:4px;display:block}
+.qr-label{font-size:10px;color:#64748b;margin-top:6px;font-weight:600}
+.line-card-info{flex:1;min-width:0}
+.line-card-title{font-size:14px;font-weight:800;color:#fff;margin-bottom:4px}
+.line-card-sub{font-size:12px;color:#64748b;margin-bottom:12px}
+.gate-line-sm{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#06c755;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;transition:transform .1s}
+.gate-line-sm:active{transform:scale(.95)}
+.gate-line{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:#06c755;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;transition:transform .1s}
+.gate-line:active{transform:scale(.96)}
+.gate-play{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .1s}
+.gate-play:active{transform:scale(.96)}
+.howto-box{margin-top:8px;padding:10px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.12);border-radius:10px;text-align:center}
+.howto-title{font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:12px}
+.howto-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;text-align:left}
+.howto-step{display:flex;align-items:center;gap:10px;font-size:13px;color:#cbd5e1}
+.howto-step b{color:#fff}
+.howto-num{width:24px;height:24px;background:#7c3aed;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.howto-img{width:100%;max-width:200px;border-radius:10px;border:1px solid rgba(139,92,246,.15);margin:0 auto}
+.gate-note{font-size:10px;color:#334155;margin-top:10px}
+.gate-loading{color:#64748b}
+.gate-spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,.08);border-top-color:#8b5cf6;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Promo courses */
+.promo-courses{display:flex;gap:10px;margin-bottom:24px;justify-content:center}
+.promo-card{flex:1;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);transition:transform .15s}
+.promo-card:active{transform:scale(.95)}
+.promo-card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+.promo-card .promo-name{font-size:10px;font-weight:700;color:#fff;padding:6px 4px;text-align:center}
+
+.promo-link{display:block;margin-top:12px;font-size:11px;color:#64748b;text-decoration:none}
+.promo-link:hover{color:#a78bfa}
+
+/* LINE SVG */
+.line-icon{width:22px;height:22px;flex-shrink:0}
+
+/* ═══ Game Header ═══ */
+.ghdr{padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.04)}
+.ghdr-left{display:flex;align-items:center;gap:8px}
+.ghdr-avatar{width:34px;height:34px;border-radius:50%;border:2px solid rgba(139,92,246,.4);object-fit:cover}
+.ghdr-name{font-size:13px;font-weight:700;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ghdr-logo{font-size:14px;font-weight:800;color:#fff}
+.ghdr-logo span{color:#a78bfa}
+.ghdr-right{display:flex;align-items:center;gap:10px}
+.ghdr-btn{padding:5px 12px;border-radius:6px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#f87171;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600}
+.ghdr-btn:hover{background:rgba(239,68,68,.2)}
+.mode-badge{font-size:10px;color:#a78bfa;font-weight:600;padding:3px 8px;background:rgba(139,92,246,.1);border-radius:6px}
+.progress-badge{font-size:12px;color:#f59e0b;font-weight:800;padding:3px 10px;background:rgba(251,191,36,.1);border-radius:8px}
+
+/* ═══ Card ═══ */
+.card-area{display:flex;align-items:center;justify-content:center;padding:4px 10px;perspective:1200px;overflow:hidden;height:calc(100dvh - 130px)}
+.card-wrap{width:100%;height:100%;position:relative}
+.card{position:absolute;top:0;left:0;right:0;bottom:0;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,.2,.2,1);cursor:pointer}
+.card.flipped{transform:rotateY(180deg)}
+.card.sr{transition:transform .3s ease;transform:translateX(110%) rotate(12deg);opacity:0}
+.face{position:absolute;top:0;left:0;right:0;bottom:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:20px;display:flex;flex-direction:column;overflow:hidden}
+
+/* ═══ Front ═══ */
+.front{justify-content:center;align-items:center;text-align:center;padding:50px 20px}
+.front .top-bar{position:absolute;top:0;left:0;right:0;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+.front .front-logo{font-size:11px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.5px}
+.front .cat-badge{font-size:9px;font-weight:700;padding:4px 12px;border-radius:8px;letter-spacing:.5px;text-transform:uppercase}
+.front .pattern{font-size:20px;font-weight:800;color:#fff;line-height:1.8;word-break:keep-all;overflow-wrap:break-word;padding:0 4px;margin-bottom:16px}
+.front .question-label{font-size:14px;font-weight:800;color:#60a5fa;letter-spacing:.5px;padding:8px 20px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.15);border-radius:10px;display:inline-block}
+.front .tap-hint{position:absolute;bottom:16px;font-size:13px;color:#a78bfa;font-weight:600;opacity:1;display:flex;align-items:center;gap:6px;animation:tapBounce 1.5s ease-in-out infinite}
+.front .tap-hint .tap-icon{font-size:20px;animation:tapPulse 1.5s ease-in-out infinite}
+@keyframes tapBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes tapPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}
+
+/* Category colors */
+.cat-gi{background:rgba(245,158,11,.15);color:#fbbf24}
+.cat-cardio{background:rgba(239,68,68,.15);color:#f87171}
+.cat-neuro{background:rgba(139,92,246,.15);color:#a78bfa}
+.cat-pulmo{background:rgba(6,182,212,.15);color:#22d3ee}
+.cat-id{background:rgba(34,197,94,.15);color:#4ade80}
+.cat-hemato{background:rgba(220,38,38,.15);color:#fca5a5}
+.cat-msk{background:rgba(163,163,163,.15);color:#d4d4d4}
+.cat-endo{background:rgba(217,70,239,.15);color:#e879f9}
+.cat-renal{background:rgba(14,165,233,.15);color:#38bdf8}
+.cat-emergency{background:rgba(239,68,68,.2);color:#fca5a5}
+.cat-golden{background:rgba(251,191,36,.15);color:#fbbf24}
+.cat-cc{background:rgba(59,130,246,.15);color:#60a5fa}
+.cat-ddx{background:rgba(34,197,94,.15);color:#4ade80}
+
+.front-gi{background:linear-gradient(160deg,#1a1500,#0f1a0a);border:1px solid rgba(245,158,11,.12)}
+.front-cardio{background:linear-gradient(160deg,#1a0808,#150a14);border:1px solid rgba(239,68,68,.12)}
+.front-neuro{background:linear-gradient(160deg,#0f0a1a,#0c0f1f);border:1px solid rgba(139,92,246,.12)}
+.front-pulmo{background:linear-gradient(160deg,#0a1418,#0c1520);border:1px solid rgba(6,182,212,.12)}
+.front-id{background:linear-gradient(160deg,#0a150a,#0c1510);border:1px solid rgba(34,197,94,.12)}
+.front-hemato{background:linear-gradient(160deg,#1a0a0a,#150810);border:1px solid rgba(220,38,38,.12)}
+.front-msk{background:linear-gradient(160deg,#121212,#0f1015);border:1px solid rgba(163,163,163,.1)}
+.front-endo{background:linear-gradient(160deg,#150a18,#100a1a);border:1px solid rgba(217,70,239,.12)}
+.front-renal{background:linear-gradient(160deg,#0a1015,#0c1520);border:1px solid rgba(14,165,233,.12)}
+.front-emergency{background:linear-gradient(160deg,#1a0505,#180808);border:1px solid rgba(239,68,68,.15)}
+.front-golden{background:linear-gradient(160deg,#1a1500,#181008);border:1px solid rgba(251,191,36,.12)}
+.front-cc{background:linear-gradient(160deg,#0a1020,#0c1530);border:1px solid rgba(59,130,246,.12)}
+.front-ddx{background:linear-gradient(160deg,#0a150a,#081510);border:1px solid rgba(34,197,94,.12)}
+
+/* ═══ Back ═══ */
+.back{transform:rotateY(180deg);padding:48px 20px 28px;overflow-y:auto}
+.back-default{background:linear-gradient(160deg,#141c2e,#0c1320);border:1px solid rgba(59,130,246,.1)}
+.back .top-bar{position:absolute;top:0;left:0;right:0;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+.back .answer-section{text-align:center}
+.back .answer-label{font-size:11px;color:#60a5fa;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+.back .answer-main{font-size:22px;font-weight:900;color:#fff;line-height:1.4;margin-bottom:6px}
+.back .answer-sub{font-size:14px;color:#94a3b8;margin-bottom:16px}
+.back .answer-points{text-align:left;margin:0 auto;max-width:320px;padding:0}
+.back .answer-points li{font-size:13px;color:#cbd5e1;padding:4px 0;line-height:1.5;list-style:none;display:flex;align-items:flex-start;gap:8px}
+.back .answer-points li::before{content:'★';color:#f59e0b;font-size:10px;flex-shrink:0;margin-top:2px}
+.back .memo-box{margin-top:14px;padding:10px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.1);border-radius:10px;text-align:center}
+.back .memo-text{font-size:12px;color:#fbbf24;line-height:1.6;font-weight:600}
+
+/* ═══ Buttons ═══ */
+.btns{padding:8px 16px 40px;display:flex;gap:10px;justify-content:center;flex-shrink:0}
+.btn{flex:1;max-width:200px;padding:15px;border-radius:14px;border:none;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .1s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{transform:scale(.93)}
+.btn-flip{background:rgba(139,92,246,.12);color:#a78bfa;border:1px solid rgba(139,92,246,.2)}
+.btn-next{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff}
+.btn-correct{background:#16a34a;color:#fff;font-size:16px!important}
+.btn-wrong{background:#dc2626;color:#fff;font-size:16px!important}
+.btn-share{padding:12px 20px;background:#06c755;color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-share:active{transform:scale(.93)}
+.btn-lb{margin-top:12px;padding:10px 20px;background:rgba(251,191,36,.1);color:#f59e0b;border:1px solid rgba(251,191,36,.2);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;max-width:300px}
+.btn-lb:active{transform:scale(.95)}
+.lb-list{text-align:left;max-width:340px;margin:16px auto 0}
+.lb-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.lb-rank{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0}
+.lb-rank-1{background:#f59e0b;color:#0f172a}.lb-rank-2{background:#94a3b8;color:#0f172a}.lb-rank-3{background:#b45309;color:#fff}
+.lb-rank-n{background:#1e293b;color:#64748b}
+.lb-pic{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.lb-name{flex:1;color:#e2e8f0;font-weight:600}
+.lb-stars{color:#f59e0b;font-weight:700}
+.lb-me{background:rgba(139,92,246,.1);border-radius:8px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const LIFF_ID='2009259048-lwEXYc0q'
+const LINE_SVG='<svg class="line-icon" viewBox="0 0 24 24" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596a.626.626 0 01-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.271.173-.508.43-.595.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>'
+let lineUser=null,cardsRevealed=0
+const app=document.getElementById('app')
+
+const catMap={GI:'gi',Cardio:'cardio',Neuro:'neuro',Pulmo:'pulmo',ID:'id',Hemato:'hemato',MSK:'msk',Endo:'endo',Renal:'renal',Emergency:'emergency','Golden Rule':'golden'}
+function catClass(c){return catMap[c]||'neuro'}
+
+// ═══ Modes round robin ═══
+const modes=['pattern','cc','ddx']
+let modeIdx=0
+function nextMode(){const m=modes[modeIdx%3];modeIdx++;return m}
+const modeLabels={pattern:'Pattern → DDx',cc:'CC → DDx',ddx:'DDx → CC'}
+
+// ═══ Check LINE browser ═══
+function isLineBrowser(){return /Line\/|LIFF|LINEApp|line\//i.test(navigator.userAgent)||typeof liff!=='undefined'&&liff.isInClient&&liff.isInClient()}
+
+function showOpenInLine(){
+  const liffUrl='https://liff.line.me/'+LIFF_ID
+  const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent('https://line.me/R/ti/p/@medninja')+'&bgcolor=060a14&color=ffffff'
+  showPromoPage(`
+    <div class="line-card">
+      <div class="line-card-qr">
+        <img src="${qrUrl}" alt="QR Code" class="qr-img" />
+        <p class="qr-label">Scan เพิ่มเพื่อน</p>
+      </div>
+      <div class="line-card-info">
+        <p class="line-card-title">เล่นได้เฉพาะใน LINE</p>
+        <p class="line-card-sub">เพิ่มเพื่อน LINE แล้วกดเมนู</p>
+        <button class="gate-line-sm" onclick="window.location.href='https://line.me/R/ti/p/@medninja'">${LINE_SVG} เพิ่มเพื่อนเพื่อเล่น</button>
+      </div>
+    </div>
+    <div class="howto-box">
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="https://medninja.b-cdn.net/ninja-dd-howto.png" alt="วิธีเข้าเล่น" style="width:80px;border-radius:8px;flex-shrink:0" />
+        <div style="text-align:left;font-size:11px;color:#cbd5e1;line-height:1.6">
+          <div style="font-weight:700;color:#a78bfa;margin-bottom:4px">วิธีเข้าเล่น</div>
+          1. เพิ่มเพื่อน LINE <b>@medninja</b><br>
+          2. กดปุ่ม <b>DDx เกมส์</b> ที่เมนู
+        </div>
+      </div>
+    </div>
+  `)
+}
+
+// ═══ LIFF ═══
+async function initLiff(){
+  const liffUrl='https://liff.line.me/'+LIFF_ID
+  showLoading()
+  try{
+    await liff.init({liffId:LIFF_ID})
+    // ถ้า login แล้ว → เล่นได้เลย (ไม่ว่า isInClient หรือไม่)
+    if(liff.isLoggedIn()){
+      // OK — ไปต่อ getProfile
+    }else if(liff.isInClient()){
+      liff.login();return
+    }else{
+      // ไม่ได้อยู่ใน LIFF + ไม่ได้ login → แสดงหน้า QR
+      showOpenInLine();return
+    }
+    const p=await liff.getProfile()
+    lineUser={userId:p.userId,displayName:p.displayName,pictureUrl:p.pictureUrl}
+    try{
+      const rr=await fetch('/api/flashcard/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineUserId:lineUser.userId,displayName:lineUser.displayName,pictureUrl:lineUser.pictureUrl,totalCardsRevealed:0,totalSessions:1})})
+      const rd=await rr.json()
+      if(rd.stars) playerStars=rd.stars
+    }catch(e){}
+    showPromo()
+  }catch(e){
+    // liff.init() fail — ไม่ใช่ LIFF environment
+    if(location.hostname==='localhost'){lineUser={userId:'dev',displayName:'Dev',pictureUrl:''};showPromo()}
+    else{showOpenInLine()}
+  }
+}
+
+function showLoading(){app.innerHTML=`<div class="gate"><div class="gate-inner"><div class="gate-spinner"></div><div class="gate-loading">กำลังโหลด...</div></div></div>`}
+
+function showGate(){
+  app.innerHTML=`<div class="gate"><div class="gate-inner">
+    <div class="gate-badge">Free Game</div>
+    <div class="gate-title">NINJA <span>DDx</span></div>
+    <div class="gate-sub">ฝึกจำ DDx แบบ Flashcard<br>เห็นชื่อ → ตอบให้ได้ทันที</div>
+    <button class="gate-line" onclick="liff.login()">${LINE_SVG} Add LINE เพื่อเล่นฟรี</button>
+    <div class="gate-note">ไม่ต้องสมัครสมาชิก แค่ Add LINE</div>
+  </div></div>`
+}
+
+// ═══ Promo Page (ใช้ร่วมกันทั้งในและนอก LINE) ═══
+function showPromoPage(buttonHtml){
+  const imgBase=isLineBrowser()?'':' https://medninja.academy'
+  app.innerHTML=`
+  <div class="gate"><div class="gate-inner">
+    <div class="gate-badge">MedNinja Academy</div>
+    <div class="gate-title" style="font-size:28px">NINJA <span>DDx</span></div>
+    <div style="margin:6px 0;padding:6px 10px;background:rgba(139,92,246,.04);border-radius:8px;font-size:10px;color:#64748b;line-height:1.5">แตะการ์ด → ดูเฉลย → กด ✅ หรือ ❌ → <b style="color:#f59e0b">จบรอบ = ได้ ⭐ + สรุปจุดอ่อนส่งไป LINE</b></div>
+    ${buttonHtml}
+    <div class="promo-courses" style="margin-top:16px">
+      <a href="https://medninja.academy/" class="promo-card"><img src="https://medninja.b-cdn.net/nl1+2.png" alt="NL1+2" onerror="this.style.display='none'"><div class="promo-name">NL 1+2</div></a>
+      <a href="https://medninja.academy/" class="promo-card"><img src="https://medninja.b-cdn.net/MEQ.jpg" alt="MEQ" onerror="this.style.display='none'"><div class="promo-name">MEQ</div></a>
+      <a href="https://medninja.academy/" class="promo-card"><img src="https://medninja.b-cdn.net/OSCE.png" alt="OSCE" onerror="this.style.display='none'"><div class="promo-name">OSCE</div></a>
+    </div>
+    <div class="gate-note">Flashcard ฟรี 700+ การ์ด</div>
+  </div></div>`
+}
+
+function getPlayerLevel(s){
+  const levels=[
+    {min:100,name:'NINJA Legend',emoji:'👑',color:'#f59e0b',next:null},
+    {min:50,name:'NINJA Master',emoji:'💎',color:'#8b5cf6',next:100},
+    {min:30,name:'NINJA Warrior',emoji:'⚔️',color:'#dc2626',next:50},
+    {min:15,name:'NINJA Fighter',emoji:'🔥',color:'#f97316',next:30},
+    {min:5,name:'NINJA Apprentice',emoji:'🌟',color:'#3b82f6',next:15},
+    {min:0,name:'NINJA Beginner',emoji:'🌱',color:'#64748b',next:5},
+  ]
+  return levels.find(l=>s>=l.min)
+}
+
+// ═══ คำคมจากปรมาจารย์ผู้เฒ่านินจา ═══
+const ninjaQuotes=[
+  'การวินิจฉัยที่แม่นยำ เริ่มจากการฝึกซ้ำจนเป็นสัญชาตญาณ',
+  'หมอที่เก่ง ไม่ใช่คนที่รู้ทุกอย่าง แต่คือคนที่ไม่หยุดฝึกฝน',
+  'ทุกครั้งที่นึกไม่ออก คือโอกาสที่จะจำได้ตลอดไป',
+  'NINJA ไม่กลัวผิด กลัวแค่ไม่ได้ลอง',
+  'DDx ที่ดี ไม่ใช่การท่องจำ แต่คือการคิดเป็นระบบ',
+  'คนไข้ทุกคนคือครู ทุกอาการคือบทเรียน',
+  'ความเร็วในการคิด DDx สร้างได้ด้วยการฝึกซ้ำ',
+  'แพทย์ที่ดี คิดถึงโรคที่พบบ่อยก่อน แต่ไม่ลืมโรคที่อันตราย',
+  'วันนี้ที่ฝึก คือวันที่คนไข้ในอนาคตจะปลอดภัย',
+  'ไม่มีทางลัดสู่ความเก่ง มีแค่ทางที่ฝึกทุกวัน',
+  'สมองที่ฝึกมาดี จะตอบสนองได้แม้ในสถานการณ์กดดัน',
+  'อ่านหนังสือให้รู้ ฝึก DDx ให้เป็น',
+  'ทุก Pattern ที่จำได้ คือชีวิตที่อาจช่วยได้ในอนาคต',
+  'NINJA แท้จริง ฝึกในเงามืด เพื่อส่องสว่างในห้องฉุกเฉิน',
+  'ไม่ต้องเก่งที่สุด แค่เก่งขึ้นกว่าเมื่อวาน',
+  'การฝึก DDx วันละ 10 นาที ดีกว่าอ่านรวดเดียว 10 ชั่วโมง',
+  'ยิ่งฝึก ยิ่งมั่นใจ ยิ่งมั่นใจ ยิ่งตัดสินใจได้เร็ว',
+  'หมอทุกคนเคยนึกไม่ออก แต่หมอที่เก่ง คือคนที่ฝึกจนนึกออก',
+  'C/C เดียวกัน DDx ต่างกัน — รายละเอียดคือกุญแจ',
+  'อย่ารอจนถึงวันสอบ ฝึกตั้งแต่วันนี้',
+  'NINJA ที่แข็งแกร่ง ไม่ใช่คนที่ไม่เคยล้ม แต่คือคนที่ลุกขึ้นทุกครั้ง',
+  'ทุกดาวที่สะสม คือก้าวที่เข้าใกล้ใบประกอบวิชาชีพ',
+  'ความรู้ที่ฝึกซ้ำ จะฝังลึกกว่าการอ่านผ่านตา',
+  'แพทย์ที่คิด DDx เป็น จะไม่พลาดโรคที่ซ่อนอยู่',
+  'วันนี้เล่นเกม พรุ่งนี้ช่วยคนไข้ได้จริง',
+  'อย่าประมาท Pattern ง่ายๆ เพราะในสนามสอบไม่มีอะไรง่าย',
+  'ฝึกจนร่างกายจำ ไม่ต้องคิด แค่เห็นก็ตอบได้',
+  'เส้นทาง NINJA ไม่มีจุดจบ มีแต่จุดที่เก่งขึ้น',
+  'คนไข้ไม่รอให้เราพร้อม เราต้องพร้อมก่อนเขามา',
+  'ปรมาจารย์ทุกคน เคยเป็น Beginner มาก่อน',
+]
+
+function getRandomQuote(){return ninjaQuotes[Math.floor(Math.random()*ninjaQuotes.length)]}
+
+function showPromo(){
+  const s=playerStars
+  const lvl=getPlayerLevel(s)
+  const roundSize=getRoundSize(s)
+  const progressHtml=lvl.next?`
+    <div style="margin:4px 0;text-align:center">
+      <div style="background:#1e293b;border-radius:6px;height:5px;overflow:hidden;max-width:200px;margin:0 auto">
+        <div style="height:100%;background:${lvl.color};border-radius:6px;width:${Math.min(100,((s-lvl.min)/(lvl.next-lvl.min))*100)}%"></div>
+      </div>
+      <div style="font-size:9px;color:#475569;margin-top:2px">⭐ ${s} / ${lvl.next}</div>
+    </div>
+  `:`<div style="font-size:11px;color:#f59e0b;margin:4px 0;font-weight:700">👑 Legend</div>`
+  const statusHtml=s>0?`
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin:4px 0">
+      <span style="font-size:16px">${lvl.emoji}</span>
+      <span style="font-size:12px;font-weight:800;color:${lvl.color}">${lvl.name}</span>
+      <span style="font-size:11px;color:#f59e0b;font-weight:700">⭐${s}</span>
+    </div>
+    ${progressHtml}
+  `:''
+  const quote=getRandomQuote()
+  showPromoPage(`
+    ${statusHtml}
+    <div style="margin:10px 0 6px;padding:10px 12px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.1);border-radius:10px">
+      <div style="font-size:11px;color:#a78bfa;line-height:1.5;font-style:italic">"${quote}"</div>
+      <div style="font-size:9px;color:#475569;margin-top:3px">— ปรมาจารย์ผู้เฒ่านินจา</div>
+    </div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:4px">
+      <button class="gate-play" style="flex:1;max-width:150px;font-size:13px;padding:10px" onclick="window.location.href='/ddx-arena'">📚 Path<br><span style="font-size:9px;font-weight:400;opacity:.7">ผ่านด่าน</span></button>
+      <button class="gate-play" style="flex:1;max-width:150px;font-size:13px;padding:10px;background:linear-gradient(135deg,#3b82f6,#6366f1)" onclick="startRound()">⚔️ Arena<br><span style="font-size:9px;font-weight:400;opacity:.7">สุ่ม ${roundSize} ใบ</span></button>
+      <button class="gate-play" style="flex:1;max-width:150px;font-size:13px;padding:10px;background:linear-gradient(135deg,#16a34a,#059669)" onclick="window.location.href='/ddx-arena'">🧠 Mindmap<br><span style="font-size:9px;font-weight:400;opacity:.7">ท่อง DDx</span></button>
+    </div>
+    ${s>0?`<button style="margin-top:8px;padding:8px 16px;background:#1e293b;color:#a78bfa;border:1px solid rgba(139,92,246,.2);border-radius:10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onclick="window.location.href='https://liff.line.me/${LIFF_ID}?page=profile'">ดูลำดับในยุทธจักร</button>`:''}
+  `)
+}
+
+// ═══ Game ═══
+let deck=[],idx=0,flipped=false,currentMode='',playerStars=0
+let roundScore={correct:0,total:0,categories:{},wrongCards:[]} // เก็บคะแนนรอบนี้
+
+// จำนวนการ์ดต่อรอบตาม level
+function getRoundSize(stars){
+  if(stars>=100) return 28
+  if(stars>=50) return 23
+  if(stars>=30) return 18
+  if(stars>=15) return 13
+  if(stars>=5) return 8
+  return 3
+}
+
+async function startRound(){
+  showLoading()
+  try{
+    const roundSize=getRoundSize(playerStars)
+    // แบ่ง 3 โหมดค่อนข้างเท่ากัน
+    const perMode=Math.ceil(roundSize/3)
+    const ts=Date.now()
+    const [pRes,ccRes,ddxRes]=await Promise.all([
+      fetch(`/api/flashcard/cards?mode=${perMode}&lineUserId=${lineUser.userId}&_t=${ts}`).then(r=>r.json()),
+      fetch(`/api/flashcard/cc-cards?mode=${perMode}&lineUserId=${lineUser.userId}&_t=${ts}`).then(r=>r.json()),
+      fetch(`/api/flashcard/ddx-cards?mode=${perMode}&lineUserId=${lineUser.userId}&_t=${ts}`).then(r=>r.json()),
+    ])
+    // tag แต่ละใบว่าเป็นโหมดไหน
+    const all=[]
+    ;(pRes.cards||[]).forEach(c=>{c._mode='pattern';all.push(c)})
+    ;(ccRes.cards||[]).forEach(c=>{c._mode='cc';all.push(c)})
+    ;(ddxRes.cards||[]).forEach(c=>{c._mode='ddx';all.push(c)})
+    // สลับ
+    for(let i=all.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[all[i],all[j]]=[all[j],all[i]]}
+    deck=all.slice(0,roundSize);idx=0;flipped=false
+    roundScore={correct:0,total:0,categories:{},wrongCards:[]}
+    renderCard()
+  }catch(e){console.error(e);alert('โหลดไม่สำเร็จ')}
+}
+
+function getQuestion(d){
+  const m=d._mode||'pattern'
+  if(m==='cc') return 'DDx ที่ต้องนึกถึง?'
+  if(m==='ddx') return 'มาด้วยอาการอะไร?'
+  return 'นึกถึงอะไร?'
+}
+
+function getFrontText(d){
+  const m=d._mode||'pattern'
+  if(m==='cc') return `${d.cc}<br><span style="font-size:14px;color:rgba(255,255,255,.4)">${d.ccEn}</span>`
+  if(m==='ddx') return d.ddx
+  return d.pattern.replace(/\n/g,'<br>')
+}
+
+function getFrontClass(d){
+  const m=d._mode||'pattern'
+  if(m==='cc') return 'cc'
+  if(m==='ddx') return 'ddx'
+  return catClass(d.category||'Neuro')
+}
+
+function getModeLabel(d){
+  const m=d._mode||'pattern'
+  if(m==='cc') return 'CC → DDx'
+  if(m==='ddx') return 'DDx → CC'
+  return d.category||'Pattern → DDx'
+}
+
+async function completeRound(){
+  // ส่ง API จบรอบ +1 ดาว + คะแนน + ส่ง LINE Flex
+  let data={stars:0,level:'NINJA Beginner',leveledUp:false,emoji:'🌱'}
+  try{
+    const r=await fetch('/api/flashcard/complete-round',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      lineUserId:lineUser.userId,
+      score:{correct:roundScore.correct,total:roundScore.total,categories:roundScore.categories,wrongCards:roundScore.wrongCards}
+    })})
+    if(r.ok) data=await r.json()
+    playerStars=data.stars||0
+  }catch(e){}
+
+  // สร้าง UI คะแนน
+  const pct=roundScore.total?Math.round(roundScore.correct/roundScore.total*100):0
+  const scoreColor=pct>=80?'#16a34a':pct>=50?'#f59e0b':'#dc2626'
+  const scoreEmoji=pct>=80?'🎯':pct>=50?'💪':'📚'
+
+  // รายชื่อที่ต้องทบทวน (การ์ดที่กด ❌)
+  const wrongHtml=roundScore.wrongCards.length?`
+    <div style="margin-top:16px;padding:14px;background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.12);border-radius:12px;text-align:left;max-width:320px;margin-left:auto;margin-right:auto">
+      <div style="font-size:13px;font-weight:700;color:#fca5a5;margin-bottom:8px">📖 ต้องไปทบทวน (${roundScore.wrongCards.length} ข้อ)</div>
+      ${roundScore.wrongCards.map(c=>`<div style="font-size:12px;color:#cbd5e1;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.5">• ${c}</div>`).join('')}
+    </div>`:''
+
+  app.innerHTML=`
+  <div class="gate" style="overflow-y:auto"><div class="gate-inner">
+    <div class="gate-badge">${data.level}</div>
+    <div style="font-size:48px;margin:12px 0">${data.emoji}</div>
+    <div class="gate-title" style="font-size:28px">จบรอบ!</div>
+    <div style="font-size:14px;color:#94a3b8;margin:4px 0">${scoreEmoji} นึกออก</div>
+    <div style="font-size:36px;font-weight:900;color:${scoreColor};margin:4px 0">${roundScore.correct} / ${roundScore.total}</div>
+    ${data.earnStar!==false?`<div style="font-size:32px;font-weight:900;color:#f59e0b;margin:8px 0">⭐ ${data.stars} ดาว (+1)</div>`:`<div style="font-size:24px;font-weight:700;color:#64748b;margin:8px 0">⭐ ${data.stars} ดาว</div><div style="font-size:12px;color:#fca5a5;margin:4px 0">รอบนี้ยังไม่ได้ดาว</div>`}
+    ${data.leveledUp?`<div style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);border-radius:12px;padding:12px 16px;margin:12px 0;text-align:center"><div style="font-size:16px;font-weight:800;color:#a78bfa">🎉 Level Up!</div><div style="font-size:13px;color:#cbd5e1;margin-top:4px">คุณเลื่อนขั้นเป็น ${data.level}</div></div>`:''}
+    <div style="margin-top:20px;padding:14px 16px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.1);border-radius:10px;text-align:center">
+      <div style="font-size:13px;color:#60a5fa;font-weight:700">📩 ผลคะแนนส่งไปที่ LINE แล้ว</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:6px">กด <b style="color:#a78bfa">เล่นต่อ</b> ใต้ผลคะแนนใน LINE</div>
+    </div>
+    <div style="margin-top:16px;font-size:11px;color:#475569">ปิดอัตโนมัติใน <span id="countdown">3</span> วินาที...</div>
+    <div style="height:60px"></div>
+  </div></div>`
+  // auto-close after 3s
+  let c=3
+  const t=setInterval(()=>{c--;const el=document.getElementById('countdown');if(el)el.textContent=c;if(c<=0){clearInterval(t);closeLiff()}},1000)
+}
+
+function closeLiff(){
+  if(liff.isInClient()) liff.closeWindow()
+  else window.close()
+}
+
+// ═══ Share ═══
+async function shareResult(stars,level,emoji,correct,total){
+  if(!liff.isInClient()){alert('แชร์ได้เฉพาะใน LINE');return}
+  try{
+    await liff.shareTargetPicker([{
+      type:'flex',altText:`${lineUser.displayName} ได้ ⭐${stars} ดาว ${level} — มาลองเล่น NINJA DDx!`,
+      contents:{
+        type:'bubble',size:'kilo',
+        body:{type:'box',layout:'vertical',spacing:'md',paddingAll:'20px',backgroundColor:'#0f172a',contents:[
+          {type:'box',layout:'horizontal',justifyContent:'center',contents:[
+            {type:'box',layout:'vertical',backgroundColor:'#7c3aed',cornerRadius:'12px',paddingAll:'4px',paddingStart:'14px',paddingEnd:'14px',contents:[
+              {type:'text',text:'NINJA DDx',size:'xxs',weight:'bold',color:'#FFFFFF',align:'center'}
+            ]}
+          ]},
+          {type:'text',text:`${emoji} ${lineUser.displayName}`,size:'md',weight:'bold',color:'#FFFFFF',align:'center',margin:'lg'},
+          {type:'text',text:level,size:'sm',weight:'bold',color:'#a78bfa',align:'center',margin:'sm'},
+          {type:'text',text:`⭐ ${stars} ดาวสะสม`,size:'xl',weight:'bold',color:'#f59e0b',align:'center',margin:'md'},
+          ...(correct!==undefined?[{type:'text',text:`รอบนี้นึกออก ${correct}/${total}`,size:'sm',color:'#cbd5e1',align:'center',margin:'sm'}]:[]),
+          {type:'text',text:'มาลองเล่นกันเถอะ!',size:'xs',color:'#94a3b8',align:'center',margin:'md'}
+        ]},
+        footer:{type:'box',layout:'vertical',spacing:'sm',paddingAll:'14px',backgroundColor:'#0f172a',contents:[
+          {type:'button',action:{type:'uri',label:'เล่น NINJA DDx ฟรี',uri:'https://liff.line.me/'+LIFF_ID},style:'primary',color:'#7c3aed',height:'sm'}
+        ]}
+      }
+    }])
+  }catch(e){console.error('Share error:',e)}
+}
+
+// ═══ Leaderboard ═══
+async function showLeaderboard(){
+  showLoading()
+  try{
+    const r=await fetch('/api/flashcard/leaderboard?lineUserId='+encodeURIComponent(lineUser.userId||''))
+    const data=await r.json()
+    const rows=(data.top||[]).map((p,i)=>{
+      const rankCls=i===0?'lb-rank-1':i===1?'lb-rank-2':i===2?'lb-rank-3':'lb-rank-n'
+      const meClass=p.isMe?' lb-me':''
+      const name=p.isMe?lineUser.displayName:p.displayName
+      return `<div class="lb-row${meClass}"><div class="lb-rank ${rankCls}">${i+1}</div><span class="lb-name">${name||'ผู้เล่น'}</span><span class="lb-stars">⭐ ${p.stars||0}</span></div>`
+    }).join('')
+    const myRank=data.myRank?`<div style="text-align:center;margin-top:12px;font-size:12px;color:#94a3b8">อันดับของคุณ: <b style="color:#f59e0b">#${data.myRank}</b></div>`:''
+    app.innerHTML=`
+    <div class="gate" style="overflow-y:auto"><div class="gate-inner">
+      <div class="gate-badge">Leaderboard</div>
+      <div class="gate-title" style="font-size:24px">🏆 Top Players</div>
+      <div class="lb-list">${rows||'<div style="text-align:center;color:#64748b;padding:20px">ยังไม่มีข้อมูล</div>'}</div>
+      ${myRank}
+      <div style="display:flex;gap:8px;margin-top:20px;justify-content:center">
+        <button class="gate-play" style="max-width:200px" onclick="startRound()">เล่นต่อ</button>
+        <button class="ghdr-btn" style="padding:12px 20px;font-size:14px" onclick="showPromo()">หน้าแรก</button>
+      </div>
+    </div></div>`
+  }catch(e){console.error(e);showPromo()}
+}
+
+function renderCard(){
+  if(idx>=deck.length){completeRound();return}
+  const d=deck[idx];flipped=false
+  const cc=getFrontClass(d)
+  app.innerHTML=`
+  <div class="ghdr">
+    <div class="ghdr-left"><span class="ghdr-logo">NINJA <span>DDx</span></span>${lineUser?.pictureUrl?`<img class="ghdr-avatar" src="${lineUser.pictureUrl}">`:''}<span class="ghdr-name">${lineUser?.displayName||''}</span></div>
+    <div class="ghdr-right"><span class="progress-badge">${idx+1}/${deck.length}</span><span class="mode-badge">${getModeLabel(d)}</span></div>
+  </div>
+  <div class="card-area">
+    <div class="card-wrap" onclick="flip()">
+      <div class="card" id="card">
+        <div class="face front front-${cc}">
+          <div class="top-bar"><span class="front-logo">NINJA DDx</span><span class="cat-badge cat-${cc}">${getModeLabel(d)}</span></div>
+          <div class="pattern">${getFrontText(d)}</div>
+          <div class="question-label">${getQuestion(d)}</div>
+          <div class="tap-hint"><span class="tap-icon">👆</span> แตะการ์ดเพื่อดูคำตอบ</div>
+        </div>
+        <div class="face back back-default">
+          <div class="answer-section">
+            <div class="answer-label">คำตอบ</div>
+            <div class="answer-main" id="ans">...</div>
+            <div class="answer-sub" id="ans-sub"></div>
+            <ul class="answer-points" id="ans-points"></ul>
+            <div class="memo-box" id="memo-box" style="display:none">
+              <div class="memo-text" id="memo"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="btns" id="btns"><button class="btn btn-flip" onclick="flip()">เปิดดูคำตอบ</button></div>`
+}
+
+function unflip(){
+  const card=document.getElementById('card')
+  const isFlipped=card.classList.contains('flipped')
+  if(isFlipped){
+    card.classList.remove('flipped')
+    document.getElementById('btns').innerHTML=`<button class="btn btn-flip" onclick="unflip()">เปิดดูคำตอบ</button>`
+  }else{
+    card.classList.add('flipped')
+    document.getElementById('btns').innerHTML=`
+      <button class="btn btn-correct" onclick="answer(true)">✅ นึกออก</button>
+      <button class="btn btn-wrong" onclick="answer(false)">❌ นึกไม่ออก</button>`
+  }
+}
+
+async function flip(){
+  if(flipped)return;flipped=true;cardsRevealed++
+  const d=deck[idx]
+  const m=d._mode||'pattern'
+  try{
+    if(m==='cc'){
+      const r=await fetch('/api/flashcard/cc-reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cardId:d.id,lineUserId:lineUser.userId})})
+      const data=await r.json()
+      if(r.ok){
+        document.getElementById('ans').textContent=data.ddxCount+' DDx'
+        document.getElementById('ans-points').innerHTML=data.ddxList.map(dx=>`<li>${dx}</li>`).join('')
+      }
+    }else if(m==='ddx'){
+      const r=await fetch('/api/flashcard/ddx-reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cardId:d.id,ddx:d.ddx,lineUserId:lineUser.userId})})
+      const data=await r.json()
+      if(r.ok){
+        document.getElementById('ans').textContent=data.ddxTh||d.ddx
+        const parts=[]
+        if(data.relatedCC&&data.relatedCC.length) parts.push(`<li><b>C/C:</b> ${data.relatedCC.join(', ')}</li>`)
+        if(data.clue) parts.push(`<li style="white-space:pre-line">${data.clue.replace(/\n/g,'<br>')}</li>`)
+        if(!parts.length) parts.push(...(data.relatedCC||[]).map(c=>`<li>${c}</li>`))
+        document.getElementById('ans-points').innerHTML=parts.join('')
+      }
+    }else{
+      const r=await fetch('/api/flashcard/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cardId:d.id,lineUserId:lineUser.userId})})
+      const data=await r.json()
+      if(r.ok){
+        const parts=data.answer.split('|').map(s=>s.trim())
+        document.getElementById('ans').textContent=parts[0]
+        if(parts[1]) document.getElementById('ans-sub').textContent=parts[1]
+        if(data.mnemonic){
+          document.getElementById('memo-box').style.display='block'
+          document.getElementById('memo').textContent='💡 '+data.mnemonic
+        }
+      }
+    }
+  }catch(e){console.error(e)}
+  document.getElementById('card').classList.add('flipped')
+  document.getElementById('btns').innerHTML=`
+    <button class="btn btn-correct" onclick="answer(true)">✅ นึกออก</button>
+    <button class="btn btn-wrong" onclick="answer(false)">❌ นึกไม่ออก</button>`
+  // บันทึกจำนวนเปิดการ์ด
+  try{fetch('/api/flashcard/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineUserId:lineUser.userId,displayName:lineUser.displayName,pictureUrl:lineUser.pictureUrl,totalCardsRevealed:1,totalSessions:0})})}catch(e){}
+}
+
+function getCardCategory(d){
+  const m=d._mode||'pattern'
+  if(m==='pattern') return d.category||'อื่นๆ'
+  if(m==='cc') return 'CC'
+  return 'DDx'
+}
+
+function answer(correct){
+  const d=deck[idx]
+  const cat=getCardCategory(d)
+  roundScore.total++
+  if(correct) roundScore.correct++
+  if(!roundScore.categories[cat]) roundScore.categories[cat]={correct:0,total:0}
+  roundScore.categories[cat].total++
+  if(correct) roundScore.categories[cat].correct++
+  // เก็บการ์ดที่นึกไม่ออก
+  if(!correct){
+    const m=d._mode||'pattern'
+    const name=m==='pattern'?d.pattern:m==='cc'?`${d.cc} (${d.ccEn||''})`:d.ddx
+    roundScore.wrongCards.push(name)
+  }
+  // ไปการ์ดถัดไป
+  document.getElementById('card').classList.add('sr')
+  setTimeout(()=>{idx++;renderCard()},250)
+}
+
+// เช็คว่าเปิดหน้า profile หรือเกม
+const urlParams=new URLSearchParams(window.location.search)
+if(urlParams.get('page')==='profile'){
+  window.location.href='/ddx-arena'
+}else if(urlParams.get('page')==='path'){
+  window.location.href='/ddx-arena'
+}else if(urlParams.get('page')==='mindmap'){
+  window.location.href='/ddx-arena'
+}else{
+  initLiff()
+}
+</script>
+</body>
+</html>

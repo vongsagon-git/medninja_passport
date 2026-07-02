@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>NINJA Mindmap — ท่อง C/C → DDx</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans Thai',sans-serif;background:#0c111b;color:#e2e8f0;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.container{max-width:480px;margin:0 auto;padding:16px 16px 80px}
+.loading{text-align:center;padding:40px;color:#64748b}
+.spinner{width:24px;height:24px;border:3px solid rgba(255,255,255,.08);border-top-color:#8b5cf6;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.back-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#1e293b;color:#94a3b8;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:12px}
+.header{text-align:center;margin-bottom:16px}
+.header-title{font-size:20px;font-weight:900;color:#fff}
+.header-title span{background:linear-gradient(135deg,#16a34a,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-sub{font-size:11px;color:#64748b;margin-top:4px}
+
+/* CC List */
+.cc-group-title{font-size:12px;font-weight:700;color:#a78bfa;margin:12px 0 6px;padding-left:4px}
+.cc-card{display:flex;align-items:center;gap:10px;padding:12px;background:#1e293b;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:transform .1s}
+.cc-card:active{transform:scale(.97)}
+.cc-name{flex:1;font-size:14px;font-weight:700;color:#fff}
+.cc-name-en{font-size:10px;color:#64748b;font-weight:400}
+.cc-count{font-size:11px;color:#f59e0b;font-weight:700;flex-shrink:0}
+
+/* Mindmap view */
+.mm-cc{text-align:center;margin-bottom:16px}
+.mm-cc-name{font-size:22px;font-weight:900;color:#fff}
+.mm-cc-en{font-size:13px;color:#64748b;margin-top:2px}
+.mm-line{width:2px;height:16px;background:#334155;margin:0 auto}
+.mm-ddx{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1e293b;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:all .15s}
+.mm-ddx:active{transform:scale(.97)}
+.mm-ddx-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:#334155;color:#64748b}
+.mm-ddx-name{flex:1;font-size:13px;font-weight:600;color:#e2e8f0}
+.mm-ddx-arrow{color:#475569;font-size:12px;flex-shrink:0;transition:transform .2s}
+.mm-ddx.open .mm-ddx-arrow{transform:rotate(90deg)}
+.mm-ddx-detail{padding:8px 12px 8px 44px;font-size:12px;color:#94a3b8;line-height:1.6;display:none}
+.mm-ddx-detail.show{display:block}
+.mm-ddx-detail b{color:#a78bfa;font-weight:700}
+.mm-total{text-align:center;font-size:11px;color:#475569;margin-top:12px}
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="loading"><div class="spinner"></div>กำลังโหลด...</div>
+</div>
+<script>
+const LIFF_ID='2009259048-lwEXYc0q'
+const app=document.getElementById('app')
+let lineUser=null
+
+async function init(){
+  try{
+    await liff.init({liffId:LIFF_ID})
+    if(!liff.isLoggedIn()){
+      if(liff.isInClient()) liff.login()
+      else window.location.href='https://medninja.academy/ddx-arena'
+      return
+    }
+    const p=await liff.getProfile()
+    lineUser={userId:p.userId,displayName:p.displayName}
+    showCCList()
+  }catch(e){
+    window.location.href='https://medninja.academy/ddx-arena'
+  }
+}
+
+async function showCCList(){
+  app.innerHTML='<div class="loading"><div class="spinner"></div></div>'
+  try{
+    const r=await fetch(`/api/flashcard/cc-cards?mode=all&lineUserId=${lineUser.userId}&_t=${Date.now()}`)
+    const d=await r.json()
+    const cards=d.cards||[]
+
+    // track view
+    fetch('/api/flashcard/mindmap-view',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineUserId:lineUser.userId,action:'list'})}).catch(()=>{})
+
+    const html=cards.map(c=>`
+      <div class="cc-card" onclick="showMindmap('${c.id}','${c.cc.replace(/'/g,"\\'")}','${(c.ccEn||'').replace(/'/g,"\\'")}',${c.ddxCount||0})">
+        <div><div class="cc-name">${c.cc}</div><div class="cc-name-en">${c.ccEn||''}</div></div>
+        <div class="cc-count">${c.ddxCount||0} DDx</div>
+      </div>
+    `).join('')
+
+    app.innerHTML=`
+      <button class="back-btn" onclick="window.location.href='https://liff.line.me/${LIFF_ID}'">← กลับ</button>
+      <div class="header">
+        <div class="header-title">NINJA <span>Mindmap</span></div>
+        <div class="header-sub">เลือกอาการ → ดู DDx ทั้งหมด</div>
+      </div>
+      ${html}
+      <div class="mm-total">${cards.length} อาการ</div>
+    `
+  }catch(e){app.innerHTML='<div class="loading">โหลดไม่สำเร็จ</div>'}
+}
+
+async function showMindmap(id,cc,ccEn,count){
+  app.innerHTML='<div class="loading"><div class="spinner"></div></div>'
+  try{
+    // reveal DDx list
+    const r=await fetch('/api/flashcard/cc-reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cardId:id,lineUserId:lineUser.userId})})
+    const d=await r.json()
+    const ddxList=d.ddxList||[]
+
+    // track view
+    fetch('/api/flashcard/mindmap-view',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineUserId:lineUser.userId,action:'view',cc})}).catch(()=>{})
+
+    const ddxHtml=ddxList.map((ddx,i)=>`
+      <div class="mm-ddx" onclick="toggleDdx(this,'${ddx.replace(/'/g,"\\'")}')">
+        <div class="mm-ddx-num">${i+1}</div>
+        <div class="mm-ddx-name">${ddx}</div>
+        <div class="mm-ddx-arrow">▶</div>
+      </div>
+      <div class="mm-ddx-detail" id="detail-${i}"></div>
+    `).join('')
+
+    app.innerHTML=`
+      <button class="back-btn" onclick="showCCList()">← กลับ</button>
+      <div class="mm-cc">
+        <div class="mm-cc-name">${cc}</div>
+        <div class="mm-cc-en">${ccEn}</div>
+      </div>
+      <div class="mm-line"></div>
+      ${ddxHtml}
+      <div class="mm-total">${ddxList.length} DDx</div>
+    `
+  }catch(e){showCCList()}
+}
+
+async function toggleDdx(el,ddxName){
+  const detail=el.nextElementSibling
+  if(detail.classList.contains('show')){
+    detail.classList.remove('show')
+    el.classList.remove('open')
+    return
+  }
+  el.classList.add('open')
+  // ดึง detail จาก DDx model
+  try{
+    const r=await fetch('/api/flashcard/ddx-reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ddx:ddxName,lineUserId:lineUser.userId})})
+    const d=await r.json()
+    let html=''
+    if(d.clue) html+=`<div><b>Clue:</b> ${d.clue}</div>`
+    if(d.history) html+=`<div><b>Hx:</b> ${d.history}</div>`
+    if(d.pe) html+=`<div><b>PE:</b> ${d.pe}</div>`
+    if(d.investigation) html+=`<div><b>Ix:</b> ${d.investigation}</div>`
+    if(d.relatedCC&&d.relatedCC.length>1) html+=`<div><b>C/C อื่น:</b> ${d.relatedCC.filter(c=>c!==ddxName).join(', ')}</div>`
+    if(!html) html='<div style="color:#475569">ยังไม่มีรายละเอียด</div>'
+    detail.innerHTML=html
+  }catch(e){detail.innerHTML='<div style="color:#475569">โหลดไม่ได้</div>'}
+  detail.classList.add('show')
+}
+
+init()
+</script>
+</body>
+</html>

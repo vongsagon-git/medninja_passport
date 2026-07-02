@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>สนใจสมัครเรียน — MedNinja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  font-family: 'Noto Sans Thai', sans-serif;
+  background: #f0f4ff;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+}
+
+/* ─── Card ─── */
+.card {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 32px 24px;
+  animation: slideUp 0.4s ease;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Header ─── */
+.header { text-align: center; margin-bottom: 28px; }
+.logo {
+  width: 64px; height: 64px;
+  margin: 0 auto 14px;
+}
+.logo img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+}
+.header h1 { font-size: 22px; font-weight: 900; color: #0f172a; }
+.header p { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+/* ─── Form ─── */
+.form-group { margin-bottom: 18px; }
+.form-label {
+  display: block;
+  font-size: 13px; font-weight: 700; color: #0f172a;
+  margin-bottom: 6px;
+}
+.form-input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.form-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  background: #fff;
+}
+.form-input::placeholder { color: #94a3b8; }
+.form-input.invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+.field-error { font-size: 12px; color: #ef4444; font-weight: 600; margin-top: 4px; display: none; }
+.field-error.show { display: block; }
+.course-grid.invalid .course-btn { border-color: #fca5a5; }
+
+/* ─── Course Checkboxes ─── */
+.course-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.course-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 8px;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.course-btn.active {
+  border-color: #3b82f6;
+  background: #eef2ff;
+}
+.course-btn input { display: none; }
+.course-icon {
+  width: 28px; height: 28px;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.course-btn.active .course-icon {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+.course-icon svg { display: none; }
+.course-btn.active .course-icon svg { display: block; }
+.course-name { font-size: 13px; font-weight: 800; color: #0f172a; }
+
+/* ─── Submit ─── */
+.btn-submit {
+  width: 100%;
+  padding: 15px;
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 6px;
+  -webkit-appearance: none;
+}
+.btn-submit:active { transform: scale(0.98); }
+.btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.spinner {
+  width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Error ─── */
+.alert {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px; font-weight: 600;
+  margin-bottom: 18px;
+  display: none;
+}
+.alert.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.alert.show { display: block; }
+
+/* ─── Success ─── */
+.success { text-align: center; padding: 20px 0; display: none; }
+.success.show { display: block; }
+.success-circle {
+  width: 72px; height: 72px;
+  background: #ecfdf5; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 18px;
+  animation: pop 0.4s ease;
+}
+@keyframes pop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+.success-circle svg { color: #10b981; }
+.success h2 { font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 6px; }
+.success p { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+.btn-outline {
+  display: inline-block;
+  padding: 12px 28px;
+  border: 2px solid #0f172a; color: #0f172a;
+  border-radius: 12px;
+  font-size: 14px; font-weight: 700;
+  text-decoration: none;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.btn-outline:active { background: #0f172a; color: #fff; }
+
+/* ─── Footer ─── */
+.footer {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 11px; color: #94a3b8;
+}
+.footer a { color: #3b82f6; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="card">
+    <div class="header">
+      <div class="logo"><img src="/logo.png" alt="MedNinja"></div>
+      <h1>สนใจสมัครเรียน</h1>
+      <p>กรอกข้อมูลเพื่อให้ทีมงาน MedNinja ติดต่อกลับ</p>
+    </div>
+
+    <div id="alert" class="alert error"></div>
+
+    <form id="interestForm" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label">ชื่อ</label>
+        <input id="firstName" type="text" class="form-input" placeholder="ชื่อจริง" maxlength="100">
+        <div class="field-error" id="err-firstName">กรุณากรอกชื่อ</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">สกุล</label>
+        <input id="lastName" type="text" class="form-input" placeholder="นามสกุล" maxlength="100">
+        <div class="field-error" id="err-lastName">กรุณากรอกนามสกุล</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">มหาวิทยาลัยที่กำลังศึกษา</label>
+        <input id="university" type="text" class="form-input" placeholder="เช่น จุฬาลงกรณ์มหาวิทยาลัย" maxlength="200">
+        <div class="field-error" id="err-university">กรุณากรอกมหาวิทยาลัย</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">เบอร์โทร</label>
+        <input id="phone" type="tel" class="form-input" placeholder="0xx-xxx-xxxx" maxlength="20">
+        <div class="field-error" id="err-phone">กรุณากรอกเบอร์โทรให้ถูกต้อง</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">อีเมล</label>
+        <input id="email" type="email" class="form-input" placeholder="example@email.com" maxlength="100">
+        <div class="field-error" id="err-email">กรุณากรอกอีเมลให้ถูกต้อง</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">คอร์สที่สนใจ</label>
+        <div class="course-grid" id="courseGrid">
+          <label class="course-btn" data-course="NL1+2">
+            <input type="checkbox" value="NL1+2">
+            <span class="course-icon">
+              <svg viewBox="0 0 20 20" fill="#fff" width="14" height="14"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>
+            </span>
+            <span class="course-name">NL1+2</span>
+          </label>
+          <label class="course-btn" data-course="MEQ">
+            <input type="checkbox" value="MEQ">
+            <span class="course-icon">
+              <svg viewBox="0 0 20 20" fill="#fff" width="14" height="14"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>
+            </span>
+            <span class="course-name">MEQ</span>
+          </label>
+          <label class="course-btn" data-course="OSCE">
+            <input type="checkbox" value="OSCE">
+            <span class="course-icon">
+              <svg viewBox="0 0 20 20" fill="#fff" width="14" height="14"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>
+            </span>
+            <span class="course-name">OSCE</span>
+          </label>
+        </div>
+        <div class="field-error" id="err-courses">กรุณาเลือกคอร์สอย่างน้อย 1 คอร์ส</div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">ส่งข้อมูล</button>
+    </form>
+
+    <div id="success" class="success">
+      <div class="success-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="36" height="36">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+        </svg>
+      </div>
+      <h2>ส่งข้อมูลสำเร็จ!</h2>
+      <p>ทีมงาน MedNinja จะติดต่อกลับโดยเร็ว</p>
+      <a href="https://medninja.academy/" class="btn-outline">กลับหน้าแรก</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="https://medninja.academy/">medninja.academy</a>
+  </div>
+</div>
+
+<script>
+(function() {
+  const form = document.getElementById('interestForm')
+  const alert = document.getElementById('alert')
+  const success = document.getElementById('success')
+  const submitBtn = document.getElementById('submitBtn')
+  const courseBtns = document.querySelectorAll('.course-btn')
+
+  // Toggle course selection
+  courseBtns.forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault()
+      this.classList.toggle('active')
+      this.querySelector('input').checked = this.classList.contains('active')
+      // Clear course error when selecting
+      courseGrid.classList.remove('invalid')
+      document.getElementById('err-courses').classList.remove('show')
+    })
+  })
+
+  const fields = ['firstName', 'lastName', 'university', 'phone', 'email']
+  const courseGrid = document.getElementById('courseGrid')
+
+  // Clear field error on input
+  fields.forEach(id => {
+    document.getElementById(id).addEventListener('input', function() {
+      this.classList.remove('invalid')
+      document.getElementById('err-' + id).classList.remove('show')
+    })
+  })
+
+  function setFieldError(id, msg) {
+    const input = document.getElementById(id)
+    const err = document.getElementById('err-' + id)
+    input.classList.add('invalid')
+    if (msg) err.textContent = msg
+    err.classList.add('show')
+  }
+
+  function clearAllErrors() {
+    fields.forEach(id => {
+      document.getElementById(id).classList.remove('invalid')
+      document.getElementById('err-' + id).classList.remove('show')
+    })
+    courseGrid.classList.remove('invalid')
+    document.getElementById('err-courses').classList.remove('show')
+    alert.classList.remove('show')
+  }
+
+  function getSelectedCourses() {
+    return Array.from(courseBtns)
+      .filter(b => b.classList.contains('active'))
+      .map(b => b.dataset.course)
+  }
+
+  function validateAll() {
+    clearAllErrors()
+    let valid = true
+    let firstInvalid = null
+
+    const firstName = document.getElementById('firstName').value.trim()
+    const lastName = document.getElementById('lastName').value.trim()
+    const university = document.getElementById('university').value.trim()
+    const phone = document.getElementById('phone').value.trim()
+    const email = document.getElementById('email').value.trim()
+    const courses = getSelectedCourses()
+
+    if (!firstName) { setFieldError('firstName'); valid = false; firstInvalid = firstInvalid || 'firstName' }
+    if (!lastName) { setFieldError('lastName'); valid = false; firstInvalid = firstInvalid || 'lastName' }
+    if (!university) { setFieldError('university'); valid = false; firstInvalid = firstInvalid || 'university' }
+
+    if (!phone) {
+      setFieldError('phone', 'กรุณากรอกเบอร์โทร')
+      valid = false; firstInvalid = firstInvalid || 'phone'
+    } else if (!/^0\d{8,9}$/.test(phone.replace(/[-\s]/g, ''))) {
+      setFieldError('phone', 'เบอร์โทรไม่ถูกต้อง (เช่น 0812345678)')
+      valid = false; firstInvalid = firstInvalid || 'phone'
+    }
+
+    if (!email) {
+      setFieldError('email', 'กรุณากรอกอีเมล')
+      valid = false; firstInvalid = firstInvalid || 'email'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFieldError('email', 'รูปแบบอีเมลไม่ถูกต้อง')
+      valid = false; firstInvalid = firstInvalid || 'email'
+    }
+
+    if (courses.length === 0) {
+      courseGrid.classList.add('invalid')
+      document.getElementById('err-courses').classList.add('show')
+      valid = false; firstInvalid = firstInvalid || 'courseGrid'
+    }
+
+    if (firstInvalid) {
+      document.getElementById(firstInvalid).scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
+    return valid ? { firstName, lastName, university, phone, email, courses } : null
+  }
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault()
+    const data = validateAll()
+    if (!data) return
+
+    submitBtn.disabled = true
+    submitBtn.innerHTML = '<span class="spinner"></span> กำลังส่ง...'
+
+    try {
+      const res = await fetch('/api/interest/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.message || 'เกิดข้อผิดพลาด')
+      }
+
+      form.style.display = 'none'
+      success.classList.add('show')
+    } catch (err) {
+      alert.textContent = err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+      alert.classList.add('show')
+      submitBtn.disabled = false
+      submitBtn.innerHTML = 'ส่งข้อมูล'
+    }
+  })
+})()
+</script>
+</body>
+</html>

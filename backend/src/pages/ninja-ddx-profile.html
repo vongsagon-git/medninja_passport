@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NINJA Profile — MedNinja DDx</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans Thai',sans-serif;background:#0c111b;color:#e2e8f0;min-height:100dvh;-webkit-user-select:none;user-select:none}
+.container{max-width:480px;margin:0 auto;padding:20px 16px 120px}
+.loading{text-align:center;padding:60px 20px;color:#64748b}
+.spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,.08);border-top-color:#8b5cf6;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Header */
+.profile-header{text-align:center;margin-bottom:24px}
+.profile-pic{width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #7c3aed;margin-bottom:8px}
+.profile-pic-ph{width:64px;height:64px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 8px;border:3px solid #7c3aed}
+.profile-name{font-size:18px;font-weight:800;color:#fff}
+.profile-level{font-size:13px;font-weight:700;margin-top:4px}
+.profile-emoji{font-size:32px;margin:8px 0}
+
+/* Stats Row */
+.stats-row{display:flex;gap:8px;margin-bottom:20px}
+.stat-card{flex:1;background:#1e293b;border-radius:12px;padding:12px 8px;text-align:center}
+.stat-val{font-size:20px;font-weight:900;color:#f59e0b}
+.stat-val-rank{color:#a78bfa}
+.stat-val-pct{color:#16a34a}
+.stat-lbl{font-size:10px;color:#64748b;margin-top:2px}
+
+/* Progress */
+.progress-section{background:#1e293b;border-radius:12px;padding:14px;margin-bottom:16px}
+.progress-label{font-size:12px;color:#94a3b8;margin-bottom:6px}
+.progress-bar{height:8px;background:#0f172a;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .5s}
+.progress-text{font-size:11px;color:#64748b;margin-top:4px;text-align:right}
+
+/* Sections */
+.section{margin-bottom:16px}
+.section-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.weak-card{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1e293b;border-radius:8px;margin-bottom:6px;font-size:12px}
+.weak-rank{width:20px;height:20px;background:#dc2626;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.weak-count{color:#dc2626;font-weight:600;font-size:11px;flex-shrink:0;white-space:nowrap}
+.weak-name{flex:1;color:#cbd5e1}
+.cat-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1e293b;border-radius:8px;margin-bottom:6px;font-size:12px}
+.cat-name{width:60px;color:#94a3b8;flex-shrink:0}
+.cat-bar{flex:1;height:6px;background:#0f172a;border-radius:3px;overflow:hidden}
+.cat-fill{height:100%;border-radius:3px}
+.cat-score{width:50px;text-align:right;font-weight:700}
+.cat-pct{width:35px;text-align:right;color:#64748b;font-size:11px}
+
+/* Button */
+/* Rank Hero */
+.rank-hero{text-align:center;margin-bottom:20px;padding:20px;background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(99,102,241,.08));border:2px solid rgba(139,92,246,.3);border-radius:16px}
+.rank-label{font-size:12px;color:#a78bfa;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.rank-number{font-size:56px;font-weight:900;color:#a78bfa;line-height:1;margin:8px 0;text-shadow:0 0 30px rgba(139,92,246,.4)}
+.rank-change{font-size:11px;color:#64748b;margin-top:8px;font-style:italic}
+
+/* Tabs */
+.profile-tabs{display:flex;gap:4px;margin-bottom:12px;padding:4px;background:#0f172a;border-radius:10px}
+.profile-tab{flex:1;padding:10px 4px;border:none;background:#1e293b;font-size:12px;font-weight:700;color:#64748b;cursor:pointer;border-radius:8px;margin:0 2px;font-family:inherit;transition:all .15s}
+.profile-tab.active{background:#7c3aed;color:#fff;box-shadow:0 0 12px rgba(139,92,246,.3)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+.play-btn{display:block;width:100%;max-width:320px;margin:20px auto 0;padding:14px;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none}
+.play-btn:active{transform:scale(.95)}
+.note{text-align:center;margin-top:12px;font-size:11px;color:#475569}
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="loading"><div class="spinner"></div>กำลังโหลด...</div>
+</div>
+<script>
+const LIFF_ID='2009259048-lwEXYc0q'
+const app=document.getElementById('app')
+
+async function init(){
+  try{
+    await liff.init({liffId:LIFF_ID})
+    if(!liff.isLoggedIn()){liff.login();return}
+    const p=await liff.getProfile()
+    const r=await fetch(`/api/flashcard/my-profile?lineUserId=${p.userId}`)
+    if(!r.ok){app.innerHTML='<div class="loading">ไม่พบข้อมูล — ลองเล่นเกมก่อนนะ</div>';return}
+    const d=await r.json()
+    render(d)
+  }catch(e){
+    app.innerHTML='<div class="loading">โหลดไม่สำเร็จ</div>'
+  }
+}
+
+function render(d){
+  const progressPct=d.nextLevelAt?Math.min(100,Math.round((d.stars/d.nextLevelAt)*100)):100
+  const cats=(d.categoryBreakdown||[])
+  const strongCats=cats.filter(c=>c.pct>=60).sort((a,b)=>b.pct-a.pct)
+  const weakCats=cats.filter(c=>c.pct<60).sort((a,b)=>a.pct-b.pct)
+  const catRow=c=>{
+    const color=c.pct>=80?'#16a34a':c.pct>=50?'#f59e0b':'#dc2626'
+    return `<div class="cat-row">
+      <span class="cat-name">${c.cat}</span>
+      <div class="cat-bar"><div class="cat-fill" style="width:${c.pct}%;background:${color}"></div></div>
+      <span class="cat-score" style="color:${color}">${c.correct}/${c.total}</span>
+      <span class="cat-pct">${c.pct}%</span>
+    </div>`
+  }
+  const strongHtml=strongCats.map(catRow).join('')
+  const weakCatHtml=weakCats.map(catRow).join('')
+
+  const weakHtml=(d.topWrong||[]).map((w,i)=>`
+    <div class="weak-card">
+      <span class="weak-rank">${i+1}</span>
+      <span class="weak-name">${w.card}</span>
+      <span class="weak-count">นึกไม่ออก ${w.count} ครั้ง</span>
+    </div>
+  `).join('')
+
+  app.innerHTML=`
+    <!-- Header: รูป + ชื่อ + level + rank -->
+    <div class="profile-header">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:8px">
+        ${d.pictureUrl?`<img class="profile-pic" src="${d.pictureUrl}" style="margin:0">`:'<div class="profile-pic-ph" style="margin:0">👤</div>'}
+        <div style="text-align:left">
+          <div class="profile-name" style="font-size:16px">NINJA ${d.displayName||''}</div>
+          <div style="font-size:12px;font-weight:700;color:${d.color}">${d.emoji} ${d.level}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rank -->
+    <div class="rank-hero" style="padding:10px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <div class="rank-number" style="font-size:28px;margin:0">#${d.myRank}</div>
+        <div style="text-align:left">
+          <div class="rank-label" style="font-size:10px;margin:0">ลำดับที่ ${d.myRank} จาก ${d.totalFollowers} คน</div>
+          <div class="rank-change" style="margin:0">ในยุทธจักร MedNinja</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" style="margin-bottom:12px">
+      <div class="stat-card"><div class="stat-val" style="font-size:16px">${d.stars}</div><div class="stat-lbl">ดาว</div></div>
+      <div class="stat-card"><div class="stat-val stat-val-pct" style="font-size:16px">${d.overallPct}%</div><div class="stat-lbl">นึกออก</div></div>
+      <div class="stat-card"><div class="stat-val" style="font-size:16px">${d.totalRounds}</div><div class="stat-lbl">รอบ</div></div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="profile-tabs">
+      <button class="profile-tab" onclick="showTab('rank')">ลำดับ</button>
+      <button class="profile-tab active" onclick="showTab('strength')">💪 จุดแข็ง/อ่อน</button>
+      <button class="profile-tab" onclick="showTab('cards')">📖 การ์ด</button>
+    </div>
+
+    <div style="text-align:center;font-size:9px;color:#475569;margin-bottom:8px">▲ กดเลือกดูแต่ละหัวข้อ</div>
+
+    <!-- Tab content -->
+    <div id="tab-rank" class="tab-content">
+      ${d.nextLevelAt?`
+      <div class="progress-section">
+        <div class="progress-label">สู่ ${d.nextLevelAt >= 100 ? 'NINJA Legend 👑' : d.nextLevelAt >= 50 ? 'NINJA Master 💎' : d.nextLevelAt >= 30 ? 'NINJA Warrior ⚔️' : d.nextLevelAt >= 15 ? 'NINJA Fighter 🔥' : 'NINJA Apprentice 🌟'}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${progressPct}%;background:${d.color}"></div></div>
+        <div class="progress-text">${d.stars} / ${d.nextLevelAt} ดาว</div>
+      </div>
+      `:`<div class="progress-section" style="text-align:center"><div style="font-size:14px;font-weight:700;color:#f59e0b">👑 ระดับสูงสุดแล้ว!</div></div>`}
+      <a class="play-btn" href="https://liff.line.me/${LIFF_ID}" style="margin-top:12px">กลับไปเล่นต่อ เพื่อไต่อันดับ</a>
+    </div>
+
+    <div id="tab-strength" class="tab-content active">
+      ${strongHtml?`<div class="section"><div class="section-title">💪 จุดแข็ง</div>${strongHtml}</div>`:''}
+      ${weakCatHtml?`<div class="section"><div class="section-title">🔥 จุดอ่อน — ต้องฝึกเพิ่ม</div>${weakCatHtml}</div>`:''}
+      ${!strongHtml&&!weakCatHtml?'<div class="section"><div class="section-title">เล่นเพิ่มเพื่อดูจุดแข็ง/อ่อน</div></div>':''}
+    </div>
+
+    <div id="tab-cards" class="tab-content">
+      ${weakHtml?`<div class="section"><div class="section-title">📖 การ์ดที่นึกไม่ออกบ่อย</div>${weakHtml}</div>`:'<div class="section"><div class="section-title">✅ ยังไม่มีจุดอ่อน เก่งมาก!</div></div>'}
+    </div>
+  `
+
+  // Tab switching
+  window.showTab=function(t){
+    document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'))
+    document.querySelectorAll('.profile-tab').forEach(el=>el.classList.remove('active'))
+    document.getElementById('tab-'+t).classList.add('active')
+    event.target.classList.add('active')
+  }
+}
+
+init()
+</script>
+</body>
+</html>

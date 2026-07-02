@@ -1,0 +1,17 @@
+{
+  "name": "medninja-passport",
+  "version": "1.0.0",
+  "description": "MedNinja Passport - ระบบคู่ขนาน LMS สำหรับ redesign UI (parallel sandbox, DB เดียวกันกับ LMS)",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "start": "cd backend && node server.js",
+    "postinstall": "cd backend && npm install",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

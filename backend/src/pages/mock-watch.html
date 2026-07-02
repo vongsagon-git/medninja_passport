@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mock WatchPage Sidebar</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans Thai',sans-serif;background:#1c1d1f;color:#fff;display:flex;min-height:100vh}
+
+/* ═══ Main (video area mock) ═══ */
+.main{flex:1;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.main-mock{text-align:center;color:#334155}
+.main-mock p{font-size:14px;margin-top:8px}
+
+/* ═══ Sidebar ═══ */
+.sidebar{width:340px;background:#1c1d1f;border-left:1px solid #2d2f31;display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+
+.sb-header{padding:14px 16px;border-bottom:1px solid #2d2f31;display:flex;align-items:center;justify-content:space-between}
+.sb-header h3{font-size:14px;font-weight:700}
+.sb-count{font-size:12px;color:#64748b}
+
+.sb-progress{padding:0 16px;margin:8px 0}
+.sb-progress-bar{height:3px;background:#2d2f31;border-radius:2px;overflow:hidden}
+.sb-progress-fill{height:100%;width:35%;background:linear-gradient(90deg,#a855f7,#3b82f6);border-radius:2px}
+
+/* ═══ Playlist ═══ */
+.playlist{flex:1;overflow-y:auto;padding-bottom:8px}
+
+.pl-topic{font-size:11px;font-weight:800;color:#a855f7;text-transform:uppercase;letter-spacing:.5px;padding:10px 16px 4px;border-top:1px solid #3e4143}
+.pl-topic:first-child{border-top:none}
+
+.pl-subtopic{font-size:11px;font-weight:700;color:#38bdf8;padding:6px 16px 2px 28px;display:flex;align-items:center;gap:4px}
+.pl-subtopic b{font-size:14px;font-weight:900;color:#0ea5e9}
+
+.pl-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;transition:background .15s;border:none;background:none;width:100%;text-align:left;color:#fff;font-family:inherit}
+.pl-item:hover{background:rgba(255,255,255,.04)}
+.pl-item.active{background:rgba(168,85,247,.1)}
+
+.pl-check{width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pl-num{font-size:11px;color:#64748b;font-weight:600}
+.pl-check.watched{color:#22c55e}
+
+.pl-info{flex:1;min-width:0}
+.pl-title{font-size:13px;font-weight:600;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-dur{font-size:11px;color:#64748b}
+
+.pl-playing{display:flex;gap:2px;align-items:flex-end;height:14px}
+.pl-playing span{width:3px;background:#a855f7;border-radius:1px;animation:bar .8s ease infinite alternate}
+.pl-playing span:nth-child(1){height:6px;animation-delay:0s}
+.pl-playing span:nth-child(2){height:10px;animation-delay:.2s}
+.pl-playing span:nth-child(3){height:4px;animation-delay:.4s}
+@keyframes bar{to{height:14px}}
+
+/* ═══ Promo Section (กระชับ อยู่ในจอเดียว) ═══ */
+.promo{border-top:1px solid #2d2f31;padding:10px 12px 14px;flex-shrink:0}
+.promo-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:8px}
+
+.promo-row{display:flex;gap:6px;margin-bottom:8px}
+.promo-item{flex:1;border-radius:10px;overflow:hidden;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);transition:all .2s;text-align:center;display:flex;flex-direction:column}
+.promo-item:hover{border-color:rgba(139,92,246,.3);transform:translateY(-2px);box-shadow:0 4px 12px rgba(139,92,246,.12)}
+.promo-item img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block}
+.promo-item span{font-size:11px;font-weight:800;color:#e2e8f0;padding:6px 4px}
+
+.promo-btn{display:block;text-align:center;padding:8px;background:linear-gradient(135deg,#a855f7,#6366f1);border-radius:8px;color:#fff;font-size:11px;font-weight:700;transition:all .2s}
+.promo-btn:hover{box-shadow:0 4px 12px rgba(168,85,247,.3)}
+
+/* ═══ Responsive ═══ */
+@media(max-width:768px){
+  .main{display:none}
+  .sidebar{width:100%;height:auto;min-height:100vh}
+}
+</style>
+</head>
+<body>
+
+<!-- Main area (mock video) -->
+<div class="main">
+  <div class="main-mock">
+    <div style="font-size:48px">📺</div>
+    <p>Video Player Area</p>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sb-header">
+    <h3>เนื้อหาในบทเรียน</h3>
+    <span class="sb-count">1/6 บท</span>
+  </div>
+  <div class="sb-progress"><div class="sb-progress-bar"><div class="sb-progress-fill"></div></div></div>
+
+  <div class="playlist">
+    <!-- Topic -->
+    <div class="pl-topic">Cardiology</div>
+
+    <!-- Subtopic -->
+    <div class="pl-subtopic"><b>›</b> Heart Failure</div>
+
+    <!-- Video 1 (active) -->
+    <button class="pl-item active">
+      <div class="pl-check"><span class="pl-num">1</span></div>
+      <div class="pl-info">
+        <div class="pl-title">HF Classification & Pathophysiology</div>
+        <div class="pl-dur">32:43</div>
+      </div>
+      <div class="pl-playing"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Video 2 -->
+    <button class="pl-item">
+      <div class="pl-check watched">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+      </div>
+      <div class="pl-info">
+        <div class="pl-title">HF Treatment & Medication</div>
+        <div class="pl-dur">28:15</div>
+      </div>
+    </button>
+
+    <!-- Subtopic 2 -->
+    <div class="pl-subtopic"><b>›</b> Valvular Heart Disease</div>
+
+    <button class="pl-item">
+      <div class="pl-check"><span class="pl-num">3</span></div>
+      <div class="pl-info">
+        <div class="pl-title">Mitral Stenosis & Regurgitation</div>
+        <div class="pl-dur">35:20</div>
+      </div>
+    </button>
+
+    <button class="pl-item">
+      <div class="pl-check"><span class="pl-num">4</span></div>
+      <div class="pl-info">
+        <div class="pl-title">Aortic Valve Disease</div>
+        <div class="pl-dur">27:50</div>
+      </div>
+    </button>
+
+    <!-- Topic 2 -->
+    <div class="pl-topic">Pulmonology</div>
+
+    <button class="pl-item">
+      <div class="pl-check"><span class="pl-num">5</span></div>
+      <div class="pl-info">
+        <div class="pl-title">Asthma & COPD</div>
+        <div class="pl-dur">40:12</div>
+      </div>
+    </button>
+
+    <button class="pl-item">
+      <div class="pl-check"><span class="pl-num">6</span></div>
+      <div class="pl-info">
+        <div class="pl-title">Pneumonia & Lung Abscess</div>
+        <div class="pl-dur">33:45</div>
+      </div>
+    </button>
+  </div>
+
+  <!-- ═══ Promo Section (ใน sidebar — ไม่ scroll หลุดจอ) ═══ -->
+  <div class="promo">
+    <div class="promo-label">เปิดรับสมัคร</div>
+    <div class="promo-row">
+      <a href="/courses/1" class="promo-item">
+        <img src="https://placehold.co/100x60/1e293b/60a5fa?text=NL+1%2B2" alt="NL 1+2">
+        <span>NL 1+2</span>
+      </a>
+      <a href="/courses/2" class="promo-item">
+        <img src="https://placehold.co/100x60/1e293b/a78bfa?text=MEQ" alt="MEQ">
+        <span>MEQ</span>
+      </a>
+      <a href="/courses/3" class="promo-item">
+        <img src="https://placehold.co/100x60/1e293b/22d3ee?text=OSCE" alt="OSCE">
+        <span>OSCE</span>
+      </a>
+    </div>
+    <a href="/ninja-passport" class="promo-btn">สมัครเรียน — Ninja Passport</a>
+  </div>
+</aside>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- ห้าม cache index.html ที่ระดับ browser (defense in depth) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <!-- ⭐ Critical: บังคับ /my และ /live ให้ใช้ version ล่าสุดเสมอ
+         รัน inline (ก่อน Vue โหลด) → ถ้า version mismatch = hard reload
+         กันได้แม้ JS bundle เป็น cache เก่า เพราะเช็คก่อนโหลด bundle -->
+    <script>
+      (function () {
+        var path = location.pathname;
+        // เช็คเฉพาะหน้าที่ critical: /my, /live (ไม่รวม /my/watch/ ที่ดู VDO อยู่)
+        var needsCheck = (path === '/my' || path.indexOf('/my/') === 0 || path.indexOf('/live/') === 0)
+          && path.indexOf('/my/watch/') !== 0;
+        if (!needsCheck) return;
+        // กัน loop: ถ้าเพิ่ง reload (< 10 วิ) ข้าม
+        var lastReload = sessionStorage.getItem('_inline_vr');
+        var now = Date.now();
+        if (lastReload && now - Number(lastReload) < 10000) return;
+        try {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', '/api/version?_=' + now, false); // sync (ก่อน Vue load)
+          xhr.setRequestHeader('Cache-Control', 'no-cache');
+          xhr.setRequestHeader('Pragma', 'no-cache');
+          xhr.send();
+          if (xhr.status === 200) {
+            var serverVersion = JSON.parse(xhr.responseText).version;
+            var storedVersion = localStorage.getItem('_app_version');
+            if (storedVersion && serverVersion !== storedVersion) {
+              // version เก่า! → reload + เก็บ version ใหม่
+              localStorage.setItem('_app_version', serverVersion);
+              sessionStorage.setItem('_inline_vr', String(now));
+              var sep = location.search ? '&' : '?';
+              location.replace(location.pathname + location.search + sep + '_v=' + now);
+              return;
+            }
+            // เก็บ version ปัจจุบัน (กรณีเข้าครั้งแรก)
+            if (!storedVersion) localStorage.setItem('_app_version', serverVersion);
+          }
+        } catch (e) { /* network fail = ปล่อยให้ใช้ cache */ }
+      })();
+    </script>
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>MedNinja LMS - ติวสอบใบประกอบวิชาชีพแพทย์</title>
+    <meta name="description" content="MedNinja LMS — ติวสอบใบประกอบวิชาชีพแพทย์ ระบบใหม่ 2570 ครบทั้ง NL, MEQ, OSCE วีดีโอบทเรียน ตะลุยโจทย์ 5000 ข้อ อัตราผ่านสอบ 91%" />
+    <meta name="keywords" content="ติวแพทย์, ใบประกอบวิชาชีพแพทย์, NLE, MEQ, OSCE, NL2570, ติวสอบแพทย์, MedNinja" />
+    <meta name="theme-color" content="#2563EB" />
+    <!-- ═══ Meta Pixel (Facebook) ═══
+         Pixel ID: 1019544597198971 (MedNinja)
+         Track: PageView ทุกหน้า + events ใน Vue components -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '1019544597198971');
+      fbq('track', 'PageView');
+    </script>
+    <!-- ═══ End Meta Pixel ═══ -->
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://medninja.co.th/" />
+    <meta property="og:title" content="MedNinja LMS - ติวสอบใบประกอบวิชาชีพแพทย์" />
+    <meta property="og:description" content="ติวสอบใบประกอบวิชาชีพแพทย์ ระบบใหม่ 2570 ครบทั้ง NL, MEQ, OSCE — วีดีโอบทเรียน + ตะลุยโจทย์ 5000 ข้อ + สอนสด" />
+    <meta property="og:image" content="https://medninja.co.th/logo.png" />
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MedNinja LMS - ติวสอบใบประกอบวิชาชีพแพทย์" />
+    <meta name="twitter:description" content="ติวสอบใบประกอบวิชาชีพแพทย์ ระบบใหม่ 2570 — วีดีโอบทเรียน + ตะลุยโจทย์ 5000 ข้อ" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Preconnect + preload Bunny player.js เพื่อให้ live ready เร็วขึ้น -->
+    <link rel="preconnect" href="https://assets.mediadelivery.net" crossorigin>
+    <link rel="preconnect" href="https://player.mediadelivery.net" crossorigin>
+    <link rel="preload" href="https://assets.mediadelivery.net/playerjs/playerjs-latest.min.js" as="script" crossorigin>
+  </head>
+  <body>
+    <!-- Meta Pixel fallback สำหรับ user ที่ปิด JavaScript -->
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1019544597198971&amp;ev=PageView&amp;noscript=1"></noscript>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

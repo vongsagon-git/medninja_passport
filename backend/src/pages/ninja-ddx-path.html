@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>NINJA Path — เรียนรู้ทีละด่าน</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans Thai',sans-serif;background:#0c111b;color:#e2e8f0;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.container{max-width:480px;margin:0 auto;padding:16px 16px 80px}
+.loading{text-align:center;padding:40px;color:#64748b}
+.spinner{width:24px;height:24px;border:3px solid rgba(255,255,255,.08);border-top-color:#8b5cf6;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Header */
+.path-header{text-align:center;margin-bottom:16px}
+.path-title{font-size:20px;font-weight:900;color:#fff}
+.path-title span{background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.path-sub{font-size:11px;color:#64748b;margin-top:4px}
+
+/* Back button */
+.back-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#1e293b;color:#94a3b8;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:12px}
+
+/* Chapter card */
+.chapter{background:#1e293b;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;transition:transform .1s;position:relative;overflow:hidden}
+.chapter:active{transform:scale(.97)}
+.chapter.locked{opacity:.4;pointer-events:none}
+.chapter.cleared{border:1px solid rgba(22,163,74,.3)}
+.ch-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ch-emoji{font-size:24px;flex-shrink:0}
+.ch-name{font-size:14px;font-weight:700;color:#fff;flex:1}
+.ch-name-en{font-size:10px;color:#64748b;font-weight:400}
+.ch-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.ch-badge-cleared{background:#d1fae5;color:#059669}
+.ch-badge-locked{background:#1e293b;color:#475569;border:1px solid #334155}
+.ch-badge-progress{background:rgba(139,92,246,.15);color:#a78bfa}
+.ch-progress{height:4px;background:#0f172a;border-radius:2px;overflow:hidden}
+.ch-progress-fill{height:100%;border-radius:2px;background:#7c3aed}
+.ch-stats{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#475569}
+.lock-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:20px;opacity:.3}
+
+/* Stage list */
+.stages{margin-top:12px}
+.stage{display:flex;align-items:center;gap:10px;padding:12px;background:#1e293b;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:transform .1s}
+.stage:active{transform:scale(.97)}
+.stage.locked{opacity:.3;pointer-events:none}
+.stage.cleared{border-left:3px solid #16a34a}
+.stage.boss{border:1px solid rgba(251,191,36,.3);background:linear-gradient(135deg,#1e293b,rgba(251,191,36,.05))}
+.stage-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.stage-num-pending{background:#334155;color:#64748b}
+.stage-num-cleared{background:#16a34a;color:#fff}
+.stage-num-boss{background:#f59e0b;color:#0f172a}
+.stage-info{flex:1}
+.stage-name{font-size:13px;font-weight:600;color:#e2e8f0}
+.stage-desc{font-size:10px;color:#64748b;margin-top:1px}
+.stage-score{font-size:11px;font-weight:700;color:#16a34a;flex-shrink:0}
+
+/* Play area — reuse flashcard styles */
+.play-area{max-width:480px;margin:0 auto}
+.play-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.play-progress{font-size:14px;font-weight:800;color:#f59e0b}
+.play-card{background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(139,92,246,.15);border-radius:16px;padding:28px 20px;text-align:center;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.play-card-text{font-size:16px;font-weight:700;color:#f1f5f9;line-height:1.6}
+.play-card-hint{font-size:12px;color:#a78bfa;margin-top:12px;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.play-answer{background:#f8fafc;border-radius:0 0 16px 16px;padding:16px;text-align:center;margin-top:-16px}
+.play-answer-text{font-size:16px;font-weight:700;color:#065f46}
+.play-answer-memo{font-size:12px;color:#64748b;font-style:italic;margin-top:4px}
+.play-btns{display:flex;gap:8px;margin-top:16px;justify-content:center}
+.play-btn{padding:12px 24px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;flex:1;max-width:160px}
+.play-btn:active{transform:scale(.93)}
+.play-btn-correct{background:#16a34a;color:#fff}
+.play-btn-wrong{background:#dc2626;color:#fff}
+
+/* Result */
+.result{text-align:center;padding:20px 0}
+.result-emoji{font-size:48px;margin-bottom:8px}
+.result-title{font-size:22px;font-weight:900;color:#fff}
+.result-score{font-size:28px;font-weight:900;margin:8px 0}
+.result-msg{font-size:13px;color:#94a3b8;margin:8px 0}
+.result-btn{display:block;width:100%;max-width:280px;margin:12px auto 0;padding:12px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.result-btn:active{transform:scale(.95)}
+.result-btn-next{background:#7c3aed;color:#fff}
+.result-btn-retry{background:#dc2626;color:#fff}
+.result-btn-back{background:#1e293b;color:#94a3b8}
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="loading"><div class="spinner"></div>กำลังโหลด...</div>
+</div>
+<script>
+const LIFF_ID='2009259048-lwEXYc0q'
+const app=document.getElementById('app')
+let lineUser=null
+
+async function init(){
+  try{
+    await liff.init({liffId:LIFF_ID})
+    if(!liff.isLoggedIn()){
+      if(liff.isInClient()) liff.login()
+      else window.location.href='https://medninja.academy/ddx-arena'
+      return
+    }
+    const p=await liff.getProfile()
+    lineUser={userId:p.userId,displayName:p.displayName,pictureUrl:p.pictureUrl}
+    showChapters()
+  }catch(e){
+    window.location.href='https://medninja.academy/ddx-arena'
+  }
+}
+
+async function showChapters(){
+  app.innerHTML='<div class="loading"><div class="spinner"></div>กำลังโหลด...</div>'
+  try{
+    const r=await fetch(`/api/flashcard/path/chapters?lineUserId=${lineUser.userId}&_t=${Date.now()}`)
+    const d=await r.json()
+    const chapters=(d.chapters||[]).map(ch=>{
+      const pct=ch.totalStages?Math.round(ch.clearedStages/ch.totalStages*100):0
+      const badge=ch.bossCleared?'<span class="ch-badge ch-badge-cleared">✅ ผ่านแล้ว</span>'
+        :ch.locked?'<span class="ch-badge ch-badge-locked">🔒 ล็อค</span>'
+        :ch.clearedStages>0?`<span class="ch-badge ch-badge-progress">${ch.clearedStages}/${ch.totalStages}</span>`
+        :''
+      return `<div class="chapter ${ch.locked?'locked':''} ${ch.bossCleared?'cleared':''}" onclick="showStages('${ch.id}')">
+        ${ch.locked?'<div class="lock-icon">🔒</div>':''}
+        <div class="ch-top">
+          <span class="ch-emoji">${ch.emoji}</span>
+          <div class="ch-name">${ch.id}<br><span class="ch-name-en">${ch.name}</span></div>
+          ${badge}
+        </div>
+        <div class="ch-progress"><div class="ch-progress-fill" style="width:${pct}%"></div></div>
+        <div class="ch-stats"><span>${ch.totalCards} การ์ด</span><span>${ch.totalStages} ด่าน</span></div>
+      </div>`
+    }).join('')
+    app.innerHTML=`
+      <button class="back-btn" onclick="window.location.href='https://liff.line.me/${LIFF_ID}'">← กลับ</button>
+      <div class="path-header">
+        <div class="path-title">NINJA <span>Path</span></div>
+        <div class="path-sub">เรียนรู้ทีละด่าน ผ่านครบได้ badge</div>
+      </div>
+      ${chapters}
+    `
+  }catch(e){app.innerHTML='<div class="loading">โหลดไม่สำเร็จ</div>'}
+}
+
+let currentChapter='',currentStage=0,deck=[],cardIdx=0,flipped=false,roundCorrect=0,isBoss=false,passPercent=80
+
+async function showStages(ch){
+  currentChapter=ch
+  app.innerHTML='<div class="loading"><div class="spinner"></div></div>'
+  try{
+    const r=await fetch(`/api/flashcard/path/chapters?lineUserId=${lineUser.userId}&_t=${Date.now()}`)
+    const d=await r.json()
+    const chapter=(d.chapters||[]).find(c=>c.id===ch)
+    if(!chapter) return showChapters()
+
+    // สร้างรายการด่าน
+    const prog=await fetch(`/api/flashcard/path/chapters?lineUserId=${lineUser.userId}`).then(r=>r.json())
+    const chData=prog.chapters.find(c=>c.id===ch)
+    const cleared=chData?.clearedStages||0
+    const totalStages=chData?.totalStages||1
+
+    let stagesHtml=''
+    for(let i=1;i<=totalStages;i++){
+      const isBossStage=i===totalStages
+      const isCleared=i<=cleared
+      const isLocked=i>cleared+1
+      const numClass=isCleared?'stage-num-cleared':isBossStage?'stage-num-boss':'stage-num-pending'
+      stagesHtml+=`<div class="stage ${isCleared?'cleared':''} ${isLocked?'locked':''} ${isBossStage?'boss':''}" onclick="startStage('${ch}',${i})">
+        <div class="stage-num ${numClass}">${isBossStage?'⚔':''+i}</div>
+        <div class="stage-info">
+          <div class="stage-name">${isBossStage?'Boss Round':'ด่านที่ '+i}</div>
+          <div class="stage-desc">${isBossStage?'สุ่มรวม — ต้องถูก 80%':'Pattern '+ch+' ชุดที่ '+i}</div>
+        </div>
+        ${isCleared?'<span class="stage-score">✅</span>':''}
+      </div>`
+    }
+
+    app.innerHTML=`
+      <button class="back-btn" onclick="showChapters()">← กลับ</button>
+      <div class="path-header">
+        <div class="path-title">${chapter.emoji} ${ch}</div>
+        <div class="path-sub">${chapter.name} — ${chapter.totalCards} การ์ด</div>
+      </div>
+      <div class="stages">${stagesHtml}</div>
+    `
+  }catch(e){showChapters()}
+}
+
+let stageHints=[]
+
+async function startStage(ch,stage){
+  currentChapter=ch;currentStage=stage;cardIdx=0;flipped=false;roundCorrect=0
+  app.innerHTML='<div class="loading"><div class="spinner"></div></div>'
+  try{
+    const r=await fetch(`/api/flashcard/path/stage?lineUserId=${lineUser.userId}&chapter=${ch}&stage=${stage}&_t=${Date.now()}`)
+    const d=await r.json()
+    deck=d.cards||[]
+    isBoss=d.isBoss||false
+    passPercent=d.passPercent||80
+    stageHints=d.hints||[]
+    // แสดงสรุปก่อนเล่น (ถ้ามี hints + ไม่ใช่ boss)
+    if(stageHints.length>0&&!isBoss){
+      showHintsBeforePlay()
+    }else{
+      renderPlayCard()
+    }
+  }catch(e){showStages(ch)}
+}
+
+function showHintsBeforePlay(){
+  const hintsHtml=stageHints.map(h=>`<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;color:#cbd5e1;line-height:1.5">💡 ${h}</div>`).join('')
+  app.innerHTML=`
+    <div class="play-area">
+      <div class="play-header">
+        <button class="back-btn" onclick="showStages('${currentChapter}')">← กลับ</button>
+        <span style="font-size:12px;color:#64748b">ด่าน ${currentStage}</span>
+      </div>
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:16px;font-weight:800;color:#fff">📝 สรุปก่อนเล่น</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px">จำให้ได้ แล้วกดเริ่มเล่น — ต้องถูกทุกข้อ!</div>
+      </div>
+      <div style="background:#1e293b;border-radius:12px;padding:14px;margin-bottom:16px">${hintsHtml}</div>
+      <button class="result-btn result-btn-next" onclick="renderPlayCard()">เริ่มเล่นด่าน ${currentStage}</button>
+    </div>`
+}
+
+function renderPlayCard(){
+  if(cardIdx>=deck.length){completeStage();return}
+  const c=deck[cardIdx]
+  flipped=false
+  app.innerHTML=`
+    <div class="play-area">
+      <div class="play-header">
+        <button class="back-btn" onclick="showStages('${currentChapter}')">← ออก</button>
+        <span class="play-progress">${cardIdx+1}/${deck.length}</span>
+        <span style="font-size:11px;color:#64748b">${isBoss?'⚔ Boss':'ด่าน '+currentStage}</span>
+      </div>
+      <div class="play-card" onclick="flipCard()">
+        <div class="play-card-text">${c.pattern}</div>
+        <div class="play-card-hint">👆 แตะเพื่อดูคำตอบ</div>
+      </div>
+      <div id="answer-area"></div>
+      <div id="btn-area"></div>
+    </div>`
+}
+
+async function flipCard(){
+  if(flipped)return;flipped=true
+  const c=deck[cardIdx]
+  try{
+    const r=await fetch('/api/flashcard/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cardId:c.id,lineUserId:lineUser.userId})})
+    const d=await r.json()
+    if(r.ok){
+      document.getElementById('answer-area').innerHTML=`
+        <div class="play-answer">
+          <div class="play-answer-text">${d.answer}</div>
+          ${d.mnemonic?`<div class="play-answer-memo">💡 ${d.mnemonic}</div>`:''}
+        </div>`
+      document.getElementById('btn-area').innerHTML=`
+        <div class="play-btns">
+          <button class="play-btn play-btn-correct" onclick="pathAnswer(true)">✅ นึกออก</button>
+          <button class="play-btn play-btn-wrong" onclick="pathAnswer(false)">❌ นึกไม่ออก</button>
+        </div>`
+    }
+  }catch(e){}
+}
+
+function pathAnswer(correct){
+  if(correct) roundCorrect++
+  cardIdx++
+  renderPlayCard()
+}
+
+async function completeStage(){
+  const total=deck.length
+  const pct=total?Math.round(roundCorrect/total*100):0
+  try{
+    const r=await fetch('/api/flashcard/path/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      lineUserId:lineUser.userId,chapter:currentChapter,stage:currentStage,correct:roundCorrect,total
+    })})
+    const d=await r.json()
+    if(d.passed){
+      app.innerHTML=`<div class="result">
+        <div class="result-emoji">${d.isBoss?'🏆':'⭐'}</div>
+        <div class="result-title">${d.isBoss?'Boss Cleared!':'ผ่านด่าน!'}</div>
+        <div class="result-score" style="color:#16a34a">${roundCorrect}/${total}</div>
+        ${d.badgeEarned?`<div style="margin:8px 0;padding:10px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);border-radius:10px"><div style="font-size:16px;font-weight:800;color:#f59e0b">🎖 ${d.badgeName}</div><div style="font-size:11px;color:#94a3b8;margin-top:4px">ปลดล็อค Chapter ถัดไปแล้ว!</div></div>`:''}
+        <button class="result-btn result-btn-next" onclick="showStages('${currentChapter}')">ด่านถัดไป →</button>
+        <button class="result-btn result-btn-back" onclick="showChapters()">กลับเลือก Chapter</button>
+      </div>`
+    }else{
+      // แสดง mnemonic ที่พลาดให้ทบทวน
+      const missedHints=stageHints.length?`<div style="margin:12px 0;background:#1e293b;border-radius:10px;padding:12px;text-align:left">
+        <div style="font-size:12px;font-weight:700;color:#fca5a5;margin-bottom:6px">📝 ทบทวนก่อนลองใหม่</div>
+        ${stageHints.map(h=>`<div style="font-size:12px;color:#cbd5e1;padding:4px 0;line-height:1.5">💡 ${h}</div>`).join('')}
+      </div>`:''
+      app.innerHTML=`<div class="result">
+        <div class="result-emoji">💪</div>
+        <div class="result-title">${isBoss?'ยังไม่ผ่าน Boss':'ยังไม่ผ่านด่าน'}</div>
+        <div class="result-score" style="color:#dc2626">${roundCorrect}/${total}</div>
+        <div class="result-msg">${isBoss?`ต้องถูก ${d.needed}%+ ถึงจะผ่าน`:'ต้องตอบถูกทุกข้อถึงจะผ่านด่าน'}</div>
+        ${missedHints}
+        <button class="result-btn result-btn-retry" onclick="startStage('${currentChapter}',${currentStage})">ลองอีกครั้ง</button>
+        <button class="result-btn result-btn-back" onclick="showStages('${currentChapter}')">กลับเลือกด่าน</button>
+      </div>`
+    }
+  }catch(e){showStages(currentChapter)}
+}
+
+init()
+</script>
+</body>
+</html>

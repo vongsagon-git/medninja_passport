@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedNinja — System Diagnostic</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:#0a0a0f;color:#e2e8f0;font-family:'Noto Sans Thai',-apple-system,sans-serif;overflow-x:hidden}
+.bg{position:fixed;inset:0;z-index:0}
+.grid{position:absolute;inset:-50%;width:200%;height:200%;background-image:linear-gradient(rgba(59,130,246,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.05) 1px,transparent 1px);background-size:60px 60px;animation:gm 20s linear infinite}
+@keyframes gm{to{transform:translate(60px,60px)}}
+.c{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:24px 16px}
+.head{text-align:center;margin-bottom:28px}
+.logo{font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#3b82f6;margin-bottom:8px}
+h1{font-size:26px;font-weight:900;background:linear-gradient(135deg,#3b82f6,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{font-size:13px;color:#64748b;margin-top:4px}
+
+/* Flow steps */
+.flow{display:flex;flex-direction:column;gap:0}
+.fs{display:flex;align-items:flex-start;gap:12px;padding:14px 0;position:relative}
+.fs::before{content:'';position:absolute;left:15px;top:40px;bottom:-14px;width:2px;background:#1e293b}
+.fs:last-child::before{display:none}
+.fs-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:2px solid #1e293b;background:#0a0a0f;z-index:1;transition:all .3s}
+.fs-icon.wait{color:#475569}
+.fs-icon.run{border-color:#3b82f6;animation:pulse .8s infinite}
+.fs-icon.ok{border-color:#10b981;background:rgba(16,185,129,.1);color:#10b981}
+.fs-icon.no{border-color:#ef4444;background:rgba(239,68,68,.1);color:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fs-body{flex:1;min-width:0}
+.fs-title{font-size:13px;font-weight:700;color:#94a3b8}
+.fs-title.active{color:#e2e8f0}
+.fs-detail{font-size:11px;color:#475569;margin-top:2px}
+.fs-detail.ok{color:#10b981}
+.fs-detail.no{color:#ef4444}
+.fs-url{font-size:9px;color:#334155;word-break:break-all;background:#111;padding:6px 8px;border-radius:6px;margin-top:4px;border:1px solid #1e293b}
+
+/* Video */
+.vid-box{aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#111;border:1px solid #1e293b;margin-top:8px;display:none}
+.vid-box iframe{width:100%;height:100%;border:none}
+.vid-box.show{display:block;animation:fadeIn .5s}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+
+/* Score */
+.sc{text-align:center;padding:20px;border-radius:16px;margin-top:20px;display:none}
+.sc.ok{background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.05));border:1px solid rgba(16,185,129,.3)}
+.sc.no{background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(239,68,68,.05));border:1px solid rgba(239,68,68,.3)}
+.sc-n{font-size:36px;font-weight:900}
+.sc.ok .sc-n{color:#10b981}
+.sc.no .sc-n{color:#ef4444}
+.sc-t{font-size:15px;font-weight:700}
+.sc-s{font-size:11px;color:#64748b;margin-top:4px}
+
+details{margin-top:16px;font-size:11px;color:#475569}
+details summary{cursor:pointer;color:#64748b}
+details pre{background:#111;padding:12px;border-radius:8px;overflow-x:auto;font-size:10px;color:#64748b;border:1px solid #1e293b;white-space:pre-wrap;word-break:break-all}
+.btn{display:block;width:100%;margin-top:16px;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#7c3aed);color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+.btn:active{transform:scale(.98)}
+.ft{text-align:center;padding:24px 0 8px;font-size:11px;color:#334155}
+@media(max-width:480px){.c{padding:16px 12px}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="bg"><div class="grid"></div></div>
+<div class="c">
+  <div class="head">
+    <div class="logo">MEDNINJA</div>
+    <h1>System Diagnostic</h1>
+    <p class="sub">ตรวจสอบทีละขั้นตอนว่าเครื่องของคุณเล่นวีดีโอได้หรือไม่</p>
+  </div>
+
+  <div class="flow" id="flow">
+    <div class="fs" id="s1"><div class="fs-icon wait" id="i1">1</div><div class="fs-body"><div class="fs-title" id="t1">ตรวจ Browser / OS / หน้าจอ</div><div class="fs-detail" id="d1">รอ...</div></div></div>
+    <div class="fs" id="s2"><div class="fs-icon wait" id="i2">2</div><div class="fs-body"><div class="fs-title" id="t2">ตรวจ Cookies</div><div class="fs-detail" id="d2">รอ...</div></div></div>
+    <div class="fs" id="s3"><div class="fs-icon wait" id="i3">3</div><div class="fs-body"><div class="fs-title" id="t3">เชื่อมต่อเซิร์ฟเวอร์วีดีโอ</div><div class="fs-detail" id="d3">รอ...</div></div></div>
+    <div class="fs" id="s4"><div class="fs-icon wait" id="i4">4</div><div class="fs-body"><div class="fs-title" id="t4">เชื่อมต่อเซิร์ฟเวอร์ MedNinja</div><div class="fs-detail" id="d4">รอ...</div></div></div>
+    <div class="fs" id="s5"><div class="fs-icon wait" id="i5">5</div><div class="fs-body"><div class="fs-title" id="t5">ขอ Signed URL จาก Server</div><div class="fs-detail" id="d5">รอ...</div><div class="fs-url" id="u5" style="display:none"></div></div></div>
+    <div class="fs" id="s6"><div class="fs-icon wait" id="i6">6</div><div class="fs-body"><div class="fs-title" id="t6">Server ตรวจสอบ URL (HTTP Status)</div><div class="fs-detail" id="d6">รอ...</div></div></div>
+    <div class="fs" id="s7"><div class="fs-icon wait" id="i7">7</div><div class="fs-body"><div class="fs-title" id="t7">โหลดวีดีโอจริง</div><div class="fs-detail" id="d7">รอ...</div><div class="vid-box" id="vb"><iframe id="vf" allow="accelerometer;gyroscope;autoplay;encrypted-media" allowfullscreen></iframe></div></div></div>
+    <div class="fs" id="s8"><div class="fs-icon wait" id="i8">8</div><div class="fs-body"><div class="fs-title" id="t8">ตรวจ Ad Blocker / เครือข่าย</div><div class="fs-detail" id="d8">รอ...</div></div></div>
+    <div class="fs" id="s9"><div class="fs-icon wait" id="i9">9</div><div class="fs-body"><div class="fs-title" id="t9">ส่งผลให้ Admin (LINE)</div><div class="fs-detail" id="d9">รอ...</div></div></div>
+  </div>
+
+  <div class="sc" id="sc">
+    <div class="sc-n" id="sn"></div>
+    <div class="sc-t" id="st"></div>
+    <div class="sc-s">ส่งผลให้ admin แล้ว</div>
+  </div>
+
+  <details id="rawD" style="display:none"><summary>ข้อมูลเครื่อง (สำหรับ admin)</summary><pre id="rw"></pre></details>
+  <button class="btn" id="retryBtn" style="display:none" onclick="location.reload()">ตรวจอีกครั้ง</button>
+
+  <div class="ft">MedNinja LMS</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id)
+const delay=ms=>new Promise(r=>setTimeout(r,ms))
+
+function setStep(n, status, detail) {
+  $('i'+n).className = 'fs-icon ' + status
+  $('t'+n).className = 'fs-title' + (status==='run'?' active':'')
+  if (detail) { $('d'+n).textContent = detail; $('d'+n).className = 'fs-detail ' + (status==='ok'?'ok':status==='no'?'no':'') }
+}
+
+async function run() {
+  const raw = {}
+  let pass = 0, total = 7
+
+  // Step 1: Browser / OS / Screen
+  setStep(1,'run','กำลังตรวจ...')
+  await delay(500)
+  const ua = navigator.userAgent; raw.userAgent = ua
+  const isIPadOS13 = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+  const os = /iPhone|iPad|iPod/.test(ua)||isIPadOS13?'iOS':/Mac OS X|Macintosh/.test(ua)?'macOS':/Windows/.test(ua)?'Windows':/Android/.test(ua)?'Android':'Other'
+  const br = /Edg\//.test(ua)?'Edge':/Chrome\//.test(ua)&&!/Edg\//.test(ua)?'Chrome':/Safari\//.test(ua)&&!/Chrome\//.test(ua)?'Safari':/Firefox\//.test(ua)?'Firefox':'Other'
+  raw.os=os; raw.browser=br; raw.screen=screen.width+'x'+screen.height; raw.dpr=devicePixelRatio
+  setStep(1,'ok', br+' · '+os+' · '+raw.screen+' · DPR '+raw.dpr)
+  pass++
+
+  // Step 2: Cookies
+  setStep(2,'run','กำลังตรวจ...')
+  await delay(400)
+  raw.cookies = navigator.cookieEnabled
+  if (raw.cookies) { setStep(2,'ok','เปิดอยู่'); pass++ }
+  else { setStep(2,'no','ปิดอยู่ — เปิด Cookie ใน Browser Settings') }
+
+  // Step 3: Video CDN
+  setStep(3,'run','กำลังเชื่อมต่อ player.mediadelivery.net ...')
+  await delay(300)
+  const cdn = await tf('https://player.mediadelivery.net')
+  raw.cdn=cdn.ok; raw.cdnMs=cdn.ms
+  if (cdn.ok) { setStep(3,'ok','เชื่อมต่อได้ ('+cdn.ms+'ms)'); pass++ }
+  else { setStep(3,'no','เชื่อมต่อไม่ได้ — อาจมี VPN / Firewall / Content Blocker บล็อก') }
+
+  // Step 4: MedNinja API
+  setStep(4,'run','กำลังเชื่อมต่อ /api/health ...')
+  await delay(300)
+  const api = await tf('/api/health')
+  raw.api=api.ok
+  if (api.ok) { setStep(4,'ok','ปกติ ('+api.ms+'ms)'); pass++ }
+  else { setStep(4,'no','เชื่อมต่อไม่ได้') }
+
+  // Step 5: Get Signed URL
+  setStep(5,'run','กำลังขอ URL จาก Server ...')
+  await delay(300)
+  let embedUrl='', httpStatus=0, hasToken=false
+  try {
+    const r = await fetch('/api/diag/test-video'), d = await r.json()
+    embedUrl = d.embedUrl||''; httpStatus = d.httpStatus||0; hasToken = embedUrl.includes('token=')
+    raw.testUrl=embedUrl; raw.hasToken=hasToken; raw.httpStatus=httpStatus
+    $('u5').style.display='block'
+    $('u5').textContent = embedUrl
+    if (hasToken) { setStep(5,'ok','ได้ Signed URL (มี token + expires)'); pass++ }
+    else { setStep(5,'no','URL ไม่มี token — แจ้ง admin ระบบอาจตั้งค่าไม่ครบ') }
+  } catch(e) {
+    setStep(5,'no','ขอ URL ไม่ได้: '+e.message)
+  }
+
+  // Step 6: HTTP Status
+  setStep(6,'run','Server กำลังตรวจ HTTP Status ของ URL ...')
+  await delay(300)
+  if (httpStatus === 200) { setStep(6,'ok','HTTP 200 OK — URL ใช้ได้'); pass++ }
+  else if (httpStatus === 403) { setStep(6,'no','HTTP 403 Forbidden — URL ถูกปฏิเสธ'+(hasToken?'':' (ไม่มี token)')) }
+  else if (httpStatus === 404) { setStep(6,'no','HTTP 404 — Video ไม่พบ') }
+  else if (httpStatus === 0) { setStep(6,'no','ไม่สามารถเชื่อมต่อได้') }
+  else { setStep(6,'no','HTTP '+httpStatus) }
+
+  // Step 7: Load video
+  setStep(7,'run','กำลังโหลดวีดีโอจริง ...')
+  if (httpStatus === 200 && embedUrl) {
+    $('vb').className='vid-box show'
+    $('vf').src = embedUrl
+    await delay(2000)
+    setStep(7,'ok','วีดีโอโหลดสำเร็จ — ลองกดเล่นดู')
+    raw.videoTest='pass'; pass++
+  } else {
+    raw.videoTest='fail'
+    let hint = 'ลองเปิด Private Window หรือเปลี่ยน Browser'
+    if (!hasToken) hint = 'แจ้ง admin — URL ไม่มี token'
+    else if (httpStatus===403 && br==='Safari') hint = 'ลองใช้ Chrome หรือปิด Content Blocker ใน Safari'
+    else if (httpStatus===403) hint = 'อาจมี VPN / Content Blocker หรือ URL หมดอายุ'
+    setStep(7,'no','โหลดไม่ได้ — '+hint)
+  }
+
+  // Step 8: Ad Blocker + Network
+  setStep(8,'run','กำลังตรวจ...')
+  await delay(400)
+  try{await fetch('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',{mode:'no-cors'});raw.adBlock=false}catch{raw.adBlock=true}
+  const conn=navigator.connection||navigator.mozConnection
+  raw.netType=conn?.effectiveType||'unknown'; raw.downlink=conn?.downlink||'?'
+  let s8text = ''
+  if(raw.adBlock) s8text += 'Ad Blocker: ตรวจพบ  '
+  s8text += 'เครือข่าย: '+(raw.netType)+' · '+(raw.downlink)+' Mbps'
+  setStep(8, raw.adBlock?'no':'ok', s8text + (raw.adBlock?' — ลองปิด Ad Blocker':''))
+
+  // Step 9: Send LINE
+  setStep(9,'run','กำลังส่ง...')
+  raw.timestamp = new Date().toLocaleString('th-TH')
+  try { await fetch('/api/diag',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...raw,videoTest:raw.videoTest})}) } catch{}
+  setStep(9,'ok','ส่งเรียบร้อย')
+  await delay(300)
+
+  // Score
+  const allOk = pass >= total
+  $('sc').style.display='block'; $('sc').className='sc '+(allOk?'ok':'no')
+  $('sn').textContent=pass+'/'+total
+  $('st').textContent=allOk?'ผ่านทุกรายการ — ดูวีดีโอได้ปกติ':'พบปัญหา — ดูรายละเอียดด้านบน'
+  $('rw').textContent=JSON.stringify(raw,null,2)
+  $('rawD').style.display='block'
+  $('retryBtn').style.display='block'
+}
+
+async function tf(u){const t=performance.now();try{await fetch(u,{mode:'no-cors'});return{ok:true,ms:Math.round(performance.now()-t)}}catch{return{ok:false,ms:Math.round(performance.now()-t)}}}
+
+run()
+</script>
+</body>
+</html>

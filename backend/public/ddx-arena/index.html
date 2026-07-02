@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DDx ARENA — เกมฝึกวินิจฉัยแยกโรค เล่นฟรี โดย MedNinja</title>
+<meta name="description" content="DDx ARENA เปิดแล้ว! เกมฝึกวินิจฉัยแยกโรค แข่งกันว่าใครจะเป็นที่หนึ่ง เล่นฟรี โดย MedNinja">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--purple:#7c3aed;--purple-glow:#a78bfa;--orange:#f97316;--orange-glow:#fdba74;--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a25;--text:#e2e8f0;--text-dim:#64748b;--green:#22c55e;--red:#ef4444;--gold:#fbbf24;--line:#06C755;--bar-h:48px}
+html{overflow-x:hidden;width:100%}
+body{font-family:'Noto Sans Thai','Segoe UI',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh;-webkit-text-size-adjust:100%;width:100%;max-width:100vw;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;padding-top:0}
+.choice-btn{touch-action:manipulation}
+.arena-layout,.arena-main,.screen{max-width:100vw;overflow-x:hidden;width:100%}
+.game-header{max-width:100vw}
+.case-card{max-width:100%;word-break:break-word}
+.phase-text{word-break:break-word;overflow-wrap:break-word}
+.choice-btn{word-break:break-word;overflow-wrap:break-word}
+.orbitron{font-family:'Orbitron','Noto Sans Thai',sans-serif}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;border:none;transition:all .2s;font-family:'Noto Sans Thai',sans-serif}
+.btn:active{transform:scale(.96)}
+.btn-orange{background:linear-gradient(135deg,var(--orange),#dc2626);color:#fff;box-shadow:0 0 30px rgba(249,115,22,.3)}
+.btn-orange:hover{box-shadow:0 0 50px rgba(249,115,22,.5);transform:translateY(-2px)}
+.btn-purple{background:linear-gradient(135deg,var(--purple),#4f46e5);color:#fff;box-shadow:0 0 30px rgba(124,58,237,.3)}
+.btn-purple:hover{box-shadow:0 0 50px rgba(124,58,237,.5);transform:translateY(-2px)}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.12)}
+.btn-ghost:hover{background:rgba(255,255,255,.12)}
+.btn-line{background:var(--line);color:#fff;font-weight:700;box-shadow:0 0 30px rgba(6,199,85,.3)}
+.btn-line:hover{box-shadow:0 0 50px rgba(6,199,85,.5);transform:translateY(-2px)}
+/* ═══ LAYOUT: sidebar leaderboard desktop ═══ */
+.arena-layout{display:flex;min-height:100vh}
+.arena-main{flex:1;min-width:0;position:relative;padding-top:32px}
+.arena-sidebar{width:340px;min-width:340px;background:linear-gradient(180deg,#0f0a1a 0%,#12121a 100%);border-left:1px solid rgba(251,191,36,.1);overflow-y:auto;position:sticky;top:var(--bar-h);height:calc(100vh - var(--bar-h));padding:14px 14px 20px}
+.arena-sidebar::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--gold),var(--orange))}
+.arena-sidebar .sb-title{font-size:18px;font-weight:900;margin-bottom:4px;text-align:center;background:linear-gradient(90deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.arena-sidebar .sb-sub{font-size:10px;color:var(--text-dim);text-align:center;margin-bottom:16px;letter-spacing:1px;text-transform:uppercase}
+.arena-sidebar .sb-list{display:flex;flex-direction:column;gap:3px}
+
+/* My rank (sticky top) */
+.sb-myrank{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(249,115,22,.1));border:1px solid rgba(124,58,237,.3);border-radius:14px;padding:12px;margin-bottom:12px;text-align:center;position:relative;overflow:hidden}
+.sb-myrank::before{content:'';position:absolute;inset:0;background:linear-gradient(45deg,transparent 40%,rgba(124,58,237,.05) 50%,transparent 60%);animation:shimmer 3s infinite}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.sb-myrank-label{font-size:10px;color:var(--purple-glow);text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:4px}
+.sb-myrank-rank{font-size:28px;font-weight:900;font-family:'Orbitron',sans-serif;color:var(--purple-glow);margin:8px 0;line-height:1}
+.sb-myrank-score{font-size:13px;color:var(--text-dim);margin-top:6px}
+.sb-myrank-score b{color:var(--gold);font-family:'Orbitron',sans-serif}
+
+/* Rows */
+.sb-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.02);transition:all .2s;position:relative;overflow:hidden}
+.sb-row:hover{background:rgba(255,255,255,.05);transform:translateX(2px)}
+.sb-row.me{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(249,115,22,.08));border:1.5px solid var(--purple);box-shadow:0 0 12px rgba(124,58,237,.2)}
+.sb-row.top1{background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(251,191,36,.02));border:1px solid rgba(251,191,36,.25);box-shadow:0 0 15px rgba(251,191,36,.1)}
+.sb-row.top2{background:linear-gradient(135deg,rgba(192,192,192,.06),rgba(192,192,192,.02));border:1px solid rgba(192,192,192,.2)}
+.sb-row.top3{background:linear-gradient(135deg,rgba(205,127,50,.06),rgba(205,127,50,.02));border:1px solid rgba(205,127,50,.2)}
+.sb-rank{font-size:12px;font-weight:900;font-family:'Orbitron',sans-serif;min-width:24px;text-align:center;color:var(--text-dim)}
+.sb-row.top1 .sb-rank{color:var(--gold);text-shadow:0 0 8px rgba(251,191,36,.5)}.sb-row.top2 .sb-rank{color:#e0e0e0}.sb-row.top3 .sb-rank{color:#cd7f32}
+.sb-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;background:var(--bg3);border:2px solid rgba(255,255,255,.1)}
+.sb-avatar-ph{width:30px;height:30px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid rgba(255,255,255,.1)}
+.sb-row.top1 .sb-avatar,.sb-row.top1 .sb-avatar-ph{border-color:var(--gold)}
+.sb-row.me .sb-avatar,.sb-row.me .sb-avatar-ph{border-color:var(--purple)}
+.sb-info{flex:1;min-width:0}
+.sb-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-name.admin-name{color:var(--orange)}
+.sb-score{font-size:13px;font-weight:900;font-family:'Orbitron',sans-serif;color:var(--gold);text-align:right;min-width:40px}
+.sb-row.me .sb-score{color:var(--purple-glow)}
+.sb-empty{text-align:center;padding:32px;color:var(--text-dim);font-size:13px}
+
+/* Custom scroll — เหมือนเกม ไม่ใช่ของระบบ */
+*::-webkit-scrollbar{width:3px;height:3px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(124,58,237,.25);border-radius:3px}
+*::-webkit-scrollbar-thumb:hover{background:rgba(124,58,237,.5)}
+*{scrollbar-width:thin;scrollbar-color:rgba(124,58,237,.25) transparent}
+html,body{overflow:hidden;height:100vh}
+.arena-layout{height:100vh;overflow:hidden}
+.arena-main{height:100vh;overflow-y:auto;overflow-x:hidden}
+.arena-sidebar{overflow-y:auto;overflow-x:hidden}
+.screen{min-height:calc(100vh - 32px);overflow-y:auto}
+
+/* Mobile: sidebar hidden, use modal */
+.mobile-lb-btn{display:none;position:fixed;bottom:20px;right:20px;z-index:50;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--orange));border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 20px rgba(251,191,36,.4)}
+.lb-modal{display:none;position:fixed;top:var(--bar-h);left:0;right:0;bottom:0;z-index:150;background:rgba(10,10,15,.95);backdrop-filter:blur(6px);overflow-y:auto;padding:20px}
+.lb-modal.active{display:block}
+.lb-modal-inner{max-width:400px;margin:0 auto}
+.lb-modal-close{position:fixed;top:calc(var(--bar-h) + 10px);right:16px;width:40px;height:40px;border-radius:50%;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:#ef4444;font-size:20px;cursor:pointer;z-index:151}
+
+@media(max-width:900px){
+  .arena-sidebar{display:none}
+  .mobile-lb-btn{display:flex;align-items:center;justify-content:center}
+}
+
+.screen{display:none;min-height:100vh;animation:fadeIn .4s ease}
+.screen.active{display:flex;flex-direction:column}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes countPop{0%{transform:scale(1.6);opacity:0}50%{transform:scale(1);opacity:1}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes correctFlash{0%{box-shadow:0 0 0 rgba(34,197,94,0)}50%{box-shadow:0 0 40px rgba(34,197,94,.4)}100%{box-shadow:0 0 0 rgba(34,197,94,0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* ═══ LOBBY ═══ */
+#lobby{justify-content:center;align-items:center;text-align:center;position:relative;overflow:hidden}
+#lobby::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 600px 400px at 30% 40%,rgba(124,58,237,.12),transparent),radial-gradient(ellipse 500px 350px at 70% 60%,rgba(249,115,22,.08),transparent)}
+.lobby-inner{position:relative;z-index:1;max-width:720px;padding:40px 24px}
+.logo-med{font-size:22px;font-weight:800;letter-spacing:8px;color:var(--purple-glow);text-transform:uppercase}
+.logo-ddx{font-size:34px;font-weight:900;color:var(--orange);letter-spacing:5px;margin:4px 0}
+.logo-arena{font-size:86px;font-weight:900;color:#fff;letter-spacing:18px;text-shadow:0 0 60px rgba(255,255,255,.15);margin-top:-4px}
+.logo-sub{font-size:15px;color:#fff;font-weight:700;margin-top:16px;margin-bottom:24px;letter-spacing:1px}
+.lobby-stats{display:flex;gap:32px;justify-content:center;margin:40px 0 32px}
+.stat-num{font-size:36px;font-weight:900;color:var(--orange);font-family:'Orbitron',sans-serif}
+.stat-label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px;margin-top:2px}
+
+/* ═══ PLAYER BAR ═══ */
+.player-bar{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:28px;padding:14px 24px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.player-avatar{width:44px;height:44px;border-radius:50%;border:2px solid var(--purple);object-fit:cover;background:var(--bg3)}
+.player-avatar-placeholder{width:44px;height:44px;border-radius:50%;border:2px solid var(--purple);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px}
+.player-info{text-align:left}
+.player-name{font-size:15px;font-weight:700}
+.player-name .admin-badge{color:var(--orange);font-size:12px;font-weight:800;margin-left:6px}
+.player-best{font-size:12px;color:var(--text-dim)}
+.player-best b{color:var(--gold);font-family:'Orbitron',sans-serif}
+.player-bar .btn-logout{margin-left:auto;padding:8px 16px;font-size:12px}
+
+/* ═══ MODE SELECT ═══ */
+.mode-grid{display:flex;flex-direction:column;gap:14px;align-items:center;margin-bottom:28px}
+.mode-card{width:100%;max-width:380px;padding:20px 24px;border-radius:16px;cursor:pointer;border:2px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);transition:all .2s;text-align:left;display:flex;gap:16px;align-items:center}
+.mode-card:hover{border-color:var(--orange);background:rgba(249,115,22,.05);transform:translateY(-2px)}
+.mode-icon{font-size:32px;min-width:44px;text-align:center}
+.mode-info h3{font-size:16px;font-weight:700;margin-bottom:2px}
+.mode-info p{font-size:12px;color:var(--text-dim)}
+.lobby-actions{display:flex;gap:12px;justify-content:center;margin-top:8px}
+
+/* ═══ GAME ═══ */
+#game{align-items:center;padding:0}
+.game-header{width:100%;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border-bottom:1px solid rgba(255,255,255,.06)}
+.game-hud-left{display:flex;align-items:center;gap:20px}
+.game-logo{font-size:14px;font-weight:800;letter-spacing:3px;color:var(--purple-glow)}
+.game-logo span{color:var(--orange)}
+.game-round{font-size:13px;color:var(--text-dim)}
+.game-round b{color:var(--orange);font-family:'Orbitron',sans-serif;font-size:15px}
+.game-hud-right{display:flex;align-items:center;gap:24px}
+.game-score-display{font-size:14px;color:var(--text-dim)}
+.game-score-display b{color:var(--green);font-family:'Orbitron',sans-serif;font-size:18px}
+.game-streak{font-size:13px;color:var(--orange-glow)}
+.game-main{flex:1;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center;padding:40px 24px}
+.case-card{width:100%;background:var(--bg2);border-radius:20px;border:1px solid rgba(255,255,255,.06);overflow:hidden;position:relative}
+.case-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--orange))}
+.case-phase{padding:32px 36px}
+.phase-label{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:var(--text-dim);margin-bottom:16px}
+.phase-icon{width:8px;height:8px;border-radius:50%;background:var(--orange);animation:pulse 1.5s infinite}
+.phase-text{font-size:20px;line-height:1.8;font-weight:400;color:var(--text);min-height:60px}
+.phase-text .kw{display:inline;background:rgba(249,115,22,.1);padding:1px 8px;border-radius:5px;color:var(--orange);font-weight:600;border:1px solid rgba(249,115,22,.15)}
+.reveal-enter{animation:slideUp .5s ease}
+.phase-step{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.phase-step:last-child{border-bottom:none}
+.phase-step .phase-label{margin-bottom:8px}
+.phase-step .phase-text{font-size:18px;min-height:auto}
+.choices-area{padding:0 36px 36px}
+.choices-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.choices-title{font-size:22px;font-weight:900;color:#f59e0b;text-transform:none;letter-spacing:1px;animation:questionGlow 1.5s ease-in-out infinite;text-shadow:0 0 20px rgba(245,158,11,.3)}
+@keyframes questionGlow{0%,100%{opacity:1;text-shadow:0 0 20px rgba(245,158,11,.3)}50%{opacity:.85;text-shadow:0 0 30px rgba(245,158,11,.5)}}
+.timer-bar{width:200px;height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+.timer-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--orange),var(--red));transition:width .1s linear;width:100%}
+.timer-text{font-size:13px;font-weight:700;font-family:'Orbitron',sans-serif;min-width:32px;text-align:right}
+.timer-text.urgent{color:var(--red);animation:pulse .5s infinite}
+.timer-group{display:flex;align-items:center;gap:10px}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.choice-btn{padding:16px 20px;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text);transition:all .15s;text-align:left;font-family:'Noto Sans Thai',sans-serif;position:relative;overflow:hidden}
+.choice-btn:hover{border-color:var(--orange);background:rgba(249,115,22,.06);transform:translateY(-2px);box-shadow:0 8px 30px rgba(249,115,22,.1)}
+.choice-btn .choice-sub{font-size:12px;color:var(--text-dim);margin-top:4px;font-weight:400}
+.choice-btn.correct{border-color:var(--green)!important;background:rgba(34,197,94,.1)!important;animation:correctFlash .6s ease}
+.choice-btn.correct::after{content:'✓';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:24px;color:var(--green);font-weight:900}
+.choice-btn.wrong{border-color:var(--red)!important;background:rgba(239,68,68,.08)!important;animation:shake .4s}
+.choice-btn.wrong::after{content:'✗';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:24px;color:var(--red);font-weight:900}
+.choice-btn.disabled{pointer-events:none;opacity:.4}
+.phase-progress{display:flex;gap:8px;justify-content:center;padding:20px;background:var(--bg3);border-top:1px solid rgba(255,255,255,.04)}
+.phase-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.1);transition:all .3s}
+.phase-dot.done{background:var(--green)}
+.phase-dot.active{background:var(--orange);box-shadow:0 0 12px rgba(249,115,22,.5);transform:scale(1.2)}
+.round-result{text-align:center;padding:40px}
+.round-result .emoji{font-size:56px;margin-bottom:16px}
+.round-result .message{font-size:20px;font-weight:700;margin-bottom:8px}
+.round-result .detail{font-size:14px;color:var(--text-dim)}
+
+/* ═══ RESULT ═══ */
+#result{justify-content:center;align-items:center;text-align:center;padding:40px 24px}
+.result-card{max-width:520px;width:100%;background:var(--bg2);border-radius:24px;padding:48px 40px;border:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden}
+.result-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--purple),var(--orange),var(--gold))}
+.result-badge{width:120px;height:120px;border-radius:50%;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:48px;border:3px solid}
+.result-badge.gold{border-color:var(--gold);background:rgba(251,191,36,.08)}.result-badge.green{border-color:var(--green);background:rgba(34,197,94,.08)}.result-badge.orange{border-color:var(--orange);background:rgba(249,115,22,.08)}.result-badge.red{border-color:var(--red);background:rgba(239,68,68,.08)}
+.result-score{font-size:56px;font-weight:900;font-family:'Orbitron',sans-serif;margin-bottom:4px}
+.result-label{font-size:14px;color:var(--text-dim);margin-bottom:24px}
+.result-title{font-size:24px;font-weight:800;margin-bottom:8px}
+.result-sub{font-size:14px;color:var(--text-dim);margin-bottom:32px}
+.result-rank{font-size:15px;color:var(--gold);margin-bottom:24px;font-weight:700}
+.result-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:32px}
+.result-stat{padding:14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.result-stat-num{font-size:24px;font-weight:800;font-family:'Orbitron',sans-serif}
+.result-stat-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.result-stat-num.g{color:var(--green)}.result-stat-num.r{color:var(--red)}.result-stat-num.o{color:var(--orange)}
+.result-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.result-actions .btn{min-width:160px;justify-content:center}
+
+/* ═══ LEADERBOARD ═══ */
+#leaderboard{justify-content:flex-start;align-items:center;text-align:center;padding:40px 24px;position:relative;overflow:hidden}
+#leaderboard::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 600px 300px at 50% 20%,rgba(251,191,36,.06),transparent)}
+.lb-inner{position:relative;z-index:1;max-width:600px;width:100%}
+.lb-header{margin-bottom:32px}
+.lb-header h2{font-size:28px;font-weight:900;margin-bottom:4px}
+.lb-header h2 span{color:var(--gold)}
+.lb-header p{font-size:14px;color:var(--text-dim)}
+
+/* Podium */
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:12px;margin-bottom:36px;min-height:220px}
+.podium-slot{display:flex;flex-direction:column;align-items:center;width:140px}
+.podium-avatar{width:56px;height:56px;border-radius:50%;border:3px solid;object-fit:cover;background:var(--bg3);margin-bottom:8px}
+.podium-avatar-placeholder{width:56px;height:56px;border-radius:50%;border:3px solid;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:8px}
+.podium-name{font-size:13px;font-weight:700;margin-bottom:4px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium-name .admin-badge{color:var(--orange);font-size:10px;font-weight:800}
+.podium-score{font-size:12px;color:var(--text-dim);font-family:'Orbitron',sans-serif;margin-bottom:8px}
+.podium-base{width:100%;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;font-family:'Orbitron',sans-serif;color:rgba(255,255,255,.3)}
+.podium-slot:nth-child(1) .podium-base{height:90px;background:linear-gradient(180deg,rgba(192,192,192,.15),rgba(192,192,192,.05))}
+.podium-slot:nth-child(1) .podium-avatar,.podium-slot:nth-child(1) .podium-avatar-placeholder{border-color:#c0c0c0}
+.podium-slot:nth-child(2) .podium-base{height:120px;background:linear-gradient(180deg,rgba(251,191,36,.15),rgba(251,191,36,.05))}
+.podium-slot:nth-child(2) .podium-avatar,.podium-slot:nth-child(2) .podium-avatar-placeholder{border-color:var(--gold);width:68px;height:68px;font-size:28px}
+.podium-slot:nth-child(3) .podium-base{height:70px;background:linear-gradient(180deg,rgba(205,127,50,.15),rgba(205,127,50,.05))}
+.podium-slot:nth-child(3) .podium-avatar,.podium-slot:nth-child(3) .podium-avatar-placeholder{border-color:#cd7f32}
+
+/* Table */
+.lb-table{width:100%;border-collapse:separate;border-spacing:0 6px;text-align:left;margin-bottom:28px}
+.lb-table th{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--text-dim);padding:8px 12px;font-weight:600}
+.lb-table td{padding:12px;background:rgba(255,255,255,.03);font-size:14px}
+.lb-table tr td:first-child{border-radius:10px 0 0 10px}
+.lb-table tr td:last-child{border-radius:0 10px 10px 0}
+.lb-table tr.me td{background:rgba(124,58,237,.12);border-top:1px solid var(--purple);border-bottom:1px solid var(--purple)}
+.lb-table tr.me td:first-child{border-left:1px solid var(--purple)}
+.lb-table tr.me td:last-child{border-right:1px solid var(--purple)}
+.lb-rank{font-family:'Orbitron',sans-serif;font-weight:700;color:var(--text-dim);min-width:32px;text-align:center}
+.lb-player{display:flex;align-items:center;gap:10px}
+.lb-player img{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--bg3)}
+.lb-player .lb-avatar-ph{width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px}
+.lb-player-name{font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-player-name .admin-badge{color:var(--orange);font-size:10px;font-weight:800}
+.lb-score{font-family:'Orbitron',sans-serif;font-weight:700;color:var(--gold)}
+.lb-acc{color:var(--text-dim);font-size:13px}
+.lb-empty{padding:40px;color:var(--text-dim);font-size:15px}
+
+/* ═══ COUNTDOWN ═══ */
+.countdown-overlay{position:fixed;top:var(--bar-h);left:0;right:0;bottom:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(10,10,15,.92);backdrop-filter:blur(8px)}
+.countdown-overlay.active{display:flex}
+.countdown-num{font-size:120px;font-weight:900;font-family:'Orbitron',sans-serif;color:var(--orange);text-shadow:0 0 80px rgba(249,115,22,.4);animation:countPop .8s ease}
+.countdown-text{position:absolute;bottom:30%;font-size:16px;color:var(--text-dim);letter-spacing:4px;text-transform:uppercase}
+
+/* ═══ LOGIN MODAL ═══ */
+.modal-overlay{position:fixed;top:var(--bar-h);left:0;right:0;bottom:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(10,10,15,.85);backdrop-filter:blur(6px)}
+.modal-overlay.active{display:flex}
+.modal-box{background:var(--bg2);border-radius:20px;padding:40px;max-width:400px;width:90%;text-align:center;border:1px solid rgba(255,255,255,.08);animation:slideUp .3s ease}
+.modal-box h3{font-size:22px;font-weight:800;margin-bottom:8px}
+.modal-box p{font-size:14px;color:var(--text-dim);margin-bottom:24px}
+.login-logo{font-size:56px;margin-bottom:16px}
+.login-line-btn{width:100%;padding:16px 32px;border-radius:14px;font-size:18px;font-weight:800;cursor:pointer;border:none;background:var(--line);color:#fff;font-family:'Noto Sans Thai',sans-serif;display:flex;align-items:center;justify-content:center;gap:12px;transition:all .2s;box-shadow:0 4px 24px rgba(6,199,85,.3)}
+.login-line-btn:hover{box-shadow:0 8px 40px rgba(6,199,85,.5);transform:translateY(-2px)}
+.login-line-btn:active{transform:scale(.96)}
+.login-line-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.login-line-icon{width:28px;height:28px}
+.login-error{color:var(--red);font-size:13px;margin-top:16px;display:none}
+
+.particles{position:fixed;top:var(--bar-h);left:0;right:0;bottom:0;overflow:hidden;pointer-events:none;z-index:0}
+.meteor{position:absolute;width:2px;height:80px;background:linear-gradient(0deg,transparent,rgba(124,58,237,.3),rgba(249,115,22,.7));border-radius:2px;opacity:0;animation:meteorFall linear infinite;transform:rotate(45deg)}
+@keyframes meteorFall{0%{opacity:0;transform:translate(0,0) rotate(45deg)}5%{opacity:.8}80%{opacity:.3}100%{opacity:0;transform:translate(500px,-600px) rotate(45deg)}}
+.star{position:absolute;border-radius:50%;background:rgba(255,255,255,.4);opacity:.15;animation:starFloat ease-in-out infinite}
+@keyframes starFloat{0%{opacity:.1;transform:translateY(0)}50%{opacity:.5;transform:translateY(-20px)}100%{opacity:.1;transform:translateY(0)}}
+.loading-msg{text-align:center;padding:60px 24px;color:var(--text-dim);font-size:18px}
+
+/* ═══ MOBILE RESPONSIVE ═══ */
+@media(max-width:768px){
+  /* Lobby */
+  .lobby-inner{padding:20px 16px}
+  .logo-arena{font-size:64px;letter-spacing:10px}
+  .logo-ddx{font-size:32px;letter-spacing:4px}
+  .logo-med{font-size:18px;letter-spacing:6px}
+  .logo-sub{font-size:12px;margin-top:10px}
+  .lobby-stats{gap:12px;margin:24px 0 20px}
+  .stat-num{font-size:22px}
+  .stat-label{font-size:9px;letter-spacing:1px}
+  .lobby-actions{gap:10px;margin-top:20px!important;flex-direction:column;align-items:stretch;padding:0 12px}
+  .lobby-actions .btn{min-width:auto;width:100%;font-size:15px;padding:14px 20px;border-radius:10px;justify-content:center}
+
+  /* Player bar */
+  .player-bar{padding:10px 12px;gap:8px;margin-bottom:16px;border-radius:12px}
+  .player-avatar,.player-avatar-placeholder{width:34px;height:34px;font-size:16px}
+  .player-name{font-size:12px}
+  .player-best{font-size:10px}
+  .player-bar .btn-logout{padding:6px 12px;font-size:10px}
+
+  /* Game header */
+  .game-header{padding:8px 12px;gap:6px;flex-wrap:wrap}
+  .game-hud-left{gap:10px}
+  .game-logo{font-size:11px;letter-spacing:1px}
+  .game-round{font-size:10px}
+  .game-round b{font-size:12px}
+  .game-hud-right{gap:12px}
+  .game-score-display{font-size:11px}
+  .game-score-display b{font-size:14px}
+  .game-streak{font-size:10px}
+
+  /* Game card */
+  .game-main{padding:12px 8px}
+  .case-card{border-radius:12px}
+  .case-card::before{height:2px}
+  .case-phase{padding:14px 12px}
+  .phase-label{font-size:9px;letter-spacing:1.5px;margin-bottom:8px}
+  .phase-icon{width:6px;height:6px}
+  .phase-text{font-size:14px;line-height:1.6;min-height:40px}
+  .phase-text .kw{font-size:13px;padding:1px 5px;border-radius:4px}
+  .phase-step{padding:6px 0}
+  .phase-step .phase-label{margin-bottom:4px}
+  .phase-step .phase-text{font-size:13px;min-height:auto}
+  .phase-progress{padding:10px;gap:5px}
+  .phase-dot{width:7px;height:7px}
+
+  /* Choices */
+  .choices-area{padding:0 12px 12px}
+  .choices-label{flex-direction:column;gap:6px;align-items:stretch;margin-bottom:10px}
+  .choices-title{font-size:18px;letter-spacing:1px}
+  .timer-bar{width:100%;height:5px}
+  .timer-text{font-size:12px}
+  .timer-group{width:100%}
+  .choice-grid{grid-template-columns:1fr;gap:8px}
+  .choice-btn{padding:12px 14px;font-size:14px;border-radius:10px;border-width:1.5px}
+  .choice-btn .choice-sub{font-size:11px;margin-top:2px}
+  .choice-btn.correct::after,.choice-btn.wrong::after{font-size:20px;right:12px}
+
+  /* Round result */
+  .round-result{padding:20px 12px}
+  .round-result .emoji{font-size:40px;margin-bottom:10px}
+  .round-result .message{font-size:16px}
+  .round-result .detail{font-size:11px}
+
+  /* Result screen */
+  #result{padding:20px 12px}
+  .result-card{padding:28px 16px;border-radius:16px}
+  .result-badge{width:80px;height:80px;font-size:32px;margin-bottom:16px}
+  .result-score{font-size:36px}
+  .result-label{font-size:12px;margin-bottom:16px}
+  .result-title{font-size:20px}
+  .result-sub{font-size:13px;margin-bottom:20px}
+  .result-rank{font-size:13px;margin-bottom:16px}
+  .result-stats{grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px}
+  .result-stat{padding:10px 8px;border-radius:8px}
+  .result-stat-num{font-size:20px}
+  .result-stat-label{font-size:9px}
+  .result-actions{gap:8px}
+  .result-actions .btn{min-width:auto;flex:1;padding:12px 8px;font-size:13px}
+
+  /* Login modal */
+  .modal-box{padding:24px 16px;border-radius:16px;width:92%}
+  .modal-box h3{font-size:17px}
+  .modal-box p{font-size:12px;margin-bottom:16px}
+  .login-logo{font-size:44px;margin-bottom:12px}
+  #loginQr{width:150px!important;height:150px!important}
+  .login-line-btn{font-size:14px;padding:12px 20px;border-radius:10px}
+  .login-line-icon{width:22px;height:22px}
+  .login-error{font-size:11px}
+
+  /* Countdown */
+  .countdown-num{font-size:72px}
+  .countdown-text{font-size:13px;bottom:25%}
+
+  /* ลำดับในยุทธจักร */
+  .podium{min-height:180px;gap:8px;margin-bottom:24px}
+  .podium-slot{width:90px}
+  .podium-avatar,.podium-avatar-placeholder{width:44px;height:44px;font-size:20px}
+  .podium-slot:nth-child(2) .podium-avatar,.podium-slot:nth-child(2) .podium-avatar-placeholder{width:52px;height:52px;font-size:24px}
+  .podium-name{font-size:11px;max-width:85px}
+  .podium-score{font-size:10px}
+  .podium-base{font-size:22px}
+  .podium-slot:nth-child(1) .podium-base{height:70px}
+  .podium-slot:nth-child(2) .podium-base{height:90px}
+  .podium-slot:nth-child(3) .podium-base{height:55px}
+  .lb-inner{padding:0}
+  .lb-header{margin-bottom:20px}
+  .lb-header h2{font-size:22px}
+  .lb-table td,.lb-table th{padding:8px 6px;font-size:11px}
+  .lb-player img,.lb-player .lb-avatar-ph{width:26px;height:26px}
+  .lb-player-name{font-size:12px;max-width:100px}
+
+  /* Sidebar leaderboard (mobile = hidden, use modal) */
+  .sb-row{padding:8px 10px;border-radius:10px}
+  .sb-rank{font-size:11px;min-width:22px}
+  .sb-avatar,.sb-avatar-ph{width:28px;height:28px;font-size:12px}
+  .sb-name{font-size:12px}
+  .sb-score{font-size:12px;min-width:40px}
+
+  /* Mobile LB modal */
+  .lb-modal{padding:16px}
+  .lb-modal-close{top:calc(var(--bar-h) + 8px);right:12px;width:34px;height:34px;font-size:16px}
+
+  /* Mode tags */
+  .lobby-actions + div{gap:6px!important;padding:0 12px!important}
+  .lobby-actions + div > div{font-size:9px!important;padding:5px 8px!important}
+}
+
+/* ═══ VERY SMALL (iPhone SE etc) ═══ */
+@media(max-width:380px){
+  .logo-arena{font-size:48px;letter-spacing:6px}
+  .logo-ddx{font-size:26px;letter-spacing:3px}
+  .logo-med{font-size:14px;letter-spacing:4px}
+  .game-header{padding:6px 8px}
+  .game-main{padding:8px 6px}
+  .case-phase{padding:10px 10px}
+  .choices-area{padding:0 10px 10px}
+  .choice-btn{padding:10px 12px;font-size:13px}
+  .phase-text{font-size:13px}
+  .result-score{font-size:30px}
+  .result-badge{width:64px;height:64px;font-size:28px}
+  .modal-box{padding:20px 14px}
+  #loginQr{width:130px!important;height:130px!important}
+}
+</style>
+</head>
+<body>
+
+<!-- Debug log (ลบได้ทีหลัง) -->
+<!-- Platform badge -->
+<!-- Device info bar -->
+<div id="platformBadge" style="position:fixed;top:0;left:0;right:0;z-index:9999;padding:4px 16px;font-size:10px;font-weight:600;font-family:'Noto Sans Thai',monospace;text-align:center;color:#64748b;background:rgba(15,23,42,.95);border-bottom:1px solid rgba(255,255,255,.06);line-height:1.6">
+  <div><span id="badgeText"></span> <span id="versionBadge" style="font-size:9px;color:#475569"></span></div>
+  <div style="display:flex;justify-content:center;gap:8px;margin-top:2px">
+    <button onclick="toggleFullscreen()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#94a3b8;font-size:10px;padding:2px 10px;border-radius:4px;cursor:pointer;font-family:'Noto Sans Thai',sans-serif" id="fsBtn">⛶ เล่นเต็มจอ</button>
+    <button onclick="location.reload(true)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#94a3b8;font-size:10px;padding:2px 10px;border-radius:4px;cursor:pointer;font-family:'Noto Sans Thai',sans-serif">↻ กดถ้าค้าง</button>
+  </div>
+</div>
+
+<div class="countdown-overlay" id="countdownOverlay"><div class="countdown-num" id="countdownNum">3</div><div class="countdown-text">เตรียมตัว</div></div>
+
+<!-- ═══ MAINTENANCE OVERLAY ═══ -->
+<div id="maintenanceOverlay" style="display:none;position:fixed;inset:0;z-index:10000;background:radial-gradient(ellipse at center,#0a0a1a 0%,#000 100%);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;font-family:'Noto Sans Thai',sans-serif">
+  <style>
+    @keyframes shieldFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.05)}}
+    @keyframes barGlow{0%,100%{box-shadow:0 0 10px rgba(245,158,11,.3)}50%{box-shadow:0 0 25px rgba(245,158,11,.6)}}
+    @keyframes barMove{0%{background-position:0 0}100%{background-position:40px 0}}
+    @keyframes sparkle{0%,100%{opacity:.3}50%{opacity:1}}
+    .maint-shield{font-size:80px;animation:shieldFloat 3s ease-in-out infinite;filter:drop-shadow(0 0 30px rgba(245,158,11,.4))}
+    .maint-bar{width:280px;height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin:24px auto 0;animation:barGlow 2s ease-in-out infinite}
+    .maint-bar-fill{height:100%;border-radius:4px;background:repeating-linear-gradient(90deg,#f59e0b 0,#f97316 10px,#f59e0b 20px,#f97316 30px,#f59e0b 40px);background-size:40px 100%;animation:barMove 1s linear infinite;width:100%}
+    .maint-spark{position:absolute;width:3px;height:3px;border-radius:50%;background:#f59e0b;animation:sparkle 2s ease-in-out infinite}
+  </style>
+  <div style="position:relative">
+    <div class="maint-spark" style="top:-30px;left:-40px;animation-delay:0s"></div>
+    <div class="maint-spark" style="top:-20px;right:-30px;animation-delay:.7s"></div>
+    <div class="maint-spark" style="bottom:-25px;left:-20px;animation-delay:1.4s"></div>
+    <div class="maint-shield">🛡️</div>
+  </div>
+  <div style="margin-top:24px;font-size:11px;font-weight:800;letter-spacing:6px;text-transform:uppercase;color:#f59e0b;font-family:'Orbitron',monospace">SERVER MAINTENANCE</div>
+  <div style="margin-top:16px;font-size:22px;font-weight:900;color:#fff;line-height:1.4">นินจาของเรากำลังลับดาบ<br>เตรียมสนามประลองใหม่...</div>
+  <div id="maintenanceMsg" style="margin-top:12px;font-size:14px;color:#94a3b8;max-width:320px"></div>
+  <div class="maint-bar"><div class="maint-bar-fill"></div></div>
+  <div style="margin-top:16px;font-size:12px;color:#64748b">⏳ กลับมาประลองได้อีกครั้งในไม่ช้า</div>
+  <div style="margin-top:40px;font-size:9px;font-weight:700;letter-spacing:4px;color:rgba(255,255,255,.1);text-transform:uppercase">MEDNINJA TECHNOLOGY</div>
+</div>
+
+<!-- Mobile LB button -->
+<button class="mobile-lb-btn" onclick="toggleMobileLB()">🏆</button>
+
+<!-- Mobile LB modal -->
+<div class="lb-modal" id="lbModal">
+  <button class="lb-modal-close" onclick="toggleMobileLB()">✕</button>
+  <div class="lb-modal-inner">
+    <div id="mobileLbList"></div>
+  </div>
+</div>
+
+<div class="arena-layout">
+<!-- MAIN AREA -->
+<div class="arena-main">
+<div class="particles" id="particles"></div>
+
+<!-- ═══ LOGIN MODAL (QR + ปุ่ม LINE) ═══ -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal-box">
+    <div class="login-logo">⚔️</div>
+    <h3>เข้าสู่สนามประลอง</h3>
+    <p style="margin-bottom:20px" id="loginDesc">Scan QR ด้วย LINE</p>
+    <!-- QR สำหรับ Desktop -->
+    <div id="loginQrWrap" style="text-align:center;margin-bottom:20px">
+      <img id="loginQr" src="" alt="QR Code" style="width:200px;height:200px;border-radius:12px;border:3px solid #06C755;display:block;margin:0 auto">
+      <p style="font-size:11px;color:var(--text-dim);margin-top:8px">เปิด LINE → แท็บ QR → สแกน</p>
+    </div>
+    <!-- ปุ่มสำหรับมือถือ -->
+    <a id="lineLoginLink" href="https://liff.line.me/2009259048-iAvDwtRh" class="login-line-btn" style="text-decoration:none;display:flex" target="_blank" rel="noopener">
+      <svg class="login-line-icon" viewBox="0 0 24 24" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+      เข้าด้วย LINE (มือถือ)
+    </a>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ═══ LOBBY ═══ -->
+<div class="screen active" id="lobby">
+  <div class="lobby-inner">
+    <div style="margin-bottom:12px;line-height:1">
+      <div class="logo-med">MEDNINJA</div>
+      <div class="logo-ddx orbitron">DDx</div>
+      <div class="logo-arena orbitron">ARENA</div>
+    </div>
+    <div class="logo-sub">สนามประลอง Differential Diagnosis — ฟรี!</div>
+
+    <!-- Player bar (shown after login) -->
+    <div class="player-bar" id="playerBar" style="display:none">
+      <div id="playerAvatarWrap"></div>
+      <div class="player-info">
+        <div class="player-name" id="playerName"></div>
+        <div class="player-best">Best Score: <b id="playerBest">0</b></div>
+      </div>
+      <button class="btn btn-ghost btn-logout" onclick="logout()">ออก</button>
+    </div>
+
+    <div class="lobby-actions" style="margin-top:32px">
+      <button class="btn btn-orange" style="font-size:20px;padding:18px 48px;min-width:280px;justify-content:center" onclick="selectMode('mixed')">⚔️ เริ่มประลอง</button>
+      <button class="btn btn-ghost" onclick="toggleMobileLB()">🏆 ลำดับในยุทธจักร</button>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <div style="font-size:12px;color:var(--text-dim);padding:8px 16px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)">🧬 DDx Buzzwords</div>
+      <div style="font-size:12px;color:var(--text-dim);padding:8px 16px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)">⚡ Pattern → DDx</div>
+      <div style="font-size:12px;color:var(--text-dim);padding:8px 16px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)">🎯 Odd One Out</div>
+    </div>
+    <!-- Admin: ปุ่ม Audit -->
+    <div id="adminAuditBtn" style="display:none;margin-top:16px">
+      <button class="btn btn-ghost" onclick="showScreen('audit')" style="font-size:13px;padding:10px 20px">🔍 Audit โจทย์</button>
+    </div>
+
+    <div style="margin-top:40px;padding-top:16px;border-top:1px solid rgba(255,255,255,.04);text-align:center">
+      <div style="font-size:10px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,.15);text-transform:uppercase">MEDNINJA TECHNOLOGY</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LEADERBOARD OVERLAY ═══ -->
+<div id="leaderboardOverlay" style="display:none;position:fixed;top:var(--bar-h);left:0;right:0;bottom:0;z-index:80;background:rgba(10,10,15,.92);backdrop-filter:blur(6px);overflow-y:auto;padding:20px">
+  <div style="max-width:500px;width:100%;margin:0 auto">
+    <div style="text-align:center;margin-bottom:20px">
+      <h2 style="font-size:24px;font-weight:900;color:#fff">🏆 <span style="color:var(--gold)">ลำดับในยุทธจักร</span></h2>
+      <p style="font-size:12px;color:var(--text-dim)">Top 20 — Realtime</p>
+    </div>
+    <div id="fullLbList" class="sb-list"></div>
+    <div class="lb-empty" id="lbEmpty" style="display:none;text-align:center;padding:40px;color:var(--text-dim)">ยังไม่มีคนเล่น — เริ่มเลย!</div>
+  </div>
+  <button class="btn btn-ghost" onclick="closeLbOverlay()" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:90;padding:12px 24px;background:rgba(15,23,42,.95);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1)">✕ ปิด</button>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div class="screen" id="game">
+  <div class="game-header">
+    <div class="game-hud-left">
+      <div id="gameAvatar" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--purple);overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"></div>
+      <div class="game-logo"><span style="color:var(--purple-glow)">MEDNINJA</span> <span style="color:var(--orange)">DDx</span> <span style="color:#fff">ARENA</span></div>
+      <div class="game-round">ข้อ <b id="currentQ">1</b> / <b id="totalQ">10</b></div>
+    </div>
+    <div class="game-hud-right">
+      <div class="game-streak" id="streakDisplay"></div>
+      <div class="game-score-display">คะแนน <b id="scoreDisplay">0</b></div>
+    </div>
+  </div>
+  <div class="game-main">
+    <div class="case-card" id="caseCard">
+      <div class="case-phase" id="casePhase"></div>
+      <div class="choices-area" id="choicesArea" style="display:none">
+        <div class="choices-label">
+          <div class="choices-title" id="choicesTitle">Diagnosis?</div>
+          <div class="timer-group"><div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div><div class="timer-text orbitron" id="timerText">10</div></div>
+        </div>
+        <div class="choice-grid" id="choiceGrid"></div>
+      </div>
+      <div class="phase-progress" id="phaseProgress"></div>
+    </div>
+    <div class="round-result" id="roundResult" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ═══ RESULT ═══ -->
+<div class="screen" id="result" style="justify-content:center;align-items:center;text-align:center;padding:40px 24px">
+  <div style="max-width:400px;width:100%">
+    <div class="result-badge" id="resultBadge" style="margin-bottom:20px">🏆</div>
+    <div class="result-score orbitron" id="resultScore" style="margin-bottom:4px">0</div>
+    <div id="resultTitle" style="font-size:22px;font-weight:800;margin-bottom:4px"></div>
+    <div id="resultSub" style="font-size:13px;color:var(--text-dim);margin-bottom:12px"></div>
+    <div id="resultRank" style="display:none;font-size:14px;color:var(--gold);font-weight:700;margin-bottom:20px"></div>
+    <div style="display:flex;gap:20px;justify-content:center;margin-bottom:24px">
+      <div><div class="result-stat-num g" id="rCorrect" style="font-size:28px">0</div><div style="font-size:10px;color:var(--text-dim)">ถูก</div></div>
+      <div><div class="result-stat-num r" id="rWrong" style="font-size:28px">0</div><div style="font-size:10px;color:var(--text-dim)">ผิด</div></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-orange" onclick="selectMode('mixed')" style="flex:1">🔄 เล่นอีก</button>
+      <button class="btn btn-ghost" onclick="showScreen('lobby')" style="flex:1">🏠 กลับ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AUDIT SCREEN (admin only) ═══ -->
+<div class="screen" id="audit" style="align-items:center;padding:20px">
+  <div style="max-width:600px;width:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:20px;font-weight:900">🔍 Audit โจทย์</h2>
+      <button class="btn btn-ghost" onclick="showScreen('lobby')" style="padding:8px 16px;font-size:12px">← กลับ</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <select id="auditFilter" onchange="loadAuditCards()" style="flex:1;padding:10px;border-radius:10px;background:var(--bg2);color:var(--text);border:1px solid rgba(255,255,255,.1);font-family:'Noto Sans Thai',sans-serif;font-size:13px">
+        <option value="all">ทั้งหมด</option>
+        <option value="unaudited" selected>ยังไม่ audit</option>
+        <option value="audited">Audited แล้ว</option>
+        <option value="flagged">🚩 Flag รอแก้</option>
+      </select>
+      <div id="auditCount" style="padding:10px 16px;border-radius:10px;background:var(--bg2);font-size:13px;color:var(--text-dim);white-space:nowrap"></div>
+    </div>
+    <div id="auditCard" style="background:var(--bg2);border-radius:16px;border:1px solid rgba(255,255,255,.06);overflow:hidden;position:relative">
+      <div style="padding:24px" id="auditContent"><div class="loading-msg">กำลังโหลด...</div></div>
+      <div style="display:flex;gap:8px;padding:16px;background:var(--bg3);border-top:1px solid rgba(255,255,255,.04)">
+        <button onclick="auditAction('flag')" style="flex:1;padding:12px;border-radius:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-weight:700;cursor:pointer;font-family:'Noto Sans Thai',sans-serif;font-size:14px">🚩 Flag</button>
+        <button onclick="auditAction('skip')" style="flex:1;padding:12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-dim);font-weight:700;cursor:pointer;font-family:'Noto Sans Thai',sans-serif;font-size:14px">⏭ ข้าม</button>
+        <button onclick="auditAction('approve')" style="flex:2;padding:12px;border-radius:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;font-weight:700;cursor:pointer;font-family:'Noto Sans Thai',sans-serif;font-size:14px">✅ Approve</button>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--text-dim)" id="auditProgress"></div>
+  </div>
+</div>
+
+</div><!-- end .arena-main -->
+
+<!-- ═══ SIDEBAR LEADERBOARD (desktop) ═══ -->
+<div class="arena-sidebar" id="arenaSidebar">
+  <div class="sb-list" id="sidebarLbList"></div>
+</div>
+
+</div><!-- end .arena-layout -->
+
+<script>
+const API = '/api/arena'
+function adminName() { return (player && player.adminName) || 'NINJA' }
+const LIFF_ID = '2009259048-iAvDwtRh'
+let TIMER_SEC = 20 // default, DDx=30 Pattern/OddOut=20
+const ROUND_SIZE = 5
+const STREAK_BONUS = 50
+
+// ═══════════════════════════════════════════
+// STEP 1: DETECT ENVIRONMENT ก่อนทุกอย่าง
+// ═══════════════════════════════════════════
+const UA = navigator.userAgent
+const ENV = {
+  isIOS: /iPhone|iPad|iPod/i.test(UA),
+  isAndroid: /Android/i.test(UA),
+  isMobile: /iPhone|iPad|iPod|Android/i.test(UA),
+  isDesktop: !/iPhone|iPad|iPod|Android/i.test(UA),
+  isInLine: /Line\//i.test(UA),
+  isInLineLIFF: /LIFF/i.test(UA),
+  liffUrl: 'https://liff.line.me/' + LIFF_ID,
+  deepLink: 'line://app/' + LIFF_ID,
+  oauthUrl: '/api/arena/line-login',
+  qrToken: new URLSearchParams(window.location.search).get('t') || sessionStorage.getItem('arena_qr_token'),
+}
+ENV.platform = ENV.isDesktop ? 'desktop'
+  : ENV.isInLine ? (ENV.isIOS ? 'ios-line' : 'android-line')
+  : ENV.isIOS ? 'ios-safari' : 'android-chrome'
+
+let player = JSON.parse(localStorage.getItem('arena_player')||'null')
+let liffReady = false
+let gameState = { mode:'', questions:[], current:0, score:0, correct:0, wrong:0, streak:0, maxStreak:0, timer:null }
+
+// ═══ Device info bar ═══
+function getDeviceInfo() {
+  const ua = navigator.userAgent
+  let os = 'Unknown', browser = 'Unknown', device = ENV.isDesktop ? '💻 Desktop' : '📱 Mobile'
+  if (/iPhone/.test(ua)) os = 'iOS ' + (ua.match(/OS (\d+[_\.]\d+)/)?.[1]?.replace('_','.') || '')
+  else if (/iPad/.test(ua)) { os = 'iPadOS'; device = '📱 Tablet' }
+  else if (/Android/.test(ua)) os = 'Android ' + (ua.match(/Android (\d+\.?\d*)/)?.[1] || '')
+  else if (/Windows/.test(ua)) os = 'Windows'
+  else if (/Mac/.test(ua)) os = 'macOS'
+  else if (/Linux/.test(ua)) os = 'Linux'
+  if (/Line\//i.test(ua)) browser = 'LINE'
+  else if (/Chrome\//.test(ua) && !/Edg/.test(ua)) browser = 'Chrome'
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari'
+  else if (/Firefox\//.test(ua)) browser = 'Firefox'
+  else if (/Edg\//.test(ua)) browser = 'Edge'
+  return { os, browser, device }
+}
+
+async function updateDeviceBadge() {
+  const el = document.getElementById('platformBadge')
+  if (!el) return
+  const info = getDeviceInfo()
+  let ip = ''
+  try { const r = await fetch('https://api.ipify.org?format=json'); const d = await r.json(); ip = d.ip } catch(e) {}
+  const bt = document.getElementById('badgeText')
+  if (bt) bt.textContent = `${info.device} ${info.os} | ${info.browser}${ENV.isInLine ? ' (LINE)' : ''}${ip ? ' | IP: ' + ip : ''}`
+}
+
+document.addEventListener('DOMContentLoaded', () => updateDeviceBadge())
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(()=>{})
+    document.getElementById('fsBtn').textContent = '⛶'
+  } else {
+    document.exitFullscreen()
+    document.getElementById('fsBtn').textContent = '⛶'
+  }
+}
+
+function logDebug(msg) {
+  console.log('[Arena]', msg)
+}
+function updateBadge() {} // compat stub
+
+// ═══════════════════════════════════════════
+// STEP 2: LOADING SCREEN ถ้าต้อง login อัตโนมัติ
+// ═══════════════════════════════════════════
+const _needLoading = ENV.qrToken || (ENV.isInLine && !player)
+if (_needLoading) {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+    document.body.insertAdjacentHTML('afterbegin', `
+      <div id="qrLoadingScreen" style="position:fixed;inset:0;z-index:999;background:#0a0a0f;display:flex;align-items:center;justify-content:center;color:#e2e8f0;font-family:'Noto Sans Thai',sans-serif">
+        <div style="text-align:center">
+          <div style="font-size:56px;margin-bottom:16px">⚔️</div>
+          <div style="width:36px;height:36px;border:4px solid rgba(255,255,255,.1);border-top-color:#06C755;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px"></div>
+          <p style="font-size:16px;font-weight:700">กำลังเข้าสู่ระบบ...</p>
+        </div>
+      </div>`)
+  })
+}
+
+// ═══════════════════════════════════════════
+// STEP 3: INIT — โหลด LIFF + จัดการ login ตาม platform
+// ═══════════════════════════════════════════
+// ═══ MAINTENANCE CHECK ═══
+async function checkMaintenance() {
+  try {
+    const r = await fetch('/api/arena/status')
+    const d = await r.json()
+    const el = document.getElementById('maintenanceOverlay')
+    if (d.maintenance) {
+      const msgEl = document.getElementById('maintenanceMsg')
+      if (msgEl && d.message) msgEl.textContent = d.message
+      el.style.display = 'flex'
+    } else {
+      el.style.display = 'none'
+    }
+  } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  logDebug('Platform: ' + ENV.platform)
+  logDebug('UA: ' + UA.substring(0, 80))
+  logDebug('QR token: ' + (ENV.qrToken ? ENV.qrToken.substring(0, 8) + '...' : 'none'))
+  logDebug('Has player: ' + !!player)
+
+  if (!_needLoading) createParticles()
+  checkMaintenance()
+  setInterval(checkMaintenance, 30000)
+  loadStats()
+  if (player && player.lineUserId) updatePlayerBar()
+  startLBRefresh()
+  startMonthCountdown() // countdown — เรียกครั้งเดียว update ทุก .lb-countdown
+
+  // โหลด LIFF SDK
+  const s = document.createElement('script')
+  s.src = 'https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js'
+  s.onload = initLIFF
+  s.onerror = () => { logDebug('LIFF SDK LOAD FAILED'); liffReady = false }
+  document.head.appendChild(s)
+})
+
+async function initLIFF() {
+  try {
+    await liff.init({ liffId: LIFF_ID })
+    liffReady = true
+    logDebug('LIFF OK: loggedIn=' + liff.isLoggedIn() + ' inClient=' + liff.isInClient())
+    updateBadge('LIFF พร้อม | loggedIn=' + liff.isLoggedIn())
+  } catch (err) {
+    logDebug('LIFF init FAIL: ' + err.message)
+    liffReady = false
+    updateBadge('LIFF FAIL → ใช้ OAuth2')
+  }
+
+  // ═══ QR CONFIRM FLOW (มี ?t= token) — เคส B2/B3 ═══
+  if (ENV.qrToken) {
+    updateBadge('QR confirm → กำลัง verify...')
+    sessionStorage.setItem('arena_qr_token', ENV.qrToken)
+    if (liffReady && liff.isLoggedIn()) {
+      sessionStorage.removeItem('arena_qr_token')
+      window.history.replaceState({}, '', '/ddx-arena')
+      autoConfirmQR(ENV.qrToken)
+      return
+    }
+    if (liffReady) {
+      updateBadge('QR → ต้อง login ก่อน → redirect...')
+      liff.login({ redirectUri: window.location.origin + '/ddx-arena?t=' + ENV.qrToken })
+    } else {
+      updateBadge('QR → LIFF fail → OAuth2')
+      window.location.href = ENV.oauthUrl
+    }
+    return
+  }
+
+  // ═══ AUTO LOGIN — อยู่ใน LINE + ยังไม่มี player — เคส D6/D7 ═══
+  if (ENV.isInLine && liffReady && !player) {
+    updateBadge('อยู่ใน LINE → auto login...')
+    logDebug('In LINE browser → auto handleLiffLogin()')
+    await handleLiffLogin()
+    return
+  }
+
+  // ═══ Redirect กลับมา — เคส E8/E9 ═══
+  if (!ENV.isInLine && liffReady && liff.isLoggedIn() && !player) {
+    updateBadge('redirect กลับมา → login...')
+    logDebug('LIFF redirect back → handleLiffLogin()')
+    await handleLiffLogin()
+    return
+  }
+
+  // ═══ มี player แล้ว หรือ Desktop รอกดปุ่ม ═══
+  updateBadge(player ? 'พร้อมเล่น ✅' : 'รอกดปุ่ม')
+}
+
+// ═══════════════════════════════════════════
+// HANDLE LIFF LOGIN — ดึง profile จาก LINE
+// ลอง idToken ก่อน → fallback accessToken + getProfile()
+// ═══════════════════════════════════════════
+async function handleLiffLogin() {
+  try {
+    logDebug('handleLiffLogin: platform=' + ENV.platform)
+    updateBadge('กำลัง login...')
+
+    // วิธี 1: idToken
+    const idToken = liff.getIDToken()
+    logDebug('idToken: ' + (idToken ? 'YES' : 'NULL'))
+    if (idToken) {
+      const d = await postJson(API + '/login', { idToken })
+      if (d.ok && d.player) { logDebug('Login OK (idToken)'); loginSuccess(d.player, d); return }
+      logDebug('idToken verify failed: ' + (d.error || ''))
+    }
+
+    // วิธี 2: accessToken + getProfile() (iOS fallback)
+    const accessToken = liff.getAccessToken()
+    logDebug('accessToken: ' + (accessToken ? 'YES' : 'NULL'))
+    if (accessToken) {
+      const profile = await liff.getProfile()
+      logDebug('Profile: ' + (profile ? profile.displayName : 'NULL'))
+      if (profile && profile.userId) {
+        const d = await postJson(API + '/login-profile', {
+          lineUserId: profile.userId,
+          displayName: profile.displayName || '',
+          pictureUrl: profile.pictureUrl || '',
+          accessToken,
+        })
+        if (d.ok && d.player) { logDebug('Login OK (profile)'); loginSuccess(d.player, d); return }
+      }
+    }
+
+    // วิธี 3: ถ้าอยู่ใน LINE → liff.login() (ครั้งเดียว)
+    if (ENV.isInLine && !sessionStorage.getItem('arena_tried_login')) {
+      logDebug('In LINE + no token → liff.login() (once)')
+      updateBadge('liff.login()...')
+      sessionStorage.setItem('arena_tried_login', '1')
+      liff.login({ redirectUri: window.location.origin + '/ddx-arena' })
+      return
+    }
+
+    // วิธี 4: OAuth2 fallback (ไม่ใช่ LINE browser)
+    if (!ENV.isInLine) {
+      logDebug('Not in LINE → OAuth2')
+      window.location.href = ENV.oauthUrl
+      return
+    }
+
+    // ทุกวิธี fail + อยู่ใน LINE → แสดง lobby ให้กดปุ่มเอง
+    logDebug('All methods failed → show lobby')
+    updateBadge('❌ auto login fail → กดปุ่มเอง')
+    sessionStorage.removeItem('arena_tried_login')
+    const ls = document.getElementById('qrLoadingScreen'); if (ls) ls.remove()
+    showScreen('lobby')
+  } catch (err) {
+    logDebug('handleLiffLogin ERROR: ' + err.message)
+    updateBadge('❌ ERROR: ' + err.message)
+    sessionStorage.removeItem('arena_tried_login')
+    const ls = document.getElementById('qrLoadingScreen'); if (ls) ls.remove()
+    showScreen('lobby')
+  }
+}
+
+// ═══ QR CONFIRM — มือถือ scan QR → ยืนยันให้ desktop ═══
+async function autoConfirmQR(token) {
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0f;color:#e2e8f0;font-family:'Noto Sans Thai',sans-serif;padding:20px">
+      <div style="text-align:center;max-width:320px" id="confirmMsg">
+        <div style="font-size:56px;margin-bottom:16px">⚔️</div>
+        <div style="width:36px;height:36px;border:4px solid rgba(255,255,255,.1);border-top-color:#06C755;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px"></div>
+        <h2 style="font-size:20px;font-weight:800;margin-bottom:8px">กำลังยืนยันตัวตน...</h2>
+      </div>
+    </div>`
+
+  try {
+    // ลอง idToken ก่อน
+    let body = { token }
+    const idToken = liff.getIDToken()
+    if (idToken) {
+      body.idToken = idToken
+    } else {
+      // iOS fallback: ใช้ accessToken + profile
+      const accessToken = liff.getAccessToken()
+      if (accessToken) {
+        const profile = await liff.getProfile()
+        body.accessToken = accessToken
+        body.lineUserId = profile.userId
+        body.displayName = profile.displayName
+        body.pictureUrl = profile.pictureUrl
+      }
+    }
+
+    const d = await postJson(API + '/qr-confirm', body)
+    showConfirmResult(d.ok, d.ok ? null : d.error)
+  } catch (err) {
+    showConfirmResult(false, err.message)
+  }
+}
+
+function showConfirmResult(ok, error) {
+  const el = document.getElementById('confirmMsg')
+  if (!el) return
+  el.innerHTML = ok
+    ? `<div style="font-size:56px;margin-bottom:16px">✅</div>
+       <h2 style="font-size:22px;font-weight:800;margin-bottom:8px;color:#22c55e">เข้าสู่ระบบสำเร็จ!</h2>
+       <p style="color:#94a3b8;font-size:15px">หน้าจอ Desktop พร้อมเล่นแล้ว</p>
+       <p style="color:#64748b;font-size:12px">ปิดหน้านี้ได้เลย</p>`
+    : `<div style="font-size:56px;margin-bottom:16px">❌</div>
+       <h2 style="font-size:20px;font-weight:800;margin-bottom:8px;color:#ef4444">ไม่สำเร็จ</h2>
+       <p style="color:#94a3b8;font-size:14px">${error || 'กรุณาลองใหม่'}</p>`
+  // auto close หลัง 2 วินาที (เฉพาะสำเร็จ)
+  if (ok) setTimeout(() => { try { liff.closeWindow() } catch(e) { window.close() } }, 2000)
+}
+
+// ═══ LOGIN SUCCESS — ทุก platform ใช้ร่วมกัน ═══
+function loginSuccess(p, extra) {
+  player = p
+  // merge isAdmin/adminName from login response
+  if (extra) {
+    if (extra.isAdmin) { player.isAdmin = true; player.adminName = extra.adminName || 'NINJA' }
+  }
+  localStorage.setItem('arena_player', JSON.stringify(player))
+  document.getElementById('loginModal').classList.remove('active')
+  const ls = document.getElementById('qrLoadingScreen')
+  if (ls) ls.remove()
+  updatePlayerBar()
+  showScreen('lobby')
+  loadSidebarLB()
+  updateBadge('✅ Login สำเร็จ: ' + (player.isAdmin ? adminName() : p.displayName))
+  // Admin: แสดงปุ่ม Audit
+  if (player.isAdmin) {
+    const ab = document.getElementById('adminAuditBtn'); if (ab) ab.style.display = 'block'
+  }
+}
+
+// ═══ HELPER ═══
+async function postJson(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  return r.json()
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError')
+  el.textContent = msg
+  el.style.display = 'block'
+  const btn = document.getElementById('lineLoginBtn')
+  btn.disabled = false
+  btn.innerHTML = '<svg class="login-line-icon" viewBox="0 0 24 24" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg> เข้าสู่ระบบด้วย LINE'
+}
+
+// ═══ STATS ═══
+async function loadStats() {
+  try {
+    const r = await fetch(API + '/stats')
+    const d = await r.json()
+    if (d.ok) {
+      // stats removed from lobby
+    }
+  } catch (e) { console.error(e) }
+}
+
+// ═══ SCREENS ═══
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+  document.getElementById(id).classList.add('active')
+  if (id === 'lobby' && player) updatePlayerBar()
+}
+
+// ═══ PLAYER BAR ═══
+function updatePlayerBar() {
+  if (!player) { document.getElementById('playerBar').style.display = 'none'; return }
+  const bar = document.getElementById('playerBar')
+  bar.style.display = 'flex'
+
+  const isAdminUser = player.isAdmin
+  const wrap = document.getElementById('playerAvatarWrap')
+  if (isAdminUser) {
+    wrap.innerHTML = '<div class="player-avatar-placeholder" style="border-color:var(--orange);background:rgba(249,115,22,.15)">⚔️</div>'
+  } else if (player.pictureUrl) {
+    wrap.innerHTML = '<img class="player-avatar" src="' + player.pictureUrl + '" alt="" onerror="this.outerHTML=\'<div class=player-avatar-placeholder>👤</div>\'">'
+  } else {
+    wrap.innerHTML = '<div class="player-avatar-placeholder">👤</div>'
+  }
+
+  const nameEl = document.getElementById('playerName')
+  nameEl.innerHTML = isAdminUser ? '<span style="color:var(--orange);font-weight:800">⚔️ ' + adminName() + '</span>' : escHtml(player.displayName || player.name || 'Player')
+
+  document.getElementById('playerBest').textContent = player.bestScore || 0
+}
+
+function logout() {
+  player = null
+  localStorage.removeItem('arena_player')
+  document.getElementById('playerBar').style.display = 'none'
+  if (liffReady && liff.isLoggedIn()) {
+    try { liff.logout() } catch(e) {}
+  }
+}
+
+// ═══════════════════════════════════════════
+// LOGIN — ใช้ ENV ที่ detect ไว้แล้ว
+// ═══════════════════════════════════════════
+function selectMode(mode) {
+  if (!player) {
+    gameState.mode = mode
+    logDebug('selectMode: ' + ENV.platform + ' → need login')
+    // ทุก platform ที่ยังไม่ login → showLoginModal (แสดง QR หรือ ปุ่ม ตาม platform)
+    showLoginModal()
+    return
+  }
+  gameState.mode = mode
+  startRound(mode)
+}
+
+function loginLine() {
+  showLoginModal()
+}
+
+let loginToken = null
+let loginPollTimer = null
+
+async function showLoginModal() {
+  document.getElementById('loginModal').classList.add('active')
+  document.getElementById('loginError').style.display = 'none'
+
+  if (ENV.isMobile) {
+    // ═══ MOBILE: ซ่อน QR แสดงปุ่ม LINE ═══
+    document.getElementById('loginQrWrap').style.display = 'none'
+    document.getElementById('loginDesc').textContent = 'กดปุ่มด้านล่างเพื่อเข้าด้วย LINE'
+
+    // iOS Safari → line://app/ (deep link เปิด LINE app ตรง)
+    // iOS LINE browser → ไม่ควรมาถึงนี่ (auto login แล้ว)
+    // Android → https://liff.line.me/ (Universal Link)
+    const loginHref = (ENV.isIOS && !ENV.isInLine) ? ENV.deepLink : ENV.liffUrl
+    document.getElementById('lineLoginLink').href = loginHref
+    logDebug('Mobile login: ' + ENV.platform + ' → ' + loginHref)
+    updateBadge('กดปุ่ม LINE → ' + (ENV.isIOS ? 'line://app/' : 'liff.line.me/'))
+    return
+  }
+
+  // Desktop: แสดง QR อย่างเดียว ซ่อนปุ่ม LINE
+  document.getElementById('loginQrWrap').style.display = 'block'
+  document.getElementById('lineLoginLink').style.display = 'none'
+  document.getElementById('loginDesc').textContent = 'Scan QR ด้วย LINE'
+  document.getElementById('loginQr').src = ''
+
+  try {
+    const r = await fetch(API + '/qr-token')
+    const d = await r.json()
+    if (!d.ok) return
+    loginToken = d.token
+
+    const liffLoginUrl = ENV.liffUrl + '?t=' + loginToken
+    document.getElementById('loginQr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&ecc=L&data=' + encodeURIComponent(liffLoginUrl)
+    document.getElementById('lineLoginLink').href = liffLoginUrl
+
+    startLoginPoll()
+  } catch (err) {
+    console.error('QR token error:', err)
+  }
+}
+
+function startLoginPoll() {
+  if (loginPollTimer) clearInterval(loginPollTimer)
+  loginPollTimer = setInterval(async () => {
+    if (!loginToken) return
+    try {
+      const r = await fetch(API + '/qr-check?token=' + loginToken)
+      const d = await r.json()
+      if (d.ok && d.player) {
+        // login สำเร็จ! แสดง loading + ชื่อ ก่อนเข้าเกม
+        clearInterval(loginPollTimer)
+        player = d.player
+        if (d.isAdmin) { player.isAdmin = true; player.adminName = d.adminName || 'NINJA' }
+        localStorage.setItem('arena_player', JSON.stringify(player))
+
+        // เปลี่ยน modal เป็น loading สำเร็จ
+        const isAdminUser = player.isAdmin
+        const avatar = isAdminUser ? '⚔️' : (player.pictureUrl ? `<img src="${player.pictureUrl}" style="width:64px;height:64px;border-radius:50%;border:3px solid #06C755">` : '👤')
+        const name = isAdminUser ? '<span style="color:#f97316">' + adminName() + '</span>' : escHtml(player.displayName || 'Player')
+        document.querySelector('.modal-box').innerHTML = `
+          <div style="text-align:center;padding:20px 0">
+            <div style="font-size:56px;margin-bottom:12px">${typeof avatar === 'string' && avatar.startsWith('<') ? avatar : `<span style="font-size:56px">${avatar}</span>`}</div>
+            <div style="font-size:20px;font-weight:800;margin-bottom:4px;color:#22c55e">✅ ยินดีต้อนรับ!</div>
+            <div style="font-size:18px;font-weight:700;margin-bottom:16px">${name}</div>
+            <div style="width:36px;height:36px;border:4px solid rgba(255,255,255,.1);border-top-color:#f97316;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px"></div>
+            <div style="font-size:13px;color:#64748b">กำลังเข้าสู่เกม...</div>
+          </div>`
+
+        // กลับ lobby ให้กดเริ่มเอง (ไม่เข้าเกมทันที)
+        setTimeout(() => {
+          document.getElementById('loginModal').classList.remove('active')
+          updatePlayerBar()
+          loadSidebarLB()
+        }, 1500)
+      }
+    } catch (e) {}
+  }, 2000)
+}
+
+function _initLiffLogin() {
+  if (!liffReady) return
+  if (liff.isLoggedIn()) {
+    handleLiffLogin()
+  } else {
+    sessionStorage.setItem('liff_loading', '1')
+    liff.login({ redirectUri: window.location.origin + '/ddx-arena' })
+  }
+}
+
+// ═══ LEADERBOARD ═══
+function closeLbOverlay() {
+  document.getElementById('leaderboardOverlay').style.display = 'none'
+}
+
+async function showลำดับในยุทธจักร() {
+  if (!player) { selectMode('mixed'); return }
+  document.getElementById('leaderboardOverlay').style.display = 'block'
+  document.getElementById('fullLbList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)">กำลังโหลด...</div>'
+  document.getElementById('lbEmpty').style.display = 'none'
+  try {
+    const body = player ? { uid: player.lineUserId } : {}
+    const r = await fetch(API + '/leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const d = await r.json()
+    if (!d.ok || !d.leaderboard || d.leaderboard.length === 0) {
+      document.getElementById('fullLbList').innerHTML = ''
+      document.getElementById('lbEmpty').style.display = 'block'
+      return
+    }
+    lbData = d
+    document.getElementById('fullLbList').innerHTML = buildLBHtml(d.leaderboard)
+    updateCountdownNow()
+    const meRow = document.querySelector('#fullLbList .sb-row.me')
+    if (meRow) meRow.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  } catch (err) {
+    document.getElementById('fullLbList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)">ไม่สามารถโหลดได้</div>'
+  }
+}
+
+// ═══ SIDEBAR LEADERBOARD (realtime) ═══
+let lbInterval = null
+let lbData = null
+async function loadSidebarLB() {
+  try {
+    const body = player ? { uid: player.lineUserId } : {}
+    const r = await fetch(API + '/leaderboard', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const d = await r.json()
+    if (!d.ok || !d.leaderboard) return
+    lbData = d
+    renderSidebarLB(d.leaderboard)
+  } catch (e) {}
+}
+
+// ═══ LEADERBOARD — single source, ยัดทุกจุด ═══
+function buildLBHtml(list) {
+  const monthNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']
+  const now = new Date()
+  const monthLabel = monthNames[now.getMonth()+1] + ' ' + (now.getFullYear()+543)
+  const rankColors = ['var(--gold)','#e0e0e0','#cd7f32']
+  const rankIcons = ['1st','2nd','3rd']
+
+  let out = ''
+
+  // 1. ชื่อเดือน
+  out += `<div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:900;color:var(--orange);letter-spacing:2px">⚔️ ลำดับในยุทธจักร</div>
+    <div style="font-size:20px;font-weight:900;color:var(--gold)">${monthLabel}</div>
+  </div>`
+
+  // 2. Countdown
+  out += `<div style="text-align:center;margin-bottom:12px;padding:10px;border-radius:12px;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.1)">
+    <div style="font-size:14px;color:var(--text-dim);font-weight:700">เริ่มต้นนับคะแนนใหม่ในอีก</div>
+    <div class="lb-countdown" style="font-size:22px;font-weight:900;font-family:'Orbitron',sans-serif;color:var(--gold);margin-top:4px"></div>
+  </div>`
+
+  // 3. แชมป์เดือนก่อน
+  if (lbData && lbData.prevChamp) {
+    const champ = lbData.prevChamp
+    const champAvatar = champ.pictureUrl
+      ? `<img src="${champ.pictureUrl}" style="width:48px;height:48px;border-radius:50%;border:3px solid var(--gold);object-fit:cover;margin:8px auto;display:block">`
+      : `<div style="width:48px;height:48px;border-radius:50%;border:3px solid var(--gold);background:var(--bg3);margin:8px auto;display:flex;align-items:center;justify-content:center;font-size:24px">⚔️</div>`
+    out += `<div style="text-align:center;margin-bottom:16px;padding:12px;border-radius:12px;background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(249,115,22,.05));border:1px solid rgba(251,191,36,.15)">
+      <div style="font-size:14px;color:var(--text-dim);font-weight:700">🏆 ผู้ชนะเดือนก่อนคือ</div>
+      ${champAvatar}
+      <div style="font-size:16px;font-weight:900;color:var(--gold)">${champ.displayName}</div>
+      <div style="font-size:12px;color:var(--orange);font-family:'Orbitron',sans-serif;margin-top:2px">${champ.score} pts</div>
+    </div>`
+  }
+
+  // 4. ลำดับของคุณ
+  if (player) {
+    const myRank = (lbData && lbData.myRank > 0) ? lbData.myRank : '—'
+    const myMe = list.find(p => p.isMe)
+    const myScore = myMe ? (myMe.monthlyScore || 0) : 0
+    out += `<div class="sb-myrank">
+      <div class="sb-myrank-label">YOUR RANK</div>
+      <div class="sb-myrank-rank">#${myRank}</div>
+      <div class="sb-myrank-score">Best Score: <b>${myScore}</b></div>
+    </div>`
+  }
+
+  // 5. Player list
+  if (!list || list.length === 0) {
+    out += '<div class="sb-empty">ยังไม่มีคนเล่นเดือนนี้ — เริ่มเลย!</div>'
+  } else {
+    out += list.map((p, i) => {
+      const isMe = !!p.isMe
+      const isAdmin = p.isAdmin
+      const cls = isMe ? 'me' : (i === 0 ? 'top1' : (i === 1 ? 'top2' : (i === 2 ? 'top3' : '')))
+      const rankDisplay = i < 3 ? `<span style="color:${rankColors[i]};font-size:14px">${rankIcons[i]}</span>` : (i+1)
+      const avatar = (isAdmin || !p.pictureUrl)
+        ? `<div class="sb-avatar-ph">${isAdmin ? '⚔️' : (i < 3 ? rankDisplay : '')}</div>`
+        : `<img class="sb-avatar" src="${p.pictureUrl}" onerror="this.outerHTML='<div class=sb-avatar-ph></div>'">`
+      const name = escHtml(p.displayName || 'Player')
+      const score = p.monthlyScore || 0
+      const scoreHtml = score > 0 ? score : '<span style="font-size:9px;color:var(--text-dim);font-family:\'Noto Sans Thai\',sans-serif">กำลังเล่น</span>'
+      return `<div class="sb-row ${cls}">
+        <div class="sb-rank">${i+1}</div>
+        ${avatar}
+        <div class="sb-info"><div class="sb-name${isAdmin?' admin-name':''}">${name}</div></div>
+        <div class="sb-score">${scoreHtml}</div>
+      </div>`
+    }).join('')
+  }
+
+  return out
+}
+
+function renderSidebarLB(list) {
+  // ไม่ login → lock
+  if (!player) {
+    const lockHtml = `<div style="text-align:center;padding:40px 20px">
+      <div style="font-size:48px;margin-bottom:16px">🔒</div>
+      <div style="font-size:16px;font-weight:700;color:var(--gold);margin-bottom:8px">Login เพื่อดู ลำดับในยุทธจักร</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:20px">เข้าสู่ระบบด้วย LINE เพื่อดูอันดับในยุทธจักร</div>
+      <button class="btn btn-orange" style="font-size:14px;padding:12px 32px" onclick="selectMode('mixed')">⚔️ เริ่มประลอง</button>
+    </div>`;
+    ['sidebarLbList','mobileLbList'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.innerHTML = lockHtml
+    })
+    return
+  }
+
+  // สร้าง HTML ครั้งเดียว → ยัดทุกจุด
+  const fullHtml = buildLBHtml(list);
+  ['sidebarLbList','mobileLbList'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.innerHTML = fullHtml
+  })
+  // update countdown ทันที
+  updateCountdownNow()
+}
+
+let monthTimer = null
+function updateCountdownNow() {
+  const now = new Date()
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const diff = next - now
+  const d = Math.floor(diff / 86400000)
+  const h = Math.floor((diff % 86400000) / 3600000)
+  const m = Math.floor((diff % 3600000) / 60000)
+  const s = Math.floor((diff % 60000) / 1000)
+  const text = `${d}d ${h}h ${m}m ${s}s`
+  document.querySelectorAll('.lb-countdown').forEach(el => { el.textContent = text })
+}
+function startMonthCountdown() {
+  if (monthTimer) clearInterval(monthTimer)
+  updateCountdownNow()
+  monthTimer = setInterval(updateCountdownNow, 1000)
+}
+
+function startLBRefresh() {
+  loadSidebarLB()
+  if (lbInterval) clearInterval(lbInterval)
+  lbInterval = setInterval(loadSidebarLB, 60000) // ทุก 60 วินาที
+}
+
+function toggleMobileLB() {
+  if (!player) { selectMode('mixed'); return }
+  const modal = document.getElementById('lbModal')
+  modal.classList.toggle('active')
+  if (modal.classList.contains('active')) loadSidebarLB()
+}
+
+// ═══ GAME ENGINE ═══
+async function startRound(mode) {
+  showScreen('game')
+  // แสดงรูป profile ซ้ายสุด
+  const ga = document.getElementById('gameAvatar')
+  if (ga && player) {
+    const isAdminUser = player.isAdmin
+    ga.innerHTML = isAdminUser ? '⚔️' : (player.pictureUrl ? `<img src="${player.pictureUrl}" style="width:100%;height:100%;object-fit:cover">` : '👤')
+  }
+  document.getElementById('caseCard').innerHTML = '<div class="loading-msg">กำลังโหลดคำถาม...</div>'
+  document.getElementById('roundResult').style.display = 'none'
+
+  try {
+    const r = await fetch(`${API}/mode/${mode}?count=${ROUND_SIZE}`)
+    const d = await r.json()
+    if (!d.ok || !d.questions?.length) {
+      document.getElementById('caseCard').innerHTML = `<div class="loading-msg">${d.error || 'ยังไม่มีข้อสอบ — กรุณา audit ก่อน'}</div>`
+      return
+    }
+    gameState = { mode, questions: d.questions, current: 0, score: 0, correct: 0, wrong: 0, streak: 0, maxStreak: 0, timer: null }
+    // restore card HTML
+    document.getElementById('caseCard').innerHTML = `
+      <div class="case-phase" id="casePhase"></div>
+      <div class="choices-area" id="choicesArea" style="display:none">
+        <div class="choices-label">
+          <div class="choices-title" id="choicesTitle">Diagnosis?</div>
+          <div class="timer-group"><div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div><div class="timer-text orbitron" id="timerText">10</div></div>
+        </div>
+        <div class="choice-grid" id="choiceGrid"></div>
+      </div>
+      <div class="phase-progress" id="phaseProgress"></div>
+    `
+    showCountdown(() => playQuestion())
+  } catch (err) {
+    document.getElementById('caseCard').innerHTML = `<div class="loading-msg">ไม่สามารถเชื่อมต่อ server</div>`
+  }
+}
+
+function showCountdown(cb) {
+  const ol = document.getElementById('countdownOverlay'), num = document.getElementById('countdownNum')
+  ol.classList.add('active'); let c = 3; num.textContent = c
+  const iv = setInterval(() => { c--; if (c <= 0) { clearInterval(iv); ol.classList.remove('active'); cb() } else { num.textContent = c; num.style.animation = 'none'; num.offsetHeight; num.style.animation = 'countPop .8s ease' } }, 800)
+}
+
+function playQuestion() {
+  const q = gameState.questions[gameState.current]
+  if (!q) { gameOver(); return }
+
+  document.getElementById('currentQ').textContent = gameState.current + 1
+  document.getElementById('totalQ').textContent = gameState.questions.length
+  document.getElementById('scoreDisplay').textContent = gameState.score
+  document.getElementById('streakDisplay').textContent = gameState.streak > 1 ? '🔥 ' + gameState.streak + ' streak' : ''
+  document.getElementById('choicesArea').style.display = 'none'
+  document.getElementById('roundResult').style.display = 'none'
+  document.getElementById('caseCard').style.display = 'block'
+
+  // mixed mode → route by q.mode per question + show mode badge
+  const qMode = q.mode || gameState.mode
+  const modeLabels = { ddx: '🧬 DDx Buzzwords', pattern: '⚡ Pattern → DDx', oddone: '🎯 Odd One Out' }
+  const modeColors = { ddx: '#3b82f6', pattern: '#f59e0b', oddone: '#8b5cf6' }
+  const totalDelay = qMode === 'ddx' ? 20 : 5
+  const badge = `<div style="text-align:center;margin-bottom:8px">
+    <span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;background:${modeColors[qMode]||'#64748b'}22;color:${modeColors[qMode]||'#64748b'};border:1px solid ${modeColors[qMode]||'#64748b'}44;letter-spacing:1px">${modeLabels[qMode]||qMode}</span>
+    <div id="stepCountdown" style="margin-top:10px;font-size:13px;color:var(--text-dim)">เตรียมตัว...</div>
+  </div>`
+  document.getElementById('casePhase').innerHTML = badge
+
+  // set timer ตาม mode
+  TIMER_SEC = qMode === 'ddx' ? 45 : 20
+
+  if (qMode === 'ddx') playDdxMode(q)
+  else if (qMode === 'pattern') playPatternMode(q)
+  else if (qMode === 'oddone') playOddOneMode(q)
+}
+
+// ═══ Step countdown — แสดงนับถอยหลังก่อนข้อมูลมา ═══
+let stepCountdownTimer = null
+function startStepCountdown(seconds, label) {
+  clearInterval(stepCountdownTimer)
+  const total = seconds * 10
+  let remaining = total
+  const el = document.getElementById('stepCountdown')
+  if (!el) return
+  el.innerHTML = `<div style="text-align:center;margin-top:12px">
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;font-weight:700">${label}</div>
+    <div style="background:rgba(255,255,255,.06);border-radius:8px;height:6px;overflow:hidden;max-width:300px;margin:0 auto">
+      <div id="stepProgressFill" style="height:100%;background:linear-gradient(90deg,var(--purple),var(--orange));border-radius:8px;width:100%;transition:width .1s linear"></div>
+    </div>
+    <div id="stepTimeText" style="font-size:32px;font-weight:900;font-family:'Orbitron',sans-serif;color:var(--gold);margin-top:8px">${seconds}</div>
+  </div>`
+  stepCountdownTimer = setInterval(() => {
+    remaining--
+    const pct = (remaining / total) * 100
+    const sec = Math.ceil(remaining / 10)
+    const fill = document.getElementById('stepProgressFill')
+    const txt = document.getElementById('stepTimeText')
+    if (fill) fill.style.width = pct + '%'
+    if (txt) {
+      txt.textContent = sec
+      if (sec <= 3) txt.style.color = 'var(--red)'
+    }
+    if (remaining <= 0) {
+      clearInterval(stepCountdownTimer)
+      el.innerHTML = ''
+    }
+  }, 100)
+}
+
+// ═══ MODE 1: DDx Buzzwords (462) ═══
+function playDdxMode(q) {
+  // V2: แสดง CC + History + PE + IX ทั้งหมดพร้อมกัน → ให้เวลาอ่าน → ค่อยโชว์ choices
+  const READ_TIME = 30 // วินาทีอ่านโจทย์
+
+  document.getElementById('phaseProgress').innerHTML = buildDots(['โจทย์', 'DDx?'])
+  updateDots(0)
+
+  // CC
+  if (q.relatedCC) {
+    const ccText = q.relatedCCEn ? `${q.relatedCC} (${q.relatedCCEn})` : q.relatedCC
+    appendPhase('CC', `<span class="kw">${ccText}</span>`)
+  }
+  // History (paragraph ยาว)
+  if (q.history && q.history.length) {
+    q.history.forEach(h => appendPhase('History', `<span class="kw" style="font-size:13px;line-height:1.7">${h}</span>`))
+  }
+  // PE
+  if (q.pe && q.pe.length) {
+    q.pe.forEach(p => appendPhase('PE', `<span class="kw">${p}</span>`))
+  }
+  // IX
+  if (q.investigation && q.investigation.length) {
+    q.investigation.forEach(x => appendPhase('Investigation', `<span class="kw">${x}</span>`))
+  }
+
+  // Countdown อ่านโจทย์
+  startStepCountdown(READ_TIME, 'อ่านโจทย์')
+
+  // ปุ่ม "แสดงตัวเลือก" ข้ามได้เลย
+  const skipBtn = document.createElement('div')
+  skipBtn.style.cssText = 'text-align:center;margin-top:10px'
+  skipBtn.innerHTML = '<button onclick="skipToChoices()" style="padding:8px 24px;border-radius:8px;background:linear-gradient(135deg,var(--orange),#dc2626);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:\'Noto Sans Thai\',sans-serif">พร้อมตอบ ▸</button>'
+  document.getElementById('casePhase').appendChild(skipBtn)
+
+  // หลังอ่านจบ → โชว์ choices
+  window._ddxReadTimer = setTimeout(() => { skipToChoices() }, READ_TIME * 1000)
+}
+
+function skipToChoices() {
+  if (window._ddxReadTimer) { clearTimeout(window._ddxReadTimer); window._ddxReadTimer = null }
+  clearInterval(stepCountdownTimer)
+  const sc = document.getElementById('stepCountdown'); if (sc) sc.innerHTML = ''
+  updateDots(1)
+  const q = gameState.questions[gameState.current]
+  document.getElementById('choicesTitle').textContent = 'จากข้อมูลนี้ จงวินิจฉัย'
+  showChoices(q.choices)
+}
+
+// ═══ MODE 2: Pattern → DDx (151) ═══
+function playPatternMode(q) {
+  document.getElementById('phaseProgress').innerHTML = buildDots(['Pattern', 'DDx?'])
+  updateDots(0)
+  appendPhase((q.category || 'Pattern'), q.prompt)
+  startStepCountdown(8, 'อ่าน Pattern')
+  setTimeout(() => {
+    clearInterval(stepCountdownTimer)
+    const sc = document.getElementById('stepCountdown'); if (sc) sc.innerHTML = ''
+    updateDots(1)
+    document.getElementById('choicesTitle').textContent = 'จาก Pattern นี้ คุณนึกถึง DDx อะไร?'
+    showChoices(q.choices)
+  }, 8000)
+}
+
+// ═══ MODE 3: Odd One Out ═══
+function playOddOneMode(q) {
+  document.getElementById('phaseProgress').innerHTML = buildDots(['CC', 'หาตัวแปลก'])
+  updateDots(0)
+  appendPhase('Chief Complaint', q.prompt || 'ข้อไหนไม่เข้าพวก?')
+  startStepCountdown(5, 'อ่าน CC')
+  setTimeout(() => {
+    clearInterval(stepCountdownTimer)
+    const sc = document.getElementById('stepCountdown'); if (sc) sc.innerHTML = ''
+    updateDots(1)
+    document.getElementById('choicesTitle').textContent = 'ข้อใดไม่ใช่ DDx ของ CC นี้?'
+    showChoices(q.choices)
+  }, 5000)
+}
+
+// ═══ SHARED ═══
+// appendPhase: เพิ่ม step ใหม่ ค้างไว้ให้เห็นทั้งหมด (ไม่ลบตัวเก่า)
+function appendPhase(label, html) {
+  const div = document.createElement('div')
+  div.className = 'phase-step reveal-enter'
+  div.innerHTML = `<div class="phase-label"><div class="phase-icon"></div>${label}</div><div class="phase-text">${html}</div>`
+  document.getElementById('casePhase').appendChild(div)
+  // auto-scroll ให้เห็น clue ใหม่เสมอ
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' })
+}
+
+function renderPhase(label, html) {
+  document.getElementById('casePhase').innerHTML = `
+    <div class="phase-label"><div class="phase-icon"></div>${label}</div>
+    <div class="phase-text reveal-enter">${html}</div>`
+}
+
+function highlightBuzzwords(text) {
+  return text.split(',').map(t => `<span class="kw">${t.trim()}</span>`).join(' ')
+}
+
+function buildDots(labels) {
+  return labels.map((l, i) => `<div class="phase-dot" data-i="${i}" title="${l}"></div>`).join('')
+}
+function updateDots(activeIdx) {
+  document.querySelectorAll('.phase-dot').forEach(d => {
+    const i = parseInt(d.dataset.i)
+    d.classList.remove('active', 'done')
+    if (i === activeIdx) d.classList.add('active')
+    else if (i < activeIdx) d.classList.add('done')
+  })
+}
+
+function showChoices(choices) {
+  document.getElementById('choicesArea').style.display = 'block'
+  const grid = document.getElementById('choiceGrid')
+  grid.innerHTML = choices.map((c, i) => `
+    <button class="choice-btn" onclick="selectChoice(this,${i})" data-idx="${i}">
+      ${c.ddxTh || c.ddx}
+      <div class="choice-sub">${c.ddxTh ? c.ddx : ''}</div>
+    </button>`).join('')
+  // scroll ให้เห็น choices
+  document.getElementById('choicesArea').scrollIntoView({ behavior: 'smooth', block: 'end' })
+  startTimer()
+}
+
+function startTimer() {
+  let remaining = TIMER_SEC * 10
+  const fill = document.getElementById('timerFill'), text = document.getElementById('timerText')
+  clearInterval(gameState.timer)
+  gameState.timer = setInterval(() => {
+    remaining--
+    fill.style.width = (remaining / (TIMER_SEC * 10)) * 100 + '%'
+    const sec = Math.ceil(remaining / 10)
+    text.textContent = sec
+    text.classList.toggle('urgent', sec <= 3)
+    if (remaining <= 0) { clearInterval(gameState.timer); timeUp() }
+  }, 100)
+}
+
+function selectChoice(btn, chosenIdx) {
+  clearInterval(gameState.timer)
+  const q = gameState.questions[gameState.current]
+  const correctIdx = parseInt(atob(q._a))
+  const isCorrect = chosenIdx === correctIdx
+
+  document.querySelectorAll('.choice-btn').forEach(b => b.classList.add('disabled'))
+  // highlight correct answer
+  document.querySelectorAll('.choice-btn').forEach(b => { if (parseInt(b.dataset.idx) === correctIdx) b.classList.add('correct') })
+
+  if (isCorrect) {
+    btn.classList.add('correct')
+    gameState.correct++; gameState.streak++
+    if (gameState.streak > gameState.maxStreak) gameState.maxStreak = gameState.streak
+    gameState.score += 10
+    setTimeout(() => showRoundResult(true, 10), 600)
+  } else {
+    btn.classList.add('wrong')
+    gameState.wrong++; gameState.streak = 0
+    gameState.score = Math.max(0, gameState.score - 5)
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100])
+    setTimeout(() => showRoundResult(false, -5), 600)
+  }
+}
+
+function timeUp() {
+  gameState.wrong++; gameState.streak = 0
+  gameState.score -= 5
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200])
+  const q = gameState.questions[gameState.current]
+  const correctIdx = parseInt(atob(q._a))
+  document.querySelectorAll('.choice-btn').forEach(b => { b.classList.add('disabled'); if (parseInt(b.dataset.idx) === correctIdx) b.classList.add('correct') })
+  setTimeout(() => showRoundResult(false, -5, true), 600)
+}
+
+function showRoundResult(correct, pts, timeout = false) {
+  document.getElementById('caseCard').style.display = 'none'
+  const el = document.getElementById('roundResult'); el.style.display = 'block'
+  const q = gameState.questions[gameState.current]
+  const correctIdx = parseInt(atob(q._a))
+  const answer = q.choices[correctIdx]
+  const emoji = correct ? '✅' : '❌'
+  const ptsText = pts >= 0 ? `+${pts}` : `${pts}`
+  const msg = timeout ? `⏰ หมดเวลา! ${ptsText}` : (correct ? `${ptsText} คะแนน${gameState.streak > 1 ? ' 🔥' + gameState.streak : ''}` : `ผิด! ${ptsText}`)
+  const mnemonicHtml = q.mnemonic ? `<div style="margin-top:10px;padding:10px 14px;border-radius:10px;background:rgba(139,92,237,.12);border:1px solid rgba(139,92,237,.25);font-size:15px;font-weight:700;color:#c4b5fd;line-height:1.5">💡 ${q.mnemonic}</div>` : ''
+  const resultDelay = q.mnemonic ? 10 : 3
+  el.innerHTML = `
+    <div class="emoji" style="animation:countPop .5s ease">${emoji}</div>
+    <div class="message" style="color:${correct ? 'var(--green)' : 'var(--red)'}">${msg}</div>
+    <div class="detail">คำตอบ: <b style="color:var(--orange)">${answer ? answer.ddx : ''}</b> ${answer?.ddxTh ? '— ' + answer.ddxTh : ''}</div>${mnemonicHtml}
+    <div style="margin-top:12px">
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;height:4px;overflow:hidden;max-width:200px;margin:0 auto">
+        <div id="resultProgressFill" style="height:100%;background:linear-gradient(90deg,var(--green),var(--gold));border-radius:8px;width:100%;transition:width .1s linear"></div>
+      </div>
+      <div id="resultTimeText" style="font-size:14px;font-weight:700;color:var(--text-dim);margin-top:6px;text-align:center">ข้อถัดไปใน ${resultDelay} วิ</div>
+      <button onclick="skipToNext()" style="margin-top:10px;padding:8px 24px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans Thai',sans-serif">ถัดไป ▸</button>
+    </div>`
+  // progress countdown
+  const totalR = resultDelay * 10
+  let remR = totalR
+  window._resultTimer = setInterval(() => {
+    remR--
+    const rfill = document.getElementById('resultProgressFill')
+    const rtxt = document.getElementById('resultTimeText')
+    if (rfill) rfill.style.width = (remR / totalR) * 100 + '%'
+    if (rtxt) rtxt.textContent = 'ข้อถัดไปใน ' + Math.ceil(remR / 10) + ' วิ'
+    if (remR <= 0) { clearInterval(window._resultTimer); gameState.current++; playQuestion() }
+  }, 100)
+}
+
+function skipToNext() {
+  if (window._resultTimer) clearInterval(window._resultTimer)
+  gameState.current++
+  playQuestion()
+}
+
+async function gameOver() {
+  const g = gameState, pct = Math.round((g.correct / g.questions.length) * 100)
+
+  // Streak bonus: ถูกครบทุกข้อ = +50
+  let streakBonus = 0
+  if (g.correct === g.questions.length && g.questions.length === ROUND_SIZE) {
+    streakBonus = STREAK_BONUS
+    g.score += streakBonus
+  }
+
+  let emoji, title, sub, cls
+  if (g.correct === ROUND_SIZE) { emoji = '👑'; title = 'PERFECT!'; sub = `ถูกครบ ${ROUND_SIZE} ข้อ! +${STREAK_BONUS} bonus!`; cls = 'gold' }
+  else if (pct >= 60) { emoji = '🏆'; title = 'ยอดเยี่ยม!'; sub = 'เก่งมากเลย!'; cls = 'green' }
+  else if (pct >= 40) { emoji = '💪'; title = 'ดีมาก!'; sub = 'ฝึกอีกนิด!'; cls = 'orange' }
+  else { emoji = '📚'; title = 'ต้องฝึกอีก!'; sub = 'ลองเล่นอีกรอบ!'; cls = 'red' }
+  document.getElementById('resultBadge').textContent = emoji; document.getElementById('resultBadge').className = 'result-badge ' + cls
+  document.getElementById('resultScore').textContent = g.score; document.getElementById('resultScore').className = 'result-score orbitron ' + cls
+  document.getElementById('resultTitle').textContent = title
+  document.getElementById('resultSub').textContent = sub + ' — ถูก ' + g.correct + '/' + g.questions.length
+  const rc = document.getElementById('rCorrect'); if (rc) rc.textContent = g.correct
+  const rw = document.getElementById('rWrong'); if (rw) rw.textContent = g.wrong
+
+  // Update local player
+  if (player) {
+    player.totalGames = (player.totalGames || 0) + 1
+    if (g.score > (player.bestScore || 0)) player.bestScore = g.score
+    localStorage.setItem('arena_player', JSON.stringify(player))
+  }
+
+  // Submit score to server
+  const rankEl = document.getElementById('resultRank')
+  rankEl.style.display = 'none'
+  if (player && player.lineUserId) {
+    try {
+      const r = await fetch(API + '/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lineUserId: player.lineUserId,
+          mode: g.mode,
+          score: g.score,
+          correct: g.correct,
+          wrong: g.wrong,
+          maxStreak: g.maxStreak,
+          totalQuestions: g.questions.length
+        })
+      })
+      const d = await r.json()
+      if (d.ok && d.rank) {
+        rankEl.style.display = 'block'
+        rankEl.innerHTML = '🏆 อันดับของคุณ: <span class="orbitron" style="color:var(--gold)">#' + d.rank + '</span>'
+        if (d.bestScore != null) {
+          player.bestScore = d.bestScore
+          localStorage.setItem('arena_player', JSON.stringify(player))
+        }
+      }
+    } catch (err) { console.error('Submit score error:', err) }
+  }
+
+  showScreen('result')
+  loadSidebarLB()
+
+  // Version check — reload หลังจบรอบถ้ามีเวอร์ชันใหม่
+  if (window._needReload) {
+    setTimeout(() => location.reload(true), 3000)
+  }
+}
+
+// ═══ AUDIT SYSTEM (admin only) ═══
+let auditCards = []
+let auditIdx = 0
+
+async function loadAuditCards() {
+  const filter = document.getElementById('auditFilter').value
+  const params = filter === 'unaudited' ? '?audited=false' : filter === 'audited' ? '?audited=true' : ''
+  try {
+    const r = await fetch(API.replace('/arena', '/admin/arena') + '/cards' + params, {
+      headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') }
+    })
+    const d = await r.json()
+    auditCards = d.cards || []
+    auditIdx = 0
+    document.getElementById('auditCount').textContent = auditCards.length + ' การ์ด'
+    showAuditCard()
+  } catch (e) {
+    document.getElementById('auditContent').innerHTML = '<div class="loading-msg">โหลดไม่ได้ — ต้อง login LMS ก่อน</div>'
+  }
+}
+
+function showAuditCard() {
+  if (auditIdx >= auditCards.length) {
+    document.getElementById('auditContent').innerHTML = '<div style="text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:12px">🎉</div><div style="font-size:18px;font-weight:700">ตรวจครบแล้ว!</div></div>'
+    document.getElementById('auditProgress').textContent = ''
+    return
+  }
+  const c = auditCards[auditIdx]
+  document.getElementById('auditProgress').textContent = `${auditIdx + 1} / ${auditCards.length}`
+  const status = c.isAudited ? '✅ Audited' : '⏳ Not Audited'
+  document.getElementById('auditContent').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:11px;padding:3px 10px;border-radius:6px;background:${c.isAudited?'rgba(34,197,94,.15)':'rgba(249,115,22,.15)'};color:${c.isAudited?'#22c55e':'#f97316'};font-weight:700">${status}</span>
+      <span style="font-size:11px;color:var(--text-dim)">${c.relatedCC || '—'}</span>
+    </div>
+    <div style="font-size:18px;font-weight:800;color:var(--orange);margin-bottom:4px">${c.ddx}</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">${c.ddxTh || ''}</div>
+    <div style="font-size:13px;line-height:1.7;color:var(--text)">
+      <div style="margin-bottom:8px"><span style="color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:1px">Buzzwords</span><br>${c.buzzwords || '—'}</div>
+      ${c.history ? '<div style="margin-bottom:8px"><span style="color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:1px">History</span><br>'+c.history+'</div>' : ''}
+      ${c.pe ? '<div style="margin-bottom:8px"><span style="color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:1px">PE</span><br>'+c.pe+'</div>' : ''}
+      ${c.investigation ? '<div style="margin-bottom:8px"><span style="color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:1px">Investigation</span><br>'+c.investigation+'</div>' : ''}
+    </div>`
+}
+
+async function auditAction(action) {
+  const c = auditCards[auditIdx]
+  if (!c) return
+  try {
+    if (action === 'approve') {
+      if (!c.isAudited) await fetch(API.replace('/arena', '/admin/arena') + '/cards/' + c._id + '/audit', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') }
+      })
+    } else if (action === 'flag') {
+      // flag = unaudit
+      if (c.isAudited) await fetch(API.replace('/arena', '/admin/arena') + '/cards/' + c._id + '/audit', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') }
+      })
+    }
+  } catch (e) {}
+  auditIdx++
+  showAuditCard()
+}
+
+function escHtml(str) {
+  const d = document.createElement('div')
+  d.textContent = str
+  return d.innerHTML
+}
+
+function createParticles() {
+  const c = document.getElementById('particles')
+  // ฝนดาวตก — ถี่ขึ้น ชี้ขวา
+  for (let i = 0; i < 15; i++) {
+    const m = document.createElement('div'); m.className = 'meteor'
+    const h = 30 + Math.random() * 60
+    const dur = 3 + Math.random() * 4
+    const delay = Math.random() * 10
+    const fromBottom = Math.random() > 0.5
+    const left = fromBottom ? Math.random()*60 : 0
+    const top = fromBottom ? 100 : 30+Math.random()*70
+    m.style.cssText = `left:${left}%;top:${top}%;height:${h}px;animation-duration:${dur}s;animation-delay:${delay}s`
+    c.appendChild(m)
+  }
+  // ดาวพราวลอย — เหมือนฟองอากาศ
+  for (let i = 0; i < 25; i++) {
+    const s = document.createElement('div'); s.className = 'star'
+    const size = 2 + Math.random() * 3
+    s.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${3+Math.random()*5}s;animation-delay:${Math.random()*6}s;background:${Math.random()>.5?'rgba(249,115,22,.3)':'rgba(124,58,237,.3)'}`
+    c.appendChild(s)
+  }
+}
+// ═══ SHARE ═══
+function getShareText() {
+  const g = gameState
+  const name = player ? player.displayName : 'ผู้เล่น'
+  return `⚔️ NINJA DDx ARENA\n${name} ได้ ${g.score} คะแนน! (ถูก ${g.correct}/${g.questions.length})\nท้าเพื่อนมาแข่ง DDx → https://medninja.academy/ddx-arena`
+}
+function shareLine() {
+  const text = encodeURIComponent(getShareText())
+  window.open('https://line.me/R/share?text=' + text, '_blank')
+}
+function shareCopy() {
+  const text = getShareText()
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn')
+      btn.textContent = '✅ Copied!'
+      setTimeout(() => { btn.textContent = '📋 Copy' }, 2000)
+    })
+  }
+}
+function shareNative() {
+  if (navigator.share) {
+    navigator.share({ title: 'NINJA DDx ARENA', text: getShareText(), url: 'https://medninja.academy/ddx-arena' }).catch(() => {})
+  }
+}
+
+// ═══ VERSION CHECK — reload หลังจบรอบเท่านั้น ═══
+const ARENA_VERSION = Date.now().toString(36).slice(-6)
+document.getElementById('versionBadge').textContent = 'v.' + ARENA_VERSION
+window._needReload = false
+setInterval(async () => {
+  try {
+    const r = await fetch('/ddx-arena?_t=' + Date.now(), { method: 'HEAD' })
+    const serverEtag = r.headers.get('etag') || ''
+    if (!window._arenaEtag) { window._arenaEtag = serverEtag; return }
+    if (serverEtag && serverEtag !== window._arenaEtag) {
+      window._needReload = true
+      const vb = document.getElementById('versionBadge')
+      if (vb) { vb.textContent = 'มีเวอร์ชันใหม่'; vb.style.color = '#f97316' }
+    }
+  } catch(e) {}
+}, 60000)
+
+// ═══ ANTI-DEBUG / ANTI-COPY (ยกเว้น admin) ═══
+function isAdmin() { return player && player.isAdmin }
+document.addEventListener('contextmenu', e => e.preventDefault())
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12') e.preventDefault()
+  if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) e.preventDefault()
+  if (e.ctrlKey && e.key === 'u') e.preventDefault()
+  if (e.ctrlKey && e.key === 'c') e.preventDefault()
+  if (e.ctrlKey && e.key === 'a') e.preventDefault()
+})
+document.addEventListener('dragstart', e => e.preventDefault())
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRM Test — MedNinja</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans Thai', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 40px 20px; }
+  h1 { text-align: center; margin-bottom: 8px; font-size: 22px; }
+  .sub { text-align: center; color: #94a3b8; font-size: 13px; margin-bottom: 32px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #1e293b; border-radius: 12px; overflow: hidden; }
+  .card-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+  .badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .badge.drm { background: #16a34a; color: #fff; }
+  .badge.no-drm { background: #dc2626; color: #fff; }
+  .lib-name { font-weight: 700; font-size: 14px; }
+  .vid-id { font-size: 10px; color: #64748b; font-family: monospace; word-break: break-all; padding: 0 16px 8px; }
+  .player { position: relative; width: 100%; padding-top: 56.25%; background: #000; }
+  .player iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+  .info { padding: 12px 16px; font-size: 12px; color: #94a3b8; }
+  .info strong { color: #e2e8f0; }
+  .browser-info { text-align: center; margin-bottom: 24px; padding: 12px 20px; background: #1e293b; border-radius: 10px; display: inline-block; }
+  .browser-info-wrap { text-align: center; margin-bottom: 24px; }
+  .loading { text-align: center; color: #a855f7; font-size: 14px; padding: 40px; }
+  .howto { margin-top: 24px; background: #1e293b; border-radius: 10px; padding: 16px 20px; }
+  .howto h3 { font-size: 14px; margin-bottom: 8px; }
+  .howto ol { padding-left: 20px; font-size: 13px; color: #94a3b8; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>DRM vs NO-DRM Test</h1>
+  <p class="sub">ทดสอบว่า Widevine DRM กัน Stream Recorder ได้จริงไหม</p>
+
+  <div class="browser-info-wrap">
+    <div class="browser-info">
+      Browser: <strong id="browserName">-</strong> |
+      DRM: <strong id="drmType">checking...</strong>
+    </div>
+  </div>
+
+  <div id="content"><p class="loading">กำลังโหลด signed URLs...</p></div>
+
+  <div class="howto">
+    <h3>วิธีทดสอบ</h3>
+    <ol>
+      <li>ติดตั้ง Stream Recorder extension</li>
+      <li>กดเล่นทั้ง 2 video</li>
+      <li>ดูว่า Stream Recorder แสดง "Stream found" ที่ video ไหน</li>
+      <li>ลองกดดาวน์โหลดทั้ง 2 ตัว</li>
+      <li><strong>DRM (ซ้าย)</strong> — ต้องดาวน์โหลดไม่ได้ หรือได้ไฟล์เสีย</li>
+      <li><strong>NO DRM (ขวา)</strong> — ดาวน์โหลดได้ปกติ</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+// Browser detect
+const ua = navigator.userAgent
+let browser = 'Unknown'
+if (/Edg\//.test(ua)) browser = 'Edge'
+else if (/OPR\/|Opera/.test(ua)) browser = 'Opera'
+else if (/Brave/.test(ua)) browser = 'Brave'
+else if (/Chrome\//.test(ua)) browser = 'Chrome'
+else if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) browser = 'Safari'
+else if (/Firefox\//.test(ua)) browser = 'Firefox'
+document.getElementById('browserName').textContent = browser
+
+// DRM detect
+async function detectDRM() {
+  const el = document.getElementById('drmType')
+  if (!navigator.requestMediaKeySystemAccess) { el.textContent = 'None'; return }
+  const cfg = [{ initDataTypes: ['cenc'], videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }] }]
+  try { await navigator.requestMediaKeySystemAccess('com.widevine.alpha', cfg); el.textContent = 'Widevine'; el.style.color = '#4ade80'; return } catch {}
+  try { await navigator.requestMediaKeySystemAccess('com.apple.fps.1_0', [{ initDataTypes: ['sinf'], videoCapabilities: [{ contentType: 'video/mp4' }] }]); el.textContent = 'FairPlay'; el.style.color = '#4ade80'; return } catch {}
+  try { await navigator.requestMediaKeySystemAccess('com.microsoft.playready', cfg); el.textContent = 'PlayReady'; el.style.color = '#4ade80'; return } catch {}
+  el.textContent = 'None'; el.style.color = '#f87171'
+}
+detectDRM()
+
+// Auth check + Fetch signed URLs from backend
+async function loadVideos() {
+  const token = localStorage.getItem('token')
+  if (!token) {
+    document.getElementById('content').innerHTML = `<p class="loading" style="color:#f87171">กรุณา <a href="/login" style="color:#a855f7">เข้าสู่ระบบ</a> (Admin เท่านั้น)</p>`
+    return
+  }
+  try {
+    const r = await fetch('/api/drm-test/urls', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    if (r.status === 401 || r.status === 403) {
+      document.getElementById('content').innerHTML = `<p class="loading" style="color:#f87171">Admin เท่านั้น — กรุณา <a href="/login" style="color:#a855f7">login ด้วย admin</a></p>`
+      return
+    }
+    const data = await r.json()
+
+    document.getElementById('content').innerHTML = `
+      <div class="grid">
+        <div class="card">
+          <div class="card-header">
+            <span class="badge drm">DRM (Widevine)</span>
+            <span class="lib-name">Library ${data.drm.library}</span>
+          </div>
+          <div class="vid-id">ID: ${data.drm.videoId}</div>
+          <div class="player">
+            <iframe src="${data.drm.embedUrl}" loading="lazy"
+              allow="accelerometer; gyroscope; autoplay; encrypted-media"></iframe>
+          </div>
+          <div class="info"><strong>ต้องเกิดอะไร:</strong> Stream Recorder ดาวน์โหลดไม่ได้ / ได้ไฟล์เสีย</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="badge no-drm">NO DRM</span>
+            <span class="lib-name">Library ${data.noDrm.library}</span>
+          </div>
+          <div class="vid-id">ID: ${data.noDrm.videoId}</div>
+          <div class="player">
+            <iframe src="${data.noDrm.embedUrl}" loading="lazy"
+              allow="accelerometer; gyroscope; autoplay; encrypted-media"></iframe>
+          </div>
+          <div class="info"><strong>ต้องเกิดอะไร:</strong> Stream Recorder ดาวน์โหลดได้ปกติ</div>
+        </div>
+      </div>
+    `
+  } catch (e) {
+    document.getElementById('content').innerHTML = `<p class="loading" style="color:#f87171">โหลดไม่ได้ — ลอง login ใหม่</p>`
+  }
+}
+loadVideos()
+</script>
+</body>
+</html>
