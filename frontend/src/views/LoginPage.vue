@@ -1,11 +1,56 @@
 <template>
   <div class="auth-page">
-    <!-- Animated background — pulse orbs + gradient mesh -->
+    <!-- ICU Monitor Background — ECG waveforms + grid -->
     <div class="auth-bg" aria-hidden="true">
-      <div class="orb orb-1"></div>
-      <div class="orb orb-2"></div>
-      <div class="orb orb-3"></div>
-      <div class="grid-overlay"></div>
+      <div class="scan-grid"></div>
+      <div class="ecg-track ecg-track-1">
+        <svg viewBox="0 0 1200 100" preserveAspectRatio="none">
+          <path d="M0,50 L200,50 L215,50 L220,20 L225,80 L230,10 L235,90 L240,50 L400,50 L415,50 L420,20 L425,80 L430,10 L435,90 L440,50 L600,50 L615,50 L620,20 L625,80 L630,10 L635,90 L640,50 L800,50 L815,50 L820,20 L825,80 L830,10 L835,90 L840,50 L1000,50 L1015,50 L1020,20 L1025,80 L1030,10 L1035,90 L1040,50 L1200,50" />
+        </svg>
+      </div>
+      <div class="ecg-track ecg-track-2">
+        <svg viewBox="0 0 1200 100" preserveAspectRatio="none">
+          <path d="M0,50 Q100,50 150,50 T280,50 L295,45 L310,55 L325,20 L340,80 L355,50 L500,50 Q600,50 650,50 T780,50 L795,45 L810,55 L825,20 L840,80 L855,50 L1000,50 Q1100,50 1150,50 L1200,50" />
+        </svg>
+      </div>
+      <div class="ecg-track ecg-track-3">
+        <svg viewBox="0 0 1200 100" preserveAspectRatio="none">
+          <path d="M0,50 L100,50 L130,60 L150,40 L170,50 L280,50 L295,25 L305,75 L315,50 L500,50 L530,60 L550,40 L570,50 L680,50 L695,25 L705,75 L715,50 L900,50 L930,60 L950,40 L970,50 L1080,50 L1095,25 L1105,75 L1115,50 L1200,50" />
+        </svg>
+      </div>
+
+      <!-- Top-left monitor label -->
+      <div class="monitor-label monitor-label-tl">
+        <div class="label-title">MEDNINJA ICU</div>
+        <div class="label-line">CH.1  HR   BPM</div>
+        <div class="label-line">CH.2  SpO2 %</div>
+        <div class="label-line">CH.3  RESP /min</div>
+      </div>
+
+      <!-- Top-right readout -->
+      <div class="monitor-label monitor-label-tr">
+        <div class="readout">
+          <div class="readout-label">HR</div>
+          <div class="readout-value">72</div>
+          <div class="readout-unit">bpm</div>
+        </div>
+        <div class="readout readout-sp">
+          <div class="readout-label">SpO2</div>
+          <div class="readout-value">98</div>
+          <div class="readout-unit">%</div>
+        </div>
+      </div>
+
+      <!-- Bottom-left status -->
+      <div class="monitor-label monitor-label-bl">
+        <div class="status-dot"></div>
+        <span>MONITORING — SESSION READY</span>
+      </div>
+
+      <!-- Bottom-right timestamp -->
+      <div class="monitor-label monitor-label-br">
+        {{ nowString }}
+      </div>
     </div>
 
     <!-- Centered card -->
@@ -20,6 +65,10 @@
             <div class="brand-mini-text">
               <div class="brand-mini-title">MedNinja</div>
               <div class="brand-mini-sub">Passport</div>
+            </div>
+            <div class="brand-mini-status">
+              <span class="brand-mini-dot"></span>
+              <span>ONLINE</span>
             </div>
           </div>
 
@@ -104,7 +153,9 @@ export default {
       resending: false,
       resendMsg: '',
       verifySuccess: false,
-      verifyUsed: false
+      verifyUsed: false,
+      nowString: '',
+      _clockTimer: null
     }
   },
   setup() {
@@ -120,8 +171,18 @@ export default {
     } else if (q.verify === 'used' || q.verify === 'invalid') {
       this.verifyUsed = true
     }
+    this._updateClock()
+    this._clockTimer = setInterval(() => this._updateClock(), 1000)
+  },
+  beforeUnmount() {
+    if (this._clockTimer) clearInterval(this._clockTimer)
   },
   methods: {
+    _updateClock() {
+      const d = new Date()
+      const pad = (n) => String(n).padStart(2, '0')
+      this.nowString = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}  ·  ${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`
+    },
     formatNid(e) {
       // Format: x-xxxx-xxxxx-xx-x
       let raw = e.target.value.replace(/\D/g, '').slice(0, 13)
@@ -198,7 +259,29 @@ export default {
   font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* ── Animated background ── */
+/* Subtle scanline overlay */
+.auth-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg,
+      rgba(125, 211, 252, 0.025) 0px,
+      rgba(125, 211, 252, 0.025) 1px,
+      transparent 1px,
+      transparent 3px);
+  pointer-events: none;
+  z-index: 2;
+  animation: scanline-flicker 8s linear infinite;
+}
+@keyframes scanline-flicker {
+  0%, 96%, 100% { opacity: 1; }
+  97% { opacity: 0.6; }
+  98% { opacity: 1; }
+  99% { opacity: 0.7; }
+}
+
+/* ── ICU Monitor Background ── */
 .auth-bg {
   position: absolute;
   inset: 0;
@@ -206,74 +289,200 @@ export default {
   z-index: 0;
 }
 
-/* Pulse orbs (medical soft-light circles) */
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.55;
-  animation: orb-pulse 8s ease-in-out infinite;
-}
-.orb-1 {
-  width: 520px;
-  height: 520px;
-  background: radial-gradient(circle, #0ea5e9 0%, rgba(14,165,233,0) 70%);
-  top: -180px;
-  left: -120px;
-  animation-delay: 0s;
-}
-.orb-2 {
-  width: 440px;
-  height: 440px;
-  background: radial-gradient(circle, #14b8a6 0%, rgba(20,184,166,0) 70%);
-  bottom: -160px;
-  right: -100px;
-  animation-delay: 2.5s;
-}
-.orb-3 {
-  width: 380px;
-  height: 380px;
-  background: radial-gradient(circle, #3b82f6 0%, rgba(59,130,246,0) 70%);
-  top: 40%;
-  left: 55%;
-  transform: translate(-50%, -50%);
-  animation-delay: 5s;
-}
-
-@keyframes orb-pulse {
-  0%, 100% {
-    transform: scale(1) translate(0, 0);
-    opacity: 0.4;
-  }
-  50% {
-    transform: scale(1.15) translate(20px, -10px);
-    opacity: 0.65;
-  }
-}
-
-.orb-2 { transform: none; }
-.orb-2 { animation-name: orb-pulse-2; }
-@keyframes orb-pulse-2 {
-  0%, 100% { transform: scale(1); opacity: 0.35; }
-  50% { transform: scale(1.2); opacity: 0.6; }
-}
-
-/* Subtle grid — clinical / diagnostic feel */
-.grid-overlay {
+/* Cross grid — diagnostic monitor */
+.scan-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    linear-gradient(rgba(125, 211, 252, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(125, 211, 252, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.02) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 85%);
+}
+
+/* ECG tracks — 3 stacked, offset by y-position */
+.ecg-track {
+  position: absolute;
+  left: 0;
+  width: 200%;
+  height: 22vh;
+  min-height: 130px;
+  max-height: 200px;
+  overflow: hidden;
+  animation: ecg-scroll 6s linear infinite;
+}
+.ecg-track svg {
+  width: 50%;
+  height: 100%;
+  display: block;
+  float: left;
+}
+.ecg-track path {
+  fill: none;
+  stroke: #7dd3fc;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter:
+    drop-shadow(0 0 4px rgba(125, 211, 252, 0.95))
+    drop-shadow(0 0 12px rgba(56, 189, 248, 0.6))
+    drop-shadow(0 0 24px rgba(14, 165, 233, 0.3));
+}
+.ecg-track-1 {
+  top: 8%;
+  animation-duration: 5s;
+}
+.ecg-track-2 {
+  top: 40%;
+  animation-duration: 6.5s;
+}
+.ecg-track-2 path {
+  stroke: #67e8f9;
+  filter:
+    drop-shadow(0 0 4px rgba(103, 232, 249, 0.95))
+    drop-shadow(0 0 12px rgba(34, 211, 238, 0.6))
+    drop-shadow(0 0 24px rgba(6, 182, 212, 0.3));
+}
+.ecg-track-3 {
+  top: 72%;
+  animation-duration: 7s;
+}
+.ecg-track-3 path {
+  stroke: #93c5fd;
+  filter:
+    drop-shadow(0 0 4px rgba(147, 197, 253, 0.95))
+    drop-shadow(0 0 12px rgba(96, 165, 250, 0.55))
+    drop-shadow(0 0 24px rgba(59, 130, 246, 0.28));
+}
+
+@keyframes ecg-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ── Monitor labels/HUD ── */
+.monitor-label {
+  position: absolute;
+  z-index: 1;
+  font-family: 'Courier New', 'Fira Code', 'JetBrains Mono', monospace;
+  color: #7dd3fc;
+  text-shadow: 0 0 8px rgba(125, 211, 252, 0.55);
+  letter-spacing: 0.08em;
+  user-select: none;
+  pointer-events: none;
+}
+
+.monitor-label-tl {
+  top: 24px;
+  left: 28px;
+  font-size: 10px;
+  line-height: 1.7;
+  opacity: 0.9;
+}
+.monitor-label-tl .label-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  margin-bottom: 6px;
+  color: #bae6fd;
+}
+.monitor-label-tl .label-line {
+  opacity: 0.6;
+}
+
+.monitor-label-tr {
+  top: 24px;
+  right: 28px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.readout {
+  padding: 6px 10px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  border-radius: 4px;
+  background: rgba(15, 42, 71, 0.4);
+  backdrop-filter: blur(4px);
+  min-width: 66px;
+  text-align: center;
+  animation: readout-blink 2s ease-in-out infinite;
+}
+.readout-sp {
+  border-color: rgba(103, 232, 249, 0.35);
+  animation-delay: 0.6s;
+}
+.readout-sp .readout-label,
+.readout-sp .readout-value,
+.readout-sp .readout-unit {
+  color: #67e8f9;
+  text-shadow: 0 0 8px rgba(103, 232, 249, 0.55);
+}
+.readout-label {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+}
+.readout-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.05;
+  margin: 2px 0;
+}
+.readout-unit {
+  font-size: 8px;
+  opacity: 0.6;
+}
+@keyframes readout-blink {
+  0%, 90%, 100% { opacity: 1; }
+  92%, 94% { opacity: 0.4; }
+}
+
+.monitor-label-bl {
+  bottom: 24px;
+  left: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  padding: 6px 12px;
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  border-radius: 999px;
+  background: rgba(15, 42, 71, 0.4);
+  backdrop-filter: blur(4px);
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7dd3fc;
+  box-shadow: 0 0 10px rgba(125, 211, 252, 0.9);
+  animation: heartbeat 1.1s ease-in-out infinite;
+}
+@keyframes heartbeat {
+  0%, 40%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(125, 211, 252, 0.9); }
+  20% { transform: scale(1.55); box-shadow: 0 0 18px rgba(125, 211, 252, 1); }
+  60% { transform: scale(1.3); box-shadow: 0 0 14px rgba(125, 211, 252, 0.95); }
+}
+
+.monitor-label-br {
+  bottom: 24px;
+  right: 28px;
+  font-size: 10px;
+  padding: 6px 12px;
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  border-radius: 4px;
+  background: rgba(15, 42, 71, 0.4);
+  backdrop-filter: blur(4px);
 }
 
 /* ── Card center ── */
 .auth-form-panel {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   width: 100%;
   max-width: 440px;
   display: flex;
@@ -285,17 +494,44 @@ export default {
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 24px;
-  padding: 40px 36px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  padding: 36px 32px;
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.35),
-    0 8px 24px rgba(14, 165, 233, 0.15),
+    0 24px 60px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(14, 165, 233, 0.25),
+    0 0 80px rgba(125, 211, 252, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  animation: card-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+/* Corner brackets — targeting scope feel */
+.auth-card::before,
+.auth-card::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #0ea5e9;
+  filter: drop-shadow(0 0 6px rgba(14, 165, 233, 0.5));
+  pointer-events: none;
+}
+.auth-card::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 20px;
+}
+.auth-card::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 20px;
 }
 @keyframes card-enter {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
@@ -304,82 +540,109 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 28px;
+  margin-bottom: 26px;
   padding-bottom: 20px;
-  border-bottom: 1px dashed rgba(14, 165, 233, 0.2);
+  border-bottom: 1px solid rgba(14, 165, 233, 0.18);
   position: relative;
 }
 .brand-mini::after {
   content: '';
   position: absolute;
-  right: 0;
+  left: 0;
   bottom: -1px;
   width: 60px;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #0ea5e9, #14b8a6);
+  background: linear-gradient(90deg, #0ea5e9, transparent);
   border-radius: 2px;
+  box-shadow: 0 0 8px rgba(14, 165, 233, 0.5);
 }
 .brand-mini-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0ea5e9, #14b8a6);
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35);
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4);
   position: relative;
 }
 .brand-mini-logo::before {
   content: '';
   position: absolute;
-  inset: -3px;
+  inset: -4px;
   border-radius: 14px;
-  border: 2px solid rgba(14, 165, 233, 0.3);
-  animation: heart-pulse 1.8s ease-out infinite;
+  border: 2px solid rgba(14, 165, 233, 0.5);
+  animation: heart-pulse 1.1s ease-out infinite;
 }
 @keyframes heart-pulse {
   0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.35); opacity: 0; }
+  60% { transform: scale(1.35); opacity: 0.4; }
+  100% { transform: scale(1.55); opacity: 0; }
 }
 .brand-mini-logo img {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   filter: brightness(0) invert(1);
+  opacity: 0.95;
 }
 .brand-mini-text {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
+  flex: 1;
 }
 .brand-mini-title {
   font-size: 17px;
   font-weight: 800;
   color: #0f172a;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 .brand-mini-sub {
-  font-size: 12px;
-  font-weight: 600;
-  color: #14b8a6;
-  letter-spacing: 0.12em;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0284c7;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  margin-top: 2px;
+  margin-top: 3px;
+}
+.brand-mini-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.08);
+}
+.brand-mini-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.9);
+  animation: heartbeat 1.1s ease-in-out infinite;
 }
 
 /* ── Login Header ── */
-.auth-header { margin-bottom: 24px; }
+.auth-header { margin-bottom: 22px; }
 .auth-header h2 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
-  color: #0f172a;
+  color: #eafff0;
   margin-bottom: 6px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 8px rgba(34, 255, 136, 0.2);
 }
 .auth-header p {
-  color: #64748b;
-  font-size: 13.5px;
+  color: #7fa695;
+  font-size: 13px;
   line-height: 1.55;
 }
 
@@ -397,10 +660,13 @@ export default {
   gap: 6px;
 }
 .form-label {
-  font-size: 12.5px;
+  font-size: 10.5px;
   font-weight: 700;
-  color: #334155;
-  letter-spacing: 0.01em;
+  color: #22ff88;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 6px rgba(34, 255, 136, 0.4);
 }
 
 /* Input */
@@ -409,28 +675,33 @@ export default {
   width: 100%;
   height: 48px;
   padding: 0 14px;
-  font-family: inherit;
-  font-size: 14.5px;
+  font-family: 'Courier New', 'Fira Code', monospace;
+  font-size: 15px;
   font-weight: 500;
-  color: #0f172a;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
+  color: #eafff0;
+  background: rgba(0, 12, 6, 0.6);
+  border: 1.5px solid rgba(34, 255, 136, 0.25);
+  border-radius: 8px;
   outline: none;
   transition: all 0.18s ease;
+  letter-spacing: 0.05em;
 }
 .form-control::placeholder {
-  color: #94a3b8;
+  color: rgba(127, 166, 149, 0.5);
   font-weight: 400;
+  letter-spacing: 0.05em;
 }
 .form-control:hover {
-  border-color: #cbd5e1;
-  background: #f1f5f9;
+  border-color: rgba(34, 255, 136, 0.45);
+  background: rgba(0, 20, 10, 0.7);
 }
 .form-control:focus {
-  background: #fff;
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.12);
+  background: rgba(0, 20, 10, 0.85);
+  border-color: #22ff88;
+  box-shadow:
+    0 0 0 3px rgba(34, 255, 136, 0.15),
+    0 0 20px rgba(34, 255, 136, 0.25),
+    inset 0 0 10px rgba(34, 255, 136, 0.05);
 }
 
 .input-icon {
@@ -438,12 +709,15 @@ export default {
   left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: #94a3b8;
+  color: rgba(127, 166, 149, 0.6);
   pointer-events: none;
   z-index: 1;
-  transition: color 0.18s ease;
+  transition: color 0.18s ease, filter 0.18s ease;
 }
-.input-wrap:focus-within .input-icon { color: #0ea5e9; }
+.input-wrap:focus-within .input-icon {
+  color: #22ff88;
+  filter: drop-shadow(0 0 4px rgba(34, 255, 136, 0.7));
+}
 
 .input-with-icon { padding-left: 42px !important; }
 .input-with-icon-right { padding-right: 44px !important; }
@@ -457,39 +731,59 @@ export default {
   border: none;
   padding: 6px;
   cursor: pointer;
-  color: #94a3b8;
+  color: rgba(127, 166, 149, 0.6);
   border-radius: 6px;
   transition: color 0.15s ease, background 0.15s ease;
 }
 .input-eye:hover {
-  color: #0ea5e9;
-  background: rgba(14, 165, 233, 0.08);
+  color: #22ff88;
+  background: rgba(34, 255, 136, 0.1);
 }
 
 /* Submit button */
 .auth-submit {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 12px;
   height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  gap: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: #001a0d;
+  background: linear-gradient(135deg, #22ff88 0%, #00d966 100%);
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   box-shadow:
-    0 8px 20px rgba(14, 165, 233, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-  letter-spacing: 0.01em;
+    0 0 0 1px rgba(34, 255, 136, 0.6),
+    0 8px 20px rgba(34, 255, 136, 0.35),
+    0 0 30px rgba(34, 255, 136, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.15s ease;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   position: relative;
   overflow: hidden;
+  animation: submit-glow 2s ease-in-out infinite;
+}
+@keyframes submit-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(34, 255, 136, 0.6),
+      0 8px 20px rgba(34, 255, 136, 0.35),
+      0 0 30px rgba(34, 255, 136, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(34, 255, 136, 0.8),
+      0 10px 26px rgba(34, 255, 136, 0.5),
+      0 0 44px rgba(34, 255, 136, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
 }
 .auth-submit::before {
   content: '';
@@ -498,22 +792,20 @@ export default {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.6s ease;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  transition: left 0.7s ease;
 }
 .auth-submit:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow:
-    0 12px 28px rgba(14, 165, 233, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  filter: brightness(1.05);
+  transform: translateY(-2px);
+  filter: brightness(1.08);
 }
 .auth-submit:hover:not(:disabled)::before { left: 100%; }
 .auth-submit:active:not(:disabled) { transform: translateY(0); }
 .auth-submit:disabled {
-  opacity: 0.75;
+  opacity: 0.6;
   cursor: default;
-  filter: saturate(0.7);
+  filter: saturate(0.5);
+  animation: none;
 }
 
 .spin-icon-sm { animation: spin 1s linear infinite; }
@@ -522,20 +814,23 @@ export default {
 /* ── Register link ── */
 .auth-register-link {
   text-align: center;
-  font-size: 13.5px;
-  color: #64748b;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
+  font-size: 12.5px;
+  color: #7fa695;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed rgba(34, 255, 136, 0.18);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.05em;
 }
 .auth-register-link a {
-  color: #0ea5e9;
+  color: #22ff88;
   font-weight: 700;
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: filter 0.15s ease;
+  text-shadow: 0 0 6px rgba(34, 255, 136, 0.5);
 }
 .auth-register-link a:hover {
-  color: #0284c7;
+  filter: brightness(1.2);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

@@ -136,11 +136,11 @@ export default {
       this.menuOpen = false
     },
     openLogin() {
-      this.authStore.loginModalOpen = true
+      this.$router.push('/')
     },
     async openNlex() {
       if (!this.authStore.isLoggedIn) {
-        this.authStore.loginModalOpen = true
+        this.$router.push('/')
         return
       }
       try {
@@ -154,7 +154,7 @@ export default {
     },
     async openMeqex() {
       if (!this.authStore.isLoggedIn) {
-        this.authStore.loginModalOpen = true
+        this.$router.push('/')
         return
       }
       const meqexUrl = import.meta.env.VITE_MEQEX_URL || 'https://meqex.medninja.academy'

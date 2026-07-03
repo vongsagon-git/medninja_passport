@@ -79,7 +79,7 @@ export default {
   },
   methods: {
     openLogin() {
-      this.authStore.loginModalOpen = true
+      this.$router.push('/')
     }
   }
 }

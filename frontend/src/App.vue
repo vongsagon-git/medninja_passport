@@ -18,7 +18,6 @@
       </router-view>
     </main>
     <Footer v-if="!isImmersive" />
-    <LoginModal />
     <!-- ⭐ Version badge — บอก version + status (มุมล่าง) -->
     <div v-if="!isImmersive && appVerShort" class="version-badge" :class="{ 'is-stale': showUpdateBanner }">
       <span class="version-dot" :class="{ stale: showUpdateBanner }"></span>
@@ -50,7 +49,6 @@
 <script>
 import Navbar from './components/layout/Navbar.vue'
 import Footer from './components/layout/Footer.vue'
-import LoginModal from './components/common/LoginModal.vue'
 import { onVersionChange, getVersion } from './services/versionCheck'
 // Device fingerprint — ปิดชั่วคราว
 
@@ -58,8 +56,7 @@ export default {
   name: 'App',
   components: {
     Navbar,
-    Footer,
-    LoginModal
+    Footer
   },
   data() {
     return {

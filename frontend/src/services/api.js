@@ -63,13 +63,11 @@ api.interceptors.response.use(
       const authStore = useAuthStore()
       authStore.user = null
       authStore.token = null
-      // หน้า public (demo/courses/home/passport) → ไม่ต้องเปิด login modal บัง
+      // Passport: token หมด/ผิด → ไปหน้า login (/) ไม่เปิด modal
       const path = window.location.pathname
-      const isPublicPage = path.startsWith('/demo/')
-        || path === '/' || path === '/courses' || path.startsWith('/courses/')
-        || path === '/ninja-passport'
-      if (!isPublicPage) {
-        authStore.loginModalOpen = true
+      const isLoginArea = path === '/' || path === '/ninja-passport' || path.startsWith('/demo/')
+      if (!isLoginArea) {
+        window.location.href = '/'
       }
     }
     return Promise.reject(error)
