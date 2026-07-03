@@ -47,7 +47,9 @@ export default {
     }
   },
   computed: {
-    // Route paths that allow landscape (video pages)
+    // Routes ที่รองรับ landscape (ไม่ block)
+    // - video pages ต้อง fullscreen ด้วย
+    // - login page ทำ split layout ใช้ landscape ได้เลย
     isVideoRoute() {
       const path = this.$route?.path || ''
       return path.startsWith('/my/watch/')
@@ -55,16 +57,22 @@ export default {
         || path === '/live'
         || path.startsWith('/demo/watch/')
     },
+    isLandscapeReadyRoute() {
+      const path = this.$route?.path || ''
+      // Login page ออกแบบให้ landscape ได้ (split layout)
+      return path === '/'
+    },
     // ใช้ util มาตรฐานของระบบ — เช็ค iPhone + Android phone (ไม่รวม tablet)
-    // iPad iOS 13+ UA=Mac ถูก handle ที่ util ด้วย maxTouchPoints
     isMobile() {
       return isMobilePhone()
     },
     showGuard() {
-      // Mobile phone + landscape + ไม่ใช่ (video route + fullscreen)
       if (!this.isMobile) return false
       if (!this.isLandscape) return false
+      // Video routes → ต้อง fullscreen ถึงจะปล่อยผ่าน
       if (this.isVideoRoute && this.isFullscreen) return false
+      // Login/pages ที่ออกแบบให้ landscape ได้ → ปล่อยผ่านตรงๆ
+      if (this.isLandscapeReadyRoute) return false
       return true
     }
   },

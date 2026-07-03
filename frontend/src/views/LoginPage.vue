@@ -22,6 +22,16 @@
     </div>
     <div class="grid-overlay" aria-hidden="true"></div>
 
+    <!-- ── Landscape hero (mobile landscape only) ── -->
+    <aside class="landscape-hero" aria-hidden="true">
+      <div class="lh-logo">
+        <img src="/logo.png" alt="MedNinja" />
+      </div>
+      <div class="lh-title">MedNinja</div>
+      <div class="lh-sub">Passport</div>
+      <p class="lh-tagline">ระบบเรียนรู้<br>สำหรับนักศึกษาแพทย์</p>
+    </aside>
+
     <!-- ── Centered card ── -->
     <div class="auth-form-panel">
       <div class="auth-card">
@@ -256,13 +266,18 @@ export default {
 .auth-page {
   position: fixed;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
   padding: 24px;
   background: linear-gradient(135deg, #0c1e3d 0%, #0e3a5f 50%, #0a2540 100%);
   overflow: hidden;
   font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Landscape hero — hidden by default, shown only on mobile landscape */
+.landscape-hero {
+  display: none;
 }
 
 /* ── Thin device header (top strip) ── */
@@ -752,20 +767,130 @@ export default {
 @media (max-width: 400px) {
   .blob { filter: blur(60px); }
 }
-@media (max-height: 640px) and (orientation: landscape) {
-  .auth-page { align-items: flex-start; padding: 16px; padding-top: 40px; }
-  .auth-card {
-    padding: 24px 28px;
-    margin: 8px 0;
+/* ═══ Mobile landscape — split hero + form (Design C style) ═══ */
+@media (max-height: 500px) and (orientation: landscape) {
+  .auth-page {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 16px 24px;
+    place-items: center;
   }
-  .brand-mini { margin-bottom: 14px; padding-bottom: 12px; }
+
+  /* Landscape hero (left panel) */
+  .landscape-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #fff;
+    text-align: center;
+    z-index: 1;
+    max-width: 260px;
+    animation: hero-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes hero-in {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .lh-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
+    margin-bottom: 6px;
+    position: relative;
+  }
+  .lh-logo::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 18px;
+    border: 2px solid rgba(14, 165, 233, 0.45);
+    animation: heart-pulse 1.6s ease-out infinite;
+  }
+  .lh-logo img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+  }
+  .lh-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .lh-sub {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    color: #7dd3fc;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .lh-tagline {
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(224, 242, 254, 0.75);
+    margin-top: 4px;
+  }
+
+  /* Form panel (right side) */
+  .auth-form-panel {
+    max-width: 380px;
+    justify-self: start;
+    height: 100%;
+    max-height: 100%;
+  }
+  .auth-card {
+    padding: 22px 26px;
+    border-radius: 16px;
+    max-height: 100%;
+  }
+  .brand-mini { display: none; }
   .auth-header { margin-bottom: 14px; }
-  .auth-header h2 { font-size: 20px; }
+  .auth-header h2 { font-size: 18px; }
   .auth-header p { display: none; }
   .auth-form { gap: 10px; }
-  .form-control { height: 42px; }
-  .auth-submit { height: 44px; margin-top: 4px; }
-  .auth-register-link { margin-top: 14px; padding-top: 12px; }
+  .form-label { font-size: 11.5px; }
+  .form-control { height: 40px; font-size: 14px; }
+  .auth-submit { height: 42px; margin-top: 4px; font-size: 14px; }
+  .auth-register-link {
+    margin-top: 12px;
+    padding-top: 10px;
+    font-size: 12px;
+  }
+  .verify-success-box,
+  .verify-info-box,
+  .verify-box {
+    padding: 8px 10px;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Very short landscape (< 400px height) — even more compact */
+@media (max-height: 400px) and (orientation: landscape) {
+  .auth-page { padding: 8px 20px; gap: 16px; }
+  .landscape-hero { max-width: 220px; }
+  .lh-logo { width: 44px; height: 44px; margin-bottom: 2px; }
+  .lh-logo img { width: 24px; height: 24px; }
+  .lh-title { font-size: 18px; }
+  .lh-sub { font-size: 10px; }
+  .lh-tagline { display: none; }
+  .auth-card { padding: 16px 20px; border-radius: 14px; }
+  .auth-header { margin-bottom: 10px; }
+  .auth-header h2 { font-size: 16px; margin-bottom: 2px; }
+  .auth-form { gap: 8px; }
+  .form-control { height: 36px; }
+  .auth-submit { height: 38px; }
+  .auth-register-link { margin-top: 8px; padding-top: 8px; font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
