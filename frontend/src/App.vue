@@ -11,9 +11,13 @@
 
     <Navbar v-if="!isImmersive" />
     <main class="main-content">
-      <router-view v-slot="{ Component }">
-        <Transition name="page" mode="out-in">
-          <component :is="Component" />
+      <router-view v-slot="{ Component, route }">
+        <!-- Login (/) + immersive routes → ห้าม slide (เข้าเลย) -->
+        <Transition
+          :name="route.meta.noTransition || route.name === 'Login' ? '' : 'page'"
+          mode="out-in"
+        >
+          <component :is="Component" :key="route.path" />
         </Transition>
       </router-view>
     </main>
