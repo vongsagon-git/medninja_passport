@@ -100,19 +100,6 @@
           <h2>PASSPORT CONTROL</h2>
         </div>
         <div class="admin-nav-grid">
-          <router-link to="/admin/knowledge-hub" class="admin-nav-card" style="border: 2px solid #3b82f6; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);">
-            <div class="nav-icon" style="background: #3b82f6; color: #fff;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>Knowledge Hub <span style="background: #ef4444; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.5px;">NEW</span></h3>
-              <p>คลังความรู้ DDx ศิริราช + P.Nut</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
-
           <router-link to="/admin/passport" class="admin-nav-card">
             <div class="nav-icon nav-icon-passport">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
@@ -279,15 +266,6 @@
           <h2>COMMUNICATION CONTROL</h2>
         </div>
         <div class="admin-nav-grid">
-          <router-link to="/admin/arena" class="admin-nav-card">
-            <div class="nav-icon" style="background:rgba(249,115,22,0.1);color:#f97316">🎯</div>
-            <div class="nav-content">
-              <h3>DDx Arena</h3>
-              <p>Audit โจทย์ · ผู้เล่น · Leaderboard</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
-
           <router-link to="/admin/visitor-analytics" class="admin-nav-card">
             <div class="nav-icon nav-icon-cyan">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
@@ -364,18 +342,6 @@
             <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </router-link>
 
-          <router-link to="/admin/flashcard" class="admin-nav-card">
-            <div class="nav-icon" style="background:rgba(139,92,246,.1);color:#a78bfa">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>NINJA DDx Flashcard</h3>
-              <p>จัดการการ์ด + ดู leads คนที่ Add LINE มาเล่น</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
         </div>
       </div>
 

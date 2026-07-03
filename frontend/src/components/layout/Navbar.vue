@@ -8,14 +8,10 @@
 
       <!-- Desktop Menu -->
       <div class="navbar-menu desktop-menu">
-        <router-link to="/" class="nav-link" active-class="" exact-active-class="router-link-active">หน้าแรก</router-link>
-        <router-link to="/courses" class="nav-link">คอร์สเรียน</router-link>
-        <a href="/demo" class="nav-link nav-link-demo">ทดลองเรียน</a>
-        <button class="nav-link nav-link-nlex" @click="openNlex">NLEX</button>
-        <button class="nav-link nav-link-meqex" @click="openMeqex">MEQEX</button>
-
         <template v-if="authStore.isLoggedIn">
           <router-link to="/my" class="nav-link">หน้าเรียน</router-link>
+          <button class="nav-link nav-link-nlex" @click="openNlex">NLEX</button>
+          <button class="nav-link nav-link-meqex" @click="openMeqex">MEQEX</button>
           <router-link v-if="authStore.isAdmin" to="/admin" class="nav-link nav-link-admin">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             จัดการระบบ
@@ -62,18 +58,6 @@
         </div>
 
         <nav class="mobile-nav">
-          <router-link to="/" class="mobile-nav-link" @click="closeMenu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
-            หน้าแรก
-          </router-link>
-          <router-link to="/courses" class="mobile-nav-link" @click="closeMenu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-            คอร์สเรียน
-          </router-link>
-          <a href="/demo" class="mobile-nav-link" @click="closeMenu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            ทดลองเรียน
-          </a>
           <a href="#" class="mobile-nav-link mobile-nav-nlex" @click.prevent="closeMenu(); openNlex()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a3.167 3.167 0 00-.504.658l-1.527 2.8a.75.75 0 01-.664.396h-.082a.75.75 0 01-.717-.53l-.607-2.024a3.168 3.168 0 00-.693-1.187l-2.407-2.407a.75.75 0 01-.22-.53V12.5m0 0L5 14.5m4.75-2H5"/></svg>
             NLEX ตะลุยข้อสอบ

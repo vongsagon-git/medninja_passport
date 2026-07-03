@@ -1,17 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
-// Eager: public pages loaded immediately for best LCP on first visit
-import HomePage from '../views/HomePage.vue'
-import CoursesPage from '../views/CoursesPage.vue'
-import CourseDetailPage from '../views/CourseDetailPage.vue'
+// Eager: หน้า login = landing (immersive, no navbar/footer)
+import LoginPage from '../views/LoginPage.vue'
 import NotFoundPage from '../views/NotFoundPage.vue'
 
 // Lazy: auth-gated or infrequent pages — loaded on first navigation
 const NinjaPassportPage = () => import('../views/NinjaPassportPage.vue')
-const ProfilePage = () => import('../views/ProfilePage.vue')
 const CompleteProfilePage = () => import('../views/CompleteProfilePage.vue')
-const DiagPage = () => import('../views/DiagPage.vue')
 const LineLink = () => import('../views/LineLink.vue')
 const ReplyStudent = () => import('../views/ReplyStudent.vue')
 
@@ -46,41 +42,27 @@ const PdfLibrary = () => import('../views/admin/PdfLibrary.vue')
 const DbViewer = () => import('../views/admin/DbViewer.vue')
 const ActivityLog = () => import('../views/admin/ActivityLog.vue')
 // Knowledge Hub — prototype รวม P'Nut + Siriraj DDx (admin-only, internal)
-const KnowledgeHub = () => import('../views/admin/KnowledgeHub.vue')
 const ManageSelfChecks = () => import('../views/admin/ManageSelfChecks.vue')
 const SelfCheckAnalytics = () => import('../views/admin/SelfCheckAnalytics.vue')
-// VirtualPatient Hub — landing เลือก OSCE VP / DDx VP (public marketing)
-const VirtualPatientHub = () => import('../views/VirtualPatientHub.vue')
-// ManageDdx, ManageFlashcard, ManageArena — ย้ายไป ddx.medninja.academy แล้ว
 const WatchLive = () => import('../views/WatchLive.vue')
 
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    component: HomePage
-  },
-  {
-    path: '/login',
     name: 'Login',
-    // เปิด modal แทนไปหน้าแยก
+    component: LoginPage,
+    meta: { guest: true, immersive: true },
     beforeEnter: (to, from, next) => {
       const authStore = useAuthStore()
       if (authStore.isLoggedIn) {
         next({ name: 'MyDashboard' })
       } else {
-        authStore.loginModalOpen = true
-        // ถ้ามาจากหน้าอื่น → กลับไปหน้านั้น, ถ้าพิมพ์ URL ตรง → ไปหน้าแรก
-        if (from.name) {
-          next(false)
-        } else {
-          next({ name: 'Home' })
-        }
+        next()
       }
-    },
-    component: HomePage,
-    meta: { guest: true }
+    }
   },
+  { path: '/login', redirect: '/' },
+  { path: '/home', redirect: '/' },
   {
     path: '/ninja-passport',
     name: 'NinjaPassport',
@@ -102,16 +84,7 @@ const routes = [
     path: '/profile',
     redirect: '/my'
   },
-  {
-    path: '/courses',
-    name: 'Courses',
-    component: CoursesPage
-  },
-  {
-    path: '/courses/:id',
-    name: 'CourseDetail',
-    component: CourseDetailPage
-  },
+  // /courses, /course-detail — ลบออกจาก passport (หน้าขาย)
   // /form, /demo → เสิร์ฟจาก backend โดยตรง (standalone HTML)
   {
     path: '/demo/watch/:videoIndex',
@@ -188,12 +161,7 @@ const routes = [
     component: AdminDashboard,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
-  {
-    path: '/admin/knowledge-hub',
-    name: 'KnowledgeHub',
-    component: KnowledgeHub,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
+  // /admin/knowledge-hub — ลบ (D4 KnowledgeHub prototype)
   {
     path: '/admin/courses',
     name: 'ManageCourses',
@@ -346,8 +314,7 @@ const routes = [
     component: ActivityLog,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
-  // VirtualPatient Hub — landing public ที่ medninja.academy/virtual-patient (immersive = ไม่มี Navbar/Footer)
-  { path: '/virtual-patient', name: 'VirtualPatientHub', component: VirtualPatientHub, meta: { public: true, immersive: true } },
+  // /virtual-patient (A6) — ลบออกจาก passport (marketing landing)
   // VirtualPatient ย้ายไป ddx.medninja.academy/virtual-patient (ต้อง handoff token)
   { path: '/admin/virtual-patient', beforeEnter: async () => {
       try {
@@ -433,15 +400,14 @@ const router = createRouter({
 })
 
 // หน้าที่ต้องการ track visitor (เงียบๆ ไม่มี UI)
-const TRACKED_PAGES = new Set(['/', '/courses', '/demo/watch/0', '/demo/watch/1'])
+const TRACKED_PAGES = new Set(['/', '/demo/watch/0', '/demo/watch/1'])
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    authStore.loginModalOpen = true
-    // เปิด modal แทน redirect ไปหน้า login
-    next({ name: 'Home' })
+    // ไม่ล็อกอิน → ไปหน้า login (/)
+    next({ name: 'Login' })
   } else if (to.meta.guest && authStore.isLoggedIn) {
     next({ name: 'MyDashboard' })
   } else if (to.meta.requiresAdmin && authStore.user?.role !== 'admin') {
