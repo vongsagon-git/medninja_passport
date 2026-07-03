@@ -33,16 +33,15 @@
 </template>
 
 <script>
+import { isMobilePhone } from '../../utils/deviceDetect'
+
 export default {
   name: 'OrientationGuard',
   data() {
     return {
       isLandscape: false,
-      isSmallScreen: false,
-      isTouch: false,
       isFullscreen: false,
       _mqOrientation: null,
-      _mqSize: null,
       _fsHandler: null,
       _visHandler: null
     }
@@ -56,13 +55,13 @@ export default {
         || path === '/live'
         || path.startsWith('/demo/watch/')
     },
+    // ใช้ util มาตรฐานของระบบ — เช็ค iPhone + Android phone (ไม่รวม tablet)
+    // iPad iOS 13+ UA=Mac ถูก handle ที่ util ด้วย maxTouchPoints
     isMobile() {
-      // "Mobile" = touch device with small screen (excludes tablets by size)
-      // iPad iOS 13+ reports as Mac in UA — that's why we check touch + width
-      return this.isTouch && this.isSmallScreen
+      return isMobilePhone()
     },
     showGuard() {
-      // Show only on: mobile + landscape + NOT (video route + fullscreen)
+      // Mobile phone + landscape + ไม่ใช่ (video route + fullscreen)
       if (!this.isMobile) return false
       if (!this.isLandscape) return false
       if (this.isVideoRoute && this.isFullscreen) return false
@@ -70,20 +69,12 @@ export default {
     }
   },
   mounted() {
-    // Media query listeners — reactive to orientation + size changes
     this._mqOrientation = window.matchMedia('(orientation: landscape)')
-    this._mqSize = window.matchMedia('(max-width: 900px)')
     this._updateOrientation = () => { this.isLandscape = this._mqOrientation.matches }
-    this._updateSize = () => { this.isSmallScreen = this._mqSize.matches }
     this._mqOrientation.addEventListener('change', this._updateOrientation)
-    this._mqSize.addEventListener('change', this._updateSize)
     this._updateOrientation()
-    this._updateSize()
 
-    // Detect touch device — key for iPad UA=Mac case
-    this.isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0)
-
-    // Fullscreen state — refresh on change
+    // Fullscreen state — refresh on change (all vendor prefixes)
     this._fsHandler = () => {
       this.isFullscreen = !!(document.fullscreenElement
         || document.webkitFullscreenElement
@@ -94,7 +85,7 @@ export default {
     document.addEventListener('webkitfullscreenchange', this._fsHandler)
     this._fsHandler()
 
-    // Re-check when user switches back to tab (some iOS quirks)
+    // Re-check when user switches back to tab (iOS quirks)
     this._visHandler = () => {
       if (document.visibilityState === 'visible') {
         this._updateOrientation()
@@ -105,7 +96,6 @@ export default {
   },
   beforeUnmount() {
     if (this._mqOrientation) this._mqOrientation.removeEventListener('change', this._updateOrientation)
-    if (this._mqSize) this._mqSize.removeEventListener('change', this._updateSize)
     if (this._fsHandler) {
       document.removeEventListener('fullscreenchange', this._fsHandler)
       document.removeEventListener('webkitfullscreenchange', this._fsHandler)

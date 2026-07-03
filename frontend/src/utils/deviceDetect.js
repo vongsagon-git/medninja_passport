@@ -85,3 +85,32 @@ export function getDeviceHint() {
   if (isAndroid()) return 'android'
   return 'desktop'
 }
+
+// ─── Passport additions (2026-07-03) ─────────────────────────
+// เพิ่มจากมาตรฐาน LMS โดยไม่กระทบของเดิม — ใช้ใน OrientationGuard + responsive
+
+// Mobile phone (ไม่รวม tablet) — iPhone หรือ Android มี "Mobile" ใน UA
+export function isMobilePhone(ua = navigator.userAgent || '') {
+  if (isIPhone(ua)) return true
+  if (isAndroid(ua) && /Mobile/.test(ua)) return true
+  return false
+}
+
+// Tablet — iPad หรือ Android ที่ไม่มี "Mobile" (Android tablet)
+export function isTablet(ua = navigator.userAgent || '') {
+  if (isIPad(ua)) return true
+  if (isAndroid(ua) && !/Mobile/.test(ua)) return true
+  return false
+}
+
+// Desktop = ไม่ใช่ mobile phone และไม่ใช่ tablet
+export function isDesktop(ua = navigator.userAgent || '') {
+  return !isMobilePhone(ua) && !isTablet(ua)
+}
+
+// รวม category เดียว → ใช้ใน UI/analytics
+export function getDeviceCategory(ua = navigator.userAgent || '') {
+  if (isMobilePhone(ua)) return 'mobile'
+  if (isTablet(ua)) return 'tablet'
+  return 'desktop'
+}

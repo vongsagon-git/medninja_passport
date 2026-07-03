@@ -1,5 +1,19 @@
 <template>
   <div class="auth-page">
+    <!-- ── Thin device header (top strip) ── -->
+    <div class="device-header" :title="deviceUA">
+      <span class="dh-item">
+        <span class="dh-dot" :class="'dh-dot-' + deviceCategory"></span>
+        <span class="dh-label">{{ deviceCategoryLabel }}</span>
+      </span>
+      <span class="dh-sep">·</span>
+      <span class="dh-item">{{ deviceOS }}</span>
+      <span class="dh-sep">·</span>
+      <span class="dh-item">{{ deviceBrowser }}</span>
+      <span class="dh-sep dh-hide-sm">·</span>
+      <span class="dh-item dh-hide-sm">{{ screenSize }}</span>
+    </div>
+
     <!-- ICU Monitor Background — ECG waveforms + grid -->
     <div class="auth-bg" aria-hidden="true">
       <div class="scan-grid"></div>
@@ -138,6 +152,7 @@
 import { useAuthStore } from '../stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import AlertMessage from '../components/common/AlertMessage.vue'
+import { getOS, getBrowser, getDeviceCategory } from '../utils/deviceDetect'
 
 export default {
   name: 'LoginPage',
@@ -155,7 +170,19 @@ export default {
       verifySuccess: false,
       verifyUsed: false,
       nowString: '',
-      _clockTimer: null
+      _clockTimer: null,
+      _resizeHandler: null,
+      screenSize: '',
+      deviceOS: '',
+      deviceBrowser: '',
+      deviceCategory: 'desktop',
+      deviceUA: ''
+    }
+  },
+  computed: {
+    deviceCategoryLabel() {
+      const map = { mobile: 'Mobile', tablet: 'Tablet', desktop: 'Desktop' }
+      return map[this.deviceCategory] || 'Device'
     }
   },
   setup() {
@@ -173,15 +200,41 @@ export default {
     }
     this._updateClock()
     this._clockTimer = setInterval(() => this._updateClock(), 1000)
+
+    // ── Detect device (using LMS-standard utils) ──
+    this._detectDevice()
+    this._updateScreenSize()
+    this._resizeHandler = () => this._updateScreenSize()
+    window.addEventListener('resize', this._resizeHandler, { passive: true })
+    window.addEventListener('orientationchange', this._resizeHandler, { passive: true })
   },
   beforeUnmount() {
     if (this._clockTimer) clearInterval(this._clockTimer)
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler)
+      window.removeEventListener('orientationchange', this._resizeHandler)
+    }
   },
   methods: {
     _updateClock() {
       const d = new Date()
       const pad = (n) => String(n).padStart(2, '0')
       this.nowString = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}  ·  ${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`
+    },
+    _detectDevice() {
+      try {
+        this.deviceOS = getOS()
+        this.deviceBrowser = getBrowser()
+        this.deviceCategory = getDeviceCategory()
+        this.deviceUA = navigator.userAgent || ''
+      } catch {
+        this.deviceOS = 'Unknown'
+        this.deviceBrowser = 'Unknown'
+        this.deviceCategory = 'desktop'
+      }
+    },
+    _updateScreenSize() {
+      this.screenSize = `${window.innerWidth}×${window.innerHeight}`
     },
     formatNid(e) {
       // Format: x-xxxx-xxxxx-xx-x
@@ -257,6 +310,59 @@ export default {
   background: linear-gradient(135deg, #0a1929 0%, #0d2847 40%, #0e3a5f 100%);
   overflow: hidden;
   font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── Thin device header (top strip) ── */
+.device-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-family: 'Inter', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(186, 230, 253, 0.75);
+  letter-spacing: 0.03em;
+  background: linear-gradient(180deg, rgba(2, 8, 22, 0.55), rgba(2, 8, 22, 0));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+  flex-wrap: wrap;
+}
+.dh-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.dh-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 6px rgba(100, 116, 139, 0.4);
+}
+.dh-dot-mobile   { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
+.dh-dot-tablet   { background: #a78bfa; box-shadow: 0 0 6px rgba(167, 139, 250, 0.5); }
+.dh-dot-desktop  { background: #34d399; box-shadow: 0 0 6px rgba(52, 211, 153, 0.5); }
+.dh-label {
+  font-weight: 700;
+  color: rgba(224, 242, 254, 0.9);
+}
+.dh-sep {
+  color: rgba(148, 163, 184, 0.4);
+}
+@media (max-width: 380px) {
+  .device-header { font-size: 10px; padding: 6px 10px; }
+  .dh-hide-sm { display: none; }
 }
 
 /* Subtle scanline overlay */
