@@ -16,10 +16,23 @@ export function isIPhone(ua = navigator.userAgent || '') {
 export function isIPad(ua = navigator.userAgent || '') {
   // iPad iOS 12-
   if (/iPad/.test(ua)) return true
-  // iPad iOS 13+ ปลอม UA เป็น Mac → ดู platform + touch
-  if (typeof navigator !== 'undefined'
-      && navigator.platform === 'MacIntel'
-      && navigator.maxTouchPoints > 1) return true
+  if (typeof navigator === 'undefined') return false
+  // iPad iOS 13+ ปลอม UA เป็น Mac
+  // ── layer 1: platform (deprecated แต่ยังทำงานบน Safari)
+  const isMacLike = navigator.platform === 'MacIntel'
+    || navigator.platform === 'iPad'
+  // ── layer 2: userAgentData (Chrome/Edge, new API)
+  const uaDataMac = navigator.userAgentData
+    && (navigator.userAgentData.platform === 'macOS'
+        || navigator.userAgentData.platform === 'iOS')
+  // ── layer 3: touch (คน desktop touch monitor อาจตกเกณฑ์นี้ — บวก mac check)
+  const hasTouch = navigator.maxTouchPoints > 1
+  if ((isMacLike || uaDataMac) && hasTouch) return true
+  // ── layer 4: fallback — Mac ที่ไม่มี Chrome/Firefox/Edge markers + touch
+  //    (Safari-only Mac → มักจะเป็น iPad Safari)
+  if (/Macintosh|Mac OS X/.test(ua)
+      && !/Chrome\/|Firefox\/|Edg\//.test(ua)
+      && hasTouch) return true
   return false
 }
 

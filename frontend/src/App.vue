@@ -19,6 +19,7 @@
     </main>
     <Footer v-if="!isImmersive" />
     <OrientationGuard />
+    <BrowserGate />
     <!-- ⭐ Version badge — บอก version + status (มุมล่าง) -->
     <div v-if="!isImmersive && appVerShort" class="version-badge" :class="{ 'is-stale': showUpdateBanner }">
       <span class="version-dot" :class="{ stale: showUpdateBanner }"></span>
@@ -51,6 +52,7 @@
 import Navbar from './components/layout/Navbar.vue'
 import Footer from './components/layout/Footer.vue'
 import OrientationGuard from './components/common/OrientationGuard.vue'
+import BrowserGate from './components/common/BrowserGate.vue'
 import { onVersionChange, getVersion } from './services/versionCheck'
 // Device fingerprint — ปิดชั่วคราว
 
@@ -59,7 +61,8 @@ export default {
   components: {
     Navbar,
     Footer,
-    OrientationGuard
+    OrientationGuard,
+    BrowserGate
   },
   data() {
     return {

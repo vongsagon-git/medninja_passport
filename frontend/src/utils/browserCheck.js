@@ -27,13 +27,33 @@ export function checkBrowserSupport() {
     || /webOS|BlackBerry|BB10|KAIOS|HarmonyOS/i.test(ua)
     || /Opera Mini|Opera Mobi/i.test(ua)
 
-  // ═══ 2. In-app browser → block ก่อน (LINE/FB/IG/...) ═══
-  const inApp = /Line\/|FBAN|FBAV|Instagram|musical_ly|BytedanceWebview|MicroMessenger|KAKAOTALK|Discord|ZoomWebKit/i
+  // ═══ 2. In-app browser → block ก่อน (ครอบคลุมทุก major app) ═══
+  // Social + messenger apps in-app browsers ห้ามใช้ทั้งหมด
+  // (เพราะเปิด browser พิเศษที่จำกัด API + ไม่มี Widevine + ไม่มี fullscreen)
+  const inApp = new RegExp([
+    'Line/',                          // LINE
+    'FBAN', 'FBAV', 'FB_IAB',         // Facebook
+    'Instagram',                       // Instagram
+    'musical_ly', 'BytedanceWebview', 'TikTok',  // TikTok
+    'MicroMessenger',                  // WeChat
+    'KAKAOTALK',                       // KakaoTalk
+    'Discord',                         // Discord
+    'ZoomWebKit',                      // Zoom
+    'Twitter', 'TwitterAndroid',       // Twitter / X
+    'Snapchat',                        // Snapchat
+    'Telegram',                        // Telegram in-app
+    'Slack',                           // Slack
+    'Messenger',                       // Meta Messenger (แยกจาก FB main)
+    'Pinterest',                       // Pinterest
+    'GSA/',                            // Google Search App
+    'YahooMobile',                     // Yahoo app
+    'DuckDuckGo',                      // (browser จริง แต่ block ไว้เพราะไม่ทดสอบ)
+  ].join('|'), 'i')
   if (inApp.test(ua)) {
     return {
       supported: false, isMobile: true,
       message: 'กรุณาเปิดใน Chrome หรือ Safari',
-      detail: 'Browser ใน LINE / Facebook / Instagram ไม่รองรับการเล่นวีดีโอ กดปุ่ม ⋮ แล้วเลือก "เปิดใน Browser"'
+      detail: 'Browser ที่อยู่ในแอป (LINE / Facebook / Instagram / TikTok / etc.) ไม่รองรับ กดปุ่ม ⋮ หรือ ⋯ แล้วเลือก "เปิดใน Browser"'
     }
   }
 
