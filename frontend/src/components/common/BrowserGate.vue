@@ -65,15 +65,24 @@ export default {
     }
   },
   computed: {
-    // Route ที่ยกเว้น browser gate:
-    // - /demo/watch/* → LMS convention (public preview)
-    // - Exception section IDs → LMS convention
+    // ⭐ Block เฉพาะตอนดู VDO เท่านั้น (ไม่บล็อกทั้งเว็บ)
+    // นักเรียนใช้ browser อะไรก็ได้ login/ดู dashboard/PDF
+    // แต่ /watch /live ต้องใช้ browser ที่รองรับ (เพราะ Widevine + FairPlay)
+    isVideoRoute() {
+      const path = this.$route?.path || ''
+      return path.startsWith('/my/watch/')
+        || path.startsWith('/live/')
+        || path === '/live'
+    },
+    // Exception path (demo/watch/*, special sectionId) → ผ่านทุก browser
     isExempt() {
       const path = this.$route?.path || ''
       return isExceptionPath(path)
     },
     showGate() {
       if (this.isExempt) return false
+      // ⭐ ไม่ block ถ้าไม่ใช่หน้า VDO
+      if (!this.isVideoRoute) return false
       return this.result.supported === false
     }
   },
