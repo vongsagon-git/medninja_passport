@@ -21,7 +21,6 @@
         </Transition>
       </router-view>
     </main>
-    <Footer v-if="!isImmersive" />
     <OrientationGuard />
     <BrowserGate />
     <!-- ⭐ Version badge — บอก version + status (มุมล่าง) -->
@@ -54,7 +53,6 @@
 
 <script>
 import Navbar from './components/layout/Navbar.vue'
-import Footer from './components/layout/Footer.vue'
 import OrientationGuard from './components/common/OrientationGuard.vue'
 import BrowserGate from './components/common/BrowserGate.vue'
 import { onVersionChange, getVersion } from './services/versionCheck'
@@ -64,7 +62,6 @@ export default {
   name: 'App',
   components: {
     Navbar,
-    Footer,
     OrientationGuard,
     BrowserGate
   },
