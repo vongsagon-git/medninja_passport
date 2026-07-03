@@ -24,22 +24,18 @@
 
     <!-- ── Landscape hero (mobile landscape only) ── -->
     <aside class="landscape-hero" aria-hidden="true">
-      <div class="lh-logo">
-        <img src="/logo.png" alt="MedNinja" />
+      <div class="lh-brand">
+        <div class="lh-title">MedNinja</div>
+        <div class="lh-sub">Passport</div>
       </div>
-      <div class="lh-title">MedNinja</div>
-      <div class="lh-sub">Passport</div>
       <p class="lh-tagline">ระบบเรียนรู้<br>สำหรับนักศึกษาแพทย์</p>
     </aside>
 
     <!-- ── Centered card ── -->
     <div class="auth-form-panel">
       <div class="auth-card">
-        <!-- Brand -->
+        <!-- Brand — typography only -->
         <div class="brand-mini">
-          <div class="brand-mini-logo">
-            <img src="/logo.png" alt="MedNinja" />
-          </div>
           <div class="brand-mini-text">
             <div class="brand-mini-title">MedNinja</div>
             <div class="brand-mini-sub">Passport</div>
@@ -435,14 +431,11 @@ export default {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ── Brand ── */
+/* ── Brand (typography only, no logo) ── */
 .brand-mini {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 28px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid rgba(14, 165, 233, 0.15);
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.12);
   position: relative;
 }
 .brand-mini::after {
@@ -450,60 +443,36 @@ export default {
   position: absolute;
   left: 0;
   bottom: -1px;
-  width: 60px;
+  width: 48px;
   height: 2px;
   background: linear-gradient(90deg, #0ea5e9, transparent);
   border-radius: 2px;
 }
-.brand-mini-logo {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0ea5e9, #0284c7);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35);
-  position: relative;
-}
-.brand-mini-logo::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 14px;
-  border: 2px solid rgba(14, 165, 233, 0.4);
-  animation: heart-pulse 1.6s ease-out infinite;
-}
-@keyframes heart-pulse {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.45); opacity: 0; }
-}
-.brand-mini-logo img {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  filter: brightness(0) invert(1);
-  opacity: 0.95;
-}
 .brand-mini-text {
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
+  line-height: 1;
 }
 .brand-mini-title {
-  font-size: 17px;
+  font-family: 'Inter', 'Sarabun', -apple-system, sans-serif;
+  font-size: 28px;
   font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, #0f172a 0%, #0284c7 60%, #0ea5e9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.03em;
+  line-height: 1;
 }
 .brand-mini-sub {
+  font-family: 'Inter', 'Sarabun', -apple-system, sans-serif;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   color: #0284c7;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.42em;
   text-transform: uppercase;
-  margin-top: 3px;
+  margin-top: 6px;
+  padding-left: 2px;
 }
 
 /* ── Header ── */
@@ -749,16 +718,14 @@ export default {
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  .auth-page { padding: 16px; align-items: flex-start; padding-top: 48px; }
+  .auth-page { padding: 16px; padding-top: 48px; }
   .auth-card {
     padding: 32px 24px;
     border-radius: 18px;
   }
-  .brand-mini { margin-bottom: 24px; padding-bottom: 18px; }
-  .brand-mini-logo { width: 40px; height: 40px; }
-  .brand-mini-logo img { width: 22px; height: 22px; }
-  .brand-mini-title { font-size: 16px; }
-  .brand-mini-sub { font-size: 11px; }
+  .brand-mini { margin-bottom: 28px; padding-bottom: 20px; }
+  .brand-mini-title { font-size: 26px; }
+  .brand-mini-sub { font-size: 11px; letter-spacing: 0.4em; margin-top: 5px; }
   .auth-header h2 { font-size: 22px; }
   .auth-header p { font-size: 13px; }
   .form-control { height: 46px; font-size: 15px; }
@@ -776,69 +743,58 @@ export default {
     place-items: center;
   }
 
-  /* Landscape hero (left panel) */
+  /* Landscape hero (left panel) — typography focus */
   .landscape-hero {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 14px;
     color: #fff;
     text-align: center;
     z-index: 1;
-    max-width: 260px;
+    max-width: 280px;
     animation: hero-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
   @keyframes hero-in {
     from { opacity: 0; transform: translateX(-20px); }
     to { opacity: 1; transform: translateX(0); }
   }
-  .lh-logo {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  .lh-brand {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
-    margin-bottom: 6px;
-    position: relative;
-  }
-  .lh-logo::after {
-    content: '';
-    position: absolute;
-    inset: -5px;
-    border-radius: 18px;
-    border: 2px solid rgba(14, 165, 233, 0.45);
-    animation: heart-pulse 1.6s ease-out infinite;
-  }
-  .lh-logo img {
-    width: 30px;
-    height: 30px;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
-  }
-  .lh-title {
-    font-size: 22px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: -0.01em;
     line-height: 1;
   }
+  .lh-title {
+    font-family: 'Inter', 'Sarabun', -apple-system, sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    background: linear-gradient(135deg, #ffffff 0%, #7dd3fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 12px rgba(125, 211, 252, 0.3));
+  }
   .lh-sub {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.24em;
+    font-family: 'Inter', 'Sarabun', -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5em;
     color: #7dd3fc;
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-top: 10px;
+    padding-left: 10px;
   }
   .lh-tagline {
     font-size: 13px;
-    line-height: 1.55;
-    color: rgba(224, 242, 254, 0.75);
-    margin-top: 4px;
+    line-height: 1.65;
+    color: rgba(224, 242, 254, 0.7);
+    font-weight: 400;
+    margin-top: 8px;
   }
 
   /* Form panel (right side) */
@@ -878,11 +834,9 @@ export default {
 /* Very short landscape (< 400px height) — even more compact */
 @media (max-height: 400px) and (orientation: landscape) {
   .auth-page { padding: 8px 20px; gap: 16px; }
-  .landscape-hero { max-width: 220px; }
-  .lh-logo { width: 44px; height: 44px; margin-bottom: 2px; }
-  .lh-logo img { width: 24px; height: 24px; }
-  .lh-title { font-size: 18px; }
-  .lh-sub { font-size: 10px; }
+  .landscape-hero { max-width: 240px; gap: 8px; }
+  .lh-title { font-size: 28px; }
+  .lh-sub { font-size: 11px; letter-spacing: 0.4em; margin-top: 6px; padding-left: 8px; }
   .lh-tagline { display: none; }
   .auth-card { padding: 16px 20px; border-radius: 14px; }
   .auth-header { margin-bottom: 10px; }
@@ -894,7 +848,7 @@ export default {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .blob, .brand-mini-logo::before, .auth-card {
+  .blob, .auth-card {
     animation: none !important;
   }
   .auth-submit { animation: none; }
