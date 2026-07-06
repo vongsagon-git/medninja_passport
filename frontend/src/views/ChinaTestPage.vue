@@ -6,7 +6,7 @@ const playerStatus = ref('loading')
 const logs = ref([])
 const errorMsg = ref('')
 
-const VIDEO_ID = 'd0245b99795e71f1a622f6f7d6580102'
+const VIDEO_ID = '700e030e797271f1977bf6e6c5490102'
 const CDN_DOMAIN = 'cdn-cn.medninja.academy'
 const PLAYAUTH_ENDPOINT = `/api/china/playauth/${VIDEO_ID}`
 const HEALTHCHECK_URL = `https://${CDN_DOMAIN}/${VIDEO_ID}/3c72bdfb27c83a11628939deb885b395-ld-encrypt-stream.m3u8`
@@ -28,14 +28,12 @@ function log(msg, type = 'info') {
   console.log(`[${time}] ${msg}`)
 }
 
-// SDK ที่ verify แล้วว่าทำงาน (mobile + desktop):
-// - de/prismplayer/2.15.4 = legacy path, ทำงานได้ทั้ง PC + Mobile
-// - imp-web-player/2.27.0 = ทำงานแค่ PC (crash silent บนมือถือ)
-// - imp-web-player/2.28+ = ต้องมี license (Dec 2024)
+// SDK versions ตาม Alibaba Console แนะนำ (2.35.4 = ล่าสุด)
+// V2.28.0+ ต้องมี license แต่ Alibaba console preview HTML ใช้ 2.35.4 = แสดงว่า license ผูกกับ account แล้ว
 const ALIPLAYER_VERSIONS = [
-  { path: 'de/prismplayer', v: '2.15.4' },
+  { path: 'apsara-media-box/imp-web-player', v: '2.35.4' },
   { path: 'apsara-media-box/imp-web-player', v: '2.27.0' },
-  { path: 'apsara-media-box/imp-web-player', v: '2.25.1' }
+  { path: 'de/prismplayer', v: '2.15.4' }
 ]
 
 function waitForAliplayer(timeoutMs = 30000) {
