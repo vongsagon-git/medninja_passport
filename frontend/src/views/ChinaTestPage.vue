@@ -82,6 +82,19 @@ function loadScriptWithFallback(versions, currentIndex = 0) {
     const startTime = Date.now()
     script.onload = async () => {
       log(`SDK ${path}@${version} โหลดสำเร็จ (${Date.now() - startTime}ms)`, 'info')
+
+      // Debug: เช็คว่ามี global อะไรที่ SDK เพิ่งใส่
+      const availableGlobals = ['Aliplayer', 'AliPlayer', 'aliplayer', 'IntlPlayer', 'PrismPlayer']
+        .filter(k => typeof window[k] !== 'undefined')
+      log(`Globals ที่เจอ: [${availableGlobals.join(', ') || 'ไม่มี'}]`, availableGlobals.length ? 'info' : 'warn')
+
+      // Detect device info สำหรับ debug
+      const ua = navigator.userAgent
+      const isMobile = /Android|iPhone|iPad|Mobile/i.test(ua)
+      const isAndroid = /Android/i.test(ua)
+      const chromeVer = (ua.match(/Chrome\/([\d.]+)/) || [])[1] || 'n/a'
+      log(`Device: ${isMobile ? 'Mobile' : 'Desktop'} · Android:${isAndroid} · Chrome ${chromeVer}`, 'info')
+
       try {
         await waitForAliplayer(30000)
         resolve()
