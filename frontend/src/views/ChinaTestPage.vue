@@ -6,9 +6,9 @@ const playerStatus = ref('loading')
 const logs = ref([])
 const errorMsg = ref('')
 
-const VIDEO_URL = 'https://cdn-cn.medninja.academy/d0245b99795e71f1a622f6f7d6580102/3c72bdfb27c83a11628939deb885b395-ld-encrypt-stream.m3u8'
 const VIDEO_ID = 'd0245b99795e71f1a622f6f7d6580102'
 const CDN_DOMAIN = 'cdn-cn.medninja.academy'
+const PLAYAUTH_ENDPOINT = `/api/china/playauth/${VIDEO_ID}`
 
 let player = null
 let playerContainer = null
@@ -18,6 +18,21 @@ function log(msg, type = 'info') {
   logs.value.push({ time, msg, type })
   if (logs.value.length > 50) logs.value.shift()
   console.log(`[${time}] ${msg}`)
+}
+
+function waitForAliplayer(timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now()
+    const timer = setInterval(() => {
+      if (window.Aliplayer) {
+        clearInterval(timer)
+        resolve()
+      } else if (Date.now() - start > timeoutMs) {
+        clearInterval(timer)
+        reject(new Error('Timeout waiting for Aliplayer global'))
+      }
+    }, 100)
+  })
 }
 
 function loadAliplayerSDK() {
@@ -35,9 +50,16 @@ function loadAliplayerSDK() {
 
     const script = document.createElement('script')
     script.src = 'https://g.alicdn.com/de/prismplayer/2.15.4/aliplayer-min.js'
-    script.onload = () => {
-      log('Aliplayer SDK โหลดสำเร็จ', 'success')
-      resolve()
+    script.onload = async () => {
+      log('Aliplayer SDK โหลดสำเร็จ - รอ initialize global...', 'info')
+      try {
+        await waitForAliplayer(10000)
+        log('window.Aliplayer พร้อมใช้งาน', 'success')
+        resolve()
+      } catch (e) {
+        log(e.message, 'error')
+        reject(e)
+      }
     }
     script.onerror = () => {
       log('โหลด Aliplayer SDK ไม่สำเร็จ', 'error')
@@ -45,6 +67,27 @@ function loadAliplayerSDK() {
     }
     document.head.appendChild(script)
   })
+}
+
+async function fetchPlayAuth() {
+  log(`ขอ PlayAuth token จาก backend: ${PLAYAUTH_ENDPOINT}`, 'info')
+  const res = await fetch(PLAYAUTH_ENDPOINT, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  })
+
+  if (!res.ok) {
+    const errText = await res.text()
+    throw new Error(`Backend error ${res.status}: ${errText.substring(0, 200)}`)
+  }
+
+  const data = await res.json()
+  if (!data.playAuth) {
+    throw new Error('Backend ไม่ได้ส่ง playAuth กลับมา')
+  }
+
+  log(`PlayAuth token ได้แล้ว (expire ~50 นาที)`, 'success')
+  return data.playAuth
 }
 
 async function initPlayer() {
@@ -55,11 +98,14 @@ async function initPlayer() {
       throw new Error('Aliplayer is not defined')
     }
 
-    log(`กำลังสร้าง Aliplayer สำหรับ video: ${VIDEO_ID.substring(0, 8)}...`, 'info')
+    const playAuth = await fetchPlayAuth()
+
+    log(`กำลังสร้าง Aliplayer (VidAuth mode) สำหรับ video: ${VIDEO_ID.substring(0, 8)}...`, 'info')
 
     player = new window.Aliplayer({
       id: 'china-player',
-      source: VIDEO_URL,
+      vid: VIDEO_ID,
+      playauth: playAuth,
       width: '100%',
       height: '100%',
       autoplay: false,
@@ -71,7 +117,7 @@ async function initPlayer() {
       useH5Prism: true,
       encryptType: 1
     }, function (p) {
-      log('Aliplayer instance สร้างสำเร็จ', 'success')
+      log('Aliplayer instance สร้างสำเร็จ (encrypted mode)', 'success')
       playerReady.value = true
       playerStatus.value = 'ready'
     })

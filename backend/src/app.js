@@ -205,6 +205,9 @@ app.use('/api/partner', require('./modules/partner/partner.routes'))
 // Visitor tracking (public — fire-and-forget)
 app.use('/api/visitor', require('./modules/visitor/visitor.routes'))
 
+// China test: Alibaba VOD PlayAuth (MVP — public, จะเพิ่ม auth ตอน Phase 2)
+app.use('/api/china', require('./modules/china/china.routes'))
+
 // NINJA PASSPORT: OCR scan (public) + Pre-registration (public)
 app.use('/api/passport', passportRoutes)
 app.use('/api/preregister', preregisterRoutes)
