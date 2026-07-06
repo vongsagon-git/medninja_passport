@@ -82,6 +82,20 @@
   <div id="log"></div>
 
   <script>
+    // Session ID + batched log send to backend
+    const sessionId = 'html-' + Math.random().toString(36).substring(2, 10) + '-' + Date.now().toString(36);
+    const logBuffer = [];
+    let flushTimer = null;
+    function flushLogs() {
+      if (!logBuffer.length) return;
+      const batch = logBuffer.splice(0, logBuffer.length);
+      fetch('/api/china/log/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, entries: batch })
+      }).catch(() => {});
+    }
+
     const logEl = document.getElementById('log');
     function log(msg, type) {
       const line = document.createElement('div');
@@ -89,7 +103,14 @@
       line.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + msg;
       logEl.appendChild(line);
       logEl.scrollTop = logEl.scrollHeight;
+
+      logBuffer.push({ level: type || 'info', msg, clientTs: new Date().toISOString() });
+      if (flushTimer) clearTimeout(flushTimer);
+      flushTimer = setTimeout(flushLogs, 500);
     }
+
+    // Show session ID ที่ header เพื่อผู้ทดสอบเห็น
+    log('Session ID: ' + sessionId, 'info');
 
     log('หน้าเริ่มทำงาน', 'info');
     log('User Agent: ' + navigator.userAgent.substring(0, 100), 'info');

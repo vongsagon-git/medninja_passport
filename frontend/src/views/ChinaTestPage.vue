@@ -21,11 +21,31 @@ const cdnInfo = ref({
 let player = null
 let playerContainer = null
 
+// Session ID สำหรับ track log ของแต่ละคน
+const sessionId = Math.random().toString(36).substring(2, 10) + '-' + Date.now().toString(36).substring(-4)
+const logBuffer = []
+let logFlushTimer = null
+
+function flushLogsToServer() {
+  if (logBuffer.length === 0) return
+  const batch = logBuffer.splice(0, logBuffer.length)
+  fetch('/api/china/log/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, entries: batch })
+  }).catch(() => {}) // silent fail
+}
+
 function log(msg, type = 'info') {
   const time = new Date().toTimeString().slice(0, 8)
   logs.value.push({ time, msg, type })
   if (logs.value.length > 50) logs.value.shift()
   console.log(`[${time}] ${msg}`)
+
+  // Send to server (batched)
+  logBuffer.push({ level: type, msg, clientTs: new Date().toISOString() })
+  if (logFlushTimer) clearTimeout(logFlushTimer)
+  logFlushTimer = setTimeout(flushLogsToServer, 500)
 }
 
 // Self-hosted SDK ที่ passport server = ตัดปัญหา CDN Alibaba ทั้งหมด
