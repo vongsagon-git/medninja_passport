@@ -28,9 +28,12 @@ function log(msg, type = 'info') {
   console.log(`[${time}] ${msg}`)
 }
 
+// หมายเหตุ: V2.28.0+ ต้องมี license (Dec 1, 2024)
+// ใช้ V2.27.x ลงไป (ก่อน license requirement)
 const ALIPLAYER_VERSIONS = [
-  { path: 'apsara-media-box/imp-web-player', v: '2.28.0' },
+  { path: 'apsara-media-box/imp-web-player', v: '2.27.0' },
   { path: 'apsara-media-box/imp-web-player', v: '2.25.1' },
+  { path: 'apsara-media-box/imp-web-player', v: '2.24.0' },
   { path: 'de/prismplayer', v: '2.15.4' }
 ]
 
