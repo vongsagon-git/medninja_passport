@@ -9,6 +9,14 @@ const errorMsg = ref('')
 const VIDEO_ID = 'd0245b99795e71f1a622f6f7d6580102'
 const CDN_DOMAIN = 'cdn-cn.medninja.academy'
 const PLAYAUTH_ENDPOINT = `/api/china/playauth/${VIDEO_ID}`
+const HEALTHCHECK_URL = `https://${CDN_DOMAIN}/${VIDEO_ID}/3c72bdfb27c83a11628939deb885b395-ld-encrypt-stream.m3u8`
+
+const cdnInfo = ref({
+  edge: 'ตรวจสอบ...',
+  location: 'ตรวจสอบ...',
+  cache: 'ตรวจสอบ...',
+  responseMs: 0
+})
 
 let player = null
 let playerContainer = null
@@ -151,10 +159,67 @@ async function initPlayer() {
   }
 }
 
+function parseEdgeCode(via) {
+  if (!via) return { edge: 'ไม่มี Via header', location: '?' }
+
+  const codes = {
+    'sg': '🇸🇬 Singapore',
+    'l2sg': '🇸🇬 Singapore L2',
+    'hk': '🇭🇰 Hong Kong',
+    'l2hk': '🇭🇰 Hong Kong L2',
+    'tw': '🇹🇼 Taiwan',
+    'jp': '🇯🇵 Japan',
+    'l2jp': '🇯🇵 Japan L2',
+    'th': '🇹🇭 Thailand',
+    'kr': '🇰🇷 Korea',
+    'bj': '🇨🇳 Beijing',
+    'sh': '🇨🇳 Shanghai',
+    'gz': '🇨🇳 Guangzhou',
+    'sz': '🇨🇳 Shenzhen'
+  }
+
+  const firstEdge = via.split(',')[0].trim()
+  const match = firstEdge.match(/ens-cache\d+\.(l2)?([a-z]+)\d+/i)
+  if (!match) return { edge: firstEdge, location: 'unknown' }
+
+  const key = (match[1] || '') + match[2]
+  return {
+    edge: firstEdge,
+    location: codes[key.toLowerCase()] || `? (${key})`
+  }
+}
+
+async function checkCdnEdge() {
+  log('กำลังตรวจ CDN edge location...', 'info')
+  const start = performance.now()
+
+  try {
+    const res = await fetch(HEALTHCHECK_URL, { method: 'HEAD', cache: 'no-store' })
+    const ms = Math.round(performance.now() - start)
+    const via = res.headers.get('via') || res.headers.get('Via')
+    const cache = res.headers.get('x-cache') || res.headers.get('X-Cache') || 'unknown'
+    const { edge, location } = parseEdgeCode(via)
+
+    cdnInfo.value = {
+      edge,
+      location,
+      cache: cache.split(' ')[0],
+      responseMs: ms
+    }
+
+    log(`CDN Edge: ${location} (${edge})`, 'success')
+    log(`Cache: ${cache} · Response time: ${ms}ms`, 'info')
+  } catch (err) {
+    log(`ตรวจ CDN ไม่สำเร็จ: ${err.message}`, 'warn')
+    cdnInfo.value = { edge: 'error', location: 'ตรวจไม่ได้', cache: '-', responseMs: 0 }
+  }
+}
+
 onMounted(() => {
   document.title = 'MedNinja - Test China Video'
   log('หน้าเทส MedNinja China VOD เริ่มทำงาน', 'info')
-  log(`URL: ${VIDEO_URL.substring(0, 60)}...`, 'info')
+  log(`Video ID: ${VIDEO_ID}`, 'info')
+  checkCdnEdge()
   initPlayer()
 })
 
@@ -182,12 +247,20 @@ onUnmounted(() => {
 
       <div class="info-grid">
         <div class="info-card">
-          <div class="info-label">Video ID</div>
-          <div class="info-value">{{ VIDEO_ID.substring(0, 16) }}...</div>
+          <div class="info-label">CDN Edge (ที่คุณ hit)</div>
+          <div class="info-value">
+            <strong style="color:#38bdf8">{{ cdnInfo.location }}</strong>
+            <div style="font-size:11px;color:#94a3b8;margin-top:2px">{{ cdnInfo.edge }}</div>
+          </div>
         </div>
         <div class="info-card">
-          <div class="info-label">CDN Domain</div>
-          <div class="info-value">{{ CDN_DOMAIN }}</div>
+          <div class="info-label">CDN Cache</div>
+          <div class="info-value">
+            <span class="badge" :class="cdnInfo.cache === 'HIT' ? 'badge-playing' : 'badge-loading'">
+              {{ cdnInfo.cache }}
+            </span>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">{{ cdnInfo.responseMs }}ms</div>
+          </div>
         </div>
         <div class="info-card">
           <div class="info-label">Encryption</div>
@@ -196,7 +269,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="info-card">
-          <div class="info-label">Status</div>
+          <div class="info-label">Player Status</div>
           <div class="info-value">
             <span :class="['badge', `badge-${playerStatus}`]">
               {{ playerStatus === 'loading' ? 'กำลังโหลด...' :
