@@ -28,7 +28,11 @@ function log(msg, type = 'info') {
   console.log(`[${time}] ${msg}`)
 }
 
-const ALIPLAYER_VERSIONS = ['2.15.4', '2.12.0']
+const ALIPLAYER_VERSIONS = [
+  { path: 'apsara-media-box/imp-web-player', v: '2.28.0' },
+  { path: 'apsara-media-box/imp-web-player', v: '2.25.1' },
+  { path: 'de/prismplayer', v: '2.15.4' }
+]
 
 function waitForAliplayer(timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
@@ -57,32 +61,32 @@ function loadScriptWithFallback(versions, currentIndex = 0) {
     if (currentIndex >= versions.length) {
       return reject(new Error('ลอง SDK ทุก version แล้วยังไม่ได้'))
     }
-    const version = versions[currentIndex]
+    const { path, v: version } = versions[currentIndex]
 
     if (window.Aliplayer) {
       log(`window.Aliplayer มีอยู่แล้ว (skip load)`, 'info')
       return resolve()
     }
 
-    log(`กำลังโหลด Aliplayer SDK v${version}...`, 'info')
+    log(`กำลังโหลด Aliplayer SDK ${path}@${version}...`, 'info')
 
     const css = document.createElement('link')
     css.rel = 'stylesheet'
-    css.href = `https://g.alicdn.com/de/prismplayer/${version}/skins/default/aliplayer-min.css`
+    css.href = `https://g.alicdn.com/${path}/${version}/skins/default/aliplayer-min.css`
     document.head.appendChild(css)
 
     const script = document.createElement('script')
-    script.src = `https://g.alicdn.com/de/prismplayer/${version}/aliplayer-min.js`
+    script.src = `https://g.alicdn.com/${path}/${version}/aliplayer-min.js`
     script.async = false
 
     const startTime = Date.now()
     script.onload = async () => {
-      log(`SDK v${version} โหลดสำเร็จ (${Date.now() - startTime}ms) - รอ execute...`, 'info')
+      log(`SDK ${path}@${version} โหลดสำเร็จ (${Date.now() - startTime}ms)`, 'info')
       try {
         await waitForAliplayer(30000)
         resolve()
       } catch (e) {
-        log(`v${version} timeout — ลอง version ถัดไป`, 'warn')
+        log(`${path}@${version} timeout — ลอง version ถัดไป`, 'warn')
         try {
           await loadScriptWithFallback(versions, currentIndex + 1)
           resolve()
@@ -92,7 +96,7 @@ function loadScriptWithFallback(versions, currentIndex = 0) {
       }
     }
     script.onerror = async () => {
-      log(`โหลด SDK v${version} ไม่สำเร็จ — ลอง version ถัดไป`, 'warn')
+      log(`โหลด ${path}@${version} ไม่สำเร็จ — ลอง version ถัดไป`, 'warn')
       try {
         await loadScriptWithFallback(versions, currentIndex + 1)
         resolve()
