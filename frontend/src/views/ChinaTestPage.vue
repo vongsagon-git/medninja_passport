@@ -28,53 +28,84 @@ function log(msg, type = 'info') {
   console.log(`[${time}] ${msg}`)
 }
 
-function waitForAliplayer(timeoutMs = 10000) {
+const ALIPLAYER_VERSIONS = ['2.15.4', '2.12.0']
+
+function waitForAliplayer(timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const start = Date.now()
+    let elapsed = 0
     const timer = setInterval(() => {
       if (window.Aliplayer) {
         clearInterval(timer)
+        log(`window.Aliplayer พร้อม (ใช้เวลา ${Date.now() - start}ms)`, 'success')
         resolve()
-      } else if (Date.now() - start > timeoutMs) {
-        clearInterval(timer)
-        reject(new Error('Timeout waiting for Aliplayer global'))
+      } else {
+        elapsed = Date.now() - start
+        if (elapsed > timeoutMs) {
+          clearInterval(timer)
+          reject(new Error(`Timeout (${timeoutMs}ms) รอ window.Aliplayer`))
+        } else if (elapsed % 5000 < 200) {
+          log(`ยังรอ Aliplayer... ${Math.round(elapsed/1000)}s`, 'warn')
+        }
       }
-    }, 100)
+    }, 200)
+  })
+}
+
+function loadScriptWithFallback(versions, currentIndex = 0) {
+  return new Promise((resolve, reject) => {
+    if (currentIndex >= versions.length) {
+      return reject(new Error('ลอง SDK ทุก version แล้วยังไม่ได้'))
+    }
+    const version = versions[currentIndex]
+
+    if (window.Aliplayer) {
+      log(`window.Aliplayer มีอยู่แล้ว (skip load)`, 'info')
+      return resolve()
+    }
+
+    log(`กำลังโหลด Aliplayer SDK v${version}...`, 'info')
+
+    const css = document.createElement('link')
+    css.rel = 'stylesheet'
+    css.href = `https://g.alicdn.com/de/prismplayer/${version}/skins/default/aliplayer-min.css`
+    document.head.appendChild(css)
+
+    const script = document.createElement('script')
+    script.src = `https://g.alicdn.com/de/prismplayer/${version}/aliplayer-min.js`
+    script.async = false
+
+    const startTime = Date.now()
+    script.onload = async () => {
+      log(`SDK v${version} โหลดสำเร็จ (${Date.now() - startTime}ms) - รอ execute...`, 'info')
+      try {
+        await waitForAliplayer(30000)
+        resolve()
+      } catch (e) {
+        log(`v${version} timeout — ลอง version ถัดไป`, 'warn')
+        try {
+          await loadScriptWithFallback(versions, currentIndex + 1)
+          resolve()
+        } catch (err) {
+          reject(err)
+        }
+      }
+    }
+    script.onerror = async () => {
+      log(`โหลด SDK v${version} ไม่สำเร็จ — ลอง version ถัดไป`, 'warn')
+      try {
+        await loadScriptWithFallback(versions, currentIndex + 1)
+        resolve()
+      } catch (err) {
+        reject(err)
+      }
+    }
+    document.head.appendChild(script)
   })
 }
 
 function loadAliplayerSDK() {
-  return new Promise((resolve, reject) => {
-    if (window.Aliplayer) {
-      log('Aliplayer SDK โหลดเรียบร้อยแล้ว', 'info')
-      return resolve()
-    }
-    log('กำลังโหลด Aliplayer SDK v2.15.4...', 'info')
-
-    const css = document.createElement('link')
-    css.rel = 'stylesheet'
-    css.href = 'https://g.alicdn.com/de/prismplayer/2.15.4/skins/default/aliplayer-min.css'
-    document.head.appendChild(css)
-
-    const script = document.createElement('script')
-    script.src = 'https://g.alicdn.com/de/prismplayer/2.15.4/aliplayer-min.js'
-    script.onload = async () => {
-      log('Aliplayer SDK โหลดสำเร็จ - รอ initialize global...', 'info')
-      try {
-        await waitForAliplayer(10000)
-        log('window.Aliplayer พร้อมใช้งาน', 'success')
-        resolve()
-      } catch (e) {
-        log(e.message, 'error')
-        reject(e)
-      }
-    }
-    script.onerror = () => {
-      log('โหลด Aliplayer SDK ไม่สำเร็จ', 'error')
-      reject(new Error('SDK load failed'))
-    }
-    document.head.appendChild(script)
-  })
+  return loadScriptWithFallback(ALIPLAYER_VERSIONS)
 }
 
 async function fetchPlayAuth() {
