@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="x-ua-compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+  <title>MedNinja - Alibaba Standalone Test</title>
+
+  <!-- ใช้ SDK ตรงตามที่ Alibaba Console แนะนำ 1:1 -->
+  <link rel="stylesheet" href="//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/skins/default/aliplayer-min.css" />
+  <script type="text/javascript" src="//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      padding: 16px;
+    }
+    h1 { font-size: 20px; margin-bottom: 4px; color: #38bdf8; }
+    .sub { color: #94a3b8; font-size: 13px; margin-bottom: 16px; }
+    .info {
+      background: rgba(255,255,255,0.05);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      word-break: break-all;
+    }
+    .info b { color: #38bdf8; }
+    .player-box {
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      max-width: 720px;
+    }
+    #J_prismPlayer { width: 100%; }
+    #log {
+      background: #000;
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      max-height: 400px;
+      overflow-y: auto;
+      color: #4ade80;
+    }
+    #log .err { color: #f87171; }
+    #log .warn { color: #fbbf24; }
+    #log .info { color: #38bdf8; }
+    button {
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎬 Alibaba Standalone Test</h1>
+  <p class="sub">Template ตรงจาก Alibaba Console (v2.35.4, VidAuth mode)</p>
+
+  <div class="info">
+    <b>Video ID:</b> 700e030e797271f1977bf6e6c5490102<br>
+    <b>SDK:</b> apsara-media-box/imp-web-player/2.35.4 (Alibaba CDN)<br>
+    <b>Mode:</b> VidAuth (playauth token from backend)
+  </div>
+
+  <button onclick="loadPlayer()">▶ Load Player</button>
+
+  <div class="player-box">
+    <div id="J_prismPlayer"></div>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    function log(msg, type) {
+      const line = document.createElement('div');
+      line.className = type || '';
+      line.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    log('หน้าเริ่มทำงาน', 'info');
+    log('User Agent: ' + navigator.userAgent.substring(0, 100), 'info');
+    log('window.Aliplayer type: ' + typeof window.Aliplayer, 'info');
+
+    // เช็คทันทีว่า SDK load หรือยัง (ไม่ต้อง fetch, ไม่ต้องรอ)
+    if (typeof window.Aliplayer !== 'undefined') {
+      log('✅ Aliplayer พร้อมใช้แล้ว (auto-loaded via <script> tag)', 'info');
+    } else {
+      log('⚠️ Aliplayer ยังไม่พร้อม รอ...', 'warn');
+      // Poll ทุก 200ms
+      let tries = 0;
+      const poller = setInterval(() => {
+        tries++;
+        if (typeof window.Aliplayer !== 'undefined') {
+          clearInterval(poller);
+          log('✅ Aliplayer พร้อมแล้ว (หลัง ' + (tries*200) + 'ms)', 'info');
+        } else if (tries > 50) {
+          clearInterval(poller);
+          log('❌ Aliplayer ไม่โหลด (>10s)', 'err');
+        }
+      }, 200);
+    }
+
+    async function loadPlayer() {
+      const videoId = '700e030e797271f1977bf6e6c5490102';
+
+      if (typeof window.Aliplayer === 'undefined') {
+        log('❌ Aliplayer ยังไม่พร้อม ลองใหม่อีกครั้งใน 2 วิ', 'err');
+        return;
+      }
+
+      log('กำลังขอ PlayAuth token...', 'info');
+      try {
+        const res = await fetch('/api/china/playauth/' + videoId);
+        if (!res.ok) {
+          const t = await res.text();
+          log('❌ Backend error ' + res.status + ': ' + t.substring(0, 200), 'err');
+          return;
+        }
+        const data = await res.json();
+        if (!data.playAuth) {
+          log('❌ Backend ไม่ส่ง playAuth: ' + JSON.stringify(data), 'err');
+          return;
+        }
+        log('✅ ได้ PlayAuth (' + data.playAuth.length + ' chars)', 'info');
+
+        log('กำลัง init Aliplayer...', 'info');
+        const player = new Aliplayer({
+          id: 'J_prismPlayer',
+          vid: videoId,
+          playauth: data.playAuth,
+          width: '100%',
+          height: '400px',
+          autoplay: false,
+          isLive: false,
+          rePlay: false,
+          playsinline: true,
+          preload: true,
+          controlBarVisibility: 'hover',
+          useH5Prism: true,
+          skinLayout: [
+            { name: 'bigPlayButton', align: 'blabs', x: 30, y: 80 },
+            { name: 'H5Loading', align: 'cc' },
+            { name: 'errorDisplay', align: 'tlabs', x: 0, y: 0 },
+            { name: 'infoDisplay' },
+            { name: 'controlBar', align: 'blabs', x: 0, y: 0,
+              children: [
+                { name: 'progress', align: 'blabs', x: 0, y: 44 },
+                { name: 'playButton', align: 'tl', x: 15, y: 12 },
+                { name: 'timeDisplay', align: 'tl', x: 10, y: 7 },
+                { name: 'fullScreenButton', align: 'tr', x: 10, y: 12 }
+              ]
+            }
+          ]
+        }, function (p) {
+          log('✅ Aliplayer instance created', 'info');
+        });
+
+        player.on('ready', () => log('event: ready', 'info'));
+        player.on('canplay', () => log('✅ event: canplay - พร้อมเล่น', 'info'));
+        player.on('play', () => log('▶️ event: play', 'info'));
+        player.on('error', (e) => {
+          log('❌ event: ERROR: ' + JSON.stringify(e || {}), 'err');
+        });
+
+      } catch (err) {
+        log('❌ Exception: ' + err.message, 'err');
+      }
+    }
+  </script>
+</body>
+</html>
