@@ -148,13 +148,14 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "blob:", 'https://static.line-scdn.net', 'https://liff.line.me', 'https://assets.mediadelivery.net', 'https://connect.facebook.net'],
+      scriptSrc: ["'self'", "'unsafe-inline'", "blob:", 'https://static.line-scdn.net', 'https://liff.line.me', 'https://assets.mediadelivery.net', 'https://connect.facebook.net', 'https://g.alicdn.com'],
       styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
       fontSrc: ["'self'", 'https:', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],
       // Allow Bunny.net video player
       frameSrc: ["'self'", 'https://player.mediadelivery.net'],
-      connectSrc: ["'self'", 'https://api.line.me', 'https://liff.line.me', 'https://access.line.me', 'https://liffsdk.line-scdn.net', 'https://api.qrserver.com', 'https://ws.medninja.academy', 'wss://ws.medninja.academy', 'https://www.facebook.com', 'https://connect.facebook.net'],
+      mediaSrc: ["'self'", 'blob:', 'https://cdn-cn.medninja.academy', 'https://*.aliyuncs.com', 'https://*.alicdn.com'],
+      connectSrc: ["'self'", 'https://api.line.me', 'https://liff.line.me', 'https://access.line.me', 'https://liffsdk.line-scdn.net', 'https://api.qrserver.com', 'https://ws.medninja.academy', 'wss://ws.medninja.academy', 'https://www.facebook.com', 'https://connect.facebook.net', 'https://cdn-cn.medninja.academy', 'https://*.aliyuncs.com', 'https://*.alicdn.com'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
