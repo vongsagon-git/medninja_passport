@@ -74,18 +74,14 @@ function loadScriptWithFallback(versions, currentIndex = 0) {
 
     log(`กำลังโหลด Aliplayer SDK ${path}@${version}...`, 'info')
 
-    // Cache-bust ทุกครั้ง (แก้ปัญหา SDK เก่า cached ใน Service Worker)
-    const cacheBust = `?_=${Date.now()}`
-
     const css = document.createElement('link')
     css.rel = 'stylesheet'
     css.href = `https://g.alicdn.com/${path}/${version}/skins/default/aliplayer-min.css`
     document.head.appendChild(css)
 
     const script = document.createElement('script')
-    script.src = `https://g.alicdn.com/${path}/${version}/aliplayer-min.js${cacheBust}`
+    script.src = `https://g.alicdn.com/${path}/${version}/aliplayer-min.js`
     script.async = false
-    script.crossOrigin = 'anonymous'
 
     const startTime = Date.now()
     script.onload = async () => {
