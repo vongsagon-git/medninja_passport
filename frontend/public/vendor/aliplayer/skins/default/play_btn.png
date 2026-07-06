@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Error>
+  <Code>NoSuchKey</Code>
+  <Message>The specified key does not exist.</Message>
+  <RequestId>6A4C3C47BA970F30398D82D9</RequestId>
+  <HostId>g-assets-germany.oss-eu-central-1.aliyuncs.com</HostId>
+  <Key>g/de/prismplayer/2.15.4/skins/default/play_btn.png</Key>
+  <EC>0041-00000113</EC>
+  <RecommendDoc>https://api.alibabacloud.com/troubleshoot?q=0041-00000113</RecommendDoc>
+</Error>

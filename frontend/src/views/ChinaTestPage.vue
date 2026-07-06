@@ -28,12 +28,14 @@ function log(msg, type = 'info') {
   console.log(`[${time}] ${msg}`)
 }
 
-// SDK versions ตาม Alibaba Console แนะนำ (2.35.4 = ล่าสุด)
-// V2.28.0+ ต้องมี license แต่ Alibaba console preview HTML ใช้ 2.35.4 = แสดงว่า license ผูกกับ account แล้ว
+// Self-hosted SDK ที่ passport server = ตัดปัญหา CDN Alibaba ทั้งหมด
+// - ทำงานทุกเครื่อง เท่ากัน
+// - ในจีนโหลดได้ (DO Singapore ใกล้จีน)
 const ALIPLAYER_VERSIONS = [
-  { path: 'apsara-media-box/imp-web-player', v: '2.35.4' },
-  { path: 'apsara-media-box/imp-web-player', v: '2.27.0' },
-  { path: 'de/prismplayer', v: '2.15.4' }
+  { path: 'self-hosted', v: '2.15.4', jsUrl: '/vendor/aliplayer/aliplayer.js', cssUrl: '/vendor/aliplayer/aliplayer.css' },
+  // Fallback ไป CDN Alibaba ถ้า self-hosted โหลดไม่ได้
+  { path: 'de/prismplayer', v: '2.15.4' },
+  { path: 'apsara-media-box/imp-web-player', v: '2.27.0' }
 ]
 
 function waitForAliplayer(timeoutMs = 30000) {
@@ -63,22 +65,26 @@ function loadScriptWithFallback(versions, currentIndex = 0) {
     if (currentIndex >= versions.length) {
       return reject(new Error('ลอง SDK ทุก version แล้วยังไม่ได้'))
     }
-    const { path, v: version } = versions[currentIndex]
+    const { path, v: version, jsUrl, cssUrl } = versions[currentIndex]
 
     if (window.Aliplayer) {
       log(`window.Aliplayer มีอยู่แล้ว (skip load)`, 'info')
       return resolve()
     }
 
-    log(`กำลังโหลด Aliplayer SDK ${path}@${version}...`, 'info')
+    const sourceLabel = path === 'self-hosted' ? '(passport self-hosted)' : `(g.alicdn.com)`
+    log(`กำลังโหลด Aliplayer SDK ${path}@${version} ${sourceLabel}...`, 'info')
+
+    const finalJsUrl = jsUrl || `https://g.alicdn.com/${path}/${version}/aliplayer-min.js`
+    const finalCssUrl = cssUrl || `https://g.alicdn.com/${path}/${version}/skins/default/aliplayer-min.css`
 
     const css = document.createElement('link')
     css.rel = 'stylesheet'
-    css.href = `https://g.alicdn.com/${path}/${version}/skins/default/aliplayer-min.css`
+    css.href = finalCssUrl
     document.head.appendChild(css)
 
     const script = document.createElement('script')
-    script.src = `https://g.alicdn.com/${path}/${version}/aliplayer-min.js`
+    script.src = finalJsUrl
     script.async = false
 
     const startTime = Date.now()
