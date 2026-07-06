@@ -28,13 +28,14 @@ function log(msg, type = 'info') {
   console.log(`[${time}] ${msg}`)
 }
 
-// หมายเหตุ: V2.28.0+ ต้องมี license (Dec 1, 2024)
-// ใช้ V2.27.x ลงไป (ก่อน license requirement)
+// SDK ที่ verify แล้วว่าทำงาน (mobile + desktop):
+// - de/prismplayer/2.15.4 = legacy path, ทำงานได้ทั้ง PC + Mobile
+// - imp-web-player/2.27.0 = ทำงานแค่ PC (crash silent บนมือถือ)
+// - imp-web-player/2.28+ = ต้องมี license (Dec 2024)
 const ALIPLAYER_VERSIONS = [
+  { path: 'de/prismplayer', v: '2.15.4' },
   { path: 'apsara-media-box/imp-web-player', v: '2.27.0' },
-  { path: 'apsara-media-box/imp-web-player', v: '2.25.1' },
-  { path: 'apsara-media-box/imp-web-player', v: '2.24.0' },
-  { path: 'de/prismplayer', v: '2.15.4' }
+  { path: 'apsara-media-box/imp-web-player', v: '2.25.1' }
 ]
 
 function waitForAliplayer(timeoutMs = 30000) {
@@ -73,14 +74,18 @@ function loadScriptWithFallback(versions, currentIndex = 0) {
 
     log(`กำลังโหลด Aliplayer SDK ${path}@${version}...`, 'info')
 
+    // Cache-bust ทุกครั้ง (แก้ปัญหา SDK เก่า cached ใน Service Worker)
+    const cacheBust = `?_=${Date.now()}`
+
     const css = document.createElement('link')
     css.rel = 'stylesheet'
     css.href = `https://g.alicdn.com/${path}/${version}/skins/default/aliplayer-min.css`
     document.head.appendChild(css)
 
     const script = document.createElement('script')
-    script.src = `https://g.alicdn.com/${path}/${version}/aliplayer-min.js`
+    script.src = `https://g.alicdn.com/${path}/${version}/aliplayer-min.js${cacheBust}`
     script.async = false
+    script.crossOrigin = 'anonymous'
 
     const startTime = Date.now()
     script.onload = async () => {
