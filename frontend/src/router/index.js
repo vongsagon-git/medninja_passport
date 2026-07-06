@@ -383,6 +383,13 @@ const routes = [
     component: () => import('../views/ExtCheck.vue'),
     meta: { immersive: true }
   },
+  // เทส Alibaba VOD สำหรับคนในจีน (public — MVP Phase 1)
+  {
+    path: '/china',
+    name: 'ChinaTest',
+    component: () => import('../views/ChinaTestPage.vue'),
+    meta: { immersive: true }
+  },
   // 404 catch-all
   {
     path: '/:pathMatch(.*)*',

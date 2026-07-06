@@ -1,0 +1,404 @@
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
+
+const playerReady = ref(false)
+const playerStatus = ref('loading')
+const logs = ref([])
+const errorMsg = ref('')
+
+const VIDEO_URL = 'https://cdn-cn.medninja.academy/d0245b99795e71f1a622f6f7d6580102/3c72bdfb27c83a11628939deb885b395-ld-encrypt-stream.m3u8'
+const VIDEO_ID = 'd0245b99795e71f1a622f6f7d6580102'
+const CDN_DOMAIN = 'cdn-cn.medninja.academy'
+
+let player = null
+let playerContainer = null
+
+function log(msg, type = 'info') {
+  const time = new Date().toTimeString().slice(0, 8)
+  logs.value.push({ time, msg, type })
+  if (logs.value.length > 50) logs.value.shift()
+  console.log(`[${time}] ${msg}`)
+}
+
+function loadAliplayerSDK() {
+  return new Promise((resolve, reject) => {
+    if (window.Aliplayer) {
+      log('Aliplayer SDK โหลดเรียบร้อยแล้ว', 'info')
+      return resolve()
+    }
+    log('กำลังโหลด Aliplayer SDK v2.15.4...', 'info')
+
+    const css = document.createElement('link')
+    css.rel = 'stylesheet'
+    css.href = 'https://g.alicdn.com/de/prismplayer/2.15.4/skins/default/aliplayer-min.css'
+    document.head.appendChild(css)
+
+    const script = document.createElement('script')
+    script.src = 'https://g.alicdn.com/de/prismplayer/2.15.4/aliplayer-min.js'
+    script.onload = () => {
+      log('Aliplayer SDK โหลดสำเร็จ', 'success')
+      resolve()
+    }
+    script.onerror = () => {
+      log('โหลด Aliplayer SDK ไม่สำเร็จ', 'error')
+      reject(new Error('SDK load failed'))
+    }
+    document.head.appendChild(script)
+  })
+}
+
+async function initPlayer() {
+  try {
+    await loadAliplayerSDK()
+
+    if (!window.Aliplayer) {
+      throw new Error('Aliplayer is not defined')
+    }
+
+    log(`กำลังสร้าง Aliplayer สำหรับ video: ${VIDEO_ID.substring(0, 8)}...`, 'info')
+
+    player = new window.Aliplayer({
+      id: 'china-player',
+      source: VIDEO_URL,
+      width: '100%',
+      height: '100%',
+      autoplay: false,
+      isLive: false,
+      rePlay: false,
+      playsinline: true,
+      preload: true,
+      controlBarVisibility: 'hover',
+      useH5Prism: true,
+      encryptType: 1
+    }, function (p) {
+      log('Aliplayer instance สร้างสำเร็จ', 'success')
+      playerReady.value = true
+      playerStatus.value = 'ready'
+    })
+
+    player.on('ready', () => log('Event: ready', 'info'))
+    player.on('play', () => {
+      log('Event: play', 'success')
+      playerStatus.value = 'playing'
+    })
+    player.on('pause', () => {
+      log('Event: pause', 'warn')
+      playerStatus.value = 'paused'
+    })
+    player.on('canplay', () => {
+      log('Event: canplay - วิดีโอพร้อมเล่น', 'success')
+    })
+    player.on('waiting', () => {
+      log('Event: waiting (กำลัง buffer)', 'warn')
+    })
+    player.on('error', (e) => {
+      const details = e?.paramData ? JSON.stringify(e.paramData) : (e?.message || 'unknown')
+      log(`Event: ERROR - ${details}`, 'error')
+      errorMsg.value = `เล่นวิดีโอไม่ได้: ${details}`
+      playerStatus.value = 'error'
+    })
+    player.on('ended', () => log('Event: ended', 'info'))
+  } catch (err) {
+    log(`เกิด Error: ${err.message}`, 'error')
+    errorMsg.value = err.message
+    playerStatus.value = 'error'
+  }
+}
+
+onMounted(() => {
+  document.title = 'MedNinja - Test China Video'
+  log('หน้าเทส MedNinja China VOD เริ่มทำงาน', 'info')
+  log(`URL: ${VIDEO_URL.substring(0, 60)}...`, 'info')
+  initPlayer()
+})
+
+onUnmounted(() => {
+  if (player) {
+    try {
+      player.dispose()
+    } catch (e) {
+      console.warn('Error disposing player:', e)
+    }
+  }
+})
+</script>
+
+<template>
+  <div class="china-test-page">
+    <div class="container">
+      <header class="page-header">
+        <div class="logo">
+          <span class="logo-icon">🎬</span>
+          <span class="logo-text">MedNinja <em>China Test</em></span>
+        </div>
+        <p class="tagline">ทดสอบเล่นวิดีโอผ่าน Alibaba CDN (HK Edge) + HTTP-DRM</p>
+      </header>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-label">Video ID</div>
+          <div class="info-value">{{ VIDEO_ID.substring(0, 16) }}...</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">CDN Domain</div>
+          <div class="info-value">{{ CDN_DOMAIN }}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Encryption</div>
+          <div class="info-value">
+            <span class="badge badge-encrypt">Alibaba HTTP-DRM 🔒</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Status</div>
+          <div class="info-value">
+            <span :class="['badge', `badge-${playerStatus}`]">
+              {{ playerStatus === 'loading' ? 'กำลังโหลด...' :
+                 playerStatus === 'ready' ? 'พร้อมเล่น' :
+                 playerStatus === 'playing' ? 'กำลังเล่น' :
+                 playerStatus === 'paused' ? 'หยุด' :
+                 playerStatus === 'error' ? 'ผิดพลาด' : playerStatus }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-wrap">
+        <div id="china-player" class="player"></div>
+      </div>
+
+      <div v-if="errorMsg" class="error-banner">
+        ⚠️ {{ errorMsg }}
+      </div>
+
+      <details class="debug-panel" open>
+        <summary>📝 Debug Console ({{ logs.length }})</summary>
+        <div class="log-list">
+          <div
+            v-for="(l, i) in logs"
+            :key="i"
+            :class="['log-line', `log-${l.type}`]"
+          >
+            <span class="log-time">[{{ l.time }}]</span>
+            <span class="log-msg">{{ l.msg }}</span>
+          </div>
+        </div>
+      </details>
+
+      <footer class="page-footer">
+        <p>
+          <strong>ติดต่อ</strong>: ส่ง screenshot + browser console log กลับมาที่ทีม MedNinja
+        </p>
+        <p class="footer-meta">
+          MedNinja © 2026 · China Test Page · Alibaba VOD + Aliplayer
+        </p>
+      </footer>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.china-test-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0c1e3f 100%);
+  color: #f1f5f9;
+  font-family: 'Sarabun', 'Segoe UI', -apple-system, sans-serif;
+  padding: 24px 16px;
+}
+
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.logo-icon {
+  font-size: 36px;
+}
+
+.logo-text em {
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.tagline {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.info-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.2s;
+}
+
+.info-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.info-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #e2e8f0;
+  font-family: 'Consolas', 'Monaco', monospace;
+  word-break: break-all;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.badge-encrypt {
+  background: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd;
+}
+
+.badge-loading {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.badge-ready {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.badge-playing {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.badge-paused {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.badge-error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.player-wrap {
+  background: #000;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  aspect-ratio: 16 / 9;
+  margin-bottom: 16px;
+}
+
+.player {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.error-banner {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.debug-panel {
+  background: #000;
+  border: 1px solid rgba(74, 222, 128, 0.15);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.debug-panel summary {
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 13px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 8px;
+  user-select: none;
+}
+
+.log-list {
+  max-height: 240px;
+  overflow-y: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.log-line {
+  padding: 2px 0;
+  opacity: 0.9;
+}
+
+.log-time {
+  color: #64748b;
+  margin-right: 8px;
+}
+
+.log-info .log-msg { color: #cbd5e1; }
+.log-success .log-msg { color: #4ade80; }
+.log-warn .log-msg { color: #fbbf24; }
+.log-error .log-msg { color: #f87171; }
+
+.page-footer {
+  text-align: center;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.7;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.footer-meta {
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  .logo { font-size: 24px; }
+  .info-grid { grid-template-columns: 1fr 1fr; }
+  .china-test-page { padding: 16px 12px; }
+}
+</style>
