@@ -223,9 +223,12 @@ app.use('/api/interest', interestRoutes)
 
 // v2: Content + Activation (Learning System)
 // profileGuard: ต้องกรอกข้อมูลครบก่อนเข้าเรียน
-// requireLine: ต้องเชื่อม LINE ก่อนทำอะไร (admin bypass, ยกเว้น activations+consent เพื่อให้โหลดหน้า /my ได้)
+// requireLine: ต้องเชื่อม LINE ก่อนทำอะไร
+//   Bypass: admin, CN users (จีนใช้ LINE ไม่ได้)
 function requireLine(req, res, next) {
   if (req.user.role === 'admin') return next()
+  // ⭐ CN user bypass — จีน block LINE, ไม่บังคับเชื่อม
+  if (req.geo?.isChina) return next()
   if (!req.user.lineUserId) {
     return res.status(403).json({ message: 'LINE_REQUIRED', detail: 'กรุณาเชื่อม LINE ก่อนเข้าใช้งาน' })
   }

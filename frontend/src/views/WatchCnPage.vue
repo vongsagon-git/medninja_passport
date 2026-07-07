@@ -893,8 +893,10 @@ export default {
       }
       tryInit()
     })
-    // ═══ LINE Link Popup — ขึ้นทุก VDO ถ้ายังไม่เชื่อม ═══
-    if (!this.isDemo && this.authStore.user && !this.authStore.user.lineUserId) {
+    // ═══ CN mirror: ไม่บังคับ LINE (จีนใช้ LINE ไม่ได้) ═══
+    // (LINE popup logic disabled ทั้งหมด — showLineLinkPopup ค้างเป็น false)
+    // Placeholder ให้ code เดิมไม่พัง:
+    if (false) {
       this.showLineLinkPopup = true
       // Poll เช็คทุก 5s ว่าเชื่อมสำเร็จหรือยัง
       this._lineLinkPoll = setInterval(() => {

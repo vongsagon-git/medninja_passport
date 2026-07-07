@@ -22,41 +22,39 @@ export function useCountryGuard (expectedCountry) {
   const authStore = useAuthStore()
   const { country, ready } = useCountry()
 
+  const forceLogout = (reason) => {
+    console.warn(`[CountryGuard] ${reason} — logout`)
+    const msg = expectedCountry === 'TH'
+      ? 'ตรวจพบ IP ไม่ตรงประเทศไทย — กรุณา login ใหม่'
+      : 'ตรวจพบ IP ไม่ตรงประเทศจีน — กรุณา login ใหม่'
+    localStorage.removeItem(LOGIN_COUNTRY_KEY)
+    authStore.logout().finally(() => {
+      alert(msg)
+      router.push('/')
+    })
+  }
+
   const check = () => {
     if (!ready.value) return
     const current = country.value
     if (!current || current === 'unknown') return
 
-    // ⭐ Admin bypass — admin login จาก IP ไหนก็ได้ ไม่ต้อง match country
+    // ⭐ Admin bypass — admin login จาก IP ไหนก็ได้
     if (authStore.user?.role === 'admin') {
       console.log('[CountryGuard] Admin bypass — skip country check')
       return
     }
 
-    // ⭐ ถ้ายังไม่มี login_country → set ตอนนี้เลย (first-time visit)
-    const stored = localStorage.getItem(LOGIN_COUNTRY_KEY)
-    if (!stored) {
-      localStorage.setItem(LOGIN_COUNTRY_KEY, current)
-      // ครั้งแรก — ไม่ kick แค่ set
-      return
-    }
-
-    // ถ้าไม่ตรง expected → logout
+    // ⭐ STRICT: IP ปัจจุบันต้องตรง expected (ตาม route)
+    //   /my → guard('TH')  → IP ต้อง TH
+    //   /my-cn → guard('CN') → IP ต้อง CN
+    //   ถ้าคนพยายาม bypass URL (เช่นพิมพ์ /my-cn แต่ IP=TH) → logout ทันที
     if (current !== expectedCountry) {
-      console.warn(`[CountryGuard] Expected ${expectedCountry} but got ${current} — logout`)
-      const msg = expectedCountry === 'TH'
-        ? 'ตรวจพบการเปลี่ยน IP เป็นประเทศจีน กรุณา login ใหม่'
-        : 'ตรวจพบการเปลี่ยน IP กลับประเทศไทย กรุณา login ใหม่'
-      // Clear + notify
-      localStorage.removeItem(LOGIN_COUNTRY_KEY)
-      authStore.logout().finally(() => {
-        alert(msg)
-        router.push('/')
-      })
+      forceLogout(`Expected ${expectedCountry} but IP resolved to ${current}`)
       return
     }
 
-    // Store current country ไว้เผื่อ page reload
+    // ตรงเป๊ะ → save login_country ให้ Navbar ใช้
     localStorage.setItem(LOGIN_COUNTRY_KEY, current)
   }
 
