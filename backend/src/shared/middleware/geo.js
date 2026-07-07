@@ -42,16 +42,44 @@ function shouldLog (ip) {
   return true
 }
 
+// Cloudflare IPv4 ranges — ใช้เช็คว่า upstream เป็น CF จริงไหม
+// ref: https://www.cloudflare.com/ips-v4
+const CF_IPV4_PREFIXES = [
+  '103.21.244.', '103.22.200.', '103.31.4.',
+  '104.16.', '104.17.', '104.18.', '104.19.', '104.20.', '104.21.', '104.22.', '104.23.',
+  '104.24.', '104.25.', '104.26.', '104.27.', '104.28.',
+  '108.162.',
+  '131.0.72.',
+  '141.101.',
+  '162.158.',
+  '172.64.', '172.65.', '172.66.', '172.67.', '172.68.', '172.69.', '172.70.', '172.71.',
+  '173.245.',
+  '188.114.',
+  '190.93.',
+  '197.234.',
+  '198.41.'
+]
+function isFromCloudflare (ip) {
+  if (!ip) return false
+  return CF_IPV4_PREFIXES.some(prefix => ip.startsWith(prefix))
+}
+
 function extractIp (req) {
-  // ⭐ Priority: req.ip (Express + trust proxy: 1) — ปลอมไม่ได้จาก DevTools
-  //    เพราะ Express อ่าน rightmost IP ใน X-Forwarded-For ที่ DO append เอง
-  //    User ส่ง X-Forwarded-For มาเอง = DO ทับด้วย IP จริงตัวขวาสุด
-  //
-  // ห้าม trust: x-forwarded-for (raw), x-real-ip → attacker set ผ่าน DevTools ได้
-  // ห้าม trust: socket.remoteAddress → เป็น IP ของ DO ไม่ใช่ client
+  // ⭐ Priority: cf-connecting-ip ถ้า upstream = Cloudflare
+  //    passport.medninja.academy อยู่หลัง Cloudflare → req.ip = CF IP (172.71.x.x)
+  //    IP จริงของ client อยู่ใน cf-connecting-ip (CF ใส่เอง — user spoof ไม่ได้
+  //    เพราะ CF จะทับ header นี้เสมอถ้า request ผ่าน CF)
+  const upstreamIp = req.ip || req.socket?.remoteAddress || ''
+  if (isFromCloudflare(upstreamIp)) {
+    const cfIp = req.headers['cf-connecting-ip']
+    if (cfIp) return String(cfIp).trim()
+  }
+
+  // Priority 2: req.ip (Express + trust proxy: 1)
+  //    ใช้กรณี direct hit DO (ไม่ผ่าน CF) — spoof ไม่ได้เพราะ DO ทับ X-Forwarded-For
   if (req.ip) return req.ip
 
-  // Fallback: ถ้า req.ip ไม่มี (dev/localhost) → socket
+  // Fallback: dev/localhost
   const sock = req.socket?.remoteAddress
   if (sock) return sock
 
@@ -130,7 +158,16 @@ function whoamiEndpoint (req, res) {
     ip: req.geo.ip,
     region: req.geo.region,
     city: req.geo.city,
-    detectedBy: req.geo.detectedBy
+    detectedBy: req.geo.detectedBy,
+    // Debug (ช่วย diagnose เวลาผลไม่ตรง)
+    debug: {
+      reqIp: req.ip,
+      cfConnectingIp: req.headers['cf-connecting-ip'] || null,
+      cfIpCountry: req.headers['cf-ipcountry'] || null,
+      cfRay: req.headers['cf-ray'] || null,
+      xForwardedFor: req.headers['x-forwarded-for'] || null,
+      upstreamIsCloudflare: isFromCloudflare(req.ip || req.socket?.remoteAddress || '')
+    }
   })
 }
 
