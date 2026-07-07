@@ -5,8 +5,8 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test</title>
-  <!-- BUILD_VERSION: 2026-07-07-14:00-v15-selfhost-with-fallback -->
-  <meta name="build-version" content="v16 · 14:15">
+  <!-- BUILD_VERSION: 2026-07-07-14:30-v17-debug-new-Aliplayer -->
+  <meta name="build-version" content="v17 · 14:30">
 
   <!-- Aliplayer SDK 2.35.4 - Self-host (Server เรา) + fallback CDN Alibaba -->
   <!-- ทดสอบ Cache Theory ยืนยันแล้ว: g.alicdn.com ช้ามากจาก network ไทย/มือถือ -->
@@ -161,7 +161,7 @@
   <div class="header-row">
     <h1>🔐 MedNinja DRM Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v16 · 14:15</span>
+      <span class="version-badge" id="versionBadge">v17 · 14:30</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -367,7 +367,8 @@
         log('✅ STS token ได้ (expires: ' + data.expiration + ')', 'success');
 
         log('กำลังสร้าง Aliplayer (DRM mode with STS)...', 'info');
-        const player = new Aliplayer({
+        log('DEBUG: window.Aliplayer type=' + typeof window.Aliplayer + ', is null=' + (window.Aliplayer === null) + ', keys=' + (window.Aliplayer ? Object.keys(window.Aliplayer).length : 0), 'info');
+        const player = new window.Aliplayer({
           id: 'J_prismPlayer',
           vid: videoId,
           accessKeyId: data.accessKeyId,
