@@ -1,49 +1,52 @@
 /**
  * Geo Middleware — Country Detection
  *
- * ตรวจ country จาก IP address (DO-only, ไม่พึ่ง Cloudflare)
- * ใช้ geoip-lite (offline DB — ฟรี + ถาวร)
+ * Detect ประเทศจาก IP address
+ * Priority:
+ *   1. Cloudflare header (cf-ipcountry) — ถ้ามี (ฟรี, เร็วสุด)
+ *   2. ipinfo.io /lite endpoint — ฟรีไม่นับ quota (ต้องตั้ง IPINFO_TOKEN)
+ *   3. geoip-lite (offline DB) — fallback
+ *   4. 'unknown' — สุดท้าย
  *
  * Attach req.geo = {
  *   country: 'TH' | 'CN' | 'US' | 'unknown',
- *   ip: '1.2.3.4',
- *   isChina: bool,
- *   isThai: bool,
- *   detectedBy: 'cloudflare' | 'geoip-lite' | 'fallback',
- *   region, city (optional)
+ *   ip, isChina, isThai, detectedBy, asn, isp
  * }
- *
- * ใช้ตัวอย่าง:
- *   app.use(geoMiddleware)
- *   → route จะได้ req.geo ใช้เลย
  */
 
 const geoip = require('geoip-lite')
 
-// Fallback country ถ้า detect ไม่ได้
-const FALLBACK_COUNTRY = 'TH'
+const IPINFO_TOKEN = process.env.IPINFO_TOKEN || 'c9a5fa81b94123'
+const IPINFO_TIMEOUT_MS = 3000
 
-// Log rate limiter — log tuk ip แค่ 1 ครั้ง/ชม.
-const logCache = new Map()
-const LOG_CACHE_MS = 60 * 60 * 1000 // 1 hour
+// ─── Cache: IP → geo data (24 hr TTL) ───
+const geoCache = new Map()
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const CACHE_MAX = 5000
 
-function shouldLog (ip) {
-  const now = Date.now()
-  const last = logCache.get(ip)
-  if (last && now - last < LOG_CACHE_MS) return false
-  logCache.set(ip, now)
-  // Cleanup old entries (simple)
-  if (logCache.size > 1000) {
-    const cutoff = now - LOG_CACHE_MS
-    for (const [k, v] of logCache) {
-      if (v < cutoff) logCache.delete(k)
-    }
+function cacheGet (ip) {
+  const entry = geoCache.get(ip)
+  if (!entry) return null
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    geoCache.delete(ip)
+    return null
   }
-  return true
+  return entry.data
 }
 
-// Cloudflare IPv4 ranges — ใช้เช็คว่า upstream เป็น CF จริงไหม
-// ref: https://www.cloudflare.com/ips-v4
+function cacheSet (ip, data) {
+  if (geoCache.size >= CACHE_MAX) {
+    // Simple eviction: ลบ 500 ตัวแรก (FIFO)
+    let n = 0
+    for (const k of geoCache.keys()) {
+      geoCache.delete(k)
+      if (++n >= 500) break
+    }
+  }
+  geoCache.set(ip, { data, ts: Date.now() })
+}
+
+// ─── Cloudflare IPv4 ranges (เช็คว่า upstream เป็น CF จริง) ───
 const CF_IPV4_PREFIXES = [
   '103.21.244.', '103.22.200.', '103.31.4.',
   '104.16.', '104.17.', '104.18.', '104.19.', '104.20.', '104.21.', '104.22.', '104.23.',
@@ -65,62 +68,103 @@ function isFromCloudflare (ip) {
 }
 
 function extractIp (req) {
-  // ⭐ Priority: cf-connecting-ip ถ้า upstream = Cloudflare
-  //    passport.medninja.academy อยู่หลัง Cloudflare → req.ip = CF IP (172.71.x.x)
-  //    IP จริงของ client อยู่ใน cf-connecting-ip (CF ใส่เอง — user spoof ไม่ได้
-  //    เพราะ CF จะทับ header นี้เสมอถ้า request ผ่าน CF)
+  // 1. cf-connecting-ip ถ้า upstream = Cloudflare (spoof ยาก เพราะ CF ทับเสมอ)
   const upstreamIp = req.ip || req.socket?.remoteAddress || ''
   if (isFromCloudflare(upstreamIp)) {
     const cfIp = req.headers['cf-connecting-ip']
     if (cfIp) return String(cfIp).trim()
   }
-
-  // Priority 2: req.ip (Express + trust proxy: 1)
-  //    ใช้กรณี direct hit DO (ไม่ผ่าน CF) — spoof ไม่ได้เพราะ DO ทับ X-Forwarded-For
+  // 2. req.ip (Express + trust proxy: 1) — DO ทับ X-Forwarded-For rightmost
   if (req.ip) return req.ip
-
-  // Fallback: dev/localhost
-  const sock = req.socket?.remoteAddress
-  if (sock) return sock
-
-  return ''
+  // 3. Fallback socket (dev/localhost)
+  return req.socket?.remoteAddress || ''
 }
 
-function detectCountry (req, ip) {
-  // Priority 1: Cloudflare header (ถ้า enable ในอนาคต)
+// ─── ipinfo.io /lite lookup (ฟรีไม่นับ quota) ───
+async function ipinfoLookup (ip) {
+  if (!IPINFO_TOKEN) return null
+  try {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), IPINFO_TIMEOUT_MS)
+    const res = await fetch(`https://api.ipinfo.io/lite/${encodeURIComponent(ip)}`, {
+      headers: { Authorization: `Bearer ${IPINFO_TOKEN}` },
+      signal: ctrl.signal
+    })
+    clearTimeout(timer)
+    if (!res.ok) return null
+    const j = await res.json()
+    if (!j.country_code) return null
+    return {
+      country: String(j.country_code).toUpperCase(),
+      countryName: j.country || null,
+      asn: j.asn || null,
+      isp: j.as_name || null,
+      continent: j.continent || null,
+      detectedBy: 'ipinfo'
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error('[geo] ipinfo lookup error:', e.message)
+    }
+    return null
+  }
+}
+
+// ─── geoip-lite lookup (offline fallback) ───
+function geoipLookup (ip) {
+  try {
+    const g = geoip.lookup(ip)
+    if (!g?.country) return null
+    return {
+      country: g.country.toUpperCase(),
+      region: g.region || null,
+      city: g.city || null,
+      detectedBy: 'geoip-lite'
+    }
+  } catch (e) {
+    console.error('[geo] geoip-lite lookup error:', e.message)
+    return null
+  }
+}
+
+// ─── Main detection (async — เพราะเรียก ipinfo) ───
+async function detectCountry (req, ip) {
+  // Priority 1: Cloudflare header (ถ้ามี — เร็วสุด)
   const cfCountry = req.headers['cf-ipcountry']
   if (cfCountry && cfCountry !== 'XX' && cfCountry !== 'T1') {
-    return { country: cfCountry.toUpperCase(), detectedBy: 'cloudflare' }
-  }
-
-  // Priority 2: geoip-lite (offline DB)
-  if (ip) {
-    try {
-      const geo = geoip.lookup(ip)
-      if (geo?.country) {
-        return {
-          country: geo.country.toUpperCase(),
-          region: geo.region,
-          city: geo.city,
-          detectedBy: 'geoip-lite'
-        }
-      }
-    } catch (e) {
-      console.error('[geo] geoip-lite lookup error:', e.message)
+    return {
+      country: cfCountry.toUpperCase(),
+      detectedBy: 'cloudflare'
     }
   }
 
-  // Priority 3: Fallback
-  return { country: FALLBACK_COUNTRY, detectedBy: 'fallback' }
+  if (!ip) return { country: 'unknown', detectedBy: 'no-ip' }
+
+  // Priority 2: ipinfo /lite (แม่นสุด, ฟรีไม่นับ quota)
+  const ipinfo = await ipinfoLookup(ip)
+  if (ipinfo) return ipinfo
+
+  // Priority 3: geoip-lite offline fallback
+  const glite = geoipLookup(ip)
+  if (glite) return glite
+
+  return { country: 'unknown', detectedBy: 'fallback' }
 }
 
-function geoMiddleware (req, res, next) {
+// ─── Middleware ───
+async function geoMiddleware (req, res, next) {
   const ip = extractIp(req)
-  const detected = detectCountry(req, ip)
 
-  const geo = {
+  let detected = ip ? cacheGet(ip) : null
+  if (!detected) {
+    detected = await detectCountry(req, ip)
+    if (ip && detected.country !== 'unknown') cacheSet(ip, detected)
+  }
+
+  req.geo = {
     ip,
     country: detected.country,
+    countryName: detected.countryName || null,
     isChina: detected.country === 'CN',
     isThai: detected.country === 'TH',
     isHK: detected.country === 'HK',
@@ -128,45 +172,37 @@ function geoMiddleware (req, res, next) {
     isSingapore: detected.country === 'SG',
     region: detected.region || null,
     city: detected.city || null,
+    asn: detected.asn || null,
+    isp: detected.isp || null,
     detectedBy: detected.detectedBy,
-    // Original headers สำหรับ debug
-    cfRay: req.headers['cf-ray'] || null,
-    ua: req.headers['user-agent'] || ''
-  }
-
-  req.geo = geo
-
-  // Log ครั้งแรกที่เจอ IP นี้ (rate-limited)
-  if (process.env.NODE_ENV !== 'production' || geo.isChina) {
-    if (shouldLog(ip)) {
-      console.log(`[geo] ${ip} → ${geo.country} (${geo.detectedBy})`)
-    }
+    cfRay: req.headers['cf-ray'] || null
   }
 
   next()
 }
 
-/**
- * Endpoint helper — ให้ frontend เรียกเช็ค country ของตัวเอง
- * GET /api/geo/whoami
- */
+// ─── Endpoint: GET /api/geo/whoami ───
 function whoamiEndpoint (req, res) {
   res.json({
+    ip: req.geo.ip,
     country: req.geo.country,
+    countryName: req.geo.countryName,
     isChina: req.geo.isChina,
     isThai: req.geo.isThai,
-    ip: req.geo.ip,
     region: req.geo.region,
     city: req.geo.city,
+    asn: req.geo.asn,
+    isp: req.geo.isp,
     detectedBy: req.geo.detectedBy,
-    // Debug (ช่วย diagnose เวลาผลไม่ตรง)
     debug: {
       reqIp: req.ip,
       cfConnectingIp: req.headers['cf-connecting-ip'] || null,
       cfIpCountry: req.headers['cf-ipcountry'] || null,
       cfRay: req.headers['cf-ray'] || null,
       xForwardedFor: req.headers['x-forwarded-for'] || null,
-      upstreamIsCloudflare: isFromCloudflare(req.ip || req.socket?.remoteAddress || '')
+      upstreamIsCloudflare: isFromCloudflare(req.ip || req.socket?.remoteAddress || ''),
+      cacheSize: geoCache.size,
+      hasIpinfoToken: !!IPINFO_TOKEN
     }
   })
 }

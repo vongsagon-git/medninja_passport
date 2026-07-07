@@ -1,22 +1,24 @@
 /**
  * useCountry — Country detection composable
  *
- * ดึงข้อมูล country ของ user จาก backend (geoip-lite ที่ DO)
- * ใช้ singleton pattern — เรียก API ครั้งเดียวต่อ session, cache ใน memory
+ * ดึงข้อมูล country + IP ของ user จาก backend
+ * Singleton — เรียก API ครั้งเดียวต่อ session
  *
  * ใช้:
- *   const { country, isChina, isThai, ready, refresh } = useCountry()
- *   watch(ready, (r) => { if (r && isChina.value) showBanner() })
+ *   const { country, ip, isChina, isThai, ready } = useCountry()
  */
 import { ref, computed, readonly } from 'vue'
 import api from '../services/api'
 
-// Singleton state (shared across all components)
+// Singleton state
 const _country = ref('')
+const _countryName = ref('')
 const _detectedBy = ref('')
 const _ip = ref('')
 const _region = ref('')
 const _city = ref('')
+const _isp = ref('')
+const _asn = ref('')
 const _ready = ref(false)
 const _loading = ref(false)
 const _error = ref(null)
@@ -29,17 +31,21 @@ async function fetchWhoami () {
   _error.value = null
   _fetchPromise = api.get('/geo/whoami')
     .then(res => {
-      _country.value = res.data.country || ''
-      _detectedBy.value = res.data.detectedBy || ''
-      _ip.value = res.data.ip || ''
-      _region.value = res.data.region || ''
-      _city.value = res.data.city || ''
+      const d = res.data || {}
+      _country.value = d.country || 'unknown'
+      _countryName.value = d.countryName || ''
+      _detectedBy.value = d.detectedBy || ''
+      _ip.value = d.ip || ''
+      _region.value = d.region || ''
+      _city.value = d.city || ''
+      _isp.value = d.isp || ''
+      _asn.value = d.asn || ''
       _ready.value = true
-      return res.data
+      return d
     })
     .catch(err => {
       _error.value = err.message || 'geo fetch failed'
-      _country.value = 'TH' // fallback
+      _country.value = 'unknown'
       _ready.value = true
       return null
     })
@@ -49,16 +55,52 @@ async function fetchWhoami () {
   return _fetchPromise
 }
 
+// Flag emoji generator จาก country code (ISO 3166-1 alpha-2)
+function countryToFlag (code) {
+  if (!code || code.length !== 2) return '🌐'
+  const A = 127397 // Regional Indicator Symbol offset
+  return String.fromCodePoint(
+    code.charCodeAt(0) + A,
+    code.charCodeAt(1) + A
+  )
+}
+
+// Human-readable country name (Thai)
+const COUNTRY_TH = {
+  CN: 'จีน',
+  TH: 'ไทย',
+  HK: 'ฮ่องกง',
+  TW: 'ไต้หวัน',
+  SG: 'สิงคโปร์',
+  MY: 'มาเลเซีย',
+  US: 'สหรัฐฯ',
+  GB: 'อังกฤษ',
+  JP: 'ญี่ปุ่น',
+  KR: 'เกาหลี',
+  VN: 'เวียดนาม',
+  ID: 'อินโดนีเซีย',
+  PH: 'ฟิลิปปินส์',
+  LA: 'ลาว',
+  KH: 'กัมพูชา',
+  MM: 'เมียนมาร์',
+  AU: 'ออสเตรเลีย',
+  IN: 'อินเดีย',
+  DE: 'เยอรมัน',
+  FR: 'ฝรั่งเศส'
+}
+
 export function useCountry () {
-  // Auto-fetch on first use
   if (!_ready.value && !_loading.value) fetchWhoami()
 
   return {
     country: readonly(_country),
+    countryName: readonly(_countryName),
     detectedBy: readonly(_detectedBy),
     ip: readonly(_ip),
     region: readonly(_region),
     city: readonly(_city),
+    isp: readonly(_isp),
+    asn: readonly(_asn),
     ready: readonly(_ready),
     loading: readonly(_loading),
     error: readonly(_error),
@@ -66,7 +108,8 @@ export function useCountry () {
     isThai: computed(() => _country.value === 'TH'),
     isHK: computed(() => _country.value === 'HK'),
     isTaiwan: computed(() => _country.value === 'TW'),
-    isSingapore: computed(() => _country.value === 'SG'),
+    flag: computed(() => countryToFlag(_country.value)),
+    countryTh: computed(() => COUNTRY_TH[_country.value] || _countryName.value || _country.value),
     refresh: () => { _fetchPromise = null; return fetchWhoami() }
   }
 }
