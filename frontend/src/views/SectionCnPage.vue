@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="page-header">
       <div class="container">
-        <router-link :to="isDemo ? '/' : '/my'" class="back-link">
+        <router-link :to="isDemo ? '/' : '/my-cn'" class="back-link">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd"/></svg>
           {{ isDemo ? 'กลับหน้าหลัก' : 'กลับ' }}
         </router-link>
@@ -29,7 +29,7 @@
       <!-- Error -->
       <div v-else-if="activationStore.error" class="alert alert-error">
         {{ activationStore.error }}
-        <router-link :to="isDemo ? '/' : '/my'" class="btn btn-sm btn-outline" style="margin-left: auto">กลับ</router-link>
+        <router-link :to="isDemo ? '/' : '/my-cn'" class="btn btn-sm btn-outline" style="margin-left: auto">กลับ</router-link>
       </div>
 
       <!-- Overall Progress -->
@@ -120,10 +120,21 @@
                     <div class="vr-meta"><span class="vr-tier-badge">ระดับ {{ v.requiredTier }}</span></div>
                   </div>
                 </div>
-                <!-- วิดีโอปกติ (unlocked) -->
+                <!-- CN: วิดีโอยังไม่มี Ali code — เทาไว้ (รออัพโหลด) -->
+                <div v-else-if="!hasCnVideo(v)" class="video-row cn-pending">
+                  <div class="vr-check">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M4 8V6a4 4 0 118 0v2h.5A1.5 1.5 0 0114 9.5v6a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 15.5v-6A1.5 1.5 0 013.5 8H4zm2-2a2 2 0 114 0v2H6V6z" clip-rule="evenodd"/></svg>
+                  </div>
+                  <svg class="vr-video-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="color:#94a3b8"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+                  <div class="vr-info">
+                    <span class="vr-title cn-pending-title">{{ v.title }}</span>
+                    <div class="vr-meta"><span class="cn-pending-badge">รออัพโหลด</span></div>
+                  </div>
+                </div>
+                <!-- วิดีโอปกติ (unlocked + มี Ali code) -->
                 <router-link
                   v-else
-                  :to="isDemo ? `/demo/watch/${v.index}` : `/my/watch/${section._id}/${v.index}`"
+                  :to="isDemo ? `/demo/watch/${v.index}` : `/my-cn/watch/${section._id}/${v.index}`"
                   class="video-row"
                   :class="{ watched: isWatched(v.index) }"
                 >
@@ -157,7 +168,7 @@
                   </div>
                 </div>
                 <!-- Bonus Video (มี VDO จริง — unlocked) -->
-                <router-link v-else-if="v.hasBonusVideo" :to="isDemo ? `/demo/watch/${v.index}` : `/my/watch/${section._id}/${v.index}?bonus=1`" class="video-row bonus-row">
+                <router-link v-else-if="v.hasBonusVideo" :to="isDemo ? `/demo/watch/${v.index}` : `/my-cn/watch/${section._id}/${v.index}?bonus=1`" class="video-row bonus-row">
                   <div class="vr-check bonus-star">&#11088;</div>
                   <svg class="vr-video-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
                   <div class="vr-info">
@@ -261,10 +272,21 @@
                       <div class="vr-meta"><span class="vr-tier-badge">ระดับ {{ v.requiredTier }}</span></div>
                     </div>
                   </div>
-                  <!-- วิดีโอปกติ (unlocked, sub) -->
+                  <!-- CN: sub วิดีโอยังไม่มี Ali code — เทา -->
+                  <div v-else-if="!hasCnVideo(v)" class="video-row in-subtopic cn-pending">
+                    <div class="vr-check">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M4 8V6a4 4 0 118 0v2h.5A1.5 1.5 0 0114 9.5v6a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 15.5v-6A1.5 1.5 0 013.5 8H4zm2-2a2 2 0 114 0v2H6V6z" clip-rule="evenodd"/></svg>
+                    </div>
+                    <svg class="vr-video-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="color:#94a3b8"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+                    <div class="vr-info">
+                      <span class="vr-title cn-pending-title">{{ v.title }}</span>
+                      <div class="vr-meta"><span class="cn-pending-badge">รออัพโหลด</span></div>
+                    </div>
+                  </div>
+                  <!-- วิดีโอปกติ (unlocked, sub, มี Ali code) -->
                   <router-link
                     v-else
-                    :to="isDemo ? `/demo/watch/${v.index}` : `/my/watch/${section._id}/${v.index}`"
+                    :to="isDemo ? `/demo/watch/${v.index}` : `/my-cn/watch/${section._id}/${v.index}`"
                     class="video-row in-subtopic"
                     :class="{ watched: isWatched(v.index) }"
                   >
@@ -298,7 +320,7 @@
                     </div>
                   </div>
                   <!-- Bonus Video (มี VDO จริง — unlocked, sub) -->
-                  <router-link v-else-if="v.hasBonusVideo" :to="isDemo ? `/demo/watch/${v.index}` : `/my/watch/${section._id}/${v.index}?bonus=1`" class="video-row bonus-row in-subtopic">
+                  <router-link v-else-if="v.hasBonusVideo" :to="isDemo ? `/demo/watch/${v.index}` : `/my-cn/watch/${section._id}/${v.index}?bonus=1`" class="video-row bonus-row in-subtopic">
                     <div class="vr-check bonus-star">&#11088;</div>
                     <svg class="vr-video-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
                     <div class="vr-info">
@@ -426,12 +448,12 @@
 
 <script>
 import { useActivationStore } from '../stores/activation'
+import { useCountryGuard } from '../composables/useCountryGuard'
 import api from '../services/api'
 import SelfCheckModal from '../components/SelfCheckModal.vue'
-import { useCountryGuard } from '../composables/useCountryGuard'
 
 export default {
-  name: 'SectionPage',
+  name: 'SectionCnPage',
   components: { SelfCheckModal },
   data() {
     return {
@@ -447,8 +469,8 @@ export default {
   },
   setup() {
     const activationStore = useActivationStore()
-    // ⭐ TH guard — logout ถ้า IP เปลี่ยนไป CN
-    useCountryGuard('TH')
+    // CN mirror guard — logout ถ้า IP เปลี่ยนไม่ใช่จีน
+    useCountryGuard('CN')
     return { activationStore }
   },
   computed: {
@@ -587,6 +609,15 @@ export default {
     }
   },
   methods: {
+    // ⭐ CN mirror: เช็คว่า video นี้มี Ali code (NoDRM หรือ DRM) พร้อมใช้งานไหม
+    hasCnVideo(v) {
+      if (!v) return false
+      return !!(v.aliVideoId || v.aliDrmVideoId)
+    },
+    hasCnBonusVideo(v) {
+      if (!v) return false
+      return !!(v.bonusAliVideoId || v.bonusAliDrmVideoId)
+    },
     // ─── Self Check ───
     topicSelfCheck(topic) {
       if (!this.section?.selfCheckMap || !topic?.topicId) return null
@@ -1257,5 +1288,33 @@ export default {
     padding: 5px 7px; gap: 0;
   }
   .vr-pdf svg + span, .vr-pdf-download svg + span { display: none; }
+}
+
+/* ⭐ CN mirror: video ที่ยังไม่มี Ali code — เทา รออัพโหลด */
+.video-row.cn-pending {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+  background: #f8fafc;
+}
+.video-row.cn-pending:hover {
+  background: #f8fafc;
+  transform: none;
+  box-shadow: none;
+}
+.cn-pending-title {
+  color: #64748b !important;
+  font-weight: 500;
+}
+.cn-pending-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 </style>

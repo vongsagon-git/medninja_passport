@@ -177,6 +177,13 @@
                                 <div v-if="vid.ref._drmName" class="bunny-filename drm" :title="vid.ref._drmName">{{ vid.ref._drmName }}</div>
                                 <span v-if="vid.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
                               </div>
+                              <!-- ⭐ CN: Alibaba VOD video IDs -->
+                              <div style="min-width:170px;">
+                                <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" />
+                              </div>
+                              <div style="min-width:170px;">
+                                <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" />
+                              </div>
                               <span v-if="vid.ref._locked" class="lock-badge" @click="unlockVideo(vid.flatIdx)">🔒</span>
                               <select v-model.number="vid.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (vid.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                                 <option :value="1">ระดับ 1</option>
@@ -255,6 +262,13 @@
                             </div>
                             <div v-if="child.ref._drmName" class="bunny-filename drm">{{ child.ref._drmName }}</div>
                             <span v-if="child.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
+                          </div>
+                          <!-- ⭐ CN: Alibaba VOD -->
+                          <div style="min-width:170px;">
+                            <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" />
+                          </div>
+                          <div style="min-width:170px;">
+                            <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" />
                           </div>
                           <span v-if="child.ref._locked" class="lock-badge" @click="unlockVideo(child.flatIdx)">🔒</span>
                           <select v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -336,6 +350,13 @@
                       </div>
                       <div v-if="node.ref._drmName" class="bunny-filename drm">{{ node.ref._drmName }}</div>
                       <span v-if="node.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
+                    </div>
+                    <!-- ⭐ CN: Alibaba VOD -->
+                    <div style="min-width:170px;">
+                      <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" />
+                    </div>
+                    <div style="min-width:170px;">
+                      <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" />
                     </div>
                     <span v-if="node.ref._locked" class="lock-badge" @click="unlockVideo(node.flatIdx)">🔒</span>
                     <select v-model.number="node.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (node.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -733,6 +754,8 @@ export default {
         subtopic,
         bunnyVideoId: '',
         bunnyDrmVideoId: '',
+        aliVideoId: '',
+        aliDrmVideoId: '',
         bunnyLibraryId: '628424',
         duration: '--:--',
         order: 0,
@@ -819,6 +842,8 @@ export default {
         subtopic: '',
         bunnyVideoId: '',
         bunnyDrmVideoId: '',
+        aliVideoId: '',
+        aliDrmVideoId: '',
         bunnyLibraryId: '628424',
         duration: '--:--',
         order: this.form.videos.length + 1,
@@ -1354,6 +1379,8 @@ export default {
             subtopicId: v.subtopicId || '',
             bunnyVideoId: v.bunnyVideoId || '',
             bunnyDrmVideoId: v.bunnyDrmVideoId || '',
+            aliVideoId: v.aliVideoId || '',
+            aliDrmVideoId: v.aliDrmVideoId || '',
             bunnyLibraryId: v.bunnyLibraryId || '628424',
             duration: v.duration || '--:--',
             order: v.order || 0,
@@ -2033,5 +2060,23 @@ export default {
   display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap;
 }
 .bonus-pdf-input { max-width: 180px; font-size: 11px; }
+
+/* ⭐ CN: Alibaba VOD input styling */
+.ali-input {
+  border-color: #dc2626 !important;
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  font-family: monospace;
+  font-size: 12px;
+}
+.ali-input.drm {
+  border-color: #b91c1c !important;
+  background: #fee2e2 !important;
+}
+.ali-input::placeholder { color: #f87171; font-family: 'Noto Sans Thai', sans-serif; }
+.ali-input:focus {
+  border-color: #7f1d1d !important;
+  outline: 2px solid rgba(220, 38, 38, 0.2);
+}
 
 </style>

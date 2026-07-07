@@ -154,21 +154,28 @@
                   <router-link :to="backUrl" style="color:#a78bfa;font-size:13px;text-decoration:underline;">กลับหน้าเรียนเลย</router-link>
                 </div>
               </div>
-              <iframe
-                v-if="video.embedUrl && !replaced && !recorderBlocked"
-                ref="videoIframe"
-                :src="video.embedUrl"
-                loading="lazy"
-                referrerpolicy="origin"
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture 'none'"
-                disableremoteplayback
-                disablepictureinpicture
-              ></iframe>
-              <!-- Loading overlay — บังจน player ready (pointer-events:none ให้กด play ได้) -->
-              <div v-if="video.embedUrl && !replaced && !recorderBlocked && !playerReady" class="player-loading-overlay">
+              <!-- ⭐ Alibaba VOD player container (CN mirror) -->
+              <div
+                v-if="hasAliVideo && !replaced && !recorderBlocked"
+                id="J_prismPlayer"
+                ref="aliPlayerBox"
+                class="ali-player-box"
+              ></div>
+              <!-- Loading overlay — บังจน Ali player ready -->
+              <div v-if="hasAliVideo && !replaced && !recorderBlocked && !playerReady" class="player-loading-overlay">
                 <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
               </div>
-              <div v-if="!video.embedUrl || replaced || recorderBlocked" class="player-placeholder">
+              <!-- ⭐ CN: ไม่มี aliVideoId → รออัพโหลด -->
+              <div v-if="!hasAliVideo" class="player-placeholder cn-no-video">
+                <div class="placeholder-content">
+                  <div class="placeholder-play" style="background:#f1f5f9">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#94a3b8"><path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3H4.5a1.5 1.5 0 00-1.5 1.5v9a1.5 1.5 0 001.5 1.5h15a1.5 1.5 0 001.5-1.5v-9a1.5 1.5 0 00-1.5-1.5h-2.25v-3A5.25 5.25 0 0012 1.5zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clip-rule="evenodd"/></svg>
+                  </div>
+                  <p class="placeholder-title">{{ video.title }}</p>
+                  <p class="placeholder-sub">🇨🇳 วิดีโอนี้ยังไม่พร้อมใช้งานสำหรับผู้ใช้ในประเทศจีน<br>กรุณาติดต่อ admin เพื่ออัพโหลด</p>
+                </div>
+              </div>
+              <div v-else-if="replaced || recorderBlocked" class="player-placeholder">
                 <div class="placeholder-content">
                   <div class="placeholder-play">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
@@ -613,8 +620,8 @@ export default {
     const activationStore = useActivationStore()
     const authStore = useAuthStore()
     const browserCheck = checkBrowserSupport()
-    // ⭐ TH guard — logout ถ้า IP เปลี่ยนไป CN
-    useCountryGuard('TH')
+    // ⭐ CN mirror: logout ถ้า IP เปลี่ยนไม่ใช่จีน
+    useCountryGuard('CN')
     return {
       activationStore,
       authStore,
@@ -700,7 +707,20 @@ export default {
     backUrl() {
       if (this.isDemo) return '/demo'
       if (this.isAdminPreview) return '/admin/sections'
-      return `/my/section/${this.sectionId}`
+      return `/my-cn/section/${this.sectionId}`
+    },
+    // ⭐ CN: เช็คว่า video มี Ali code (NoDRM หรือ DRM) พร้อมใช้ไหม
+    hasAliVideo() {
+      const v = this.video
+      if (!v) return false
+      if (this.isBonus) return !!(v.bonusAliVideoId || v.bonusAliDrmVideoId)
+      return !!(v.aliVideoId || v.aliDrmVideoId)
+    },
+    aliVideoIdToPlay() {
+      const v = this.video
+      if (!v) return ''
+      if (this.isBonus) return v.bonusAliDrmVideoId || v.bonusAliVideoId || ''
+      return v.aliDrmVideoId || v.aliVideoId || ''
     },
     watchedCount() {
       const key = this.sectionId
@@ -862,6 +882,17 @@ export default {
   },
   mounted() {
     this._mountedAt = Date.now()
+    // ⭐ CN: Init Aliplayer (async, wait for video data)
+    this.$nextTick(() => {
+      const tryInit = () => {
+        if (this.video && this.hasAliVideo) {
+          this._initAliPlayer()
+        } else if (Date.now() - this._mountedAt < 10000) {
+          setTimeout(tryInit, 500)
+        }
+      }
+      tryInit()
+    })
     // ═══ LINE Link Popup — ขึ้นทุก VDO ถ้ายังไม่เชื่อม ═══
     if (!this.isDemo && this.authStore.user && !this.authStore.user.lineUserId) {
       this.showLineLinkPopup = true
@@ -1040,6 +1071,11 @@ export default {
     this._detectDrm()
   },
   beforeUnmount() {
+    // ⭐ Dispose Aliplayer
+    if (this._aliPlayer) {
+      try { this._aliPlayer.dispose() } catch {}
+      this._aliPlayer = null
+    }
     if (this._lineLinkPoll) clearInterval(this._lineLinkPoll)
     document.removeEventListener('fullscreenchange', this._onFsChange)
     if (this._onWmResize) window.removeEventListener('resize', this._onWmResize)
@@ -1229,7 +1265,7 @@ export default {
         if (data.kicked) {
           // admin เตะ → redirect ออก
           clearInterval(this._heartbeatInterval)
-          this.$router.push('/my')
+          this.$router.push('/my-cn')
           return
         }
         if (!data.replaced) {
@@ -1359,7 +1395,7 @@ export default {
       const qs = bonus ? '?bonus=1' : ''
       if (this.isDemo) this.$router.push(`/demo/watch/${idx}${qs}`)
       else if (this.isAdminPreview) this.$router.push(`/admin/preview/section/${this.sectionId}/${idx}${qs}`)
-      else this.$router.push(`/my/watch/${this.sectionId}/${idx}${qs}`)
+      else this.$router.push(`/my-cn/watch/${this.sectionId}/${idx}${qs}`)
       if (window.innerWidth < 1024) this.sidebarOpen = false
     },
     isWatched(idx) {
@@ -1805,7 +1841,7 @@ export default {
       // Admin kick → ออกทันที
       this._socket.on('kicked', () => {
         if (this._heartbeatInterval) clearInterval(this._heartbeatInterval)
-        this.$router.push('/my')
+        this.$router.push('/my-cn')
       })
     },
     _beaconClear() {
@@ -2191,6 +2227,132 @@ export default {
     _diagSet(n, st, d) {
       const s = this.diagSteps[n - 1]
       if (s) { s.status = st; if (d !== undefined) s.detail = d }
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // ⭐ Aliplayer methods (CN mirror)
+    // ═══════════════════════════════════════════════════════════
+    async _loadAliplayerSDK () {
+      if (window.Aliplayer && typeof window.Aliplayer === 'function') return true
+      return new Promise((resolve, reject) => {
+        // Try aliplayer.js (self-hosted vendor)
+        const s = document.createElement('script')
+        s.src = '/vendor/aliplayer/aliplayer.js'
+        s.async = true
+        s.onload = () => {
+          setTimeout(() => {
+            resolve(typeof window.Aliplayer === 'function')
+          }, 200)
+        }
+        s.onerror = () => reject(new Error('Failed to load Aliplayer SDK'))
+        document.head.appendChild(s)
+      })
+    },
+    async _fetchAliStsToken () {
+      try {
+        const res = await api.get('/china/sts')
+        // api.js interceptor unwraps → res = data
+        const d = (res && res.data) ? res.data : (res || {})
+        if (!d.accessKeyId) throw new Error('STS response missing accessKeyId')
+        return d
+      } catch (e) {
+        console.error('[Ali] STS fetch error:', e.message)
+        throw e
+      }
+    },
+    async _initAliPlayer () {
+      if (!this.hasAliVideo) {
+        console.log('[Ali] No aliVideoId — skip player init')
+        return
+      }
+      const videoId = this.aliVideoIdToPlay
+      console.log('[Ali] Initializing player with videoId:', videoId)
+
+      try {
+        // 1. Load SDK
+        const sdkOk = await this._loadAliplayerSDK()
+        if (!sdkOk) throw new Error('Aliplayer SDK not loaded')
+
+        // 2. Fetch STS
+        const sts = await this._fetchAliStsToken()
+
+        // 3. Cleanup previous
+        if (this._aliPlayer) {
+          try { this._aliPlayer.dispose() } catch {}
+          this._aliPlayer = null
+        }
+
+        // 4. Config
+        const config = {
+          id: 'J_prismPlayer',
+          vid: videoId,
+          accessKeyId: sts.accessKeyId,
+          accessKeySecret: sts.accessKeySecret,
+          securityToken: sts.securityToken,
+          region: sts.region || 'ap-southeast-1',
+          width: '100%',
+          height: '100%',
+          autoplay: false,
+          isLive: false,
+          rePlay: false,
+          playsinline: true,
+          preload: true,
+          controlBarVisibility: 'hover',
+          useH5Prism: true,
+          license: {
+            domain: 'passport.medninja.academy',
+            key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
+          },
+          // encryptType 1 = Alibaba proprietary (permissive — รับทั้ง Ali + Widevine template)
+          encryptType: 1
+        }
+
+        // 5. Instantiate
+        this._aliPlayer = new window.Aliplayer(config, (p) => {
+          console.log('[Ali] Player instance created')
+        })
+
+        // 6. Events
+        this._aliPlayer.on('ready', () => {
+          console.log('[Ali] Player ready')
+          this.playerReady = true
+        })
+        this._aliPlayer.on('canplay', () => {
+          console.log('[Ali] canplay — DRM decrypted OK')
+        })
+        this._aliPlayer.on('play', () => {
+          this.isPlaying = true
+        })
+        this._aliPlayer.on('pause', () => {
+          this.isPlaying = false
+        })
+        this._aliPlayer.on('ended', () => {
+          this.isPlaying = false
+        })
+        this._aliPlayer.on('error', (e) => {
+          const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {})
+          console.error('[Ali] Player error:', details)
+        })
+
+      } catch (err) {
+        console.error('[Ali] Init failed:', err.message)
+      }
+    },
+    _disposeAliPlayer () {
+      if (this._aliPlayer) {
+        try { this._aliPlayer.dispose() } catch {}
+        this._aliPlayer = null
+      }
+      this.playerReady = false
+    }
+  },
+  watch: {
+    aliVideoIdToPlay(newId) {
+      if (!newId) {
+        this._disposeAliPlayer()
+        return
+      }
+      this.$nextTick(() => this._initAliPlayer())
     }
   }
 }
@@ -3722,4 +3884,27 @@ kbd {
 .w-pl-bonus.active { background: rgba(251,191,36,0.15); }
 .w-pl-bonus-star { font-size: 12px; border: none !important; }
 
+/* ⭐ CN Aliplayer container */
+.ali-player-box {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+.ali-player-box :deep(.prism-player) {
+  width: 100% !important;
+  height: 100% !important;
+}
+.player-placeholder.cn-no-video {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+}
+.player-placeholder.cn-no-video .placeholder-title {
+  color: #334155;
+  font-weight: 700;
+}
+.player-placeholder.cn-no-video .placeholder-sub {
+  color: #64748b;
+  line-height: 1.6;
+}
 </style>

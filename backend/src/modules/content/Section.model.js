@@ -6,6 +6,9 @@ const videoSchema = new mongoose.Schema({
   bunnyVideoId: { type: String, default: '' },
   bunnyDrmVideoId: { type: String, default: '' },
   bunnyLibraryId: { type: String, default: '' },
+  // ⭐ Alibaba VOD (China) — passport-only, LMS ไม่รู้จัก (ignore)
+  aliVideoId: { type: String, default: '' },       // Ali NoDRM (encryptType 0)
+  aliDrmVideoId: { type: String, default: '' },    // Ali DRM (Widevine)
   duration: { type: String, default: '' },
   order: { type: Number, default: 0 },
   topic: { type: String, default: '' },

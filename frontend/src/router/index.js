@@ -16,6 +16,11 @@ const MyDashboard = () => import('../views/MyDashboard.vue')
 const SectionPage = () => import('../views/SectionPage.vue')
 const WatchPage = () => import('../views/WatchPage.vue')
 
+// ⭐ CN mirror — for Chinese students (Alibaba VOD)
+const MyCnDashboard = () => import('../views/MyCnDashboard.vue')
+const SectionCnPage = () => import('../views/SectionCnPage.vue')
+const WatchCnPage = () => import('../views/WatchCnPage.vue')
+
 // DDx ย้ายไป ddx.medninja.academy แล้ว
 
 // MEQ student pages
@@ -114,6 +119,25 @@ const routes = [
     path: '/my/watch/:sectionId/:videoIndex',
     name: 'WatchPage',
     component: WatchPage,
+    meta: { requiresAuth: true, requiresProfile: true, immersive: true }
+  },
+  // ⭐ CN mirror routes — for Chinese students
+  {
+    path: '/my-cn',
+    name: 'MyCnDashboard',
+    component: MyCnDashboard,
+    meta: { requiresAuth: true, requiresProfile: true, immersive: true }
+  },
+  {
+    path: '/my-cn/section/:id',
+    name: 'SectionCnPage',
+    component: SectionCnPage,
+    meta: { requiresAuth: true, requiresProfile: true }
+  },
+  {
+    path: '/my-cn/watch/:sectionId/:videoIndex',
+    name: 'WatchCnPage',
+    component: WatchCnPage,
     meta: { requiresAuth: true, requiresProfile: true, immersive: true }
   },
   // ระบบเสริม — Synapse / DDx / OSCE (coming soon)

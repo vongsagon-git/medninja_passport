@@ -11,7 +11,10 @@
             <div class="pp-subtitle">Your Medical Education Passport</div>
           </div>
         </div>
-        <span class="pp-country">@{{ user?.firstName || 'student' }}</span>
+        <div class="pp-header-right">
+          <span class="cn-badge" title="CN Mirror — Alibaba VOD">CN</span>
+          <span class="pp-country">@{{ user?.firstName || 'student' }}</span>
+        </div>
       </div>
 
       <div class="pp-body">
@@ -189,7 +192,7 @@
             <router-link
               v-for="sec in act.package.sections"
               :key="sec._id"
-              :to="`/my/section/${sec._id}`"
+              :to="`/my-cn/section/${sec._id}`"
               class="course-sec-link"
             >
               <span class="course-sec-code">{{ sec.name || sec.code }}</span>
@@ -256,8 +259,8 @@
 <script>
 import { useAuthStore } from '../stores/auth'
 import { useActivationStore } from '../stores/activation'
-import api from '../services/api'
 import { useCountryGuard } from '../composables/useCountryGuard'
+import api from '../services/api'
 
 const MINIAPPS = [
   { key: 'synapse', emoji: '🧠', name: 'Synapse' },
@@ -271,7 +274,7 @@ const MINIAPPS = [
 ]
 
 export default {
-  name: 'MyDashboard',
+  name: 'MyCnDashboard',
   data() {
     return {
       liveSessions: [],
@@ -282,8 +285,8 @@ export default {
   setup() {
     const authStore = useAuthStore()
     const activationStore = useActivationStore()
-    // ⭐ TH guard — logout ถ้า IP เปลี่ยนไป CN
-    useCountryGuard('TH')
+    // ตรวจสอบ country ทุกครั้งที่หน้าเปลี่ยน — ถ้า IP เปลี่ยนจาก CN → logout
+    useCountryGuard('CN')
     return { authStore, activationStore }
   },
   computed: {
@@ -484,6 +487,17 @@ export default {
 .pp-title { color: #fff; font-size: 16px; font-weight: 700; line-height: 1.1; letter-spacing: -0.2px; }
 .pp-subtitle { color: rgba(255,255,255,.7); font-size: 11px; font-weight: 500; margin-top: 2px; }
 .pp-country { color: rgba(255,255,255,.85); font-size: 12px; font-weight: 600; }
+.pp-header-right { display: flex; align-items: center; gap: 8px; }
+.cn-badge {
+  background: linear-gradient(135deg, #dc2626, #f59e0b);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.4);
+}
 
 .pp-body { display: flex; gap: 16px; padding: 20px; }
 .pp-photo { flex-shrink: 0; }
