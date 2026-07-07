@@ -1,12 +1,18 @@
 const express = require('express')
 const router = express.Router()
-const { getPlayAuth } = require('./china.controller')
+const { getPlayAuth, listVideos, getPlayInfo } = require('./china.controller')
 const { pushLog, getLogs, clearLogs } = require('./china.logs')
 
 router.use(express.json({ limit: '512kb' }))
 
 // GET /api/china/playauth/:videoId — public (MVP)
 router.get('/playauth/:videoId', getPlayAuth)
+
+// GET /api/china/videos — list videos ใน Alibaba VOD account (สำหรับ AI debug)
+router.get('/videos', listVideos)
+
+// GET /api/china/playinfo/:videoId — get play URL + encryption status
+router.get('/playinfo/:videoId', getPlayInfo)
 
 // POST /api/china/log — frontend ส่ง log ทุก event
 router.post('/log', (req, res) => {

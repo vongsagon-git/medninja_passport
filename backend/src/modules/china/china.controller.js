@@ -39,4 +39,76 @@ async function getPlayAuth(req, res) {
   }
 }
 
-module.exports = { getPlayAuth }
+// List videos ใน account — เพื่อให้ AI เห็นว่ามี video อะไรบ้าง
+async function listVideos(req, res) {
+  try {
+    const result = await client.request('SearchMedia', {
+      PageNo: 1,
+      PageSize: 20,
+      SortBy: 'CreationTime:Desc',
+      Fields: 'VideoBase,Transcode'
+    }, { method: 'POST' })
+
+    const videos = (result.MediaList || []).map(m => ({
+      videoId: m.MediaId || (m.VideoBase && m.VideoBase.VideoId),
+      title: m.VideoBase && m.VideoBase.Title,
+      status: m.VideoBase && m.VideoBase.Status,
+      duration: m.VideoBase && m.VideoBase.Duration,
+      creationTime: m.VideoBase && m.VideoBase.CreationTime,
+      transcodeMode: m.VideoBase && m.VideoBase.TranscodeMode,
+      coverUrl: m.VideoBase && m.VideoBase.CoverURL
+    }))
+
+    return res.json({ count: videos.length, videos, total: result.Total })
+  } catch (err) {
+    console.error('[china.listVideos] error:', err.message, err.code)
+    return res.status(500).json({
+      error: err.message,
+      code: err.code || 'UNKNOWN'
+    })
+  }
+}
+
+// Get play info — URL + encryption status
+async function getPlayInfo(req, res) {
+  const { videoId } = req.params
+  if (!videoId) return res.status(400).json({ error: 'videoId required' })
+
+  try {
+    const result = await client.request('GetPlayInfo', {
+      VideoId: videoId,
+      Formats: 'mp4,m3u8',
+      AuthTimeout: 3000
+    }, { method: 'POST' })
+
+    const infoList = (result.PlayInfoList && result.PlayInfoList.PlayInfo) || []
+    const streams = infoList.map(s => ({
+      definition: s.Definition,
+      format: s.Format,
+      encrypt: s.Encrypt,
+      encryptType: s.EncryptType,
+      duration: s.Duration,
+      size: s.Size,
+      bitrate: s.Bitrate,
+      width: s.Width,
+      height: s.Height,
+      playUrl: s.PlayURL,
+      streamType: s.StreamType
+    }))
+
+    return res.json({
+      videoBase: result.VideoBase,
+      streamCount: streams.length,
+      encrypted: streams.some(s => s.encrypt),
+      streams
+    })
+  } catch (err) {
+    console.error('[china.getPlayInfo] error:', err.message, err.code)
+    return res.status(500).json({
+      error: err.message,
+      code: err.code || 'UNKNOWN'
+    })
+  }
+}
+
+module.exports = { getPlayAuth, listVideos, getPlayInfo }
