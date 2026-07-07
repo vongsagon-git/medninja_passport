@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja Alibaba Proprietary Test</title>
   <!-- BUILD_VERSION: 2026-07-07-19:30-ali-test-v1 -->
-  <meta name="build-version" content="ali-v3 · 20:00">
+  <meta name="build-version" content="ali-v4 · 20:15">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -190,7 +190,7 @@
   <div class="header-row">
     <h1>⚡ Alibaba Proprietary Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge" style="background: #3b82f6; color: white">ali-v3 · 20:00</span>
+      <span class="version-badge" id="versionBadge" style="background: #3b82f6; color: white">ali-v4 · 20:15</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -494,6 +494,16 @@
         if (hasM3U8) {
           setFlow('manifest', 'pass', detailHtml);
           log('✅ [Flow 2] Manifest OK - HLS encrypted stream พร้อม', 'success');
+          // ⭐ อัพเดต Now Playing banner จาก Title ใน Manifest
+          const title = (data.videoBase && data.videoBase.Title) || '(no title)';
+          const encType = m3u8.encryptType || '?';
+          const resolution = m3u8.width + '×' + m3u8.height;
+          const npEl = document.getElementById('nowPlaying');
+          const npTitle = document.getElementById('nowPlayingTitle');
+          if (npEl && npTitle) {
+            npEl.style.display = 'block';
+            npTitle.innerHTML = '<b>' + title + '</b> · ' + resolution + ' · <span style="color:#93c5fd">' + encType + '</span>';
+          }
         } else {
           setFlow('manifest', 'fail', detailHtml + '<br><span class="err">⚠️ ไม่พบ encrypted m3u8 stream</span>');
           log('⚠️ [Flow 2] ไม่พบ encrypted m3u8', 'warn');
@@ -715,26 +725,25 @@
             document.getElementById('vidInput').value = v.videoId;
             localStorage.setItem(LAST_VID_KEY, v.videoId);
             const displayName = v.title || v.videoId.substring(0, 12);
-            log('🔄 เปลี่ยน video: ' + displayName + ' - restart ทุก flow + auto-play', 'success');
-            // Update "Now Playing" banner
-            const npEl = document.getElementById('nowPlaying');
-            const npTitle = document.getElementById('nowPlayingTitle');
-            if (npEl && npTitle) {
-              npEl.style.display = 'block';
-              npTitle.textContent = displayName + ' (' + v.videoId.substring(0, 8) + '...)';
-            }
-            // Cleanup player + reset flows
+            log('════════════════════════════════════', 'info');
+            log('🔄 กด pill: ' + displayName + ' - เริ่มใหม่หมด!', 'success');
+            log('════════════════════════════════════', 'info');
+            // 🧹 Full reset: cleanup player + all state + hide banner
             if (typeof player !== 'undefined' && player) {
               try { player.dispose(); } catch (e) {}
               player = null;
             }
             cachedSTS = null;
+            // Hide Now Playing banner (จะโผล่ใหม่ตอน Manifest pass)
+            const npEl = document.getElementById('nowPlaying');
+            if (npEl) npEl.style.display = 'none';
+            // Reset ทุก flow กลับ pending
             ['sts', 'manifest', 'sdk', 'player'].forEach(id => setFlow(id, 'pending', ''));
-            // Run all flows sequentially + auto-play video ใหม่
+            // Run all flows ใหม่ทั้งหมด
             await testSTS();
             await testManifest();
             await testSDK();
-            // Auto-trigger player (เล่นเลยไม่ต้องกด)
+            // Auto-play (ไม่ต้องกด Test Player)
             setTimeout(() => testPlayer(), 300);
           };
           picks.appendChild(span);
