@@ -4,68 +4,9 @@
   <meta charset="UTF-8">
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
-  <title>MedNinja DRM Test</title>
-  <!-- BUILD_VERSION: 2026-07-07-15:45-v22-sts-verify -->
-  <meta name="build-version" content="v22 · 15:45">
-
-  <!-- Aliplayer SDK 2.35.4 - fetch + Blob approach (bypass script tag issues) -->
-  <script>
-    window.__sdkStatus = { attempts: [], loaded: false, error: null, method: 'fetch+blob' };
-
-    // Load CSS (normal way)
-    var css = document.createElement('link');
-    css.rel = 'stylesheet';
-    css.href = '/vendor/aliplayer/aliplayer-2.35.4.css';
-    document.head.appendChild(css);
-
-    // Load JS via fetch → blob → script tag (bypass MIME sniff / CSP issues)
-    // ทำแบบนี้เพราะ v20 พบว่า script.onload fired แต่ code ไม่ execute!
-    function loadSDKViaFetch(url, isPrimary) {
-      var start = Date.now();
-      var attempt = { url: url, start: start, isPrimary: isPrimary, method: 'fetch', ok: null };
-      window.__sdkStatus.attempts.push(attempt);
-
-      fetch(url)
-        .then(function(res) {
-          attempt.status = res.status;
-          attempt.fetchOk = res.ok;
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.text();
-        })
-        .then(function(code) {
-          attempt.codeSize = code.length;
-          attempt.codeStart = code.substring(0, 60);
-          try {
-            // Eval directly in global scope (indirect eval = global scope)
-            (0, eval)(code);
-            attempt.evalOk = true;
-            attempt.duration = Date.now() - start;
-            attempt.hasAliplayer = typeof window.Aliplayer !== 'undefined';
-            attempt.ok = attempt.hasAliplayer;
-            window.__sdkStatus.loaded = attempt.hasAliplayer;
-            if (!attempt.hasAliplayer) {
-              attempt.altSearch = {
-                module: typeof module,
-                exports: typeof exports,
-                hasWindowKeys: Object.keys(window).filter(function(k) { return k.toLowerCase().indexOf('player') !== -1; }).slice(0, 5)
-              };
-            }
-          } catch (evalErr) {
-            attempt.evalOk = false;
-            attempt.evalError = evalErr.message;
-            attempt.ok = false;
-            if (isPrimary) loadSDKViaFetch('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', false);
-          }
-        })
-        .catch(function(err) {
-          attempt.ok = false;
-          attempt.error = err.message;
-          if (isPrimary) loadSDKViaFetch('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', false);
-        });
-    }
-
-    loadSDKViaFetch('/vendor/aliplayer/aliplayer-2.35.4.js', true);
-  </script>
+  <title>MedNinja DRM Test - Flow Diagnostics</title>
+  <!-- BUILD_VERSION: 2026-07-07-16:00-v23-separated-flows -->
+  <meta name="build-version" content="v23 · 16:00">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,16 +17,13 @@
       padding: 16px;
     }
     h1 { font-size: 22px; color: #a855f7; margin-bottom: 4px; }
-    .sub { color: #94a3b8; font-size: 13px; margin-bottom: 12px; }
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      background: #a855f7;
-      color: white;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: bold;
-      margin-right: 6px;
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     .version-badge {
       background: #4ade80;
@@ -96,26 +34,122 @@
       font-weight: bold;
       font-family: monospace;
     }
-    .header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
     .info {
       background: rgba(168, 85, 247, 0.1);
       border: 1px solid rgba(168, 85, 247, 0.3);
-      padding: 12px 14px;
+      padding: 10px 14px;
       border-radius: 8px;
-      font-size: 13px;
+      font-size: 12px;
       margin-bottom: 12px;
       word-break: break-all;
     }
-    .info b { color: #c4b5fd; }
-    .info .cn { color: #ef4444; font-weight: bold; }
-    .info .th { color: #3b82f6; font-weight: bold; }
+
+    /* Flow sections */
+    .flow-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    @media (min-width: 900px) {
+      .flow-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .flow-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .flow-card.pass { border-color: rgba(74, 222, 128, 0.4); background: rgba(20, 83, 45, 0.15); }
+    .flow-card.fail { border-color: rgba(239, 68, 68, 0.4); background: rgba(127, 29, 29, 0.15); }
+    .flow-card.running { border-color: rgba(59, 130, 246, 0.4); background: rgba(30, 58, 138, 0.15); }
+    .flow-card h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .flow-card .status-icon { font-size: 18px; }
+    .flow-card .details {
+      font-size: 11px;
+      color: #94a3b8;
+      font-family: monospace;
+      word-break: break-all;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    .flow-card button {
+      background: #a855f7;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-top: 6px;
+      font-weight: bold;
+    }
+    .flow-card .kv {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 0;
+    }
+    .flow-card .kv .k { color: #64748b; }
+    .flow-card .kv .v { color: #e2e8f0; font-family: monospace; word-break: break-all; }
+    .flow-card .kv .v.ok { color: #4ade80; }
+    .flow-card .kv .v.err { color: #f87171; }
+
+    /* Video input */
+    .video-input {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .video-input input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 12px;
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 6px;
+      color: #f1f5f9;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .video-input button {
+      background: #a855f7;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .video-input button.list-btn { background: #22c55e; }
+
+    .quick-picks {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    .quick-picks .quick {
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      color: #4ade80;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
     .player-box {
       background: #000;
       border-radius: 8px;
@@ -124,14 +158,15 @@
       max-width: 720px;
     }
     #J_prismPlayer { width: 100%; min-height: 300px; }
+
     #log {
       background: #000;
       border: 1px solid rgba(74,222,128,0.2);
       border-radius: 8px;
-      padding: 12px;
+      padding: 10px;
       font-family: 'Consolas', monospace;
-      font-size: 11px;
-      max-height: 400px;
+      font-size: 10px;
+      max-height: 300px;
       overflow-y: auto;
       color: #4ade80;
     }
@@ -139,120 +174,127 @@
     #log .warn { color: #fbbf24; }
     #log .info { color: #38bdf8; }
     #log .success { color: #4ade80; font-weight: bold; }
-    button {
-      background: #a855f7;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 15px;
-      margin: 8px 4px;
-      font-weight: bold;
-    }
+
     button.reload-btn {
       background: #64748b;
+      color: white;
+      border: none;
       padding: 4px 10px;
       font-size: 11px;
-      margin: 0;
-    }
-    button.list-btn { background: #22c55e; }
-    .video-input {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-      max-width: 720px;
-      flex-wrap: wrap;
-    }
-    .video-input input {
-      flex: 1;
-      min-width: 240px;
-      padding: 12px 14px;
-      background: rgba(168, 85, 247, 0.1);
-      border: 1px solid rgba(168, 85, 247, 0.4);
-      border-radius: 6px;
-      color: #f1f5f9;
-      font-family: 'Consolas', monospace;
-      font-size: 13px;
-    }
-    .video-input button { margin: 0; }
-    .quick-picks {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-      font-size: 12px;
-      color: #94a3b8;
-    }
-    .quick-picks .quick {
-      background: rgba(74, 222, 128, 0.1);
-      border: 1px solid rgba(74, 222, 128, 0.3);
-      color: #4ade80;
-      padding: 6px 12px;
-      border-radius: 999px;
+      border-radius: 4px;
       cursor: pointer;
-      font-family: 'Consolas', monospace;
-      font-size: 11px;
     }
-    .quick-picks .quick:hover { background: rgba(74, 222, 128, 0.2); }
   </style>
 </head>
 <body>
   <div class="header-row">
-    <h1>🔐 MedNinja DRM Test</h1>
+    <h1>🔐 DRM Flow Diagnostics</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v22 · 15:45</span>
+      <span class="version-badge" id="versionBadge">v23 · 16:00</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
 
-  <p class="sub">
-    <span class="badge">Widevine</span>
-    <span class="badge">FairPlay</span>
-    Dual-DRM via Alibaba license server (mirror)
-  </p>
-
   <div class="info">
-    <b>Your IP:</b> <span id="ipAddr">...</span> ·
-    <b>Country:</b> <span id="ipCountry">-</span><br>
-    <b>Device:</b> <span id="devInfo">-</span><br>
-    <b>Encryption:</b> Widevine-FairPlay DRM · <b>SDK:</b> Aliplayer 2.35.4 (self-host)<br>
-    <b>License:</b> Activated (Chinese Mainland region)
+    <b>Your IP:</b> <span id="ipAddr">...</span> · <b>Country:</b> <span id="ipCountry">-</span> ·
+    <b>Device:</b> <span id="devInfo">-</span>
   </div>
 
+  <!-- Video selector -->
   <div class="video-input">
     <input id="vidInput" type="text" placeholder="กรอก Alibaba Video ID..." />
-    <button onclick="loadDRM()">▶ Play DRM Video</button>
-    <button class="list-btn" onclick="listVideos()">📋 List</button>
-    <button onclick="testSTS()" style="background: #f59e0b">🔑 Test STS</button>
+    <button class="list-btn" onclick="listVideos()">📋 List Videos</button>
   </div>
-
   <div class="quick-picks" id="quickPicks">
-    <span style="align-self: center; margin-right: 6px;">Quick:</span>
+    <span style="align-self: center; color: #94a3b8;">Quick:</span>
   </div>
 
+  <!-- 4 Flow Cards -->
+  <div class="flow-grid">
+    <!-- Flow 1: STS Token (Backend + Alibaba API) -->
+    <div class="flow-card" id="flow-sts">
+      <h3><span class="status-icon">⏸️</span> Flow 1: STS Token (Backend → Alibaba)</h3>
+      <div class="details" id="flow-sts-details">
+        ทดสอบ: backend /api/china/sts เรียก Alibaba STS AssumeRole ได้ครบ 3 keys ไหม
+      </div>
+      <button onclick="testSTS()">🔑 Test STS</button>
+    </div>
+
+    <!-- Flow 2: HLS Manifest (Alibaba CDN) -->
+    <div class="flow-card" id="flow-manifest">
+      <h3><span class="status-icon">⏸️</span> Flow 2: HLS Manifest (Alibaba CDN)</h3>
+      <div class="details" id="flow-manifest-details">
+        ทดสอบ: video m3u8 manifest URL เข้าถึงได้ + encrypted (Widevine)
+      </div>
+      <button onclick="testManifest()">📄 Test Manifest</button>
+    </div>
+
+    <!-- Flow 3: SDK Loading -->
+    <div class="flow-card" id="flow-sdk">
+      <h3><span class="status-icon">⏸️</span> Flow 3: Aliplayer SDK Loading</h3>
+      <div class="details" id="flow-sdk-details">
+        ทดสอบ: SDK 691KB โหลด + execute + window.Aliplayer available
+      </div>
+      <button onclick="testSDK()">📦 Test SDK</button>
+    </div>
+
+    <!-- Flow 4: Player + Widevine + Play -->
+    <div class="flow-card" id="flow-player">
+      <h3><span class="status-icon">⏸️</span> Flow 4: Player + Widevine + Play</h3>
+      <div class="details" id="flow-player-details">
+        ทดสอบ: สร้าง Aliplayer instance + license + DRM decrypt + play (ต้องรอ Flow 1+3)
+      </div>
+      <button onclick="testPlayer()">▶ Test Player</button>
+    </div>
+  </div>
+
+  <!-- Video Player -->
   <div class="player-box">
     <div id="J_prismPlayer"></div>
   </div>
 
+  <!-- Log -->
   <div id="log"></div>
 
+  <!-- SDK loader -->
   <script>
+    window.__sdkStatus = { attempts: [], loaded: false, error: null };
+
+    // Load CSS
+    var css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/vendor/aliplayer/aliplayer-2.35.4.css';
+    document.head.appendChild(css);
+
+    // Load JS via script tag (standard)
+    var sdkStart = Date.now();
+    var s = document.createElement('script');
+    s.src = '/vendor/aliplayer/aliplayer-2.35.4.js';
+    s.async = false;
+    s.onload = function() {
+      window.__sdkStatus.attempts.push({
+        method: 'script-tag',
+        ok: true,
+        duration: Date.now() - sdkStart,
+        hasAliplayer: typeof window.Aliplayer !== 'undefined',
+        aliplayerType: typeof window.Aliplayer
+      });
+    };
+    s.onerror = function() {
+      window.__sdkStatus.attempts.push({ method: 'script-tag', ok: false, error: 'onerror' });
+    };
+    document.head.appendChild(s);
+  </script>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════
+    // Log system
+    // ═══════════════════════════════════════════════════════════
     const sessionId = 'drm-' + Math.random().toString(36).substring(2, 10);
     const logBuffer = [];
     let flushTimer = null;
-
-    function flushLogs() {
-      if (!logBuffer.length) return;
-      const batch = logBuffer.splice(0, logBuffer.length);
-      fetch('/api/china/log/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, entries: batch })
-      }).catch(() => {});
-    }
-
     const logEl = document.getElementById('log');
+
     function log(msg, type) {
       const line = document.createElement('div');
       line.className = type || '';
@@ -263,14 +305,38 @@
       if (flushTimer) clearTimeout(flushTimer);
       flushTimer = setTimeout(flushLogs, 500);
     }
+    function flushLogs() {
+      if (!logBuffer.length) return;
+      const batch = logBuffer.splice(0, logBuffer.length);
+      fetch('/api/china/log/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, entries: batch })
+      }).catch(() => {});
+    }
 
-    // Build version
+    // ═══════════════════════════════════════════════════════════
+    // Flow status setter
+    // ═══════════════════════════════════════════════════════════
+    function setFlow(id, status, details) {
+      const card = document.getElementById('flow-' + id);
+      if (!card) return;
+      card.classList.remove('pass', 'fail', 'running');
+      if (status !== 'pending') card.classList.add(status);
+      const iconEl = card.querySelector('.status-icon');
+      iconEl.textContent = { running: '⏳', pass: '✅', fail: '❌', pending: '⏸️' }[status] || '⏸️';
+      if (details) {
+        document.getElementById('flow-' + id + '-details').innerHTML = details;
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Build info + Device
+    // ═══════════════════════════════════════════════════════════
     const buildVer = document.querySelector('meta[name="build-version"]').content;
     log('🏷️ Build: ' + buildVer, 'success');
     log('Session: ' + sessionId, 'info');
-    log('UA: ' + navigator.userAgent.substring(0, 100), 'info');
 
-    // Device info (simple, inline)
     function detectDevice() {
       const ua = navigator.userAgent;
       let dev = 'Desktop', browser = '?';
@@ -290,215 +356,213 @@
     }
     detectDevice();
 
-    // IP + Country (backend Cloudflare - fast)
+    // ═══════════════════════════════════════════════════════════
+    // IP Detection (Cloudflare)
+    // ═══════════════════════════════════════════════════════════
     (async () => {
       try {
         const res = await fetch('/api/china/whoami');
         const data = await res.json();
         const flag = { CN: '🇨🇳', TH: '🇹🇭', HK: '🇭🇰', SG: '🇸🇬', US: '🇺🇸' }[data.country] || '🌐';
         document.getElementById('ipAddr').textContent = data.ip || '-';
-        const countryEl = document.getElementById('ipCountry');
-        countryEl.textContent = flag + ' ' + (data.country || '-');
-        countryEl.className = data.country === 'CN' ? 'cn' : data.country === 'TH' ? 'th' : '';
+        document.getElementById('ipCountry').textContent = flag + ' ' + (data.country || '-');
         log('✅ IP: ' + data.ip + ' · ' + data.country, 'success');
       } catch (e) {
-        log('⚠️ IP detect fail: ' + e.message, 'warn');
+        log('⚠️ IP: ' + e.message, 'warn');
       }
     })();
 
-    // Widevine capability check (auto)
-    if (navigator.requestMediaKeySystemAccess) {
-      log('✅ EME (Encrypted Media Extensions) supported', 'success');
-      navigator.requestMediaKeySystemAccess('com.widevine.alpha', [{
-        initDataTypes: ['cenc'],
-        videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
-      }])
-        .then(access => log('✅ Widevine CDM available', 'success'))
-        .catch(e => log('⚠️ Widevine CDM error: ' + e.message, 'warn'));
-
-      navigator.requestMediaKeySystemAccess('com.apple.fps.1_0', [{
-        initDataTypes: ['sinf'],
-        videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
-      }])
-        .then(access => log('✅ FairPlay supported', 'success'))
-        .catch(e => log('ℹ️ FairPlay ไม่รองรับ (ปกติ non-Apple)', 'info'));
-    } else {
-      log('❌ EME ไม่รองรับใน browser นี้', 'err');
-    }
-
-    // Wait for SDK (up to 30s) — ต้องเช็คว่าไม่ใช่ null (typeof null === 'object')
-    const sdkStart = Date.now();
-    const sdkPoll = setInterval(() => {
-      const elapsed = Math.round((Date.now() - sdkStart) / 1000);
-      // Get Aliplayer จากทุกแหล่ง
-      let alp = null;
-      try { alp = window.Aliplayer; } catch (e) {}
-      if (!alp) { try { alp = (typeof Aliplayer !== 'undefined') ? Aliplayer : null; } catch (e) {} }
-      if (!alp) { try { alp = (typeof globalThis !== 'undefined') ? globalThis.Aliplayer : null; } catch (e) {} }
-
-      // ตรวจว่าเป็น non-null value ที่ใช้ new ได้ (function หรือ object callable)
-      // typeof null === 'object' — ต้องกัน explicit
-      const isReady = alp !== null && alp !== undefined &&
-                      (typeof alp === 'function' ||
-                       (typeof alp === 'object' && (typeof alp.default === 'function' || Object.keys(alp).length > 0)));
-
-      if (isReady) {
-        clearInterval(sdkPoll);
-        // ถ้า Aliplayer เป็น { default: fn } (ES module wrap) — ใช้ default
-        const finalAlp = (typeof alp === 'object' && typeof alp.default === 'function') ? alp.default : alp;
-        window.Aliplayer = finalAlp;
-        log('✅ Aliplayer พร้อม (' + elapsed + 's, type=' + typeof finalAlp + ', keys=' + (typeof finalAlp === 'object' ? Object.keys(finalAlp).length : 'N/A') + ')', 'success');
-      } else if (elapsed >= 30) {
-        clearInterval(sdkPoll);
-        const dbgKeys = (alp && typeof alp === 'object') ? Object.keys(alp).slice(0, 5).join(',') : 'none';
-        log('❌ Aliplayer timeout 30s (type=' + typeof alp + ', null=' + (alp === null) + ', keys=[' + dbgKeys + '])', 'err');
-      } else if (elapsed % 5 === 0 && elapsed > 0) {
-        const dbgKeys = (alp && typeof alp === 'object') ? Object.keys(alp).length : 'N/A';
-        const sdkStatus = window.__sdkStatus || {};
-        const lastAttempt = sdkStatus.attempts ? sdkStatus.attempts[sdkStatus.attempts.length - 1] : null;
-        const sdkInfo = lastAttempt ? 'sdk:' + (lastAttempt.ok === true ? 'ok' : lastAttempt.ok === false ? 'FAIL' : 'loading') : 'no-sdk';
-        log('⏳ รอ Aliplayer... ' + elapsed + 's (' + sdkInfo + ', type=' + typeof alp + ', null=' + (alp === null) + ', keys=' + dbgKeys + ')', 'warn');
-        // v21: log fetch details when elapsed === 5
-        if (elapsed === 5 && lastAttempt) {
-          const dbg = {
-            method: lastAttempt.method,
-            status: lastAttempt.status,
-            codeSize: lastAttempt.codeSize,
-            codeStart: lastAttempt.codeStart,
-            evalOk: lastAttempt.evalOk,
-            evalError: lastAttempt.evalError,
-            hasAliplayer: lastAttempt.hasAliplayer
-          };
-          log('DEBUG fetch: ' + JSON.stringify(dbg).substring(0, 200), 'info');
-        }
-        if (elapsed === 10 && lastAttempt && lastAttempt.altSearch) {
-          log('DEBUG altSearch: ' + JSON.stringify(lastAttempt.altSearch), 'info');
-        }
-      }
-    }, 500);
-
-    // Video ID: restore last-used
-    const LAST_VID_KEY = 'drmTest_lastVideoId';
-    document.getElementById('vidInput').value = localStorage.getItem(LAST_VID_KEY) || '';
-
     // ═══════════════════════════════════════════════════════════
-    // STS Test (แยกจาก Play — ทดสอบ backend + Alibaba ทำงานไหม)
+    // FLOW 1: STS Token Test (Backend + Alibaba API)
     // ═══════════════════════════════════════════════════════════
+    let cachedSTS = null;
     async function testSTS() {
       const videoId = document.getElementById('vidInput').value.trim();
       if (!videoId) {
-        log('❌ กรุณากรอก Video ID หรือกด List เพื่อเลือกก่อน', 'err');
+        setFlow('sts', 'fail', 'กรุณากรอก Video ID');
         return;
       }
-      log('🔑 ทดสอบ STS: GET /api/china/sts/' + videoId.substring(0, 8) + '...', 'info');
+      setFlow('sts', 'running', 'กำลังเรียก /api/china/sts/' + videoId.substring(0, 8) + '...');
+      log('🔑 [Flow 1] Test STS: ' + videoId, 'info');
       const t0 = Date.now();
       try {
         const res = await fetch('/api/china/sts/' + videoId);
-        const elapsed = Date.now() - t0;
-        log('📡 HTTP: ' + res.status + ' (' + elapsed + 'ms)', res.ok ? 'success' : 'err');
-
+        const ms = Date.now() - t0;
         const data = await res.json();
 
-        // ตรวจ 3 keys ทั้งหมด
         const hasAK = !!data.accessKeyId;
         const hasSK = !!data.accessKeySecret;
         const hasST = !!data.securityToken;
-        const hasRegion = !!data.region;
-        const hasExpire = !!data.expiration;
 
-        log('🔍 STS Response Fields:', 'info');
-        log('   ' + (hasAK ? '✅' : '❌') + ' accessKeyId: ' + (hasAK ? (data.accessKeyId.substring(0, 12) + '...' + ' (' + data.accessKeyId.length + ' chars)') : 'MISSING'), hasAK ? 'success' : 'err');
-        log('   ' + (hasSK ? '✅' : '❌') + ' accessKeySecret: ' + (hasSK ? ('***hidden*** (' + data.accessKeySecret.length + ' chars)') : 'MISSING'), hasSK ? 'success' : 'err');
-        log('   ' + (hasST ? '✅' : '❌') + ' securityToken: ' + (hasST ? ('***hidden*** (' + data.securityToken.length + ' chars)') : 'MISSING'), hasST ? 'success' : 'err');
-        log('   ' + (hasRegion ? '✅' : '⚠️') + ' region: ' + (data.region || 'MISSING (จะใช้ default ap-southeast-1)'), hasRegion ? 'success' : 'warn');
-        log('   ' + (hasExpire ? '✅' : '⚠️') + ' expiration: ' + (data.expiration || 'MISSING'), hasExpire ? 'success' : 'warn');
+        const detailHtml = `
+          <div class="kv"><span class="k">HTTP:</span><span class="v ${res.ok ? 'ok' : 'err'}">${res.status} (${ms}ms)</span></div>
+          <div class="kv"><span class="k">accessKeyId:</span><span class="v ${hasAK ? 'ok' : 'err'}">${hasAK ? data.accessKeyId.substring(0, 16) + '...' + ' (' + data.accessKeyId.length + 'ch)' : '❌ MISSING'}</span></div>
+          <div class="kv"><span class="k">accessKeySecret:</span><span class="v ${hasSK ? 'ok' : 'err'}">${hasSK ? '***hidden*** (' + data.accessKeySecret.length + 'ch)' : '❌ MISSING'}</span></div>
+          <div class="kv"><span class="k">securityToken:</span><span class="v ${hasST ? 'ok' : 'err'}">${hasST ? '***hidden*** (' + data.securityToken.length + 'ch)' : '❌ MISSING'}</span></div>
+          <div class="kv"><span class="k">region:</span><span class="v">${data.region || '(default)'}</span></div>
+          <div class="kv"><span class="k">expiration:</span><span class="v">${data.expiration || '-'}</span></div>
+          ${data.error ? '<div class="kv"><span class="k">error:</span><span class="v err">' + data.error + '</span></div>' : ''}
+        `;
 
         if (hasAK && hasSK && hasST) {
-          log('🎉 STS สำเร็จ! Backend + Alibaba STS ทำงานได้ครบ 3 keys', 'success');
+          setFlow('sts', 'pass', detailHtml);
+          log('✅ [Flow 1] STS สำเร็จ - 3 keys ครบ (' + ms + 'ms)', 'success');
+          cachedSTS = data;
+          return data;
         } else {
-          log('❌ STS ไม่ครบ - ตรวจ backend log', 'err');
+          setFlow('sts', 'fail', detailHtml);
+          log('❌ [Flow 1] STS ไม่ครบ 3 keys', 'err');
+          return null;
         }
-
-        // ถ้ามี error field ให้ log
-        if (data.error) log('   ⚠️ error field: ' + data.error, 'warn');
-        if (data.code) log('   ⚠️ code field: ' + data.code, 'warn');
-        if (data.hint) log('   ℹ️ hint: ' + data.hint, 'info');
-
-        return data;
       } catch (err) {
-        log('❌ STS Exception: ' + err.message, 'err');
+        setFlow('sts', 'fail', 'Exception: ' + err.message);
+        log('❌ [Flow 1] Exception: ' + err.message, 'err');
         return null;
       }
     }
 
-    // Auto load video list
-    async function listVideos() {
-      log('กำลังโหลดรายการ video ทั้งหมด...', 'info');
-      try {
-        const res = await fetch('/api/china/videos');
-        const data = await res.json();
-        log('✅ พบ ' + data.count + ' videos', 'success');
-        const picks = document.getElementById('quickPicks');
-        picks.querySelectorAll('.quick').forEach(el => el.remove());
-        (data.videos || []).forEach(v => {
-          const span = document.createElement('span');
-          span.className = 'quick';
-          const shortId = v.videoId.substring(0, 8) + '…';
-          span.textContent = v.title ? (v.title.substring(0, 20) + ' [' + shortId + ']') : shortId;
-          span.title = v.videoId;
-          span.onclick = () => {
-            document.getElementById('vidInput').value = v.videoId;
-            log('เลือก video: ' + v.videoId.substring(0, 8) + '...', 'info');
-          };
-          picks.appendChild(span);
-        });
-        // auto-fill if empty
-        if (data.videos.length > 0 && !document.getElementById('vidInput').value) {
-          document.getElementById('vidInput').value = data.videos[0].videoId;
-        }
-        // Auto STS test หลัง list โหลดเสร็จ (verify backend ทำงาน)
-        setTimeout(testSTS, 500);
-      } catch (err) {
-        log('❌ โหลด list ไม่ได้: ' + err.message, 'err');
-      }
-    }
-    setTimeout(listVideos, 800);
-
-    async function loadDRM() {
+    // ═══════════════════════════════════════════════════════════
+    // FLOW 2: HLS Manifest Test (Alibaba CDN)
+    // ═══════════════════════════════════════════════════════════
+    async function testManifest() {
       const videoId = document.getElementById('vidInput').value.trim();
       if (!videoId) {
-        log('❌ กรุณากรอก Video ID หรือกด List เพื่อเลือก', 'err');
+        setFlow('manifest', 'fail', 'กรุณากรอก Video ID');
         return;
       }
-      localStorage.setItem(LAST_VID_KEY, videoId);
-
-      const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
-      // ครอบทุก export type (SDK 2.35.4 export เป็น object, SDK เก่า export เป็น function)
-      if (!alp || (typeof alp !== 'function' && typeof alp !== 'object')) {
-        log('❌ Aliplayer ยังไม่พร้อม (type=' + typeof alp + ')', 'err');
-        return;
-      }
-      if (!window.Aliplayer) window.Aliplayer = alp;
-
-      log('กำลังขอ STS token (สำหรับ DRM)...', 'info');
+      setFlow('manifest', 'running', 'ขอ playinfo จาก backend...');
+      log('📄 [Flow 2] Test Manifest: ' + videoId, 'info');
+      const t0 = Date.now();
       try {
-        const res = await fetch('/api/china/sts/' + videoId);
+        const res = await fetch('/api/china/playinfo/' + videoId);
+        const ms = Date.now() - t0;
         const data = await res.json();
-        if (!data.accessKeyId || !data.securityToken) {
-          log('❌ No STS: ' + JSON.stringify(data), 'err');
+
+        const streams = data.streams || [];
+        const m3u8 = streams.find(s => s.format === 'm3u8' && s.encrypt);
+        const hasM3U8 = !!m3u8;
+
+        let detailHtml = `
+          <div class="kv"><span class="k">HTTP:</span><span class="v ${res.ok ? 'ok' : 'err'}">${res.status} (${ms}ms)</span></div>
+          <div class="kv"><span class="k">Title:</span><span class="v">${(data.videoBase && data.videoBase.Title) || '-'}</span></div>
+          <div class="kv"><span class="k">Duration:</span><span class="v">${(data.videoBase && data.videoBase.Duration) || '-'}s</span></div>
+          <div class="kv"><span class="k">Streams:</span><span class="v">${streams.length}</span></div>
+          <div class="kv"><span class="k">Encrypted:</span><span class="v ${data.encrypted ? 'ok' : 'err'}">${data.encrypted ? '✅ YES' : '❌ NO'}</span></div>
+        `;
+        if (m3u8) {
+          detailHtml += `
+            <div class="kv"><span class="k">m3u8 URL:</span><span class="v ok">${m3u8.playUrl.substring(0, 60)}...</span></div>
+            <div class="kv"><span class="k">Encryption:</span><span class="v ok">${m3u8.encryptType || 'unknown'}</span></div>
+            <div class="kv"><span class="k">Resolution:</span><span class="v">${m3u8.width}×${m3u8.height}</span></div>
+            <div class="kv"><span class="k">Bitrate:</span><span class="v">${m3u8.bitrate} kbps</span></div>
+          `;
+        }
+
+        if (hasM3U8) {
+          setFlow('manifest', 'pass', detailHtml);
+          log('✅ [Flow 2] Manifest OK - HLS encrypted stream พร้อม', 'success');
+        } else {
+          setFlow('manifest', 'fail', detailHtml + '<br><span class="err">⚠️ ไม่พบ encrypted m3u8 stream</span>');
+          log('⚠️ [Flow 2] ไม่พบ encrypted m3u8', 'warn');
+        }
+        return data;
+      } catch (err) {
+        setFlow('manifest', 'fail', 'Exception: ' + err.message);
+        log('❌ [Flow 2] Exception: ' + err.message, 'err');
+        return null;
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FLOW 3: SDK Loading Test
+    // ═══════════════════════════════════════════════════════════
+    async function testSDK() {
+      setFlow('sdk', 'running', 'ตรวจ SDK loading status...');
+      log('📦 [Flow 3] Test SDK', 'info');
+
+      // Wait up to 15s for SDK to load
+      const start = Date.now();
+      let attempts = 0;
+      const check = () => {
+        attempts++;
+        const elapsed = Math.round((Date.now() - start) / 1000);
+        const status = window.__sdkStatus || {};
+        const lastAttempt = status.attempts && status.attempts.length > 0 ? status.attempts[status.attempts.length - 1] : null;
+        const hasAliplayer = typeof window.Aliplayer !== 'undefined' && window.Aliplayer !== null;
+
+        if (hasAliplayer) {
+          const alp = window.Aliplayer;
+          const keys = typeof alp === 'object' ? Object.keys(alp).length : 'N/A';
+          const detailHtml = `
+            <div class="kv"><span class="k">Method:</span><span class="v">${lastAttempt ? lastAttempt.method : 'unknown'}</span></div>
+            <div class="kv"><span class="k">Load time:</span><span class="v ok">${lastAttempt ? lastAttempt.duration + 'ms' : '?'}</span></div>
+            <div class="kv"><span class="k">script.onload:</span><span class="v ok">${lastAttempt && lastAttempt.ok ? '✅ fired' : '❌'}</span></div>
+            <div class="kv"><span class="k">window.Aliplayer:</span><span class="v ok">${typeof alp}</span></div>
+            <div class="kv"><span class="k">Keys count:</span><span class="v">${keys}</span></div>
+            <div class="kv"><span class="k">Version:</span><span class="v">2.35.4 (self-host)</span></div>
+          `;
+          setFlow('sdk', 'pass', detailHtml);
+          log('✅ [Flow 3] SDK พร้อม (' + elapsed + 's)', 'success');
           return;
         }
-        log('✅ STS token ได้ (expires: ' + data.expiration + ')', 'success');
 
-        log('กำลังสร้าง Aliplayer (DRM mode with STS)...', 'info');
-        log('DEBUG: window.Aliplayer type=' + typeof window.Aliplayer + ', is null=' + (window.Aliplayer === null) + ', keys=' + (window.Aliplayer ? Object.keys(window.Aliplayer).length : 0), 'info');
-        const player = new window.Aliplayer({
+        if (elapsed >= 15) {
+          const detailHtml = `
+            <div class="kv"><span class="k">Elapsed:</span><span class="v err">${elapsed}s (timeout)</span></div>
+            <div class="kv"><span class="k">script.onload:</span><span class="v ${lastAttempt && lastAttempt.ok ? 'ok' : 'err'}">${lastAttempt ? (lastAttempt.ok ? '✅ fired' : '❌') : 'ไม่มี attempt'}</span></div>
+            <div class="kv"><span class="k">window.Aliplayer:</span><span class="v err">${typeof window.Aliplayer}</span></div>
+            <div class="kv"><span class="k">Error:</span><span class="v err">${lastAttempt && lastAttempt.error ? lastAttempt.error : 'SDK loaded but code did not execute'}</span></div>
+          `;
+          setFlow('sdk', 'fail', detailHtml);
+          log('❌ [Flow 3] SDK timeout', 'err');
+          return;
+        }
+
+        setTimeout(check, 500);
+      };
+      check();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FLOW 4: Player + Widevine Test
+    // ═══════════════════════════════════════════════════════════
+    let player = null;
+    async function testPlayer() {
+      const videoId = document.getElementById('vidInput').value.trim();
+      if (!videoId) {
+        setFlow('player', 'fail', 'กรุณากรอก Video ID');
+        return;
+      }
+      setFlow('player', 'running', 'ตรวจ pre-req...');
+
+      // Check pre-requisites
+      if (typeof window.Aliplayer === 'undefined') {
+        setFlow('player', 'fail', 'Aliplayer SDK ไม่พร้อม — run Flow 3 ก่อน');
+        return;
+      }
+      if (!cachedSTS) {
+        setFlow('player', 'running', 'ต้องใช้ STS token — เรียก Flow 1 ก่อน...');
+        const sts = await testSTS();
+        if (!sts) {
+          setFlow('player', 'fail', 'STS fail — ดู Flow 1');
+          return;
+        }
+      }
+
+      setFlow('player', 'running', 'สร้าง Aliplayer instance...');
+      log('▶ [Flow 4] Test Player', 'info');
+
+      try {
+        // Cleanup previous
+        if (player) { try { player.dispose(); } catch (e) {} player = null; }
+
+        player = new window.Aliplayer({
           id: 'J_prismPlayer',
           vid: videoId,
-          accessKeyId: data.accessKeyId,
-          accessKeySecret: data.accessKeySecret,
-          securityToken: data.securityToken,
-          region: data.region || 'ap-southeast-1',
+          accessKeyId: cachedSTS.accessKeyId,
+          accessKeySecret: cachedSTS.accessKeySecret,
+          securityToken: cachedSTS.securityToken,
+          region: cachedSTS.region || 'ap-southeast-1',
           width: '100%',
           height: '400px',
           autoplay: false,
@@ -514,21 +578,73 @@
           },
           encryptType: 2
         }, function (p) {
-          log('✅ Aliplayer instance created', 'success');
+          log('✅ [Flow 4] Aliplayer instance created', 'success');
         });
 
-        player.on('ready', () => log('event: ready', 'info'));
-        player.on('canplay', () => log('✅ event: canplay - DRM decrypted!', 'success'));
-        player.on('play', () => log('▶️ event: play', 'info'));
+        let events = [];
+        player.on('ready', () => { events.push('ready'); log('event: ready', 'info'); setFlow('player', 'running', 'ready → รอ canplay...'); });
+        player.on('canplay', () => {
+          events.push('canplay');
+          log('✅ [Flow 4] DRM decrypted!', 'success');
+          setFlow('player', 'pass', 'canplay - DRM decrypted! Events: ' + events.join(' → '));
+        });
+        player.on('play', () => { events.push('play'); log('▶ [Flow 4] Playing', 'success'); });
         player.on('error', (e) => {
           const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {});
-          log('❌ ERROR: ' + details, 'err');
+          log('❌ [Flow 4] ERROR: ' + details, 'err');
+          setFlow('player', 'fail', 'Error: ' + details.substring(0, 100));
         });
-        player.on('waiting', () => log('event: waiting (buffer)', 'warn'));
       } catch (err) {
-        log('❌ Exception: ' + err.message, 'err');
+        log('❌ [Flow 4] Exception: ' + err.message, 'err');
+        setFlow('player', 'fail', 'Exception: ' + err.message);
       }
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // Video List
+    // ═══════════════════════════════════════════════════════════
+    const LAST_VID_KEY = 'drmTest_lastVideoId';
+    document.getElementById('vidInput').value = localStorage.getItem(LAST_VID_KEY) || '';
+
+    async function listVideos() {
+      log('📋 กำลังโหลดรายการ video...', 'info');
+      try {
+        const res = await fetch('/api/china/videos');
+        const data = await res.json();
+        log('✅ พบ ' + data.count + ' videos', 'success');
+        const picks = document.getElementById('quickPicks');
+        picks.querySelectorAll('.quick').forEach(el => el.remove());
+        (data.videos || []).forEach(v => {
+          const span = document.createElement('span');
+          span.className = 'quick';
+          span.textContent = v.videoId.substring(0, 8) + '…';
+          span.title = v.videoId;
+          span.onclick = () => {
+            document.getElementById('vidInput').value = v.videoId;
+            localStorage.setItem(LAST_VID_KEY, v.videoId);
+            log('เลือก video: ' + v.videoId.substring(0, 8) + '...', 'info');
+          };
+          picks.appendChild(span);
+        });
+        if (data.videos.length > 0 && !document.getElementById('vidInput').value) {
+          document.getElementById('vidInput').value = data.videos[0].videoId;
+        }
+      } catch (err) {
+        log('❌ list: ' + err.message, 'err');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Auto-run: list → STS → manifest → SDK
+    // Flow 4 (Player) = manual (ผู้ใช้กด)
+    // ═══════════════════════════════════════════════════════════
+    (async () => {
+      await listVideos();
+      await new Promise(r => setTimeout(r, 300));
+      await testSTS();
+      await testManifest();
+      testSDK(); // async ไม่รอ
+    })();
   </script>
 </body>
 </html>
