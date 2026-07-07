@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { getPlayAuth, listVideos, getPlayInfo } = require('./china.controller')
+const { getPlayAuth, listVideos, getPlayInfo, listTemplateGroups, submitTranscode } = require('./china.controller')
 const { pushLog, getLogs, clearLogs } = require('./china.logs')
 
 router.use(express.json({ limit: '512kb' }))
@@ -13,6 +13,12 @@ router.get('/videos', listVideos)
 
 // GET /api/china/playinfo/:videoId — get play URL + encryption status
 router.get('/playinfo/:videoId', getPlayInfo)
+
+// GET /api/china/templates — list transcoding template groups
+router.get('/templates', listTemplateGroups)
+
+// GET /api/china/transcode?videoId=xxx&templateGroupId=xxx — trigger re-transcode
+router.get('/transcode', submitTranscode)
 
 // POST /api/china/log — frontend ส่ง log ทุก event
 router.post('/log', (req, res) => {

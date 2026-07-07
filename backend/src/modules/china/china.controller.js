@@ -111,4 +111,44 @@ async function getPlayInfo(req, res) {
   }
 }
 
-module.exports = { getPlayAuth, listVideos, getPlayInfo }
+// List Transcoding Template Groups
+async function listTemplateGroups(req, res) {
+  try {
+    const result = await client.request('ListTranscodeTemplateGroup', {}, { method: 'POST' })
+    const groups = (result.TranscodeTemplateGroupList || []).map(g => ({
+      groupId: g.TranscodeTemplateGroupId,
+      name: g.Name,
+      isDefault: g.IsDefault,
+      creationTime: g.CreationTime,
+      modifyTime: g.ModifyTime
+    }))
+    return res.json({ count: groups.length, groups })
+  } catch (err) {
+    console.error('[china.listTemplateGroups]', err.message, err.code)
+    return res.status(500).json({ error: err.message, code: err.code })
+  }
+}
+
+// Submit transcoding job (re-transcode video ด้วย template ที่มี encryption)
+async function submitTranscode(req, res) {
+  const { videoId, templateGroupId } = req.query
+  if (!videoId || !templateGroupId) {
+    return res.status(400).json({ error: 'videoId + templateGroupId required (query params)' })
+  }
+  try {
+    const result = await client.request('SubmitTranscodeJobs', {
+      VideoId: videoId,
+      TemplateGroupId: templateGroupId
+    }, { method: 'POST' })
+    return res.json({
+      transcodeTaskId: result.TranscodeTaskId,
+      jobs: result.TranscodeJobs,
+      requestId: result.RequestId
+    })
+  } catch (err) {
+    console.error('[china.submitTranscode]', err.message, err.code)
+    return res.status(500).json({ error: err.message, code: err.code })
+  }
+}
+
+module.exports = { getPlayAuth, listVideos, getPlayInfo, listTemplateGroups, submitTranscode }
