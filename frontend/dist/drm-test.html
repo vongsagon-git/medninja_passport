@@ -74,6 +74,49 @@
       margin: 8px 4px;
       font-weight: bold;
     }
+    .video-input {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      max-width: 720px;
+      flex-wrap: wrap;
+    }
+    .video-input input {
+      flex: 1;
+      min-width: 240px;
+      padding: 12px 14px;
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 6px;
+      color: #f1f5f9;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+    }
+    .video-input input:focus {
+      outline: none;
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.15);
+    }
+    .video-input button { margin: 0; }
+    .quick-picks {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .quick-picks .quick {
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      color: #4ade80;
+      padding: 6px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+    }
+    .quick-picks .quick:hover { background: rgba(74, 222, 128, 0.2); }
   </style>
 </head>
 <body>
@@ -85,14 +128,21 @@
   </p>
 
   <div class="info">
-    <b>Video ID:</b> 700e030e797271f1977bf6e6c5490102<br>
-    <b>Video:</b> Introduce.mov (48.9s)<br>
-    <b>Encryption:</b> encrypt=1, type="Widevine-FairPlay"<br>
-    <b>Stream:</b> HLS (m3u8) 960x540 · 997 kbps<br>
-    <b>SDK:</b> Aliplayer 2.35.4 (supports DRM)
+    <b>Encryption:</b> Widevine-FairPlay DRM<br>
+    <b>Stream:</b> HLS (m3u8) encrypted<br>
+    <b>SDK:</b> Aliplayer 2.35.4 (supports DRM)<br>
+    <b>License:</b> Activated (Chinese Mainland region)
   </div>
 
-  <button onclick="loadDRM()">▶ Play DRM Video</button>
+  <div class="video-input">
+    <input id="vidInput" type="text" placeholder="กรอก Alibaba Video ID (24-32 hex chars)..." />
+    <button onclick="loadDRM()">▶ Play</button>
+    <button onclick="listVideos()" style="background: #22c55e">📋 List</button>
+  </div>
+
+  <div class="quick-picks" id="quickPicks">
+    <span style="align-self: center; margin-right: 6px;">Quick:</span>
+  </div>
 
   <div class="player-box">
     <div id="J_prismPlayer"></div>
@@ -159,8 +209,49 @@
       }
     }, 2000);
 
+    // ตั้งค่า last-used video id จาก localStorage หรือ default
+    const LAST_VID_KEY = 'drmTest_lastVideoId';
+    const savedVid = localStorage.getItem(LAST_VID_KEY) || '';
+    document.getElementById('vidInput').value = savedVid;
+
+    // โหลด video list เข้า quick picks
+    async function listVideos() {
+      log('กำลังโหลดรายการ video ทั้งหมด...', 'info');
+      try {
+        const res = await fetch('/api/china/videos');
+        const data = await res.json();
+        log('✅ พบ ' + data.count + ' videos', 'success');
+        const picks = document.getElementById('quickPicks');
+        picks.querySelectorAll('.quick').forEach(el => el.remove());
+        (data.videos || []).forEach(v => {
+          const span = document.createElement('span');
+          span.className = 'quick';
+          const shortId = v.videoId.substring(0, 8) + '…';
+          const label = v.title ? (v.title.substring(0, 20) + ' [' + shortId + ']') : shortId;
+          span.textContent = label;
+          span.title = v.videoId;
+          span.onclick = () => {
+            document.getElementById('vidInput').value = v.videoId;
+            log('เลือก video: ' + v.videoId.substring(0, 8) + '...', 'info');
+          };
+          picks.appendChild(span);
+        });
+      } catch (err) {
+        log('❌ โหลด list ไม่ได้: ' + err.message, 'err');
+      }
+    }
+
+    // auto-load list ตอนหน้า ready
+    setTimeout(listVideos, 1000);
+
     async function loadDRM() {
-      const videoId = '700e030e797271f1977bf6e6c5490102';
+      const videoId = document.getElementById('vidInput').value.trim();
+      if (!videoId) {
+        log('❌ กรุณากรอก Video ID หรือกด List เพื่อเลือก', 'err');
+        return;
+      }
+      // save last-used
+      localStorage.setItem(LAST_VID_KEY, videoId);
 
       if (typeof window.Aliplayer === 'undefined') {
         log('❌ Aliplayer ยังไม่พร้อม', 'err');
