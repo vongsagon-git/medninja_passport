@@ -39,6 +39,19 @@
           <span class="sep sep-hide-sm">·</span>
           <span class="device-item screen-size sep-hide-sm">{{ screenSize }}</span>
         </div>
+
+        <!-- LOGOUT (visible only when logged in) -->
+        <button
+          v-if="isLoggedIn"
+          class="logout-btn"
+          @click="handleLogout"
+          title="ออกจากระบบ"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          <span class="logout-label">ออก</span>
+        </button>
       </div>
     </div>
   </transition>
@@ -46,12 +59,23 @@
 
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 import useCountry from '../../composables/useCountry'
 import { getOS, getBrowser, getDeviceCategory } from '../../utils/deviceDetect'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 const { country, countryTh, flag, ip, isp, isChina, isThai, ready, loading, error } = useCountry()
+
+const isLoggedIn = computed(() => !!authStore.token)
+
+async function handleLogout () {
+  if (!confirm('ต้องการออกจากระบบใช่ไหม?')) return
+  await authStore.logout()
+  router.push('/')
+}
 
 // ─── Device Info ───
 const deviceOS = ref('')
@@ -224,6 +248,35 @@ const tone = computed(() => {
   opacity: 0.7;
 }
 
+/* Logout button */
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(239, 68, 68, 0.85);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 6px;
+  font-family: inherit;
+}
+.logout-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+}
+.logout-btn:active {
+  transform: translateY(0);
+}
+.logout-btn svg {
+  flex-shrink: 0;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .banner-inner {
@@ -239,6 +292,8 @@ const tone = computed(() => {
   .ip { font-size: 10px; }
   .country-name { font-size: 11px; }
   .device-item { font-size: 10px; }
+  .logout-btn { padding: 2px 8px; font-size: 10px; }
+  .logout-label { display: none; }
 }
 
 /* Transition */
