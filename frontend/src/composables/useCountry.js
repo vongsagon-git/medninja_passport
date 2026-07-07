@@ -44,9 +44,10 @@ async function fetchWhoami () {
       return d
     })
     .catch(err => {
+      // ⚠️ อย่า set _ready = true เพราะจะทำให้ banner แสดง 'unknown'
+      // ปล่อยให้ ready = false → banner ซ่อนสนิท (ดีกว่าโชว์ค่าเปล่า)
       _error.value = err.message || 'geo fetch failed'
-      _country.value = 'unknown'
-      _ready.value = true
+      _country.value = ''
       return null
     })
     .finally(() => {

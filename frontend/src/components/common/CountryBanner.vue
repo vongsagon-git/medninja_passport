@@ -53,7 +53,9 @@ const isLivePage = computed(() => {
   return p.startsWith('/live')
 })
 
-const show = computed(() => ready.value && !isLivePage.value)
+const show = computed(() =>
+  ready.value && country.value && country.value !== 'unknown' && !isLivePage.value
+)
 
 const tone = computed(() => {
   if (isChina.value) return 'tone-cn'
