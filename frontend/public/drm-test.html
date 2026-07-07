@@ -5,8 +5,8 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test - Flow Diagnostics</title>
-  <!-- BUILD_VERSION: 2026-07-07-16:00-v23-separated-flows -->
-  <meta name="build-version" content="v23 · 16:00">
+  <!-- BUILD_VERSION: 2026-07-07-16:15-v24-debug-testPlayer -->
+  <meta name="build-version" content="v24 · 16:15">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -190,7 +190,7 @@
   <div class="header-row">
     <h1>🔐 DRM Flow Diagnostics</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v23 · 16:00</span>
+      <span class="version-badge" id="versionBadge">v24 · 16:15</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -528,35 +528,66 @@
     // ═══════════════════════════════════════════════════════════
     let player = null;
     async function testPlayer() {
+      log('▶ [Flow 4] === CLICKED Test Player ===', 'info');
       const videoId = document.getElementById('vidInput').value.trim();
+      log('  videoId: ' + (videoId || '(empty)'), 'info');
+
       if (!videoId) {
+        log('❌ [Flow 4] no videoId', 'err');
         setFlow('player', 'fail', 'กรุณากรอก Video ID');
         return;
       }
       setFlow('player', 'running', 'ตรวจ pre-req...');
 
-      // Check pre-requisites
-      if (typeof window.Aliplayer === 'undefined') {
-        setFlow('player', 'fail', 'Aliplayer SDK ไม่พร้อม — run Flow 3 ก่อน');
+      // Check pre-req: Aliplayer
+      log('  window.Aliplayer type: ' + typeof window.Aliplayer, 'info');
+      if (typeof window.Aliplayer === 'undefined' || window.Aliplayer === null) {
+        log('❌ [Flow 4] Aliplayer ไม่พร้อม (' + typeof window.Aliplayer + ')', 'err');
+        setFlow('player', 'fail', 'Aliplayer SDK ไม่พร้อม');
         return;
       }
+
+      // Check pre-req: STS
+      log('  cachedSTS: ' + (cachedSTS ? 'มี (accessKeyId: ' + cachedSTS.accessKeyId.substring(0, 8) + '...)' : 'null'), 'info');
       if (!cachedSTS) {
-        setFlow('player', 'running', 'ต้องใช้ STS token — เรียก Flow 1 ก่อน...');
-        const sts = await testSTS();
-        if (!sts) {
-          setFlow('player', 'fail', 'STS fail — ดู Flow 1');
+        log('  ⏳ STS ไม่มี - เรียก Flow 1 ก่อน', 'warn');
+        setFlow('player', 'running', 'เรียก Flow 1...');
+        try {
+          const sts = await testSTS();
+          log('  testSTS return: ' + (sts ? 'ok' : 'null'), 'info');
+          if (!sts) {
+            log('❌ [Flow 4] STS ล้ม', 'err');
+            setFlow('player', 'fail', 'STS fail');
+            return;
+          }
+          cachedSTS = sts;
+        } catch (stsErr) {
+          log('❌ [Flow 4] STS exception: ' + stsErr.message, 'err');
+          setFlow('player', 'fail', 'STS exception');
           return;
         }
       }
 
+      // ตรวจ #J_prismPlayer element
+      const playerEl = document.getElementById('J_prismPlayer');
+      log('  #J_prismPlayer: ' + (playerEl ? 'พบ (offsetWidth=' + playerEl.offsetWidth + ')' : '❌ ไม่มี'), 'info');
+      if (!playerEl) {
+        setFlow('player', 'fail', 'ไม่มี #J_prismPlayer element');
+        return;
+      }
+
       setFlow('player', 'running', 'สร้าง Aliplayer instance...');
-      log('▶ [Flow 4] Test Player', 'info');
+      log('  🏗️ กำลังสร้าง new Aliplayer(...)', 'info');
 
       try {
         // Cleanup previous
-        if (player) { try { player.dispose(); } catch (e) {} player = null; }
+        if (player) {
+          log('  cleanup player เก่า', 'info');
+          try { player.dispose(); } catch (e) { log('  dispose error: ' + e.message, 'warn'); }
+          player = null;
+        }
 
-        player = new window.Aliplayer({
+        const config = {
           id: 'J_prismPlayer',
           vid: videoId,
           accessKeyId: cachedSTS.accessKeyId,
@@ -577,25 +608,46 @@
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           },
           encryptType: 2
-        }, function (p) {
-          log('✅ [Flow 4] Aliplayer instance created', 'success');
+        };
+        log('  config: vid=' + videoId.substring(0, 8) + '..., region=' + config.region + ', ak=' + config.accessKeyId.substring(0, 8) + '...', 'info');
+
+        player = new window.Aliplayer(config, function (p) {
+          log('✅ [Flow 4] Aliplayer instance created!', 'success');
+          setFlow('player', 'running', 'instance created → รอ ready...');
         });
 
+        log('  new Aliplayer() returned: ' + (player ? 'ok' : 'null'), 'info');
+        if (!player) {
+          log('❌ [Flow 4] new Aliplayer() returned null!', 'err');
+          setFlow('player', 'fail', 'constructor return null');
+          return;
+        }
+
         let events = [];
-        player.on('ready', () => { events.push('ready'); log('event: ready', 'info'); setFlow('player', 'running', 'ready → รอ canplay...'); });
+        player.on('ready', () => {
+          events.push('ready');
+          log('✅ event: ready', 'success');
+          setFlow('player', 'running', 'ready → รอ canplay...');
+        });
         player.on('canplay', () => {
           events.push('canplay');
-          log('✅ [Flow 4] DRM decrypted!', 'success');
+          log('✅ [Flow 4] DRM decrypted! (canplay)', 'success');
           setFlow('player', 'pass', 'canplay - DRM decrypted! Events: ' + events.join(' → '));
         });
-        player.on('play', () => { events.push('play'); log('▶ [Flow 4] Playing', 'success'); });
+        player.on('play', () => {
+          events.push('play');
+          log('▶ [Flow 4] Playing!', 'success');
+        });
         player.on('error', (e) => {
           const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {});
-          log('❌ [Flow 4] ERROR: ' + details, 'err');
+          log('❌ [Flow 4] Player error: ' + details, 'err');
           setFlow('player', 'fail', 'Error: ' + details.substring(0, 100));
         });
+        player.on('waiting', () => log('event: waiting (buffer)', 'warn'));
+
+        log('  event listeners attached: ready, canplay, play, error, waiting', 'info');
       } catch (err) {
-        log('❌ [Flow 4] Exception: ' + err.message, 'err');
+        log('❌ [Flow 4] CATCH exception: ' + err.message + ' | stack: ' + (err.stack ? err.stack.substring(0, 200) : 'no stack'), 'err');
         setFlow('player', 'fail', 'Exception: ' + err.message);
       }
     }
