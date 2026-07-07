@@ -5,12 +5,21 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test</title>
-  <!-- BUILD_VERSION: 2026-07-07-15:00-v19-corp-fix -->
-  <meta name="build-version" content="v19 · 15:00">
+  <!-- BUILD_VERSION: 2026-07-07-15:15-v20-umd-force-browser -->
+  <meta name="build-version" content="v20 · 15:15">
 
-  <!-- Aliplayer SDK 2.35.4 - Self-host + Global tracking -->
+  <!-- Aliplayer SDK 2.35.4 - Self-host + UMD force browser mode -->
   <script>
-    // Track SDK loading status ก่อน load
+    // ⚠️ CRITICAL: บาง Android Chrome มี module/exports/define ใน scope
+    //     UMD จะ export ผ่าน CommonJS/AMD path แทน window.Aliplayer
+    //     ต้อง force delete ก่อน SDK รัน
+    (function() {
+      try { if (typeof module !== 'undefined') { window.__origModule = module; module = undefined; } } catch(e) {}
+      try { if (typeof exports !== 'undefined') { window.__origExports = exports; exports = undefined; } } catch(e) {}
+      try { if (typeof define !== 'undefined' && define.amd) { window.__origDefine = define; define = undefined; } } catch(e) {}
+    })();
+
+    // Track SDK loading status
     window.__sdkStatus = { attempts: [], loaded: false, error: null };
     window.__sdkLoad = function(url, isPrimary) {
       var start = Date.now();
@@ -25,13 +34,22 @@
         attempt.duration = Date.now() - start;
         attempt.hasAliplayer = typeof window.Aliplayer !== 'undefined';
         window.__sdkStatus.loaded = attempt.hasAliplayer;
+
+        // Post-load debugging: หา Aliplayer จากทุกที่
+        if (!attempt.hasAliplayer) {
+          attempt.altSearch = {
+            module: typeof module,
+            exports: typeof exports,
+            hasModuleExports: typeof module !== 'undefined' && !!module.exports,
+            hasWindowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('player')).slice(0, 5)
+          };
+        }
       };
       s.onerror = function(e) {
         attempt.ok = false;
         attempt.duration = Date.now() - start;
         attempt.error = 'script.onerror';
         window.__sdkStatus.error = attempt;
-        // Auto-fallback ถ้า primary fail
         if (isPrimary) {
           console.warn('[SDK] Primary fail, loading fallback');
           window.__sdkLoad('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', false);
@@ -184,7 +202,7 @@
   <div class="header-row">
     <h1>🔐 MedNinja DRM Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v19 · 15:00</span>
+      <span class="version-badge" id="versionBadge">v20 · 15:15</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -336,11 +354,21 @@
         log('❌ Aliplayer timeout 30s (type=' + typeof alp + ', null=' + (alp === null) + ', keys=[' + dbgKeys + '])', 'err');
       } else if (elapsed % 5 === 0 && elapsed > 0) {
         const dbgKeys = (alp && typeof alp === 'object') ? Object.keys(alp).length : 'N/A';
-        // Extra debug: SDK loading status
         const sdkStatus = window.__sdkStatus || {};
         const lastAttempt = sdkStatus.attempts ? sdkStatus.attempts[sdkStatus.attempts.length - 1] : null;
         const sdkInfo = lastAttempt ? 'sdk:' + (lastAttempt.ok === true ? 'ok' : lastAttempt.ok === false ? 'FAIL' : 'loading') : 'no-sdk';
         log('⏳ รอ Aliplayer... ' + elapsed + 's (' + sdkInfo + ', type=' + typeof alp + ', null=' + (alp === null) + ', keys=' + dbgKeys + ')', 'warn');
+        // เมื่อครบ 10s แสดง altSearch เพื่อหา Aliplayer ที่อื่น
+        if (elapsed === 10 && lastAttempt && lastAttempt.altSearch) {
+          log('DEBUG altSearch: ' + JSON.stringify(lastAttempt.altSearch), 'info');
+          // Try recovery: หา Aliplayer จาก module.exports
+          try {
+            if (typeof module !== 'undefined' && module.exports && typeof module.exports === 'function') {
+              log('🔧 Recovery: พบ Aliplayer ใน module.exports — copy ไป window.Aliplayer', 'success');
+              window.Aliplayer = module.exports;
+            }
+          } catch(e) {}
+        }
       }
     }, 500);
 
