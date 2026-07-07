@@ -352,9 +352,12 @@ if (process.env.NODE_ENV === 'production') {
     maxAge: '1h',
     index: false,
     setHeaders: (res, filePath) => {
-      // safety: index.html / sw.js / manifest = no-cache
-      if (/index\.html$|sw\.js$|manifest\.(json|webmanifest)$/.test(filePath)) {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      // safety: index.html / sw.js / manifest / test HTMLs = no-cache
+      if (/index\.html$|sw\.js$|manifest\.(json|webmanifest)$|drm-test\.html$|sdk-check\.html$|alibaba-standalone-test\.html$/.test(filePath)) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
+        res.setHeader('CDN-Cache-Control', 'no-store')
+        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store')
+        res.setHeader('Pragma', 'no-cache')
       }
     }
   }))
