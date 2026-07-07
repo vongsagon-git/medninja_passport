@@ -31,7 +31,8 @@ async function fetchWhoami () {
   _error.value = null
   _fetchPromise = api.get('/geo/whoami')
     .then(res => {
-      const d = res.data || {}
+      // api.js interceptor unwraps → res = data ตรง ๆ (ไม่ใช่ {data: ...})
+      const d = (res && res.data) ? res.data : (res || {})
       _country.value = d.country || 'unknown'
       _countryName.value = d.countryName || ''
       _detectedBy.value = d.detectedBy || ''
