@@ -5,8 +5,8 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test - Stream Selector</title>
-  <!-- BUILD_VERSION: 2026-07-07-17:45-v29-encrypted-only -->
-  <meta name="build-version" content="v29 · 17:45">
+  <!-- BUILD_VERSION: 2026-07-07-18:00-v30-fix-detection -->
+  <meta name="build-version" content="v30 · 18:00">
 
   <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
   <script src="/vendor/aliplayer/aliplayer-2.35.4.js"></script>
@@ -199,7 +199,7 @@
   <div class="header-row">
     <h1>🔐 DRM Stream Selector</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v29 · 17:45</span>
+      <span class="version-badge" id="versionBadge">v30 · 18:00</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -216,7 +216,9 @@
   <div class="video-input">
     <input id="vidInput" type="text" placeholder="กรอก Video ID..." />
     <button onclick="loadStreams()">🔍 Load Streams</button>
+    <button onclick="useLatestVideo()" style="background: #f59e0b">🎬 Use Latest</button>
   </div>
+  <div id="videosList" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; font-size: 11px;"></div>
 
   <!-- Streams grid (populated by loadStreams()) -->
   <div class="streams-title">🔐 Encrypted Streams (คลิกเพื่อเล่น) — Widevine vs Alibaba Proprietary</div>
@@ -300,16 +302,65 @@
       } catch (e) {}
     })();
 
-    // Restore last video ID
-    document.getElementById('vidInput').value = localStorage.getItem('drmTest_lastVideoId') || '0024f6c679d971f1a6aaf6f7c4590102';
+    // Restore last video ID (but validate against server)
+    const savedVid = localStorage.getItem('drmTest_lastVideoId');
+    document.getElementById('vidInput').value = savedVid || '';
+
+    // Auto-fetch latest video ID from server (list videos endpoint)
+    async function fetchVideosList() {
+      try {
+        const res = await fetch('/api/china/videos');
+        const data = await res.json();
+        const videos = data.videos || [];
+        const listEl = document.getElementById('videosList');
+        listEl.innerHTML = '<span style="color: #94a3b8; align-self: center;">📋 Videos ที่มี:</span>';
+        videos.forEach((v, i) => {
+          const chip = document.createElement('span');
+          chip.style.cssText = 'background: rgba(74, 222, 128, 0.15); color: #4ade80; padding: 4px 10px; border-radius: 999px; cursor: pointer; font-family: monospace; border: 1px solid rgba(74, 222, 128, 0.3);';
+          const shortId = v.videoId.substring(0, 12) + '...';
+          const title = v.title ? v.title.substring(0, 15) : '';
+          chip.textContent = (title ? title + ' [' : '[') + shortId + ']';
+          chip.title = v.videoId;
+          chip.onclick = () => {
+            document.getElementById('vidInput').value = v.videoId;
+            localStorage.setItem('drmTest_lastVideoId', v.videoId);
+            loadStreams();
+          };
+          listEl.appendChild(chip);
+        });
+
+        // Auto-use latest if no saved OR saved video not in list
+        if (!savedVid || !videos.find(v => v.videoId === savedVid)) {
+          if (videos.length > 0) {
+            const latestId = videos[0].videoId;
+            document.getElementById('vidInput').value = latestId;
+            localStorage.setItem('drmTest_lastVideoId', latestId);
+            log('🎬 Auto-selected latest video: ' + latestId.substring(0, 12) + '...', 'info');
+          }
+        }
+      } catch (e) {
+        log('⚠️ ไม่สามารถ load videos list: ' + e.message, 'warn');
+      }
+    }
+
+    function useLatestVideo() {
+      fetchVideosList().then(() => setTimeout(loadStreams, 200));
+    }
+
+    fetchVideosList();
 
     // Determine encryption type from stream metadata
     function getStreamType(stream) {
       if (!stream.encrypt || stream.encrypt === 0) return 'unencrypted';
       const type = (stream.encryptType || '').toLowerCase();
+      // Widevine DRM
       if (type.includes('widevine') || type.includes('fairplay') || type === 'drm') return 'widevine';
-      if (type.includes('private') || type.includes('alibaba') || type.includes('http') || type === '1') return 'proprietary';
-      return 'unencrypted';
+      // Alibaba Proprietary (multiple naming variants)
+      if (type.includes('aliyun') || type.includes('vodencryption') ||
+          type.includes('private') || type.includes('alibaba') ||
+          type.includes('http') || type === '1') return 'proprietary';
+      // Fallback: encrypted แต่ไม่รู้ประเภท = ลอง proprietary (safer default)
+      return 'proprietary';
     }
 
     function getTypeLabel(type) {
