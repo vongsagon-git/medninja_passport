@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aliplayer SDK Minimal Check</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #0f172a; color: #f1f5f9; font-size: 16px; }
+    .test { padding: 12px; margin: 8px 0; border-radius: 6px; }
+    .ok { background: #14532d; }
+    .err { background: #7f1d1d; }
+    .info { background: #1e40af; }
+    pre { font-size: 12px; overflow-x: auto; }
+    button { padding: 12px 24px; margin: 8px 0; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h1>🔬 Aliplayer SDK Minimal Test</h1>
+  <p>ทดสอบ SDK 4 versions ตรงๆ ไม่ผ่านอะไร</p>
+
+  <div id="results"></div>
+
+  <script>
+    const results = document.getElementById('results');
+    const sessionId = 'sdk-check-' + Math.random().toString(36).substring(2, 8);
+
+    function addResult(html, cls) {
+      const div = document.createElement('div');
+      div.className = 'test ' + cls;
+      div.innerHTML = html;
+      results.appendChild(div);
+    }
+
+    async function sendLog(entries) {
+      try {
+        await fetch('/api/china/log/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, entries })
+        });
+      } catch (e) {}
+    }
+
+    // แสดง device info
+    addResult(`
+      <b>Session:</b> ${sessionId}<br>
+      <b>UA:</b> <pre>${navigator.userAgent}</pre>
+      <b>Screen:</b> ${screen.width}x${screen.height} · <b>window:</b> ${window.innerWidth}x${window.innerHeight}<br>
+      <b>Touch:</b> ${'ontouchstart' in window ? 'yes' : 'no'} · <b>Cookie:</b> ${navigator.cookieEnabled ? 'on' : 'off'}
+    `, 'info');
+
+    const logs = [{ level: 'info', msg: 'Device: ' + navigator.userAgent }];
+
+    // Test SDK versions ทีละอัน
+    const versions = [
+      { name: '2.35.4', jsUrl: '//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js' },
+      { name: '2.27.0', jsUrl: '//g.alicdn.com/apsara-media-box/imp-web-player/2.27.0/aliplayer-min.js' },
+      { name: '2.25.1', jsUrl: '//g.alicdn.com/apsara-media-box/imp-web-player/2.25.1/aliplayer-min.js' },
+      { name: '2.15.4 (legacy)', jsUrl: '//g.alicdn.com/de/prismplayer/2.15.4/aliplayer-min.js' },
+      { name: '2.15.4 (self-hosted)', jsUrl: '/vendor/aliplayer/aliplayer.js' }
+    ];
+
+    async function testVersion(v) {
+      return new Promise((resolve) => {
+        // Clean previous
+        delete window.Aliplayer;
+        const oldScripts = document.querySelectorAll('script[data-aliplayer-test]');
+        oldScripts.forEach(s => s.remove());
+
+        const beforeType = typeof window.Aliplayer;
+        const script = document.createElement('script');
+        script.src = v.jsUrl;
+        script.setAttribute('data-aliplayer-test', v.name);
+
+        const start = Date.now();
+        let scriptError = null;
+        let onloadFired = false;
+
+        script.onerror = (e) => {
+          scriptError = 'script.onerror fired';
+          check();
+        };
+        script.onload = () => {
+          onloadFired = true;
+          setTimeout(check, 500); // wait 500ms after load
+        };
+
+        function check() {
+          const afterType = typeof window.Aliplayer;
+          const elapsed = Date.now() - start;
+          const result = {
+            version: v.name,
+            url: v.jsUrl,
+            elapsed,
+            onloadFired,
+            scriptError,
+            beforeType,
+            afterType,
+            success: afterType === 'function'
+          };
+
+          const cls = result.success ? 'ok' : 'err';
+          const emoji = result.success ? '✅' : '❌';
+          addResult(`
+            ${emoji} <b>${v.name}</b><br>
+            <small>URL: ${v.jsUrl}</small><br>
+            elapsed: ${elapsed}ms · onload: ${onloadFired} · error: ${scriptError || 'none'}<br>
+            window.Aliplayer: <code>${beforeType}</code> → <code>${afterType}</code>
+          `, cls);
+
+          logs.push({
+            level: result.success ? 'success' : 'err',
+            msg: `SDK ${v.name}: ${result.success ? 'OK' : 'FAIL'} — after=${afterType} elapsed=${elapsed}ms onload=${onloadFired} error=${scriptError || 'none'}`
+          });
+
+          resolve(result);
+        }
+
+        // Also timeout after 15s
+        setTimeout(() => {
+          if (!onloadFired && !scriptError) {
+            scriptError = 'timeout 15s no onload';
+            check();
+          }
+        }, 15000);
+
+        document.head.appendChild(script);
+      });
+    }
+
+    (async () => {
+      for (const v of versions) {
+        addResult(`⏳ Testing <b>${v.name}</b>...`, 'info');
+        await testVersion(v);
+        // Send logs after each test
+        await sendLog(logs.splice(0, logs.length));
+      }
+      addResult('✨ <b>เสร็จหมดทุก version!</b>', 'info');
+    })();
+  </script>
+</body>
+</html>
