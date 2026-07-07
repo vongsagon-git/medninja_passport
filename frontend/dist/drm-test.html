@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test</title>
   <!-- BUILD_VERSION: 2026-07-07-14:00-v15-selfhost-with-fallback -->
-  <meta name="build-version" content="v15 · 14:00">
+  <meta name="build-version" content="v16 · 14:15">
 
   <!-- Aliplayer SDK 2.35.4 - Self-host (Server เรา) + fallback CDN Alibaba -->
   <!-- ทดสอบ Cache Theory ยืนยันแล้ว: g.alicdn.com ช้ามากจาก network ไทย/มือถือ -->
@@ -161,7 +161,7 @@
   <div class="header-row">
     <h1>🔐 MedNinja DRM Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v15 · 14:00</span>
+      <span class="version-badge" id="versionBadge">v16 · 14:15</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -285,18 +285,21 @@
       log('❌ EME ไม่รองรับใน browser นี้', 'err');
     }
 
-    // Wait for SDK (up to 30s)
+    // Wait for SDK (up to 30s) — ครอบทุก export type (SDK 2.35.4 export เป็น object)
     const sdkStart = Date.now();
     const sdkPoll = setInterval(() => {
       const elapsed = Math.round((Date.now() - sdkStart) / 1000);
       const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
-      if (typeof alp === 'function') {
+      // SDK 2.35.4 = object (UMD pattern), SDK เก่า = function
+      // เช็คแบบครอบทุกกรณี: มี Aliplayer + callable (function หรือ object ที่มี prototype)
+      const isReady = alp && (typeof alp === 'function' || typeof alp === 'object');
+      if (isReady) {
         clearInterval(sdkPoll);
         if (!window.Aliplayer) window.Aliplayer = alp;
-        log('✅ Aliplayer พร้อม (โหลดใช้เวลา ' + elapsed + 's)', 'success');
+        log('✅ Aliplayer พร้อม (โหลดใช้เวลา ' + elapsed + 's, type=' + typeof alp + ')', 'success');
       } else if (elapsed >= 30) {
         clearInterval(sdkPoll);
-        log('❌ Aliplayer โหลดไม่สำเร็จหลัง 30s — SDK URL อาจถูก block', 'err');
+        log('❌ Aliplayer โหลดไม่สำเร็จหลัง 30s (type=' + typeof alp + ')', 'err');
       } else if (elapsed % 5 === 0 && elapsed > 0) {
         log('⏳ รอ Aliplayer... ' + elapsed + 's (type=' + typeof alp + ')', 'warn');
       }
@@ -346,8 +349,9 @@
       localStorage.setItem(LAST_VID_KEY, videoId);
 
       const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
-      if (typeof alp !== 'function') {
-        log('❌ Aliplayer ยังไม่พร้อม', 'err');
+      // ครอบทุก export type (SDK 2.35.4 export เป็น object, SDK เก่า export เป็น function)
+      if (!alp || (typeof alp !== 'function' && typeof alp !== 'object')) {
+        log('❌ Aliplayer ยังไม่พร้อม (type=' + typeof alp + ')', 'err');
         return;
       }
       if (!window.Aliplayer) window.Aliplayer = alp;
