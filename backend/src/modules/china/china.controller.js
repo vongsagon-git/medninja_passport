@@ -77,7 +77,9 @@ async function getPlayInfo(req, res) {
   try {
     const result = await client.request('GetPlayInfo', {
       VideoId: videoId,
-      Formats: 'mp4,m3u8',
+      Formats: 'mp4,m3u8,mpd',
+      StreamType: 'video,audio',
+      ResultType: 'Multiple',
       AuthTimeout: 3000
     }, { method: 'POST' })
 
@@ -151,4 +153,62 @@ async function submitTranscode(req, res) {
   }
 }
 
-module.exports = { getPlayAuth, listVideos, getPlayInfo, listTemplateGroups, submitTranscode }
+// Get transcoding template group detail (see all templates inside)
+async function getTemplateGroup(req, res) {
+  const { groupId } = req.params
+  if (!groupId) return res.status(400).json({ error: 'groupId required' })
+  try {
+    const result = await client.request('GetTranscodeTemplateGroup', {
+      TranscodeTemplateGroupId: groupId
+    }, { method: 'POST' })
+    const group = result.TranscodeTemplateGroup || {}
+    const templates = (group.TranscodeTemplateList || []).map(t => ({
+      templateId: t.TranscodeTemplateId,
+      templateName: t.TranscodeTemplateName,
+      definition: t.Definition,
+      videoCodec: t.Video && t.Video.Codec,
+      videoBitrate: t.Video && t.Video.Bitrate,
+      videoWidth: t.Video && t.Video.Width,
+      videoHeight: t.Video && t.Video.Height,
+      videoRemove: t.Video && t.Video.Remove,
+      audioCodec: t.Audio && t.Audio.Codec,
+      audioBitrate: t.Audio && t.Audio.Bitrate,
+      audioRemove: t.Audio && t.Audio.Remove,
+      container: t.Container && t.Container.Format,
+      muxConfig: t.MuxConfig,
+      encryptSetting: t.EncryptSetting,
+      transConfig: t.TransConfig
+    }))
+    return res.json({
+      groupId: group.TranscodeTemplateGroupId,
+      name: group.Name,
+      isDefault: group.IsDefault,
+      templateCount: templates.length,
+      templates,
+      rawTemplateList: group.TranscodeTemplateList
+    })
+  } catch (err) {
+    console.error('[china.getTemplateGroup]', err.message, err.code)
+    return res.status(500).json({ error: err.message, code: err.code })
+  }
+}
+
+// Get transcode job status
+async function getTranscodeStatus(req, res) {
+  const { taskId } = req.params
+  if (!taskId) return res.status(400).json({ error: 'taskId required' })
+  try {
+    const result = await client.request('GetTranscodeTask', {
+      TranscodeTaskId: taskId
+    }, { method: 'POST' })
+    return res.json({
+      task: result.TranscodeTask,
+      status: result.TranscodeTask && result.TranscodeTask.TaskStatus
+    })
+  } catch (err) {
+    console.error('[china.getTranscodeStatus]', err.message, err.code)
+    return res.status(500).json({ error: err.message, code: err.code })
+  }
+}
+
+module.exports = { getPlayAuth, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus }

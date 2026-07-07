@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { getPlayAuth, listVideos, getPlayInfo, listTemplateGroups, submitTranscode } = require('./china.controller')
+const { getPlayAuth, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus } = require('./china.controller')
 const { pushLog, getLogs, clearLogs } = require('./china.logs')
 
 router.use(express.json({ limit: '512kb' }))
