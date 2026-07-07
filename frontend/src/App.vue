@@ -175,6 +175,8 @@ export default {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* ⭐ CountryBanner บนสุด (fixed) — ดัน content ลงมาให้เห็นเต็ม */
+  padding-top: var(--country-banner-h, 28px);
 }
 
 .main-content {

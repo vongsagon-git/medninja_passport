@@ -194,7 +194,8 @@ export default {
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   position: sticky;
-  top: 0;
+  /* ⭐ ต่อจาก CountryBanner ที่อยู่บนสุด (fixed top:0) */
+  top: var(--country-banner-h, 28px);
   z-index: 200;
   transition: box-shadow var(--transition-base), border-color var(--transition-base);
 }

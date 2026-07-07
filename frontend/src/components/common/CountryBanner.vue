@@ -147,6 +147,17 @@ const tone = computed(() => {
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans Thai', sans-serif;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+  /* ⭐ กำหนดความสูง banner (26px desktop, 22px mobile) ผ่าน CSS variable */
+  height: 28px;
+}
+</style>
+<style>
+/* Global CSS variable — ให้ Navbar / App.vue รู้ความสูง banner */
+:root {
+  --country-banner-h: 28px;
+}
+@media (max-width: 640px) {
+  :root { --country-banner-h: 24px; }
 }
 
 .tone-cn      { background: linear-gradient(90deg, #7f1d1d 0%, #991b1b 50%, #7f1d1d 100%); color: #fff; }
