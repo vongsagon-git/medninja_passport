@@ -5,8 +5,8 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test - Stream Selector</title>
-  <!-- BUILD_VERSION: 2026-07-07-17:30-v28-stream-selector -->
-  <meta name="build-version" content="v28 · 17:30">
+  <!-- BUILD_VERSION: 2026-07-07-17:45-v29-encrypted-only -->
+  <meta name="build-version" content="v29 · 17:45">
 
   <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
   <script src="/vendor/aliplayer/aliplayer-2.35.4.js"></script>
@@ -199,7 +199,7 @@
   <div class="header-row">
     <h1>🔐 DRM Stream Selector</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v28 · 17:30</span>
+      <span class="version-badge" id="versionBadge">v29 · 17:45</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -219,7 +219,7 @@
   </div>
 
   <!-- Streams grid (populated by loadStreams()) -->
-  <div class="streams-title">📺 Streams ทั้งหมดในวิดีโอ (คลิกเพื่อเล่น)</div>
+  <div class="streams-title">🔐 Encrypted Streams (คลิกเพื่อเล่น) — Widevine vs Alibaba Proprietary</div>
   <div class="streams-grid" id="streamsGrid">
     <div style="color: #94a3b8; padding: 20px; text-align: center; grid-column: 1/-1;">
       กรอก Video ID แล้วกด "Load Streams" เพื่อดูรายการ...
@@ -357,12 +357,12 @@
           return;
         }
 
-        // Filter: เก็บเฉพาะ m3u8 (streaming) — ข้าม mov/mp4 ต้นฉบับ
-        const playableStreams = streams.filter(s => s.format === 'm3u8' || s.encrypt);
+        // Filter: เก็บเฉพาะ encrypted streams (Widevine + Proprietary) - ข้าม original mov/mp4
+        const playableStreams = streams.filter(s => s.encrypt && s.encrypt !== 0 && s.format === 'm3u8');
 
         if (playableStreams.length === 0) {
-          grid.innerHTML = '<div style="color:#fbbf24;padding:20px;text-align:center;grid-column:1/-1;">⚠️ ไม่มี encrypted m3u8 stream (แค่ mp4/mov original)</div>';
-          log('⚠️ ไม่มี playable streams', 'warn');
+          grid.innerHTML = '<div style="color:#fbbf24;padding:20px;text-align:center;grid-column:1/-1;">⚠️ ไม่มี encrypted m3u8 stream (video ยังไม่ transcode ด้วย DRM/Proprietary?)</div>';
+          log('⚠️ ไม่มี encrypted streams', 'warn');
           return;
         }
 
