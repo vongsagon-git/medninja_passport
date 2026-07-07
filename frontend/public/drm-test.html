@@ -5,11 +5,49 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Comparison - Side by Side</title>
-  <!-- BUILD_VERSION: 2026-07-07-18:15-v31-side-by-side-2videos -->
-  <meta name="build-version" content="v31 · 18:15">
+  <!-- BUILD_VERSION: 2026-07-07-19:00-v32-robust-sdk-loader -->
+  <meta name="build-version" content="v32 · 19:00">
 
   <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
-  <script src="/vendor/aliplayer/aliplayer-2.35.4.js"></script>
+  <script>
+    // Robust SDK loader — ทำงานได้กับ Incognito + Edge (ไม่พึ่ง browser cache)
+    window.__sdkStatus = { loaded: false, method: null, error: null };
+
+    function loadSDKViaScript(url, callback) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = false;
+      s.onload = function() {
+        // ตรวจ Aliplayer หลาย location
+        var alp = window.Aliplayer;
+        if (!alp && typeof Aliplayer !== 'undefined') alp = Aliplayer;
+        if (alp) {
+          window.Aliplayer = alp;
+          window.__sdkStatus.loaded = true;
+          window.__sdkStatus.method = 'script-tag';
+          if (callback) callback(true);
+        } else {
+          window.__sdkStatus.error = 'onload fired but Aliplayer undefined';
+          if (callback) callback(false);
+        }
+      };
+      s.onerror = function() {
+        window.__sdkStatus.error = 'script.onerror';
+        if (callback) callback(false);
+      };
+      document.head.appendChild(s);
+    }
+
+    // โหลด SDK: self-host primary, CDN fallback
+    loadSDKViaScript('/vendor/aliplayer/aliplayer-2.35.4.js', function(ok) {
+      if (!ok && !window.Aliplayer) {
+        console.warn('[SDK] self-host failed, trying CDN Alibaba');
+        loadSDKViaScript('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', function(ok2) {
+          if (!ok2) console.error('[SDK] CDN fallback also failed');
+        });
+      }
+    });
+  </script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -204,7 +242,7 @@
   <div class="header-row">
     <h1>🔐 DRM Comparison — Side by Side</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v31 · 18:15</span>
+      <span class="version-badge" id="versionBadge">v32 · 19:00</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -450,14 +488,19 @@
                            (typeof alp === 'object' && Object.keys(alp).length > 0));
           if (isReady) {
             if (!window.Aliplayer) window.Aliplayer = alp;
-            setFlow(side, 3, 'pass', elapsed + 's · ' + typeof alp);
-            log(side, '✅ SDK พร้อม', 'success');
+            const method = (window.__sdkStatus && window.__sdkStatus.method) || 'unknown';
+            setFlow(side, 3, 'pass', elapsed + 's · ' + method);
+            log(side, '✅ SDK พร้อม (' + method + ')', 'success');
             resolve(true);
-          } else if (elapsed >= 15) {
-            setFlow(side, 3, 'fail', 'timeout');
-            log(side, '❌ SDK timeout', 'err');
+          } else if (elapsed >= 30) {
+            const err = (window.__sdkStatus && window.__sdkStatus.error) || 'timeout';
+            setFlow(side, 3, 'fail', err);
+            log(side, '❌ SDK timeout: ' + err, 'err');
             resolve(false);
           } else {
+            if (elapsed % 5 === 0 && elapsed > 0) {
+              log(side, '⏳ รอ SDK... ' + elapsed + 's (type=' + typeof alp + ')', 'warn');
+            }
             setTimeout(check, 300);
           }
         };
