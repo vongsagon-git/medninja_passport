@@ -344,6 +344,14 @@ app.use('/api', (req, res) => {
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
+  // Vendor libs (aliplayer, etc.) — serve เป็นไฟล์เฉพาะ ไม่ผ่าน SPA fallback
+  app.use('/vendor', express.static(path.join(__dirname, '../../frontend/dist/vendor'), {
+    maxAge: '30d',
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+      if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=utf-8')
+    }
+  }))
   // JS/CSS chunks มี hash → cache ได้นาน
   app.use('/assets', express.static(path.join(__dirname, '../../frontend/dist/assets'), { maxAge: '30d', immutable: true }))
   // ไฟล์อื่นๆ (favicon, logo, robots.txt) cache สั้น
