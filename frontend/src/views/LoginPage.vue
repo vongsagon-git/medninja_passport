@@ -1,18 +1,6 @@
 <template>
   <div class="auth-page">
-    <!-- ── Thin device header (top strip) ── -->
-    <div class="device-header" :title="deviceUA">
-      <span class="dh-item">
-        <span class="dh-dot" :class="'dh-dot-' + deviceCategory"></span>
-        <span class="dh-label">{{ deviceCategoryLabel }}</span>
-      </span>
-      <span class="dh-sep">·</span>
-      <span class="dh-item">{{ deviceOS }}</span>
-      <span class="dh-sep">·</span>
-      <span class="dh-item">{{ deviceBrowser }}</span>
-      <span class="dh-sep dh-hide-sm">·</span>
-      <span class="dh-item dh-hide-sm">{{ screenSize }}</span>
-    </div>
+    <!-- Device header ย้ายไปอยู่ใน CountryBanner (global banner บนสุด) -->
 
     <!-- ── Aurora background ── -->
     <div class="aurora" aria-hidden="true">
