@@ -5,9 +5,9 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Debug Checklist</title>
-  <!-- BUILD_VERSION: 2026-07-07-12:45-v10-vendor-route-fix -->
-  <meta name="build-version" content="v10 · 12:45">
-  <meta name="build-time" content="2026-07-07T05:45:00Z">
+  <!-- BUILD_VERSION: 2026-07-07-13:00-v11-fast-whoami-only -->
+  <meta name="build-version" content="v11 · 13:00">
+  <meta name="build-time" content="2026-07-07T06:00:00Z">
 
   <!-- Aliplayer SDK 2.35.4 - Self-hosted -->
   <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
@@ -269,7 +269,7 @@
     <div class="header">
       <h1>🔐 DRM Debug Checklist</h1>
       <div style="display: flex; gap: 6px; align-items: center;">
-        <span class="version-badge" id="versionBadge">v10 · 12:45</span>
+        <span class="version-badge" id="versionBadge">v11 · 13:00</span>
         <button class="reload-btn" onclick="location.reload(true)">🔄 Hard Reload</button>
       </div>
     </div>
@@ -519,48 +519,32 @@
     // ═══════════════════════════════════════════════════════════
     async function detectIP() {
       setStep('ipapi', 'running');
-      log('🌍 Detecting IP + country...', 'info');
+      log('🌍 Detecting IP + country (backend)...', 'info');
+
+      // ใช้แค่ backend /whoami (Cloudflare header)
+      // ไม่เรียก 3rd party — เร็ว + ไม่ถูก block จีน
       try {
-        // Try ipapi.co (works most places, may be blocked in CN)
-        const res = await fetch('https://ipapi.co/json/', { timeout: 5000 });
+        const res = await fetch('/api/china/whoami');
         const data = await res.json();
         const ip = data.ip || '-';
-        const country = data.country_name || data.country || '-';
-        const countryCode = data.country_code || '-';
-        const region = data.region || '-';
-        const city = data.city || '-';
-        const isp = data.org || '-';
-
-        document.getElementById('ipAddr').textContent = ip;
-        document.getElementById('ipRegion').textContent = region;
-        document.getElementById('ipCity').textContent = city;
-        document.getElementById('ipIsp').textContent = isp;
-
+        const countryCode = data.country || '-';
         const flag = getFlag(countryCode);
         const countryClass = countryCode === 'CN' ? 'country-cn'
                           : countryCode === 'TH' ? 'country-th'
                           : 'country-other';
+        document.getElementById('ipAddr').textContent = ip;
         document.getElementById('ipCountry').innerHTML =
-          `<span class="flag">${flag}</span><span class="${countryClass}">${country} (${countryCode})</span>`;
-
-        log(`✅ IP: ${ip} — ${country} (${countryCode})`, 'success');
-        setStep('ipapi', 'pass', `${ip} · ${country} (${countryCode})`);
-        return { ip, country, countryCode };
+          `<span class="flag">${flag}</span><span class="${countryClass}">${countryCode}</span>`;
+        // City/ISP = ไม่มีจาก Cloudflare header — แสดง "-"
+        document.getElementById('ipCity').textContent = '-';
+        document.getElementById('ipIsp').textContent = '-';
+        log(`✅ IP: ${ip} — ${countryCode} (Cloudflare)`, 'success');
+        setStep('ipapi', 'pass', `${ip} · ${countryCode}`);
+        return { ip, country: countryCode, countryCode };
       } catch (err) {
-        // Fallback: try backend
-        log('⚠️ ipapi.co ล้มเหลว, ลองผ่าน backend...', 'warn');
-        try {
-          const res2 = await fetch('/api/china/whoami');
-          const data2 = await res2.json();
-          document.getElementById('ipAddr').textContent = data2.ip || '-';
-          document.getElementById('ipCountry').textContent = data2.country || '-';
-          setStep('ipapi', 'pass', `${data2.ip} · ${data2.country} (backend)`);
-          return data2;
-        } catch (err2) {
-          log('❌ IP detection ล้มเหลว: ' + err.message, 'err');
-          setStep('ipapi', 'fail', 'ตรวจไม่ได้');
-          return null;
-        }
+        log('❌ IP detection ล้มเหลว: ' + err.message, 'err');
+        setStep('ipapi', 'fail', err.message);
+        return null;
       }
     }
     function getFlag(cc) {
