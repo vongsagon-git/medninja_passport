@@ -43,17 +43,19 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response.data,
   async (error) => {
-    // LINE ยังไม่เชื่อม → กลับไปหน้า /my ให้เชื่อม
+    // ⭐ Country-aware home URL
+    const myHome = localStorage.getItem('login_country') === 'CN' ? '/my-cn' : '/my'
+    // LINE ยังไม่เชื่อม → กลับไปหน้า my ให้เชื่อม
     if (error.response?.status === 403 && error.response?.data?.message === 'LINE_REQUIRED') {
-      if (window.location.pathname !== '/my') {
-        window.location.href = '/my'
+      if (window.location.pathname !== myHome) {
+        window.location.href = myHome
       }
       return Promise.reject(error)
     }
     // LINE unfollow → บล็อกทุกอย่าง
     if (error.response?.status === 403 && error.response?.data?.code === 'LINE_UNFOLLOW') {
       alert('กรุณา Add LINE @medninja เพื่อเข้าใช้งาน\n\nระบบตรวจพบว่าคุณยังไม่ได้ Follow LINE Official Account')
-      window.location.href = '/my'
+      window.location.href = myHome
       return Promise.reject(error)
     }
     if (error.response?.status === 401) {

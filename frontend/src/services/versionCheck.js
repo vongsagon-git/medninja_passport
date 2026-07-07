@@ -42,13 +42,14 @@ export function startVersionCheck() {
           return
         }
 
-        // ถ้าดู VDO ปกติอยู่ → แสดง toast + 5 นาทีไม่ refresh → redirect /my
+        // ถ้าดู VDO ปกติอยู่ → แสดง toast + 5 นาทีไม่ refresh → redirect my home
         if (onNewVersion) onNewVersion()
         setTimeout(() => {
           if (newVersionAvailable) {
             const p = window.location.pathname
-            if (p.includes('/my/watch/') || p.includes('/demo/watch/')) {
-              window.location.href = '/my'
+            if (p.includes('/my/watch/') || p.includes('/my-cn/watch/') || p.includes('/demo/watch/')) {
+              const myHome = localStorage.getItem('login_country') === 'CN' ? '/my-cn' : '/my'
+              window.location.href = myHome
             }
           }
         }, 5 * 60 * 1000)
