@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test - Flow Diagnostics</title>
   <!-- BUILD_VERSION: 2026-07-07-16:45-v26-addEventListener -->
-  <meta name="build-version" content="v34 · 19:45 Widevine">
+  <meta name="build-version" content="v35 · 20:00 Widevine">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -190,7 +190,7 @@
   <div class="header-row">
     <h1>🔐 DRM Flow Diagnostics</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v34 · 19:45 Widevine</span>
+      <span class="version-badge" id="versionBadge">v35 · 20:00 Widevine</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -250,6 +250,11 @@
   </div>
 
   <!-- Video Player -->
+  <!-- Currently Playing Info -->
+  <div id="nowPlaying" style="background: rgba(74, 222, 128, 0.15); border: 1px solid rgba(74, 222, 128, 0.4); color: #4ade80; padding: 8px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; display: none;">
+    🎬 <b>กำลังเล่น:</b> <span id="nowPlayingTitle">-</span>
+  </div>
+
   <div class="player-box">
     <div id="J_prismPlayer"></div>
   </div>
@@ -566,15 +571,6 @@
         return;
       }
 
-      // 🔒 LOCK: หน้านี้เล่นได้เฉพาะ Video Widevine เท่านั้น
-      if (videoId !== '70084e4a79dc71f185e5e6e7c74a0102') {
-        log('🚨 [Flow 4] Video ID ไม่ตรงกับ Widevine! หน้านี้เล่นได้เฉพาะ 70084e4a...', 'err');
-        setFlow('player', 'fail', 'หน้านี้เล่นได้เฉพาะ Video Widevine (70084e4a...) เท่านั้น');
-        // Force reset input to correct video
-        document.getElementById('vidInput').value = '70084e4a79dc71f185e5e6e7c74a0102';
-        return;
-      }
-
       setFlow('player', 'running', 'ตรวจ pre-req...');
 
       // Check pre-req: Aliplayer
@@ -710,12 +706,36 @@
         (data.videos || []).forEach(v => {
           const span = document.createElement('span');
           span.className = 'quick';
-          span.textContent = v.videoId.substring(0, 8) + '…';
-          span.title = v.videoId;
-          span.onclick = () => {
+          // แสดงชื่อ + ID สั้น (title จาก Alibaba VOD)
+          const shortId = v.videoId.substring(0, 8);
+          const displayTitle = v.title ? v.title.substring(0, 20) : '';
+          span.textContent = displayTitle ? (displayTitle + ' [' + shortId + ']') : (shortId + '…');
+          span.title = (v.title || '') + ' — ' + v.videoId;
+          span.onclick = async () => {
             document.getElementById('vidInput').value = v.videoId;
             localStorage.setItem(LAST_VID_KEY, v.videoId);
-            log('เลือก video: ' + v.videoId.substring(0, 8) + '...', 'info');
+            const displayName = v.title || v.videoId.substring(0, 12);
+            log('🔄 เปลี่ยน video: ' + displayName + ' - restart ทุก flow + auto-play', 'success');
+            // Update "Now Playing" banner
+            const npEl = document.getElementById('nowPlaying');
+            const npTitle = document.getElementById('nowPlayingTitle');
+            if (npEl && npTitle) {
+              npEl.style.display = 'block';
+              npTitle.textContent = displayName + ' (' + v.videoId.substring(0, 8) + '...)';
+            }
+            // Cleanup player + reset flows
+            if (typeof player !== 'undefined' && player) {
+              try { player.dispose(); } catch (e) {}
+              player = null;
+            }
+            cachedSTS = null;
+            ['sts', 'manifest', 'sdk', 'player'].forEach(id => setFlow(id, 'pending', ''));
+            // Run all flows sequentially + auto-play video ใหม่
+            await testSTS();
+            await testManifest();
+            await testSDK();
+            // Auto-trigger player (เล่นเลยไม่ต้องกด)
+            setTimeout(() => testPlayer(), 300);
           };
           picks.appendChild(span);
         });
