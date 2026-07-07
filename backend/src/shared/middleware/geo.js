@@ -43,20 +43,18 @@ function shouldLog (ip) {
 }
 
 function extractIp (req) {
-  // Priority: Cloudflare > DO proxy > direct
-  const candidates = [
-    req.headers['cf-connecting-ip'],   // Cloudflare (ถ้ามี)
-    req.headers['x-forwarded-for'],     // DO/nginx proxy
-    req.headers['x-real-ip'],           // nginx
-    req.socket?.remoteAddress,          // Direct connection
-    req.ip                              // Express fallback
-  ]
-  for (const raw of candidates) {
-    if (!raw) continue
-    // X-Forwarded-For อาจเป็น comma-separated
-    const ip = String(raw).split(',')[0].trim()
-    if (ip && ip !== 'unknown') return ip
-  }
+  // ⭐ Priority: req.ip (Express + trust proxy: 1) — ปลอมไม่ได้จาก DevTools
+  //    เพราะ Express อ่าน rightmost IP ใน X-Forwarded-For ที่ DO append เอง
+  //    User ส่ง X-Forwarded-For มาเอง = DO ทับด้วย IP จริงตัวขวาสุด
+  //
+  // ห้าม trust: x-forwarded-for (raw), x-real-ip → attacker set ผ่าน DevTools ได้
+  // ห้าม trust: socket.remoteAddress → เป็น IP ของ DO ไม่ใช่ client
+  if (req.ip) return req.ip
+
+  // Fallback: ถ้า req.ip ไม่มี (dev/localhost) → socket
+  const sock = req.socket?.remoteAddress
+  if (sock) return sock
+
   return ''
 }
 
