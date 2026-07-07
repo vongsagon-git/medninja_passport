@@ -68,15 +68,27 @@ function isFromCloudflare (ip) {
 }
 
 function extractIp (req) {
-  // 1. cf-connecting-ip ถ้า upstream = Cloudflare (spoof ยาก เพราะ CF ทับเสมอ)
   const upstreamIp = req.ip || req.socket?.remoteAddress || ''
+
+  // 1. cf-connecting-ip (มาจาก Cloudflare — trust ที่สุด ถ้ามี)
+  const cfIp = req.headers['cf-connecting-ip']
+  if (cfIp) return String(cfIp).trim()
+
+  // 2. ถ้า upstream = Cloudflare แต่ไม่มี cf-connecting-ip
+  //    → อ่าน x-forwarded-for แล้วเอา LEFTMOST (IP client จริง)
+  //    Format: "<client-ip>, <cloudflare-ip>"
   if (isFromCloudflare(upstreamIp)) {
-    const cfIp = req.headers['cf-connecting-ip']
-    if (cfIp) return String(cfIp).trim()
+    const xff = req.headers['x-forwarded-for']
+    if (xff) {
+      const first = String(xff).split(',')[0].trim()
+      if (first) return first
+    }
   }
-  // 2. req.ip (Express + trust proxy: 1) — DO ทับ X-Forwarded-For rightmost
+
+  // 3. req.ip (Express + trust proxy: 1) — direct hit DO (ไม่ผ่าน CF)
   if (req.ip) return req.ip
-  // 3. Fallback socket (dev/localhost)
+
+  // 4. Fallback socket
   return req.socket?.remoteAddress || ''
 }
 
