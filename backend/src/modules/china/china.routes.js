@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { getPlayAuth, getStsToken, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus } = require('./china.controller')
-const { pushLog, getLogs, clearLogs } = require('./china.logs')
+const { pushLog, getLogs, clearLogs, pushTestResult, getTestResults } = require('./china.logs')
 
 router.use(express.json({ limit: '512kb' }))
 
@@ -10,6 +10,65 @@ router.get('/playauth/:videoId', getPlayAuth)
 
 // GET /api/china/sts/:videoId — สำหรับ Widevine/FairPlay DRM video
 router.get('/sts/:videoId', getStsToken)
+
+// GET /api/china/whoami — server-side IP + country detection (fallback ถ้า ipapi.co block)
+router.get('/whoami', (req, res) => {
+  const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
+  const country = req.headers['cf-ipcountry'] || 'unknown'  // Cloudflare header
+  const ray = req.headers['cf-ray'] || ''
+  const ua = req.headers['user-agent'] || ''
+  res.json({
+    ip,
+    country,
+    countryName: country,
+    cfRay: ray,
+    userAgent: ua,
+    detectedBy: 'cloudflare-header'
+  })
+})
+
+// POST /api/china/log/test-result — บันทึกผล DRM test (device + browser + step results)
+router.post('/log/test-result', (req, res) => {
+  const body = req.body || {}
+  const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
+  const country = req.headers['cf-ipcountry'] || 'unknown'
+  pushTestResult({
+    sessionId: String(body.sessionId || 'unknown').substring(0, 32),
+    buildVer: String(body.buildVer || '').substring(0, 40),
+    status: String(body.status || 'unknown').substring(0, 20),
+    device: body.device || null,
+    stepStatus: body.stepStatus || null,
+    details: body.details || null,
+    ip,
+    country,
+    ua: (req.headers['user-agent'] || '').substring(0, 200)
+  })
+  res.json({ ok: true })
+})
+
+// GET /api/china/log/test-results — admin/AI ดูผลรวมทั้งหมด
+router.get('/log/test-results', (req, res) => {
+  const list = getTestResults({ sessionId: req.query.sessionId, status: req.query.status })
+  if (req.query.format === 'text') {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    const txt = list.map(r => {
+      const dev = r.device || {}
+      const steps = r.stepStatus || {}
+      const passCount = Object.values(steps).filter(v => v === 'pass').length
+      const failCount = Object.values(steps).filter(v => v === 'fail').length
+      const totalSteps = Object.keys(steps).length
+      return [
+        `[${r.ts}] session=${(r.sessionId || '').substring(0, 8)} country=${r.country} ip=${r.ip}`,
+        `  Device: ${dev.devType || '?'} · ${dev.os || '?'} · ${dev.browser || '?'} ${dev.browserVer || ''}`,
+        `  Status: ${r.status} · steps: ${passCount}✅ / ${failCount}❌ / ${totalSteps}`,
+        `  Build: ${r.buildVer}`,
+        r.details && Object.keys(r.details).length ? `  Details: ${JSON.stringify(r.details)}` : null
+      ].filter(Boolean).join('\n')
+    }).join('\n\n')
+    return res.send(txt || '(no test results yet)')
+  }
+  res.json({ count: list.length, results: list })
+})
 
 // GET /api/china/videos — list videos ใน Alibaba VOD account (สำหรับ AI debug)
 router.get('/videos', listVideos)

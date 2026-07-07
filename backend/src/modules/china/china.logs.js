@@ -3,6 +3,11 @@
 const MAX_LOGS = 500
 const logs = []
 
+// Test result store — บันทึกผลการ test DRM
+// Cap 200 test results
+const MAX_TESTS = 200
+const testResults = []
+
 function pushLog(entry) {
   logs.push({
     ts: new Date().toISOString(),
@@ -27,4 +32,24 @@ function clearLogs() {
   logs.length = 0
 }
 
-module.exports = { pushLog, getLogs, clearLogs }
+// ═══════════ Test results ═══════════
+function pushTestResult(entry) {
+  testResults.push({
+    ts: new Date().toISOString(),
+    ...entry
+  })
+  if (testResults.length > MAX_TESTS) testResults.shift()
+}
+
+function getTestResults(filter = {}) {
+  let result = [...testResults]
+  if (filter.sessionId) {
+    result = result.filter(r => r.sessionId === filter.sessionId)
+  }
+  if (filter.status) {
+    result = result.filter(r => r.status === filter.status)
+  }
+  return result.reverse() // newest first
+}
+
+module.exports = { pushLog, getLogs, clearLogs, pushTestResult, getTestResults }
