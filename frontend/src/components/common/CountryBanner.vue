@@ -71,13 +71,17 @@ const tone = computed(() => {
 
 <style scoped>
 .country-banner {
-  position: sticky;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 900;
+  z-index: 99997;
   color: #fff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+/* กัน content ถูก banner บัง — ดัน main-content ลงมา */
+:global(body:has(.country-banner)) {
+  padding-top: 48px;
 }
 .tone-cn {
   background: linear-gradient(90deg, #dc2626 0%, #ef4444 50%, #dc2626 100%);
