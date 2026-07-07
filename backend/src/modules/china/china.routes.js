@@ -1,12 +1,15 @@
 const express = require('express')
 const router = express.Router()
-const { getPlayAuth, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus } = require('./china.controller')
+const { getPlayAuth, getStsToken, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus } = require('./china.controller')
 const { pushLog, getLogs, clearLogs } = require('./china.logs')
 
 router.use(express.json({ limit: '512kb' }))
 
-// GET /api/china/playauth/:videoId — public (MVP)
+// GET /api/china/playauth/:videoId — สำหรับ video ไม่มี DRM
 router.get('/playauth/:videoId', getPlayAuth)
+
+// GET /api/china/sts/:videoId — สำหรับ Widevine/FairPlay DRM video
+router.get('/sts/:videoId', getStsToken)
 
 // GET /api/china/videos — list videos ใน Alibaba VOD account (สำหรับ AI debug)
 router.get('/videos', listVideos)

@@ -39,6 +39,53 @@ async function getPlayAuth(req, res) {
   }
 }
 
+// STS token — สำหรับ DRM playback (Widevine/FairPlay)
+// Alibaba: DRM ต้องใช้ STS (accessKeyId/Secret/securityToken) ไม่ใช่ PlayAuth
+const stsClient = new RPCClient({
+  accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
+  accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
+  endpoint: 'https://sts.aliyuncs.com',
+  apiVersion: '2015-04-01'
+})
+
+async function getStsToken(req, res) {
+  const { videoId } = req.params
+  if (!videoId) {
+    return res.status(400).json({ error: 'videoId is required' })
+  }
+
+  const roleArn = process.env.ALIBABA_VOD_ROLE_ARN
+  if (!roleArn) {
+    return res.status(500).json({
+      error: 'ALIBABA_VOD_ROLE_ARN not configured',
+      hint: 'Create RAM role with AliyunVODReadOnlyAccess and set ARN in env'
+    })
+  }
+
+  try {
+    const result = await stsClient.request('AssumeRole', {
+      RoleArn: roleArn,
+      RoleSessionName: 'medninja-drm-' + Date.now(),
+      DurationSeconds: 3600
+    }, { method: 'POST' })
+
+    return res.json({
+      accessKeyId: result.Credentials.AccessKeyId,
+      accessKeySecret: result.Credentials.AccessKeySecret,
+      securityToken: result.Credentials.SecurityToken,
+      expiration: result.Credentials.Expiration,
+      videoId,
+      region: process.env.ALIBABA_VOD_REGION || 'ap-southeast-1'
+    })
+  } catch (err) {
+    console.error('[china.getStsToken] error:', err.message, err.code)
+    return res.status(500).json({
+      error: err.message,
+      code: err.code || 'UNKNOWN'
+    })
+  }
+}
+
 // List videos ใน account — เพื่อให้ AI เห็นว่ามี video อะไรบ้าง
 async function listVideos(req, res) {
   try {
@@ -211,4 +258,4 @@ async function getTranscodeStatus(req, res) {
   }
 }
 
-module.exports = { getPlayAuth, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus }
+module.exports = { getPlayAuth, getStsToken, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus }

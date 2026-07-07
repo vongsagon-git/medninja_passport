@@ -258,21 +258,25 @@
         return;
       }
 
-      log('กำลังขอ PlayAuth token...', 'info');
+      log('กำลังขอ STS token (สำหรับ DRM)...', 'info');
       try {
-        const res = await fetch('/api/china/playauth/' + videoId);
+        const res = await fetch('/api/china/sts/' + videoId);
         const data = await res.json();
-        if (!data.playAuth) {
-          log('❌ No playAuth: ' + JSON.stringify(data), 'err');
+        if (!data.accessKeyId || !data.securityToken) {
+          log('❌ No STS: ' + JSON.stringify(data), 'err');
           return;
         }
-        log('✅ PlayAuth ได้ (' + data.playAuth.length + ' chars)', 'success');
+        log('✅ STS token ได้ (expires: ' + data.expiration + ')', 'success');
 
-        log('กำลังสร้าง Aliplayer (DRM mode)...', 'info');
+        log('กำลังสร้าง Aliplayer (DRM mode with STS)...', 'info');
         const player = new Aliplayer({
           id: 'J_prismPlayer',
           vid: videoId,
-          playauth: data.playAuth,
+          // STS credentials (สำหรับ Widevine/FairPlay DRM)
+          accessKeyId: data.accessKeyId,
+          accessKeySecret: data.accessKeySecret,
+          securityToken: data.securityToken,
+          region: data.region || 'ap-southeast-1',
           width: '100%',
           height: '400px',
           autoplay: false,
@@ -288,7 +292,7 @@
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           },
           // DRM specific
-          encryptType: 0  // 0 = auto detect, 1 = Alibaba proprietary, 2 = DRM
+          encryptType: 2  // 2 = DRM (Widevine/FairPlay)
         }, function (p) {
           log('✅ Aliplayer instance created', 'success');
         });
