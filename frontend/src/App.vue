@@ -10,6 +10,7 @@
     </Transition>
 
     <Navbar v-if="!isImmersive" />
+    <CountryBanner />
     <main class="main-content">
       <router-view v-slot="{ Component, route }">
         <!-- Login (/) + immersive routes → ห้าม slide (เข้าเลย) -->
@@ -55,6 +56,7 @@
 import Navbar from './components/layout/Navbar.vue'
 import OrientationGuard from './components/common/OrientationGuard.vue'
 import BrowserGate from './components/common/BrowserGate.vue'
+import CountryBanner from './components/common/CountryBanner.vue'
 import { onVersionChange, getVersion } from './services/versionCheck'
 // Device fingerprint — ปิดชั่วคราว
 
@@ -63,7 +65,8 @@ export default {
   components: {
     Navbar,
     OrientationGuard,
-    BrowserGate
+    BrowserGate,
+    CountryBanner
   },
   data() {
     return {

@@ -187,6 +187,14 @@ app.use(cors({
 }))
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
+// ─── Geo Middleware (DO-only, geoip-lite) ───
+// Attach req.geo = { country, isChina, isThai, ip, ... } to every request
+const geoMiddleware = require('./shared/middleware/geo')
+app.use(geoMiddleware)
+
+// Public whoami — ให้ frontend เช็ค country ตัวเอง (ไม่ต้อง login)
+app.get('/api/geo/whoami', geoMiddleware.whoamiEndpoint)
+
 // LINE Webhook — raw body สำหรับ verify signature (ต้องอยู่ก่อน express.json)
 app.use('/api/line/webhook', require('./modules/line/line.webhook.routes'))
 // Beam Webhook — raw body สำหรับ verify signature
