@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test - Flow Diagnostics</title>
   <!-- BUILD_VERSION: 2026-07-07-16:45-v26-addEventListener -->
-  <meta name="build-version" content="v36 · 20:15 Widevine">
+  <meta name="build-version" content="v37 · 20:30 Widevine">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -190,7 +190,7 @@
   <div class="header-row">
     <h1>🔐 DRM Flow Diagnostics</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v36 · 20:15 Widevine</span>
+      <span class="version-badge" id="versionBadge">v37 · 20:30 Widevine</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -699,11 +699,10 @@
     // ═══════════════════════════════════════════════════════════
     // Video List
     // ═══════════════════════════════════════════════════════════
-    // ⭐ Hardcode Widevine Video ID (auto-fill ทุกครั้ง — ป้องกัน localStorage เก็บ ID ผิด)
-    const WIDEVINE_VID = '70084e4a79dc71f185e5e6e7c74a0102';
+    // ⭐ Video ID จะ auto-fill จาก /api/china/videos (video แรกใน list)
+    // ไม่ hardcode เพราะ user อาจเปลี่ยน video ใน Alibaba
     const LAST_VID_KEY = 'drmTest_lastVideoId';
-    document.getElementById('vidInput').value = WIDEVINE_VID;
-    localStorage.setItem(LAST_VID_KEY, WIDEVINE_VID);
+    // เริ่มต้นว่าง — รอ fetchVideosList() จะ auto-select
 
     async function listVideos() {
       log('📋 กำลังโหลดรายการ video...', 'info');
@@ -748,8 +747,13 @@
           };
           picks.appendChild(span);
         });
-        if (data.videos.length > 0 && !document.getElementById('vidInput').value) {
+        // ⭐ Auto-fill video แรกใน list เสมอ (override localStorage เก่า)
+        if (data.videos.length > 0) {
           document.getElementById('vidInput').value = data.videos[0].videoId;
+          localStorage.setItem(LAST_VID_KEY, data.videos[0].videoId);
+          log('🎬 Auto-selected: ' + (data.videos[0].title || data.videos[0].videoId.substring(0, 12)), 'success');
+        } else {
+          log('⚠️ ไม่มี video ใน Alibaba VOD', 'warn');
         }
       } catch (err) {
         log('❌ list: ' + err.message, 'err');

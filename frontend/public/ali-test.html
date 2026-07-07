@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja Alibaba Proprietary Test</title>
   <!-- BUILD_VERSION: 2026-07-07-19:30-ali-test-v1 -->
-  <meta name="build-version" content="ali-v4 · 20:15">
+  <meta name="build-version" content="ali-v5 · 20:30">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -190,7 +190,7 @@
   <div class="header-row">
     <h1>⚡ Alibaba Proprietary Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge" style="background: #3b82f6; color: white">ali-v4 · 20:15</span>
+      <span class="version-badge" id="versionBadge" style="background: #3b82f6; color: white">ali-v5 · 20:30</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -699,11 +699,8 @@
     // ═══════════════════════════════════════════════════════════
     // Video List
     // ═══════════════════════════════════════════════════════════
-    // ⭐ Hardcode Proprietary Video ID (auto-fill ทุกครั้ง — แยก localStorage key)
-    const PROPRIETARY_VID = 'f0a10c4f79dc71f1a46bf6f7f45a0102';
+    // ⭐ Video ID จะ auto-fill จาก /api/china/videos
     const LAST_VID_KEY = 'aliTest_lastVideoId';
-    document.getElementById('vidInput').value = PROPRIETARY_VID;
-    localStorage.setItem(LAST_VID_KEY, PROPRIETARY_VID);
 
     async function listVideos() {
       log('📋 กำลังโหลดรายการ video...', 'info');
@@ -748,8 +745,13 @@
           };
           picks.appendChild(span);
         });
-        if (data.videos.length > 0 && !document.getElementById('vidInput').value) {
+        // ⭐ Auto-fill video แรกใน list เสมอ (override localStorage เก่า)
+        if (data.videos.length > 0) {
           document.getElementById('vidInput').value = data.videos[0].videoId;
+          localStorage.setItem(LAST_VID_KEY, data.videos[0].videoId);
+          log('🎬 Auto-selected: ' + (data.videos[0].title || data.videos[0].videoId.substring(0, 12)), 'success');
+        } else {
+          log('⚠️ ไม่มี video ใน Alibaba VOD', 'warn');
         }
       } catch (err) {
         log('❌ list: ' + err.message, 'err');
