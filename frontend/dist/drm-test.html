@@ -5,9 +5,9 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Debug Checklist</title>
-  <!-- BUILD_VERSION: 2026-07-07-12:15-v8-fix-constructor -->
-  <meta name="build-version" content="v8 · 12:15">
-  <meta name="build-time" content="2026-07-07T05:15:00Z">
+  <!-- BUILD_VERSION: 2026-07-07-12:30-v9-parallel-detection -->
+  <meta name="build-version" content="v9 · 12:30">
+  <meta name="build-time" content="2026-07-07T05:30:00Z">
 
   <!-- Aliplayer SDK 2.35.4 - Self-hosted -->
   <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
@@ -269,7 +269,7 @@
     <div class="header">
       <h1>🔐 DRM Debug Checklist</h1>
       <div style="display: flex; gap: 6px; align-items: center;">
-        <span class="version-badge" id="versionBadge">v8 · 12:15</span>
+        <span class="version-badge" id="versionBadge">v9 · 12:30</span>
         <button class="reload-btn" onclick="location.reload(true)">🔄 Hard Reload</button>
       </div>
     </div>
@@ -799,20 +799,26 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // AUTO RUN on load: HTML → SDK → DRM detection → IP → List
+    // AUTO RUN on load: ทำทุกอย่าง PARALLEL (SDK, DRM, IP, list)
+    // เพื่อไม่ให้ตัวใดตัวหนึ่งค้างทั้งระบบ
     // ═══════════════════════════════════════════════════════════
     (async () => {
       // Restore last video id
       const saved = localStorage.getItem('drmTest_lastVideoId') || '';
       document.getElementById('vidInput').value = saved;
 
-      // Auto-run detection steps
-      await waitForSDK(30000);
-      await detectDRMSupport();
-      await detectIP();
-      await listVideos();
+      log('🚀 เริ่ม auto-detection (parallel mode)...', 'info');
 
-      log('ℹ️ Auto-detection เสร็จ. กด "▶ Run Test" เพื่อทดสอบ DRM playback', 'info');
+      // Run ทั้งหมด parallel — ตัวไหนเสร็จก่อน update UI เลย
+      const results = await Promise.allSettled([
+        waitForSDK(30000).catch(e => { log('SDK error: ' + e.message, 'err'); return false; }),
+        detectDRMSupport().catch(e => { log('DRM error: ' + e.message, 'err'); }),
+        detectIP().catch(e => { log('IP error: ' + e.message, 'err'); }),
+        listVideos().catch(e => { log('List error: ' + e.message, 'err'); return null; })
+      ]);
+
+      log('ℹ️ Auto-detection เสร็จ ' + results.filter(r => r.status === 'fulfilled').length + '/' + results.length + ' pass', 'info');
+      log('ℹ️ กด "▶ Run Test" เพื่อทดสอบ DRM playback', 'info');
 
       // Save initial detection to DB
       await saveTestResult('detection-only', { phase: 'auto-detection' });
