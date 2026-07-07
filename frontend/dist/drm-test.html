@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="x-ua-compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+  <title>MedNinja - DRM Widevine + FairPlay Test</title>
+
+  <!-- Aliplayer SDK - v2.35.4 (Alibaba latest, supports DRM) -->
+  <link rel="stylesheet" href="//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/skins/default/aliplayer-min.css" />
+  <script src="//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #1a0033 0%, #0f172a 100%);
+      color: #f1f5f9;
+      padding: 16px;
+    }
+    h1 { font-size: 22px; color: #a855f7; margin-bottom: 4px; }
+    .sub { color: #94a3b8; font-size: 13px; margin-bottom: 12px; }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #a855f7;
+      color: white;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-right: 6px;
+    }
+    .info {
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      word-break: break-all;
+    }
+    .info b { color: #c4b5fd; }
+    .player-box {
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      max-width: 720px;
+    }
+    #J_prismPlayer { width: 100%; min-height: 300px; }
+    #log {
+      background: #000;
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      max-height: 400px;
+      overflow-y: auto;
+      color: #4ade80;
+    }
+    #log .err { color: #f87171; }
+    #log .warn { color: #fbbf24; }
+    #log .info { color: #38bdf8; }
+    #log .success { color: #4ade80; font-weight: bold; }
+    button {
+      background: #a855f7;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      margin: 8px 4px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔐 MedNinja DRM Test</h1>
+  <p class="sub">
+    <span class="badge">Widevine</span>
+    <span class="badge">FairPlay</span>
+    Dual-DRM via Alibaba license server (mirror)
+  </p>
+
+  <div class="info">
+    <b>Video ID:</b> 700e030e797271f1977bf6e6c5490102<br>
+    <b>Video:</b> Introduce.mov (48.9s)<br>
+    <b>Encryption:</b> encrypt=1, type="Widevine-FairPlay"<br>
+    <b>Stream:</b> HLS (m3u8) 960x540 · 997 kbps<br>
+    <b>SDK:</b> Aliplayer 2.35.4 (supports DRM)
+  </div>
+
+  <button onclick="loadDRM()">▶ Play DRM Video</button>
+
+  <div class="player-box">
+    <div id="J_prismPlayer"></div>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    const sessionId = 'drm-' + Math.random().toString(36).substring(2, 10);
+    const logBuffer = [];
+    let flushTimer = null;
+
+    function flushLogs() {
+      if (!logBuffer.length) return;
+      const batch = logBuffer.splice(0, logBuffer.length);
+      fetch('/api/china/log/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, entries: batch })
+      }).catch(() => {});
+    }
+
+    const logEl = document.getElementById('log');
+    function log(msg, type) {
+      const line = document.createElement('div');
+      line.className = type || '';
+      line.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      logBuffer.push({ level: type || 'info', msg, clientTs: new Date().toISOString() });
+      if (flushTimer) clearTimeout(flushTimer);
+      flushTimer = setTimeout(flushLogs, 500);
+    }
+
+    log('Session: ' + sessionId, 'info');
+    log('UA: ' + navigator.userAgent.substring(0, 100), 'info');
+
+    // Widevine capability check
+    if (navigator.requestMediaKeySystemAccess) {
+      log('✅ EME (Encrypted Media Extensions) supported', 'success');
+      navigator.requestMediaKeySystemAccess('com.widevine.alpha', [{
+        initDataTypes: ['cenc'],
+        videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
+      }])
+        .then(access => log('✅ Widevine CDM available', 'success'))
+        .catch(e => log('⚠️ Widevine CDM error: ' + e.message, 'warn'));
+
+      navigator.requestMediaKeySystemAccess('com.apple.fps.1_0', [{
+        initDataTypes: ['sinf'],
+        videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
+      }])
+        .then(access => log('✅ FairPlay supported', 'success'))
+        .catch(e => log('ℹ️ FairPlay ไม่รองรับ (ปกติ non-Apple): ' + e.message.substring(0, 60), 'info'));
+    } else {
+      log('❌ EME ไม่รองรับใน browser นี้', 'err');
+    }
+
+    setTimeout(() => {
+      log('Aliplayer type: ' + typeof window.Aliplayer, 'info');
+      if (typeof window.Aliplayer === 'undefined') {
+        log('⚠️ Aliplayer ยังไม่โหลด...', 'warn');
+      } else {
+        log('✅ Aliplayer พร้อม', 'success');
+      }
+    }, 2000);
+
+    async function loadDRM() {
+      const videoId = '700e030e797271f1977bf6e6c5490102';
+
+      if (typeof window.Aliplayer === 'undefined') {
+        log('❌ Aliplayer ยังไม่พร้อม', 'err');
+        return;
+      }
+
+      log('กำลังขอ PlayAuth token...', 'info');
+      try {
+        const res = await fetch('/api/china/playauth/' + videoId);
+        const data = await res.json();
+        if (!data.playAuth) {
+          log('❌ No playAuth: ' + JSON.stringify(data), 'err');
+          return;
+        }
+        log('✅ PlayAuth ได้ (' + data.playAuth.length + ' chars)', 'success');
+
+        log('กำลังสร้าง Aliplayer (DRM mode)...', 'info');
+        const player = new Aliplayer({
+          id: 'J_prismPlayer',
+          vid: videoId,
+          playauth: data.playAuth,
+          width: '100%',
+          height: '400px',
+          autoplay: false,
+          isLive: false,
+          rePlay: false,
+          playsinline: true,
+          preload: true,
+          controlBarVisibility: 'hover',
+          useH5Prism: true,
+          // DRM specific
+          encryptType: 0  // 0 = auto detect, 1 = Alibaba proprietary, 2 = DRM
+        }, function (p) {
+          log('✅ Aliplayer instance created', 'success');
+        });
+
+        player.on('ready', () => log('event: ready', 'info'));
+        player.on('canplay', () => log('✅ event: canplay - DRM decrypted!', 'success'));
+        player.on('play', () => log('▶️ event: play', 'info'));
+        player.on('error', (e) => {
+          const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {});
+          log('❌ ERROR: ' + details, 'err');
+        });
+        player.on('waiting', () => log('event: waiting (buffer)', 'warn'));
+      } catch (err) {
+        log('❌ Exception: ' + err.message, 'err');
+      }
+    }
+  </script>
+</body>
+</html>
