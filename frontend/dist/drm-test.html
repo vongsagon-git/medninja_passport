@@ -200,14 +200,21 @@
       log('❌ EME ไม่รองรับใน browser นี้', 'err');
     }
 
-    setTimeout(() => {
-      log('Aliplayer type: ' + typeof window.Aliplayer, 'info');
-      if (typeof window.Aliplayer === 'undefined') {
-        log('⚠️ Aliplayer ยังไม่โหลด...', 'warn');
-      } else {
-        log('✅ Aliplayer พร้อม', 'success');
+    // Poll SDK จนกว่าโหลดเสร็จ (max 30 วินาที)
+    const sdkStart = Date.now();
+    const sdkPoll = setInterval(() => {
+      const elapsed = Math.round((Date.now() - sdkStart) / 1000);
+      if (typeof window.Aliplayer === 'function') {
+        clearInterval(sdkPoll);
+        log('✅ Aliplayer พร้อม (โหลดใช้เวลา ' + elapsed + 's)', 'success');
+      } else if (elapsed >= 30) {
+        clearInterval(sdkPoll);
+        log('❌ Aliplayer โหลดไม่สำเร็จหลัง 30s — SDK URL อาจถูก block', 'err');
+        log('SDK URL: //g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', 'info');
+      } else if (elapsed % 5 === 0 && elapsed > 0) {
+        log('⏳ รอ Aliplayer... ' + elapsed + 's (type=' + typeof window.Aliplayer + ')', 'warn');
       }
-    }, 2000);
+    }, 500);
 
     // ตั้งค่า last-used video id จาก localStorage หรือ default
     const LAST_VID_KEY = 'drmTest_lastVideoId';
