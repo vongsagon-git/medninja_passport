@@ -17,12 +17,14 @@
       aria-live="polite"
     >
       <div class="banner-inner">
-        <span class="flag">{{ flag }}</span>
+        <span class="flag">{{ loading ? '🌐' : flag }}</span>
         <div class="text">
           <div class="title">
-            <span class="country-name">{{ countryTh }}</span>
-            <span class="sep">·</span>
-            <span class="ip">{{ ip || '—' }}</span>
+            <span class="country-name">{{ loading ? 'กำลังตรวจสอบ...' : countryTh }}</span>
+            <template v-if="!loading && ip">
+              <span class="sep">·</span>
+              <span class="ip">{{ ip }}</span>
+            </template>
           </div>
           <div class="sub">
             <template v-if="isChina">
@@ -45,7 +47,7 @@ import { useRoute } from 'vue-router'
 import useCountry from '../../composables/useCountry'
 
 const route = useRoute()
-const { country, countryTh, flag, ip, isp, isChina, isThai, ready } = useCountry()
+const { country, countryTh, flag, ip, isp, isChina, isThai, ready, loading, error } = useCountry()
 
 // ซ่อนบน /live (ตามที่หมอแตมสั่ง)
 const isLivePage = computed(() => {
@@ -53,13 +55,16 @@ const isLivePage = computed(() => {
   return p.startsWith('/live')
 })
 
-const show = computed(() =>
-  ready.value && country.value && country.value !== 'unknown' && !isLivePage.value
-)
+// แสดง banner ตลอด ยกเว้น /live
+// - loading → skeleton
+// - ready + country → banner จริง
+// - error → ไม่แสดง (silent)
+const show = computed(() => !isLivePage.value && (loading.value || (ready.value && country.value && country.value !== 'unknown')))
 
 const tone = computed(() => {
   if (isChina.value) return 'tone-cn'
   if (isThai.value) return 'tone-th'
+  if (loading.value) return 'tone-loading'
   return 'tone-other'
 })
 </script>
@@ -85,6 +90,10 @@ const tone = computed(() => {
 .tone-other {
   background: linear-gradient(90deg, #475569 0%, #64748b 50%, #475569 100%);
   box-shadow: 0 2px 12px rgba(71, 85, 105, 0.3);
+}
+.tone-loading {
+  background: linear-gradient(90deg, #334155 0%, #475569 50%, #334155 100%);
+  box-shadow: 0 2px 12px rgba(51, 65, 85, 0.3);
 }
 
 .banner-inner {
