@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
-  <title>MedNinja DRM Test - Stream Selector</title>
-  <!-- BUILD_VERSION: 2026-07-07-18:00-v30-fix-detection -->
-  <meta name="build-version" content="v30 · 18:00">
+  <title>MedNinja DRM Comparison - Side by Side</title>
+  <!-- BUILD_VERSION: 2026-07-07-18:15-v31-side-by-side-2videos -->
+  <meta name="build-version" content="v31 · 18:15">
 
   <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
   <script src="/vendor/aliplayer/aliplayer-2.35.4.js"></script>
@@ -17,21 +17,21 @@
       font-family: sans-serif;
       background: linear-gradient(135deg, #1a0033 0%, #0f172a 100%);
       color: #f1f5f9;
-      padding: 12px;
+      padding: 10px;
     }
-    h1 { font-size: 20px; color: #a855f7; margin-bottom: 4px; }
+    h1 { font-size: 18px; color: #a855f7; margin-bottom: 4px; }
     .header-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .version-badge {
       background: #4ade80;
       color: #052e16;
-      padding: 4px 10px;
+      padding: 3px 10px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: bold;
@@ -41,206 +41,233 @@
       background: #64748b;
       color: white;
       border: none;
-      padding: 4px 10px;
+      padding: 3px 10px;
       font-size: 11px;
       border-radius: 4px;
       cursor: pointer;
     }
-
-    .info-card {
+    .top-info {
       background: rgba(168, 85, 247, 0.1);
       border: 1px solid rgba(168, 85, 247, 0.3);
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 11px;
       margin-bottom: 10px;
       word-break: break-all;
     }
 
-    .video-input {
+    /* Video list chips */
+    .videos-list {
       display: flex;
       gap: 6px;
-      margin-bottom: 12px;
-      max-width: 720px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      font-size: 11px;
+      align-items: center;
+    }
+    .video-chip {
+      background: rgba(74, 222, 128, 0.15);
+      color: #4ade80;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: monospace;
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      font-size: 10px;
+    }
+    .video-chip:hover { background: rgba(74, 222, 128, 0.3); }
+
+    /* Side-by-side grid */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 1024px) {
+      .compare-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .side {
+      background: rgba(30, 41, 59, 0.4);
+      border: 2px solid rgba(148, 163, 184, 0.15);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .side.widevine {
+      border-color: rgba(168, 85, 247, 0.4);
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(30, 41, 59, 0.4));
+    }
+    .side.proprietary {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(30, 41, 59, 0.4));
+    }
+    .side h2 {
+      font-size: 15px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .side.widevine h2 { color: #c4b5fd; }
+    .side.proprietary h2 { color: #93c5fd; }
+    .side .subtitle {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    .video-input {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
       flex-wrap: wrap;
     }
     .video-input input {
       flex: 1;
-      min-width: 200px;
-      padding: 10px 12px;
-      background: rgba(168, 85, 247, 0.1);
-      border: 1px solid rgba(168, 85, 247, 0.4);
-      border-radius: 6px;
+      min-width: 150px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 5px;
       color: #f1f5f9;
-      font-family: 'Consolas', monospace;
-      font-size: 12px;
+      font-family: monospace;
+      font-size: 11px;
     }
     .video-input button {
-      background: #22c55e;
+      padding: 8px 12px;
       color: white;
       border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: bold;
     }
+    .widevine .video-input button { background: #a855f7; }
+    .proprietary .video-input button { background: #3b82f6; }
 
-    /* Streams grid */
-    .streams-title {
-      font-size: 13px;
-      color: #94a3b8;
-      margin: 12px 0 8px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 4px;
+      margin-bottom: 3px;
+      font-size: 11px;
     }
-    .streams-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      margin-bottom: 12px;
+    .flow-row.pass { background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; }
+    .flow-row.fail { background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; }
+    .flow-row.running { background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; }
+    .flow-row .icon { font-size: 12px; min-width: 16px; }
+    .flow-row .title { flex: 1; font-weight: bold; }
+    .flow-row .detail { font-size: 10px; color: #94a3b8; font-family: monospace; }
+
+    .player-box {
+      background: #000;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 8px 0;
+      aspect-ratio: 16/9;
     }
-    @media (min-width: 900px) {
-      .streams-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .player-box > div { width: 100%; height: 100%; }
+
+    .side-log {
+      background: #000;
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 5px;
+      padding: 6px;
+      font-family: 'Consolas', monospace;
+      font-size: 9px;
+      max-height: 150px;
+      overflow-y: auto;
+      color: #4ade80;
     }
-    .stream-card {
-      background: rgba(30, 41, 59, 0.5);
-      border: 2px solid rgba(148, 163, 184, 0.2);
-      border-radius: 10px;
-      padding: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .stream-card:hover {
-      border-color: rgba(168, 85, 247, 0.5);
-      transform: translateY(-2px);
-    }
-    .stream-card.selected {
-      border-color: #a855f7;
-      background: rgba(168, 85, 247, 0.15);
-      box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
-    }
-    .stream-card .type-badge {
+    .side-log .err { color: #f87171; }
+    .side-log .warn { color: #fbbf24; }
+    .side-log .info { color: #38bdf8; }
+    .side-log .success { color: #4ade80; font-weight: bold; }
+
+    .config-badge {
       display: inline-block;
-      padding: 3px 10px;
+      padding: 2px 8px;
       border-radius: 999px;
       font-size: 10px;
       font-weight: bold;
       font-family: monospace;
-      margin-bottom: 8px;
+      margin-right: 4px;
     }
-    .stream-card.widevine .type-badge { background: rgba(168, 85, 247, 0.3); color: #c4b5fd; border: 1px solid rgba(168, 85, 247, 0.5); }
-    .stream-card.proprietary .type-badge { background: rgba(59, 130, 246, 0.3); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.5); }
-    .stream-card.unencrypted .type-badge { background: rgba(239, 68, 68, 0.3); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.5); }
-    .stream-card h3 {
-      font-size: 14px;
-      margin-bottom: 6px;
-    }
-    .stream-card .details {
-      font-size: 11px;
-      color: #cbd5e1;
-      line-height: 1.6;
-    }
-    .stream-card .details b { color: #f1f5f9; }
-    .stream-card .play-btn {
-      background: #a855f7;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: bold;
-      margin-top: 8px;
-      width: 100%;
-    }
-    .stream-card.proprietary .play-btn { background: #3b82f6; }
-    .stream-card.unencrypted .play-btn { background: #ef4444; }
-
-    /* Player */
-    .player-wrap {
-      background: #000;
-      border-radius: 8px;
-      overflow: hidden;
-      margin-bottom: 12px;
-      max-width: 800px;
-    }
-    #J_prismPlayer { width: 100%; min-height: 300px; }
-
-    .selected-info {
-      background: rgba(74, 222, 128, 0.1);
-      border: 1px solid rgba(74, 222, 128, 0.3);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      margin-bottom: 10px;
-      color: #4ade80;
-      display: none;
-    }
-
-    #log {
-      background: #000;
-      border: 1px solid rgba(74,222,128,0.2);
-      border-radius: 8px;
-      padding: 10px;
-      font-family: 'Consolas', monospace;
-      font-size: 11px;
-      max-height: 250px;
-      overflow-y: auto;
-      color: #4ade80;
-    }
-    #log .err { color: #f87171; }
-    #log .warn { color: #fbbf24; }
-    #log .info { color: #38bdf8; }
-    #log .success { color: #4ade80; font-weight: bold; }
+    .widevine .config-badge { background: rgba(168, 85, 247, 0.3); color: #c4b5fd; }
+    .proprietary .config-badge { background: rgba(59, 130, 246, 0.3); color: #93c5fd; }
   </style>
 </head>
 <body>
   <div class="header-row">
-    <h1>🔐 DRM Stream Selector</h1>
+    <h1>🔐 DRM Comparison — Side by Side</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v30 · 18:00</span>
+      <span class="version-badge" id="versionBadge">v31 · 18:15</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
 
-  <div class="info-card">
+  <div class="top-info">
     <b>Your IP:</b> <span id="ipAddr">...</span> ·
     <b>Country:</b> <span id="ipCountry">-</span> ·
-    <b>Device:</b> <span id="devInfo">-</span><br>
-    <b>License:</b> Activated (Chinese Mainland region) ·
-    <b>SDK:</b> Aliplayer 2.35.4 (self-host)
+    <b>Device:</b> <span id="devInfo">-</span>
   </div>
 
-  <!-- Video ID input -->
-  <div class="video-input">
-    <input id="vidInput" type="text" placeholder="กรอก Video ID..." />
-    <button onclick="loadStreams()">🔍 Load Streams</button>
-    <button onclick="useLatestVideo()" style="background: #f59e0b">🎬 Use Latest</button>
+  <!-- Video chips (จาก /api/china/videos) -->
+  <div class="videos-list" id="videosList">
+    <span style="color: #94a3b8;">📋 Videos:</span>
   </div>
-  <div id="videosList" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; font-size: 11px;"></div>
 
-  <!-- Streams grid (populated by loadStreams()) -->
-  <div class="streams-title">🔐 Encrypted Streams (คลิกเพื่อเล่น) — Widevine vs Alibaba Proprietary</div>
-  <div class="streams-grid" id="streamsGrid">
-    <div style="color: #94a3b8; padding: 20px; text-align: center; grid-column: 1/-1;">
-      กรอก Video ID แล้วกด "Load Streams" เพื่อดูรายการ...
+  <div class="compare-grid">
+    <!-- LEFT: Widevine -->
+    <div class="side widevine">
+      <h2>🎯 Widevine DRM
+        <span class="config-badge">encryptType: 2</span>
+      </h2>
+      <p class="subtitle">Enterprise-grade · Best for PC/Laptop · Widevine L1 required</p>
+
+      <div class="video-input">
+        <input id="vidW" type="text" placeholder="Video ID (Widevine transcode)..." />
+        <button onclick="runSide('W')">▶ Test</button>
+      </div>
+
+      <div class="flow-row pending" id="W-flow1"><span class="icon">⏸️</span><span class="title">1. STS</span><span class="detail" id="W-flow1-d"></span></div>
+      <div class="flow-row pending" id="W-flow2"><span class="icon">⏸️</span><span class="title">2. Manifest</span><span class="detail" id="W-flow2-d"></span></div>
+      <div class="flow-row pending" id="W-flow3"><span class="icon">⏸️</span><span class="title">3. SDK</span><span class="detail" id="W-flow3-d"></span></div>
+      <div class="flow-row pending" id="W-flow4"><span class="icon">⏸️</span><span class="title">4. Player + Widevine</span><span class="detail" id="W-flow4-d"></span></div>
+
+      <div class="player-box"><div id="playerW"></div></div>
+
+      <div class="side-log" id="logW"></div>
+    </div>
+
+    <!-- RIGHT: Alibaba Proprietary -->
+    <div class="side proprietary">
+      <h2>⚡ Alibaba Proprietary
+        <span class="config-badge">encryptType: 1</span>
+      </h2>
+      <p class="subtitle">HTTP-DRM · Works everywhere · Mobile-friendly</p>
+
+      <div class="video-input">
+        <input id="vidP" type="text" placeholder="Video ID (Proprietary transcode)..." />
+        <button onclick="runSide('P')">▶ Test</button>
+      </div>
+
+      <div class="flow-row pending" id="P-flow1"><span class="icon">⏸️</span><span class="title">1. STS</span><span class="detail" id="P-flow1-d"></span></div>
+      <div class="flow-row pending" id="P-flow2"><span class="icon">⏸️</span><span class="title">2. Manifest</span><span class="detail" id="P-flow2-d"></span></div>
+      <div class="flow-row pending" id="P-flow3"><span class="icon">⏸️</span><span class="title">3. SDK</span><span class="detail" id="P-flow3-d"></span></div>
+      <div class="flow-row pending" id="P-flow4"><span class="icon">⏸️</span><span class="title">4. Player + Proprietary</span><span class="detail" id="P-flow4-d"></span></div>
+
+      <div class="player-box"><div id="playerP"></div></div>
+
+      <div class="side-log" id="logP"></div>
     </div>
   </div>
 
-  <!-- Selected info -->
-  <div class="selected-info" id="selectedInfo"></div>
-
-  <!-- Player -->
-  <div class="player-wrap">
-    <div id="J_prismPlayer"></div>
-  </div>
-
-  <!-- Log -->
-  <div id="log"></div>
-
   <script>
-    const sessionId = 'drm-sel-' + Math.random().toString(36).substring(2, 10);
+    const sessionId = 'drm-cmp-' + Math.random().toString(36).substring(2, 10);
     const logBuffer = [];
     let flushTimer = null;
 
@@ -254,23 +281,33 @@
       }).catch(() => {});
     }
 
-    const logEl = document.getElementById('log');
-    function log(msg, type) {
+    function log(side, msg, type) {
+      const logEl = document.getElementById('log' + side);
       const line = document.createElement('div');
       line.className = type || '';
       line.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + msg;
       logEl.appendChild(line);
       logEl.scrollTop = logEl.scrollHeight;
-      logBuffer.push({ level: type || 'info', msg, clientTs: new Date().toISOString() });
+      logBuffer.push({ level: type || 'info', msg: '[' + side + '] ' + msg, clientTs: new Date().toISOString() });
       if (flushTimer) clearTimeout(flushTimer);
       flushTimer = setTimeout(flushLogs, 500);
     }
 
-    const buildVer = document.querySelector('meta[name="build-version"]').content;
-    log('🏷️ Build: ' + buildVer, 'success');
-    log('Session: ' + sessionId, 'info');
+    function setFlow(side, num, status, detail) {
+      const row = document.getElementById(side + '-flow' + num);
+      if (!row) return;
+      row.classList.remove('pass', 'fail', 'running', 'pending');
+      row.classList.add(status);
+      const iconEl = row.querySelector('.icon');
+      iconEl.textContent = { running: '⏳', pass: '✅', fail: '❌', pending: '⏸️' }[status] || '⏸️';
+      if (detail) document.getElementById(side + '-flow' + num + '-d').textContent = detail;
+    }
 
-    // Device detect
+    // Init
+    const buildVer = document.querySelector('meta[name="build-version"]').content;
+    log('W', '🏷️ Build: ' + buildVer, 'success');
+    log('P', '🏷️ Build: ' + buildVer, 'success');
+
     function detectDevice() {
       const ua = navigator.userAgent;
       let dev = 'Desktop', browser = '?';
@@ -279,18 +316,14 @@
       else if (/Android.*Mobile/.test(ua)) dev = '📱 Android';
       else if (/Windows/.test(ua)) dev = '💻 Windows';
       else if (/Macintosh/.test(ua)) dev = '💻 Mac';
-
       if (/Edg\/([\d.]+)/.exec(ua)) browser = 'Edge ' + RegExp.$1;
       else if (/Chrome\/([\d.]+)/.exec(ua)) browser = 'Chrome ' + RegExp.$1;
       else if (/Firefox\/([\d.]+)/.exec(ua)) browser = 'Firefox ' + RegExp.$1;
       else if (/Version\/([\d.]+).*Safari/.exec(ua)) browser = 'Safari ' + RegExp.$1;
-
       document.getElementById('devInfo').textContent = dev + ' · ' + browser;
-      log('📱 ' + dev + ' · ' + browser, 'info');
     }
     detectDevice();
 
-    // IP
     (async () => {
       try {
         const res = await fetch('/api/china/whoami');
@@ -298,211 +331,160 @@
         const flag = { CN: '🇨🇳', TH: '🇹🇭', HK: '🇭🇰', SG: '🇸🇬', US: '🇺🇸' }[data.country] || '🌐';
         document.getElementById('ipAddr').textContent = data.ip || '-';
         document.getElementById('ipCountry').textContent = flag + ' ' + (data.country || '-');
-        log('✅ IP: ' + data.ip + ' · ' + data.country, 'success');
       } catch (e) {}
     })();
 
-    // Restore last video ID (but validate against server)
-    const savedVid = localStorage.getItem('drmTest_lastVideoId');
-    document.getElementById('vidInput').value = savedVid || '';
-
-    // Auto-fetch latest video ID from server (list videos endpoint)
+    // Auto-fetch video list & fill chips
     async function fetchVideosList() {
       try {
         const res = await fetch('/api/china/videos');
         const data = await res.json();
         const videos = data.videos || [];
         const listEl = document.getElementById('videosList');
-        listEl.innerHTML = '<span style="color: #94a3b8; align-self: center;">📋 Videos ที่มี:</span>';
-        videos.forEach((v, i) => {
+        videos.forEach(v => {
           const chip = document.createElement('span');
-          chip.style.cssText = 'background: rgba(74, 222, 128, 0.15); color: #4ade80; padding: 4px 10px; border-radius: 999px; cursor: pointer; font-family: monospace; border: 1px solid rgba(74, 222, 128, 0.3);';
-          const shortId = v.videoId.substring(0, 12) + '...';
-          const title = v.title ? v.title.substring(0, 15) : '';
-          chip.textContent = (title ? title + ' [' : '[') + shortId + ']';
-          chip.title = v.videoId;
-          chip.onclick = () => {
-            document.getElementById('vidInput').value = v.videoId;
-            localStorage.setItem('drmTest_lastVideoId', v.videoId);
-            loadStreams();
-          };
+          chip.className = 'video-chip';
+          chip.textContent = v.videoId.substring(0, 12) + '...';
+          chip.title = 'Click ซ้าย=W, ขวา=P | ' + v.videoId;
+          chip.oncontextmenu = (e) => { e.preventDefault(); document.getElementById('vidP').value = v.videoId; localStorage.setItem('drmP', v.videoId); log('P', 'set: ' + v.videoId.substring(0, 12) + '...', 'info'); };
+          chip.onclick = () => { document.getElementById('vidW').value = v.videoId; localStorage.setItem('drmW', v.videoId); log('W', 'set: ' + v.videoId.substring(0, 12) + '...', 'info'); };
           listEl.appendChild(chip);
         });
-
-        // Auto-use latest if no saved OR saved video not in list
-        if (!savedVid || !videos.find(v => v.videoId === savedVid)) {
-          if (videos.length > 0) {
-            const latestId = videos[0].videoId;
-            document.getElementById('vidInput').value = latestId;
-            localStorage.setItem('drmTest_lastVideoId', latestId);
-            log('🎬 Auto-selected latest video: ' + latestId.substring(0, 12) + '...', 'info');
-          }
-        }
-      } catch (e) {
-        log('⚠️ ไม่สามารถ load videos list: ' + e.message, 'warn');
-      }
+        const hint = document.createElement('span');
+        hint.style.cssText = 'color: #64748b; font-size: 10px;';
+        hint.textContent = '(click = ซ้าย, right-click = ขวา)';
+        listEl.appendChild(hint);
+      } catch (e) {}
     }
-
-    function useLatestVideo() {
-      fetchVideosList().then(() => setTimeout(loadStreams, 200));
-    }
-
     fetchVideosList();
 
-    // Determine encryption type from stream metadata
-    function getStreamType(stream) {
-      if (!stream.encrypt || stream.encrypt === 0) return 'unencrypted';
-      const type = (stream.encryptType || '').toLowerCase();
-      // Widevine DRM
-      if (type.includes('widevine') || type.includes('fairplay') || type === 'drm') return 'widevine';
-      // Alibaba Proprietary (multiple naming variants)
-      if (type.includes('aliyun') || type.includes('vodencryption') ||
-          type.includes('private') || type.includes('alibaba') ||
-          type.includes('http') || type === '1') return 'proprietary';
-      // Fallback: encrypted แต่ไม่รู้ประเภท = ลอง proprietary (safer default)
-      return 'proprietary';
-    }
+    // Restore last IDs
+    document.getElementById('vidW').value = localStorage.getItem('drmW') || '';
+    document.getElementById('vidP').value = localStorage.getItem('drmP') || '';
 
-    function getTypeLabel(type) {
-      return {
-        widevine: '🎯 Widevine DRM',
-        proprietary: '⚡ Alibaba Proprietary',
-        unencrypted: '⚠️ Unencrypted'
-      }[type] || type;
-    }
+    // Configs per side
+    const players = { W: null, P: null };
+    const configs = {
+      W: { encryptType: 2, label: 'Widevine DRM', playerId: 'playerW' },
+      P: { encryptType: 1, label: 'Alibaba Proprietary', playerId: 'playerP' }
+    };
 
-    function getEncryptTypeNum(type) {
-      return { widevine: 2, proprietary: 1, unencrypted: 0 }[type] || 0;
-    }
-
-    let player = null;
-    let currentVideoId = null;
-
-    // ═══════════════════════════════════════════════════════════
-    // Load streams from playinfo API
-    // ═══════════════════════════════════════════════════════════
-    async function loadStreams() {
-      const videoId = document.getElementById('vidInput').value.trim();
+    async function runSide(side) {
+      const videoId = document.getElementById('vid' + side).value.trim();
       if (!videoId) {
-        log('❌ กรุณากรอก Video ID', 'err');
+        log(side, '❌ กรุณากรอก Video ID', 'err');
         return;
       }
-      currentVideoId = videoId;
-      localStorage.setItem('drmTest_lastVideoId', videoId);
-      log('🔍 Load streams: ' + videoId.substring(0, 8) + '...', 'info');
+      localStorage.setItem('drm' + side, videoId);
+      [1, 2, 3, 4].forEach(n => setFlow(side, n, 'pending'));
 
-      const grid = document.getElementById('streamsGrid');
-      grid.innerHTML = '<div style="color:#94a3b8;padding:20px;text-align:center;grid-column:1/-1;">⏳ กำลังโหลด...</div>';
+      const sts = await testSTS(side, videoId);
+      if (!sts) return;
 
+      const manifest = await testManifest(side, videoId);
+      if (!manifest) return;
+
+      const sdkOk = await testSDK(side);
+      if (!sdkOk) return;
+
+      await testPlayer(side, videoId, sts);
+    }
+
+    async function testSTS(side, videoId) {
+      setFlow(side, 1, 'running');
+      log(side, '🔑 [Flow 1] Test STS', 'info');
+      const t0 = Date.now();
+      try {
+        const res = await fetch('/api/china/sts/' + videoId);
+        const ms = Date.now() - t0;
+        const data = await res.json();
+        if (!data.accessKeyId || !data.securityToken) {
+          setFlow(side, 1, 'fail', 'no keys');
+          log(side, '❌ STS: ' + JSON.stringify(data).substring(0, 100), 'err');
+          return null;
+        }
+        setFlow(side, 1, 'pass', ms + 'ms · 3 keys ok');
+        log(side, '✅ STS ' + ms + 'ms', 'success');
+        return data;
+      } catch (err) {
+        setFlow(side, 1, 'fail', err.message);
+        log(side, '❌ STS: ' + err.message, 'err');
+        return null;
+      }
+    }
+
+    async function testManifest(side, videoId) {
+      setFlow(side, 2, 'running');
+      log(side, '📄 [Flow 2] Test Manifest', 'info');
+      const t0 = Date.now();
       try {
         const res = await fetch('/api/china/playinfo/' + videoId);
+        const ms = Date.now() - t0;
         const data = await res.json();
-        const streams = data.streams || [];
-
-        log('✅ พบ ' + streams.length + ' streams', 'success');
-        log('  Title: ' + ((data.videoBase && data.videoBase.Title) || '-'), 'info');
-        log('  Duration: ' + ((data.videoBase && data.videoBase.Duration) || '-') + 's', 'info');
-
-        if (streams.length === 0) {
-          grid.innerHTML = '<div style="color:#f87171;padding:20px;text-align:center;grid-column:1/-1;">❌ ไม่พบ streams (video ยังไม่ transcode?)</div>';
-          return;
+        const encStream = (data.streams || []).find(s => s.encrypt);
+        if (!encStream) {
+          setFlow(side, 2, 'fail', 'no encrypted');
+          log(side, '❌ no encrypted stream', 'err');
+          return null;
         }
-
-        // Filter: เก็บเฉพาะ encrypted streams (Widevine + Proprietary) - ข้าม original mov/mp4
-        const playableStreams = streams.filter(s => s.encrypt && s.encrypt !== 0 && s.format === 'm3u8');
-
-        if (playableStreams.length === 0) {
-          grid.innerHTML = '<div style="color:#fbbf24;padding:20px;text-align:center;grid-column:1/-1;">⚠️ ไม่มี encrypted m3u8 stream (video ยังไม่ transcode ด้วย DRM/Proprietary?)</div>';
-          log('⚠️ ไม่มี encrypted streams', 'warn');
-          return;
-        }
-
-        // Render stream cards
-        grid.innerHTML = '';
-        playableStreams.forEach((stream, idx) => {
-          const type = getStreamType(stream);
-          const card = document.createElement('div');
-          card.className = 'stream-card ' + type;
-          card.dataset.type = type;
-          card.dataset.idx = idx;
-          card.innerHTML = `
-            <span class="type-badge">${getTypeLabel(type)}</span>
-            <h3>${stream.definition || 'Default'} · ${stream.format.toUpperCase()}</h3>
-            <div class="details">
-              <b>Resolution:</b> ${stream.width}×${stream.height}<br>
-              <b>Bitrate:</b> ${parseFloat(stream.bitrate).toFixed(0)} kbps<br>
-              <b>Size:</b> ${(stream.size / 1024 / 1024).toFixed(2)} MB<br>
-              <b>Duration:</b> ${parseFloat(stream.duration).toFixed(1)}s<br>
-              <b>Encrypt:</b> ${stream.encrypt ? '✅ ' + (stream.encryptType || 'yes') : '❌ no'}<br>
-              <b>encryptType (SDK):</b> ${getEncryptTypeNum(type)}
-            </div>
-            <button class="play-btn" onclick="playStream(${idx}, '${type}')">▶ Play This Stream</button>
-          `;
-          grid.appendChild(card);
-        });
-
-        // Store streams globally
-        window.__streams = playableStreams;
-
-        log('✅ แสดง ' + playableStreams.length + ' streams ให้เลือก', 'success');
+        const detail = (encStream.encryptType || 'encrypted') + ' · ' + encStream.width + 'x' + encStream.height;
+        setFlow(side, 2, 'pass', detail);
+        log(side, '✅ Manifest: ' + encStream.encryptType, 'success');
+        return data;
       } catch (err) {
-        log('❌ Load streams error: ' + err.message, 'err');
-        grid.innerHTML = '<div style="color:#f87171;padding:20px;text-align:center;grid-column:1/-1;">❌ ' + err.message + '</div>';
+        setFlow(side, 2, 'fail', err.message);
+        log(side, '❌ Manifest: ' + err.message, 'err');
+        return null;
       }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Play selected stream
-    // ═══════════════════════════════════════════════════════════
-    async function playStream(streamIdx, type) {
-      const stream = window.__streams[streamIdx];
-      if (!stream) {
-        log('❌ stream ไม่พบ', 'err');
-        return;
+    async function testSDK(side) {
+      setFlow(side, 3, 'running');
+      const start = Date.now();
+      return new Promise((resolve) => {
+        const check = () => {
+          const elapsed = Math.round((Date.now() - start) / 1000);
+          const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
+          const isReady = alp !== null && alp !== undefined &&
+                          (typeof alp === 'function' ||
+                           (typeof alp === 'object' && Object.keys(alp).length > 0));
+          if (isReady) {
+            if (!window.Aliplayer) window.Aliplayer = alp;
+            setFlow(side, 3, 'pass', elapsed + 's · ' + typeof alp);
+            log(side, '✅ SDK พร้อม', 'success');
+            resolve(true);
+          } else if (elapsed >= 15) {
+            setFlow(side, 3, 'fail', 'timeout');
+            log(side, '❌ SDK timeout', 'err');
+            resolve(false);
+          } else {
+            setTimeout(check, 300);
+          }
+        };
+        check();
+      });
+    }
+
+    async function testPlayer(side, videoId, sts) {
+      const cfg = configs[side];
+      setFlow(side, 4, 'running', 'creating...');
+      log(side, '🏗️ [Flow 4] Create player (encryptType=' + cfg.encryptType + ')', 'info');
+
+      if (players[side]) {
+        try { players[side].dispose(); } catch (e) {}
+        players[side] = null;
       }
 
-      // Highlight selected card
-      document.querySelectorAll('.stream-card').forEach(c => c.classList.remove('selected'));
-      document.querySelector('.stream-card[data-idx="' + streamIdx + '"]').classList.add('selected');
-
-      const encryptType = getEncryptTypeNum(type);
-      const info = document.getElementById('selectedInfo');
-      info.style.display = 'block';
-      info.innerHTML = `🎬 กำลังเล่น: <b>${getTypeLabel(type)}</b> (encryptType: ${encryptType}) · Resolution: ${stream.width}×${stream.height} · ${parseFloat(stream.bitrate).toFixed(0)} kbps`;
-
-      log('▶ Play: ' + type + ' (encryptType=' + encryptType + ')', 'info');
-
-      // Get STS
-      log('🔑 กำลังขอ STS...', 'info');
-      let sts;
       try {
-        const res = await fetch('/api/china/sts/' + currentVideoId);
-        sts = await res.json();
-        if (!sts.accessKeyId) throw new Error(sts.error || 'no STS');
-        log('✅ STS ได้ (' + sts.accessKeyId.substring(0, 12) + '...)', 'success');
-      } catch (err) {
-        log('❌ STS: ' + err.message, 'err');
-        return;
-      }
-
-      // Cleanup previous
-      if (player) {
-        try { player.dispose(); } catch (e) {}
-        player = null;
-      }
-
-      // Create player
-      log('🏗️ สร้าง Aliplayer (encryptType=' + encryptType + ')...', 'info');
-      try {
-        player = new window.Aliplayer({
-          id: 'J_prismPlayer',
-          vid: currentVideoId,
+        players[side] = new window.Aliplayer({
+          id: cfg.playerId,
+          vid: videoId,
           accessKeyId: sts.accessKeyId,
           accessKeySecret: sts.accessKeySecret,
           securityToken: sts.securityToken,
           region: sts.region || 'ap-southeast-1',
           width: '100%',
-          height: '400px',
+          height: '100%',
           autoplay: false,
           isLive: false,
           rePlay: false,
@@ -514,30 +496,39 @@
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           },
-          encryptType: encryptType
+          encryptType: cfg.encryptType
         }, function (p) {
-          log('✅ Instance created', 'success');
+          log(side, '✅ Instance created', 'success');
+          setFlow(side, 4, 'running', 'instance ok');
         });
 
-        player.on('ready', () => log('event: ready', 'info'));
-        player.on('canplay', () => log('✅ event: canplay - decrypted!', 'success'));
-        player.on('play', () => log('▶ event: play', 'success'));
-        player.on('error', (e) => {
+        players[side].on('ready', () => {
+          log(side, '✅ ready', 'success');
+          setFlow(side, 4, 'running', 'ready');
+        });
+        players[side].on('canplay', () => {
+          log(side, '✅ canplay - decrypted!', 'success');
+          setFlow(side, 4, 'pass', 'DRM decrypted!');
+        });
+        players[side].on('play', () => log(side, '▶ playing', 'success'));
+        players[side].on('error', (e) => {
           const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {});
-          log('❌ ERROR: ' + details, 'err');
-          info.innerHTML = '❌ Error: ' + details.substring(0, 150);
-          info.style.color = '#f87171';
+          log(side, '❌ ERROR: ' + details, 'err');
+          setFlow(side, 4, 'fail', details.substring(0, 60));
         });
       } catch (err) {
-        log('❌ Exception: ' + err.message, 'err');
+        log(side, '❌ Exception: ' + err.message, 'err');
+        setFlow(side, 4, 'fail', err.message);
       }
     }
 
-    // Auto-load streams on init
+    // Hint
     setTimeout(() => {
-      log('ℹ️ Auto-load streams...', 'info');
-      loadStreams();
-    }, 1500);
+      log('W', 'ℹ️ กด chip video ด้านบน = set ซ้าย (Widevine)', 'info');
+      log('P', 'ℹ️ กด chip video ค้างขวา = set ขวา (Proprietary)', 'info');
+      log('W', 'หรือกรอก Video ID เอง แล้วกด ▶ Test', 'info');
+      log('P', 'ใช้ Video ID ที่ transcode ด้วย template แต่ละแบบ', 'info');
+    }, 1000);
   </script>
 </body>
 </html>
