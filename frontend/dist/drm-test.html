@@ -5,9 +5,9 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Debug Checklist</title>
-  <!-- BUILD_VERSION: 2026-07-07-12:00-v7-checklist -->
-  <meta name="build-version" content="v7 · 12:00">
-  <meta name="build-time" content="2026-07-07T05:00:00Z">
+  <!-- BUILD_VERSION: 2026-07-07-12:15-v8-fix-constructor -->
+  <meta name="build-version" content="v8 · 12:15">
+  <meta name="build-time" content="2026-07-07T05:15:00Z">
 
   <!-- Aliplayer SDK 2.35.4 - Self-hosted -->
   <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
@@ -269,7 +269,7 @@
     <div class="header">
       <h1>🔐 DRM Debug Checklist</h1>
       <div style="display: flex; gap: 6px; align-items: center;">
-        <span class="version-badge" id="versionBadge">v7 · 12:00</span>
+        <span class="version-badge" id="versionBadge">v8 · 12:15</span>
         <button class="reload-btn" onclick="location.reload(true)">🔄 Hard Reload</button>
       </div>
     </div>
@@ -577,12 +577,15 @@
       return new Promise((resolve) => {
         const check = () => {
           const elapsed = Math.round((Date.now() - start) / 1000);
-          if (typeof window.Aliplayer === 'function') {
-            log(`✅ Aliplayer พร้อม (${elapsed}s)`, 'success');
+          const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
+          if (typeof alp === 'function') {
+            // Ensure window.Aliplayer is set (SDK อาจ export global แบบ non-window)
+            if (!window.Aliplayer) window.Aliplayer = alp;
+            log(`✅ Aliplayer พร้อม (${elapsed}s, type=${typeof alp})`, 'success');
             setStep('sdk', 'pass', `โหลดใช้เวลา ${elapsed}s`);
             resolve(true);
           } else if (elapsed >= timeoutMs / 1000) {
-            log(`❌ Aliplayer ไม่โหลด (timeout ${elapsed}s)`, 'err');
+            log(`❌ Aliplayer ไม่โหลด (timeout ${elapsed}s, window.Aliplayer=${typeof window.Aliplayer})`, 'err');
             setStep('sdk', 'fail', `timeout ${elapsed}s`);
             resolve(false);
           } else {
@@ -714,7 +717,7 @@
       }
 
       try {
-        player = new window.Aliplayer({
+        player = new Aliplayer({
           id: 'J_prismPlayer',
           vid: videoId,
           accessKeyId: sts.accessKeyId,
