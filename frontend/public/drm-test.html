@@ -5,26 +5,49 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test</title>
-  <!-- BUILD_VERSION: 2026-07-07-14:45-v18-null-check-fix -->
-  <meta name="build-version" content="v18 · 14:45">
+  <!-- BUILD_VERSION: 2026-07-07-15:00-v19-corp-fix -->
+  <meta name="build-version" content="v19 · 15:00">
 
-  <!-- Aliplayer SDK 2.35.4 - Self-host (Server เรา) + fallback CDN Alibaba -->
-  <!-- ทดสอบ Cache Theory ยืนยันแล้ว: g.alicdn.com ช้ามากจาก network ไทย/มือถือ -->
-  <!-- แก้: self-host จาก server เรา (โหลดเร็ว + reliable ทุก location) -->
-  <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
-  <script src="/vendor/aliplayer/aliplayer-2.35.4.js" onerror="loadFallbackSDK()"></script>
+  <!-- Aliplayer SDK 2.35.4 - Self-host + Global tracking -->
   <script>
-    // Fallback: ถ้า self-host โหลดไม่ได้ → ลอง CDN Alibaba
-    function loadFallbackSDK() {
-      console.warn('[MedNinja] Self-host SDK failed, fallback to g.alicdn.com');
-      var css = document.createElement('link');
-      css.rel = 'stylesheet';
-      css.href = '//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/skins/default/aliplayer-min.css';
-      document.head.appendChild(css);
+    // Track SDK loading status ก่อน load
+    window.__sdkStatus = { attempts: [], loaded: false, error: null };
+    window.__sdkLoad = function(url, isPrimary) {
+      var start = Date.now();
+      var attempt = { url: url, start: start, isPrimary: isPrimary, ok: null };
+      window.__sdkStatus.attempts.push(attempt);
+
       var s = document.createElement('script');
-      s.src = '//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js';
+      s.src = url;
+      s.async = false;
+      s.onload = function() {
+        attempt.ok = true;
+        attempt.duration = Date.now() - start;
+        attempt.hasAliplayer = typeof window.Aliplayer !== 'undefined';
+        window.__sdkStatus.loaded = attempt.hasAliplayer;
+      };
+      s.onerror = function(e) {
+        attempt.ok = false;
+        attempt.duration = Date.now() - start;
+        attempt.error = 'script.onerror';
+        window.__sdkStatus.error = attempt;
+        // Auto-fallback ถ้า primary fail
+        if (isPrimary) {
+          console.warn('[SDK] Primary fail, loading fallback');
+          window.__sdkLoad('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', false);
+        }
+      };
       document.head.appendChild(s);
-    }
+    };
+
+    // Load CSS
+    var css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/vendor/aliplayer/aliplayer-2.35.4.css';
+    document.head.appendChild(css);
+
+    // Load primary SDK
+    window.__sdkLoad('/vendor/aliplayer/aliplayer-2.35.4.js', true);
   </script>
 
   <style>
@@ -161,7 +184,7 @@
   <div class="header-row">
     <h1>🔐 MedNinja DRM Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v18 · 14:45</span>
+      <span class="version-badge" id="versionBadge">v19 · 15:00</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -313,7 +336,11 @@
         log('❌ Aliplayer timeout 30s (type=' + typeof alp + ', null=' + (alp === null) + ', keys=[' + dbgKeys + '])', 'err');
       } else if (elapsed % 5 === 0 && elapsed > 0) {
         const dbgKeys = (alp && typeof alp === 'object') ? Object.keys(alp).length : 'N/A';
-        log('⏳ รอ Aliplayer... ' + elapsed + 's (type=' + typeof alp + ', null=' + (alp === null) + ', keys=' + dbgKeys + ')', 'warn');
+        // Extra debug: SDK loading status
+        const sdkStatus = window.__sdkStatus || {};
+        const lastAttempt = sdkStatus.attempts ? sdkStatus.attempts[sdkStatus.attempts.length - 1] : null;
+        const sdkInfo = lastAttempt ? 'sdk:' + (lastAttempt.ok === true ? 'ok' : lastAttempt.ok === false ? 'FAIL' : 'loading') : 'no-sdk';
+        log('⏳ รอ Aliplayer... ' + elapsed + 's (' + sdkInfo + ', type=' + typeof alp + ', null=' + (alp === null) + ', keys=' + dbgKeys + ')', 'warn');
       }
     }, 500);
 

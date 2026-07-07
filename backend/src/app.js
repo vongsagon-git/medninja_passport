@@ -350,6 +350,10 @@ if (process.env.NODE_ENV === 'production') {
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
       if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=utf-8')
+      // เอา CORP/COOP restriction ออก — Chrome Android บาง version block ถ้ามี same-origin
+      // vendor SDK เป็น public static file OK ให้ cross-origin ได้
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+      res.setHeader('Access-Control-Allow-Origin', '*')
     }
   }))
   // JS/CSS chunks มี hash → cache ได้นาน
