@@ -5,8 +5,8 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test</title>
-  <!-- BUILD_VERSION: 2026-07-07-15:30-v21-fetch-eval -->
-  <meta name="build-version" content="v21 · 15:30">
+  <!-- BUILD_VERSION: 2026-07-07-15:45-v22-sts-verify -->
+  <meta name="build-version" content="v22 · 15:45">
 
   <!-- Aliplayer SDK 2.35.4 - fetch + Blob approach (bypass script tag issues) -->
   <script>
@@ -201,7 +201,7 @@
   <div class="header-row">
     <h1>🔐 MedNinja DRM Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v21 · 15:30</span>
+      <span class="version-badge" id="versionBadge">v22 · 15:45</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -224,6 +224,7 @@
     <input id="vidInput" type="text" placeholder="กรอก Alibaba Video ID..." />
     <button onclick="loadDRM()">▶ Play DRM Video</button>
     <button class="list-btn" onclick="listVideos()">📋 List</button>
+    <button onclick="testSTS()" style="background: #f59e0b">🔑 Test STS</button>
   </div>
 
   <div class="quick-picks" id="quickPicks">
@@ -380,6 +381,56 @@
     const LAST_VID_KEY = 'drmTest_lastVideoId';
     document.getElementById('vidInput').value = localStorage.getItem(LAST_VID_KEY) || '';
 
+    // ═══════════════════════════════════════════════════════════
+    // STS Test (แยกจาก Play — ทดสอบ backend + Alibaba ทำงานไหม)
+    // ═══════════════════════════════════════════════════════════
+    async function testSTS() {
+      const videoId = document.getElementById('vidInput').value.trim();
+      if (!videoId) {
+        log('❌ กรุณากรอก Video ID หรือกด List เพื่อเลือกก่อน', 'err');
+        return;
+      }
+      log('🔑 ทดสอบ STS: GET /api/china/sts/' + videoId.substring(0, 8) + '...', 'info');
+      const t0 = Date.now();
+      try {
+        const res = await fetch('/api/china/sts/' + videoId);
+        const elapsed = Date.now() - t0;
+        log('📡 HTTP: ' + res.status + ' (' + elapsed + 'ms)', res.ok ? 'success' : 'err');
+
+        const data = await res.json();
+
+        // ตรวจ 3 keys ทั้งหมด
+        const hasAK = !!data.accessKeyId;
+        const hasSK = !!data.accessKeySecret;
+        const hasST = !!data.securityToken;
+        const hasRegion = !!data.region;
+        const hasExpire = !!data.expiration;
+
+        log('🔍 STS Response Fields:', 'info');
+        log('   ' + (hasAK ? '✅' : '❌') + ' accessKeyId: ' + (hasAK ? (data.accessKeyId.substring(0, 12) + '...' + ' (' + data.accessKeyId.length + ' chars)') : 'MISSING'), hasAK ? 'success' : 'err');
+        log('   ' + (hasSK ? '✅' : '❌') + ' accessKeySecret: ' + (hasSK ? ('***hidden*** (' + data.accessKeySecret.length + ' chars)') : 'MISSING'), hasSK ? 'success' : 'err');
+        log('   ' + (hasST ? '✅' : '❌') + ' securityToken: ' + (hasST ? ('***hidden*** (' + data.securityToken.length + ' chars)') : 'MISSING'), hasST ? 'success' : 'err');
+        log('   ' + (hasRegion ? '✅' : '⚠️') + ' region: ' + (data.region || 'MISSING (จะใช้ default ap-southeast-1)'), hasRegion ? 'success' : 'warn');
+        log('   ' + (hasExpire ? '✅' : '⚠️') + ' expiration: ' + (data.expiration || 'MISSING'), hasExpire ? 'success' : 'warn');
+
+        if (hasAK && hasSK && hasST) {
+          log('🎉 STS สำเร็จ! Backend + Alibaba STS ทำงานได้ครบ 3 keys', 'success');
+        } else {
+          log('❌ STS ไม่ครบ - ตรวจ backend log', 'err');
+        }
+
+        // ถ้ามี error field ให้ log
+        if (data.error) log('   ⚠️ error field: ' + data.error, 'warn');
+        if (data.code) log('   ⚠️ code field: ' + data.code, 'warn');
+        if (data.hint) log('   ℹ️ hint: ' + data.hint, 'info');
+
+        return data;
+      } catch (err) {
+        log('❌ STS Exception: ' + err.message, 'err');
+        return null;
+      }
+    }
+
     // Auto load video list
     async function listVideos() {
       log('กำลังโหลดรายการ video ทั้งหมด...', 'info');
@@ -405,6 +456,8 @@
         if (data.videos.length > 0 && !document.getElementById('vidInput').value) {
           document.getElementById('vidInput').value = data.videos[0].videoId;
         }
+        // Auto STS test หลัง list โหลดเสร็จ (verify backend ทำงาน)
+        setTimeout(testSTS, 500);
       } catch (err) {
         log('❌ โหลด list ไม่ได้: ' + err.message, 'err');
       }
