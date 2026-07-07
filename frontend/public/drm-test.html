@@ -4,38 +4,33 @@
   <meta charset="UTF-8">
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
-  <title>MedNinja DRM Debug Checklist</title>
-  <!-- BUILD_VERSION: 2026-07-07-13:00-v11-fast-whoami-only -->
-  <meta name="build-version" content="v11 · 13:00">
-  <meta name="build-time" content="2026-07-07T06:00:00Z">
+  <title>MedNinja DRM Test</title>
+  <!-- BUILD_VERSION: 2026-07-07-13:45-v14-cdn-simple -->
+  <meta name="build-version" content="v14 · 13:45">
 
-  <!-- Aliplayer SDK 2.35.4 - Self-hosted -->
-  <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
-  <script src="/vendor/aliplayer/aliplayer-2.35.4.js"></script>
+  <!-- Aliplayer SDK 2.35.4 - CDN Alibaba (v6 style: ที่เคยเล่นได้) -->
+  <link rel="stylesheet" href="//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/skins/default/aliplayer-min.css" />
+  <script src="//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0a0a1a;
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #1a0033 0%, #0f172a 100%);
       color: #f1f5f9;
-      padding: 12px;
-      line-height: 1.5;
+      padding: 16px;
     }
-    .container { max-width: 900px; margin: 0 auto; }
-
-    /* Header */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-    .header h1 {
-      font-size: 20px;
-      color: #a855f7;
+    h1 { font-size: 22px; color: #a855f7; margin-bottom: 4px; }
+    .sub { color: #94a3b8; font-size: 13px; margin-bottom: 12px; }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #a855f7;
+      color: white;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-right: 6px;
     }
     .version-badge {
       background: #4ade80;
@@ -46,301 +41,151 @@
       font-weight: bold;
       font-family: monospace;
     }
-    .reload-btn {
-      background: #64748b;
-      color: white;
-      border: none;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 11px;
-      cursor: pointer;
-    }
-
-    /* IP Info Card */
-    .ip-card {
-      background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));
-      border: 1px solid rgba(168, 85, 247, 0.3);
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 12px;
-    }
-    .ip-card .row {
+    .header-row {
       display: flex;
       justify-content: space-between;
-      gap: 8px;
-      padding: 4px 0;
-      font-size: 13px;
+      align-items: center;
       flex-wrap: wrap;
-    }
-    .ip-card .row .label {
-      color: #94a3b8;
-      min-width: 80px;
-    }
-    .ip-card .row .value {
-      color: #f1f5f9;
-      font-family: monospace;
-      font-weight: bold;
-      text-align: right;
-      word-break: break-all;
-    }
-    .ip-card .flag {
-      font-size: 22px;
-      display: inline-block;
-      margin-right: 4px;
-    }
-    .ip-card .country-cn {
-      color: #ef4444;
-      font-weight: bold;
-    }
-    .ip-card .country-th {
-      color: #3b82f6;
-      font-weight: bold;
-    }
-    .ip-card .country-other {
-      color: #f59e0b;
-      font-weight: bold;
-    }
-
-    /* Checklist */
-    .checklist {
-      background: #0f172a;
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 12px;
-    }
-    .checklist h2 {
-      color: #a855f7;
-      font-size: 15px;
+      gap: 8px;
       margin-bottom: 10px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid rgba(168, 85, 247, 0.2);
     }
-    .step {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 8px;
-      border-radius: 6px;
-      margin-bottom: 4px;
-      background: rgba(30, 41, 59, 0.5);
-      transition: background 0.2s;
-    }
-    .step.pending {
-      opacity: 0.6;
-    }
-    .step.running {
-      background: rgba(59, 130, 246, 0.15);
-      border-left: 3px solid #3b82f6;
-    }
-    .step.pass {
-      background: rgba(34, 197, 94, 0.1);
-      border-left: 3px solid #22c55e;
-    }
-    .step.fail {
-      background: rgba(239, 68, 68, 0.1);
-      border-left: 3px solid #ef4444;
-    }
-    .step .icon {
-      font-size: 18px;
-      min-width: 24px;
-      text-align: center;
-    }
-    .step .body {
-      flex: 1;
-    }
-    .step .title {
-      font-weight: bold;
-      font-size: 14px;
-      color: #e2e8f0;
-    }
-    .step .detail {
-      font-size: 12px;
-      color: #94a3b8;
-      margin-top: 2px;
-      font-family: monospace;
+    .info {
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
       word-break: break-all;
     }
-    .step .time {
-      font-size: 11px;
-      color: #64748b;
-      font-family: monospace;
+    .info b { color: #c4b5fd; }
+    .info .cn { color: #ef4444; font-weight: bold; }
+    .info .th { color: #3b82f6; font-weight: bold; }
+    .player-box {
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      max-width: 720px;
     }
-
-    /* Video input */
+    #J_prismPlayer { width: 100%; min-height: 300px; }
+    #log {
+      background: #000;
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      max-height: 400px;
+      overflow-y: auto;
+      color: #4ade80;
+    }
+    #log .err { color: #f87171; }
+    #log .warn { color: #fbbf24; }
+    #log .info { color: #38bdf8; }
+    #log .success { color: #4ade80; font-weight: bold; }
+    button {
+      background: #a855f7;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      margin: 8px 4px;
+      font-weight: bold;
+    }
+    button.reload-btn {
+      background: #64748b;
+      padding: 4px 10px;
+      font-size: 11px;
+      margin: 0;
+    }
+    button.list-btn { background: #22c55e; }
     .video-input {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       margin-bottom: 12px;
+      max-width: 720px;
       flex-wrap: wrap;
     }
     .video-input input {
       flex: 1;
-      min-width: 200px;
-      padding: 10px 12px;
+      min-width: 240px;
+      padding: 12px 14px;
       background: rgba(168, 85, 247, 0.1);
       border: 1px solid rgba(168, 85, 247, 0.4);
       border-radius: 6px;
       color: #f1f5f9;
-      font-family: monospace;
-      font-size: 12px;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
     }
-    .video-input button {
-      background: #a855f7;
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: bold;
-    }
-    .video-input button.list-btn { background: #22c55e; }
-
+    .video-input button { margin: 0; }
     .quick-picks {
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
       margin-bottom: 12px;
-      font-size: 11px;
+      font-size: 12px;
+      color: #94a3b8;
     }
-    .quick {
-      background: rgba(74, 222, 128, 0.15);
+    .quick-picks .quick {
+      background: rgba(74, 222, 128, 0.1);
       border: 1px solid rgba(74, 222, 128, 0.3);
       color: #4ade80;
-      padding: 6px 10px;
+      padding: 6px 12px;
       border-radius: 999px;
       cursor: pointer;
-      font-family: monospace;
-    }
-
-    /* Player */
-    .player-box {
-      background: #000;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-bottom: 12px;
-    }
-    #J_prismPlayer { width: 100%; min-height: 240px; }
-
-    /* Log */
-    .log-box {
-      background: #000;
-      border: 1px solid rgba(74, 222, 128, 0.2);
-      border-radius: 10px;
-      padding: 10px;
-      font-family: 'Consolas', 'Courier New', monospace;
+      font-family: 'Consolas', monospace;
       font-size: 11px;
-      max-height: 300px;
-      overflow-y: auto;
-      color: #4ade80;
     }
-    .log-box .line { padding: 2px 0; }
-    .log-box .err { color: #f87171; }
-    .log-box .warn { color: #fbbf24; }
-    .log-box .info { color: #60a5fa; }
-    .log-box .success { color: #4ade80; font-weight: bold; }
-
-    /* Reset button */
-    .reset-btn {
-      background: #64748b;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      margin-bottom: 12px;
-    }
-
-    /* Section title */
-    .section-title {
-      font-size: 13px;
-      color: #94a3b8;
-      margin: 12px 0 6px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+    .quick-picks .quick:hover { background: rgba(74, 222, 128, 0.2); }
   </style>
 </head>
 <body>
-  <div class="container">
-
-    <!-- Header -->
-    <div class="header">
-      <h1>🔐 DRM Debug Checklist</h1>
-      <div style="display: flex; gap: 6px; align-items: center;">
-        <span class="version-badge" id="versionBadge">v11 · 13:00</span>
-        <button class="reload-btn" onclick="location.reload(true)">🔄 Hard Reload</button>
-      </div>
+  <div class="header-row">
+    <h1>🔐 MedNinja DRM Test</h1>
+    <div style="display: flex; gap: 6px; align-items: center;">
+      <span class="version-badge" id="versionBadge">v14 · 13:45</span>
+      <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
-
-    <!-- IP + Country + Device + Browser Info -->
-    <div class="section-title">🌍 Your Connection</div>
-    <div class="ip-card" id="ipCard">
-      <div class="row"><span class="label">IP:</span><span class="value" id="ipAddr">กำลังโหลด...</span></div>
-      <div class="row"><span class="label">Country:</span><span class="value" id="ipCountry">-</span></div>
-      <div class="row"><span class="label">City:</span><span class="value" id="ipCity">-</span></div>
-      <div class="row"><span class="label">ISP:</span><span class="value" id="ipIsp">-</span></div>
-    </div>
-
-    <div class="section-title">📱 Device & Browser</div>
-    <div class="ip-card" id="deviceCard">
-      <div class="row"><span class="label">Device:</span><span class="value" id="devType">-</span></div>
-      <div class="row"><span class="label">OS:</span><span class="value" id="devOS">-</span></div>
-      <div class="row"><span class="label">Browser:</span><span class="value" id="devBrowser">-</span></div>
-      <div class="row"><span class="label">Screen:</span><span class="value" id="devScreen">-</span></div>
-      <div class="row"><span class="label">Touch:</span><span class="value" id="devTouch">-</span></div>
-    </div>
-
-    <!-- Video Selection -->
-    <div class="section-title">🎬 Video Selection</div>
-    <div class="video-input">
-      <input id="vidInput" type="text" placeholder="กรอก Alibaba Video ID..." />
-      <button onclick="runFullChecklist()">▶ Run Test</button>
-      <button class="list-btn" onclick="listVideos()">📋 List</button>
-    </div>
-    <div class="quick-picks" id="quickPicks">
-      <span style="align-self: center; color: #94a3b8;">Quick:</span>
-    </div>
-
-    <!-- Checklist -->
-    <div class="section-title">✅ Checklist (13 steps)</div>
-    <div class="checklist" id="checklist">
-      <h2>Detection & DRM Playback Test</h2>
-      <div id="steps"></div>
-    </div>
-
-    <!-- Video Player -->
-    <div class="section-title">🎬 Video Player</div>
-    <div class="player-box">
-      <div id="J_prismPlayer"></div>
-    </div>
-
-    <!-- Raw Log -->
-    <div class="section-title">📋 Raw Log</div>
-    <div class="log-box" id="log"></div>
-
   </div>
 
+  <p class="sub">
+    <span class="badge">Widevine</span>
+    <span class="badge">FairPlay</span>
+    Dual-DRM via Alibaba license server (mirror)
+  </p>
+
+  <div class="info">
+    <b>Your IP:</b> <span id="ipAddr">...</span> ·
+    <b>Country:</b> <span id="ipCountry">-</span><br>
+    <b>Device:</b> <span id="devInfo">-</span><br>
+    <b>Encryption:</b> Widevine-FairPlay DRM · <b>SDK:</b> Aliplayer 2.35.4 (self-host)<br>
+    <b>License:</b> Activated (Chinese Mainland region)
+  </div>
+
+  <div class="video-input">
+    <input id="vidInput" type="text" placeholder="กรอก Alibaba Video ID..." />
+    <button onclick="loadDRM()">▶ Play DRM Video</button>
+    <button class="list-btn" onclick="listVideos()">📋 List</button>
+  </div>
+
+  <div class="quick-picks" id="quickPicks">
+    <span style="align-self: center; margin-right: 6px;">Quick:</span>
+  </div>
+
+  <div class="player-box">
+    <div id="J_prismPlayer"></div>
+  </div>
+
+  <div id="log"></div>
+
   <script>
-    // ═══════════════════════════════════════════════════════════
-    // Log system
-    // ═══════════════════════════════════════════════════════════
     const sessionId = 'drm-' + Math.random().toString(36).substring(2, 10);
     const logBuffer = [];
     let flushTimer = null;
-    const logEl = document.getElementById('log');
 
-    function log(msg, type) {
-      const line = document.createElement('div');
-      line.className = 'line ' + (type || '');
-      line.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + msg;
-      logEl.appendChild(line);
-      logEl.scrollTop = logEl.scrollHeight;
-      logBuffer.push({ level: type || 'info', msg, clientTs: new Date().toISOString() });
-      if (flushTimer) clearTimeout(flushTimer);
-      flushTimer = setTimeout(flushLogs, 500);
-    }
     function flushLogs() {
       if (!logBuffer.length) return;
       const batch = logBuffer.splice(0, logBuffer.length);
@@ -351,297 +196,115 @@
       }).catch(() => {});
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Checklist system (13 steps)
-    // ═══════════════════════════════════════════════════════════
-    const STEPS = [
-      { id: 'html',      title: '1. HTML v7 loaded',              detail: 'build-version meta tag'                            },
-      { id: 'sdk',       title: '2. Aliplayer SDK loaded',        detail: '/vendor/aliplayer/aliplayer-2.35.4.js (self-host)' },
-      { id: 'eme',       title: '3. EME (Encrypted Media)',       detail: 'navigator.requestMediaKeySystemAccess'             },
-      { id: 'widevine',  title: '4. Widevine CDM available',      detail: 'com.widevine.alpha keySystem'                      },
-      { id: 'fairplay',  title: '5. FairPlay CDM (Apple only)',   detail: 'com.apple.fps.1_0 keySystem'                       },
-      { id: 'ipapi',     title: '6. IP/Country detection',        detail: 'ipapi.co or backend geo'                           },
-      { id: 'videolist', title: '7. Fetch video list',            detail: 'GET /api/china/videos'                             },
-      { id: 'sts',       title: '8. Request STS token',           detail: 'GET /api/china/sts/:videoId'                       },
-      { id: 'assumerole',title: '9. STS AssumeRole (Alibaba)',    detail: 'sts.aliyuncs.com AssumeRole call'                  },
-      { id: 'instance',  title: '10. Aliplayer instance created', detail: 'new Aliplayer({vid, sts, license, region})'        },
-      { id: 'license',   title: '11. Widevine license fetched',   detail: 'drm-cn-hongkong.aliyuncs.com/widevine'             },
-      { id: 'decrypt',   title: '12. Video decrypted',            detail: 'event: canplay - DRM decrypted!'                   },
-      { id: 'play',      title: '13. Video playing',              detail: 'event: play (video actually plays)'                }
-    ];
-
-    const stepsEl = document.getElementById('steps');
-    function renderSteps() {
-      stepsEl.innerHTML = STEPS.map(s => `
-        <div class="step pending" id="step-${s.id}">
-          <div class="icon">⏸️</div>
-          <div class="body">
-            <div class="title">${s.title}</div>
-            <div class="detail">${s.detail}</div>
-          </div>
-          <div class="time" id="time-${s.id}"></div>
-        </div>
-      `).join('');
-    }
-    renderSteps();
-
-    function setStep(id, status, extraDetail) {
-      const el = document.getElementById('step-' + id);
-      if (!el) return;
-      el.className = 'step ' + status;
-      const icon = { running: '⏳', pass: '✅', fail: '❌', pending: '⏸️' }[status] || '⏸️';
-      el.querySelector('.icon').textContent = icon;
-      if (extraDetail) {
-        const detailEl = el.querySelector('.detail');
-        detailEl.textContent = extraDetail;
-      }
-      const timeEl = document.getElementById('time-' + id);
-      if (status === 'pass' || status === 'fail') {
-        timeEl.textContent = new Date().toTimeString().slice(0,8);
-      }
-    }
-    function resetSteps() {
-      STEPS.forEach(s => {
-        setStep(s.id, 'pending');
-        const timeEl = document.getElementById('time-' + s.id);
-        if (timeEl) timeEl.textContent = '';
-      });
+    const logEl = document.getElementById('log');
+    function log(msg, type) {
+      const line = document.createElement('div');
+      line.className = type || '';
+      line.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      logBuffer.push({ level: type || 'info', msg, clientTs: new Date().toISOString() });
+      if (flushTimer) clearTimeout(flushTimer);
+      flushTimer = setTimeout(flushLogs, 500);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Device + Browser detection
-    // ═══════════════════════════════════════════════════════════
-    function detectDevice() {
-      const ua = navigator.userAgent;
-      let devType = 'Desktop';
-      let os = 'Unknown';
-      let browser = 'Unknown';
-      let browserVer = '';
-
-      // Device type
-      if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
-        devType = '📱 iPad';
-      } else if (/iPhone/.test(ua)) {
-        devType = '📱 iPhone';
-      } else if (/Android/.test(ua) && /Mobile/.test(ua)) {
-        devType = '📱 Android Phone';
-      } else if (/Android/.test(ua)) {
-        devType = '📱 Android Tablet';
-      } else if (/Windows/.test(ua)) {
-        devType = '💻 Windows PC';
-      } else if (/Macintosh/.test(ua)) {
-        devType = '💻 Mac';
-      } else if (/Linux/.test(ua)) {
-        devType = '💻 Linux PC';
-      }
-
-      // OS
-      if (/Windows NT ([\d.]+)/.exec(ua)) os = 'Windows ' + RegExp.$1;
-      else if (/iPhone OS ([\d_]+)/.exec(ua)) os = 'iOS ' + RegExp.$1.replace(/_/g, '.');
-      else if (/OS X ([\d_]+)/.exec(ua)) os = 'macOS ' + RegExp.$1.replace(/_/g, '.');
-      else if (/Android ([\d.]+)/.exec(ua)) os = 'Android ' + RegExp.$1;
-      else if (/Linux/.test(ua)) os = 'Linux';
-
-      // Browser + version
-      const browserMatchers = [
-        { re: /SamsungBrowser\/([\d.]+)/, name: 'Samsung Internet' },
-        { re: /Edg\/([\d.]+)/, name: 'Edge' },
-        { re: /OPR\/([\d.]+)/, name: 'Opera' },
-        { re: /Chrome\/([\d.]+)/, name: 'Chrome' },
-        { re: /Firefox\/([\d.]+)/, name: 'Firefox' },
-        { re: /Version\/([\d.]+).*Safari/, name: 'Safari' }
-      ];
-      for (const m of browserMatchers) {
-        const match = m.re.exec(ua);
-        if (match) {
-          browser = m.name;
-          browserVer = match[1];
-          break;
-        }
-      }
-
-      const screen = window.screen.width + '×' + window.screen.height +
-                     ' (window: ' + window.innerWidth + '×' + window.innerHeight + ')';
-      const touch = ('ontouchstart' in window) ? '✅ Yes (' + navigator.maxTouchPoints + ' points)' : '❌ No';
-
-      document.getElementById('devType').textContent = devType;
-      document.getElementById('devOS').textContent = os;
-      document.getElementById('devBrowser').textContent = browser + ' ' + browserVer;
-      document.getElementById('devScreen').textContent = screen;
-      document.getElementById('devTouch').textContent = touch;
-
-      log(`📱 Device: ${devType} · ${os}`, 'info');
-      log(`🌐 Browser: ${browser} ${browserVer}`, 'info');
-
-      return { devType, os, browser, browserVer, screen, touch, ua };
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // STEP 1: HTML loaded (auto)
-    // ═══════════════════════════════════════════════════════════
+    // Build version
     const buildVer = document.querySelector('meta[name="build-version"]').content;
-    const buildTime = document.querySelector('meta[name="build-time"]').content;
     log('🏷️ Build: ' + buildVer, 'success');
     log('Session: ' + sessionId, 'info');
-    setStep('html', 'pass', 'build: ' + buildVer);
+    log('UA: ' + navigator.userAgent.substring(0, 100), 'info');
 
-    const deviceInfo = detectDevice();
+    // Device info (simple, inline)
+    function detectDevice() {
+      const ua = navigator.userAgent;
+      let dev = 'Desktop', browser = '?';
+      if (/iPhone/.test(ua)) dev = '📱 iPhone';
+      else if (/iPad/.test(ua)) dev = '📱 iPad';
+      else if (/Android.*Mobile/.test(ua)) dev = '📱 Android';
+      else if (/Windows/.test(ua)) dev = '💻 Windows';
+      else if (/Macintosh/.test(ua)) dev = '💻 Mac';
 
-    // ═══════════════════════════════════════════════════════════
-    // DB Log: save every step to backend
-    // ═══════════════════════════════════════════════════════════
-    async function saveTestResult(status, details) {
-      const stepStatus = {};
-      STEPS.forEach(s => {
-        const el = document.getElementById('step-' + s.id);
-        stepStatus[s.id] = el ? el.className.replace('step ', '') : 'unknown';
-      });
-      const payload = {
-        sessionId,
-        buildVer,
-        status,  // 'pass' | 'fail' | 'partial'
-        device: deviceInfo,
-        stepStatus,
-        details: details || {},
-        clientTs: new Date().toISOString()
-      };
-      try {
-        await fetch('/api/china/log/test-result', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } catch (e) {}
+      if (/Edg\/([\d.]+)/.exec(ua)) browser = 'Edge ' + RegExp.$1;
+      else if (/Chrome\/([\d.]+)/.exec(ua)) browser = 'Chrome ' + RegExp.$1;
+      else if (/Firefox\/([\d.]+)/.exec(ua)) browser = 'Firefox ' + RegExp.$1;
+      else if (/Version\/([\d.]+).*Safari/.exec(ua)) browser = 'Safari ' + RegExp.$1;
+
+      document.getElementById('devInfo').textContent = dev + ' · ' + browser;
+      log('📱 ' + dev + ' · ' + browser, 'info');
     }
+    detectDevice();
 
-    // ═══════════════════════════════════════════════════════════
-    // STEP 6: IP + Country detection
-    // ═══════════════════════════════════════════════════════════
-    async function detectIP() {
-      setStep('ipapi', 'running');
-      log('🌍 Detecting IP + country (backend)...', 'info');
-
-      // ใช้แค่ backend /whoami (Cloudflare header)
-      // ไม่เรียก 3rd party — เร็ว + ไม่ถูก block จีน
+    // IP + Country (backend Cloudflare - fast)
+    (async () => {
       try {
         const res = await fetch('/api/china/whoami');
         const data = await res.json();
-        const ip = data.ip || '-';
-        const countryCode = data.country || '-';
-        const flag = getFlag(countryCode);
-        const countryClass = countryCode === 'CN' ? 'country-cn'
-                          : countryCode === 'TH' ? 'country-th'
-                          : 'country-other';
-        document.getElementById('ipAddr').textContent = ip;
-        document.getElementById('ipCountry').innerHTML =
-          `<span class="flag">${flag}</span><span class="${countryClass}">${countryCode}</span>`;
-        // City/ISP = ไม่มีจาก Cloudflare header — แสดง "-"
-        document.getElementById('ipCity').textContent = '-';
-        document.getElementById('ipIsp').textContent = '-';
-        log(`✅ IP: ${ip} — ${countryCode} (Cloudflare)`, 'success');
-        setStep('ipapi', 'pass', `${ip} · ${countryCode}`);
-        return { ip, country: countryCode, countryCode };
-      } catch (err) {
-        log('❌ IP detection ล้มเหลว: ' + err.message, 'err');
-        setStep('ipapi', 'fail', err.message);
-        return null;
-      }
-    }
-    function getFlag(cc) {
-      const flags = { CN: '🇨🇳', TH: '🇹🇭', US: '🇺🇸', HK: '🇭🇰', SG: '🇸🇬', JP: '🇯🇵', KR: '🇰🇷', TW: '🇹🇼' };
-      return flags[cc] || '🌐';
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // STEP 2: Wait for Aliplayer SDK
-    // ═══════════════════════════════════════════════════════════
-    async function waitForSDK(timeoutMs = 30000) {
-      setStep('sdk', 'running');
-      const start = Date.now();
-      return new Promise((resolve) => {
-        const check = () => {
-          const elapsed = Math.round((Date.now() - start) / 1000);
-          const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
-          if (typeof alp === 'function') {
-            // Ensure window.Aliplayer is set (SDK อาจ export global แบบ non-window)
-            if (!window.Aliplayer) window.Aliplayer = alp;
-            log(`✅ Aliplayer พร้อม (${elapsed}s, type=${typeof alp})`, 'success');
-            setStep('sdk', 'pass', `โหลดใช้เวลา ${elapsed}s`);
-            resolve(true);
-          } else if (elapsed >= timeoutMs / 1000) {
-            log(`❌ Aliplayer ไม่โหลด (timeout ${elapsed}s, window.Aliplayer=${typeof window.Aliplayer})`, 'err');
-            setStep('sdk', 'fail', `timeout ${elapsed}s`);
-            resolve(false);
-          } else {
-            setTimeout(check, 500);
-          }
-        };
-        check();
-      });
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // STEP 3-5: EME + Widevine + FairPlay detection
-    // ═══════════════════════════════════════════════════════════
-    async function detectDRMSupport() {
-      setStep('eme', 'running');
-      if (!navigator.requestMediaKeySystemAccess) {
-        log('❌ EME ไม่รองรับ', 'err');
-        setStep('eme', 'fail', 'EME API missing');
-        setStep('widevine', 'fail', 'ต้องมี EME ก่อน');
-        setStep('fairplay', 'fail', 'ต้องมี EME ก่อน');
-        return;
-      }
-      log('✅ EME supported', 'success');
-      setStep('eme', 'pass', 'navigator.requestMediaKeySystemAccess พร้อม');
-
-      // Widevine check
-      setStep('widevine', 'running');
-      try {
-        await navigator.requestMediaKeySystemAccess('com.widevine.alpha', [{
-          initDataTypes: ['cenc'],
-          videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
-        }]);
-        log('✅ Widevine CDM available', 'success');
-        setStep('widevine', 'pass', 'com.widevine.alpha พร้อม');
+        const flag = { CN: '🇨🇳', TH: '🇹🇭', HK: '🇭🇰', SG: '🇸🇬', US: '🇺🇸' }[data.country] || '🌐';
+        document.getElementById('ipAddr').textContent = data.ip || '-';
+        const countryEl = document.getElementById('ipCountry');
+        countryEl.textContent = flag + ' ' + (data.country || '-');
+        countryEl.className = data.country === 'CN' ? 'cn' : data.country === 'TH' ? 'th' : '';
+        log('✅ IP: ' + data.ip + ' · ' + data.country, 'success');
       } catch (e) {
-        log('⚠️ Widevine ไม่พร้อม: ' + e.message.substring(0, 60), 'warn');
-        setStep('widevine', 'fail', e.message.substring(0, 60));
+        log('⚠️ IP detect fail: ' + e.message, 'warn');
       }
+    })();
 
-      // FairPlay check
-      setStep('fairplay', 'running');
-      try {
-        await navigator.requestMediaKeySystemAccess('com.apple.fps.1_0', [{
-          initDataTypes: ['sinf'],
-          videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
-        }]);
-        log('✅ FairPlay supported', 'success');
-        setStep('fairplay', 'pass', 'Apple/Safari device');
-      } catch (e) {
-        log('ℹ️ FairPlay ไม่รองรับ (ปกติ non-Apple)', 'info');
-        setStep('fairplay', 'pending', 'ไม่ใช่ Apple device (ok)');
-      }
+    // Widevine capability check (auto)
+    if (navigator.requestMediaKeySystemAccess) {
+      log('✅ EME (Encrypted Media Extensions) supported', 'success');
+      navigator.requestMediaKeySystemAccess('com.widevine.alpha', [{
+        initDataTypes: ['cenc'],
+        videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
+      }])
+        .then(access => log('✅ Widevine CDM available', 'success'))
+        .catch(e => log('⚠️ Widevine CDM error: ' + e.message, 'warn'));
+
+      navigator.requestMediaKeySystemAccess('com.apple.fps.1_0', [{
+        initDataTypes: ['sinf'],
+        videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
+      }])
+        .then(access => log('✅ FairPlay supported', 'success'))
+        .catch(e => log('ℹ️ FairPlay ไม่รองรับ (ปกติ non-Apple)', 'info'));
+    } else {
+      log('❌ EME ไม่รองรับใน browser นี้', 'err');
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // STEP 7: List videos
-    // ═══════════════════════════════════════════════════════════
+    // Wait for SDK (up to 30s)
+    const sdkStart = Date.now();
+    const sdkPoll = setInterval(() => {
+      const elapsed = Math.round((Date.now() - sdkStart) / 1000);
+      const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
+      if (typeof alp === 'function') {
+        clearInterval(sdkPoll);
+        if (!window.Aliplayer) window.Aliplayer = alp;
+        log('✅ Aliplayer พร้อม (โหลดใช้เวลา ' + elapsed + 's)', 'success');
+      } else if (elapsed >= 30) {
+        clearInterval(sdkPoll);
+        log('❌ Aliplayer โหลดไม่สำเร็จหลัง 30s — SDK URL อาจถูก block', 'err');
+      } else if (elapsed % 5 === 0 && elapsed > 0) {
+        log('⏳ รอ Aliplayer... ' + elapsed + 's (type=' + typeof alp + ')', 'warn');
+      }
+    }, 500);
+
+    // Video ID: restore last-used
+    const LAST_VID_KEY = 'drmTest_lastVideoId';
+    document.getElementById('vidInput').value = localStorage.getItem(LAST_VID_KEY) || '';
+
+    // Auto load video list
     async function listVideos() {
-      setStep('videolist', 'running');
-      log('📋 โหลดรายการ video...', 'info');
+      log('กำลังโหลดรายการ video ทั้งหมด...', 'info');
       try {
         const res = await fetch('/api/china/videos');
         const data = await res.json();
         log('✅ พบ ' + data.count + ' videos', 'success');
-        setStep('videolist', 'pass', `พบ ${data.count} videos`);
         const picks = document.getElementById('quickPicks');
         picks.querySelectorAll('.quick').forEach(el => el.remove());
         (data.videos || []).forEach(v => {
           const span = document.createElement('span');
           span.className = 'quick';
           const shortId = v.videoId.substring(0, 8) + '…';
-          span.textContent = v.title ? (v.title.substring(0, 15) + ' [' + shortId + ']') : shortId;
+          span.textContent = v.title ? (v.title.substring(0, 20) + ' [' + shortId + ']') : shortId;
           span.title = v.videoId;
           span.onclick = () => {
             document.getElementById('vidInput').value = v.videoId;
@@ -649,65 +312,49 @@
           };
           picks.appendChild(span);
         });
-        // auto-select first if input empty
+        // auto-fill if empty
         if (data.videos.length > 0 && !document.getElementById('vidInput').value) {
           document.getElementById('vidInput').value = data.videos[0].videoId;
         }
-        return data.videos;
       } catch (err) {
         log('❌ โหลด list ไม่ได้: ' + err.message, 'err');
-        setStep('videolist', 'fail', err.message);
-        return null;
       }
     }
+    setTimeout(listVideos, 800);
 
-    // ═══════════════════════════════════════════════════════════
-    // STEP 8-9: Request STS token
-    // ═══════════════════════════════════════════════════════════
-    async function getSTS(videoId) {
-      setStep('sts', 'running');
-      setStep('assumerole', 'running');
-      log('🔑 ขอ STS token...', 'info');
+    async function loadDRM() {
+      const videoId = document.getElementById('vidInput').value.trim();
+      if (!videoId) {
+        log('❌ กรุณากรอก Video ID หรือกด List เพื่อเลือก', 'err');
+        return;
+      }
+      localStorage.setItem(LAST_VID_KEY, videoId);
+
+      const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
+      if (typeof alp !== 'function') {
+        log('❌ Aliplayer ยังไม่พร้อม', 'err');
+        return;
+      }
+      if (!window.Aliplayer) window.Aliplayer = alp;
+
+      log('กำลังขอ STS token (สำหรับ DRM)...', 'info');
       try {
         const res = await fetch('/api/china/sts/' + videoId);
         const data = await res.json();
-        if (!data.accessKeyId) {
-          throw new Error(data.error || 'No accessKeyId');
+        if (!data.accessKeyId || !data.securityToken) {
+          log('❌ No STS: ' + JSON.stringify(data), 'err');
+          return;
         }
         log('✅ STS token ได้ (expires: ' + data.expiration + ')', 'success');
-        setStep('sts', 'pass', 'backend ส่ง STS มาแล้ว');
-        setStep('assumerole', 'pass', 'Alibaba STS API ทำงาน');
-        return data;
-      } catch (err) {
-        log('❌ STS fail: ' + err.message, 'err');
-        setStep('sts', 'fail', err.message);
-        setStep('assumerole', 'fail', 'STS API ล้มเหลว');
-        return null;
-      }
-    }
 
-    // ═══════════════════════════════════════════════════════════
-    // STEP 10-13: Create Aliplayer + verify events
-    // ═══════════════════════════════════════════════════════════
-    let player = null;
-    async function createPlayer(videoId, sts) {
-      setStep('instance', 'running');
-      log('🎬 สร้าง Aliplayer...', 'info');
-
-      // Cleanup previous player if any
-      if (player) {
-        try { player.dispose(); } catch (e) {}
-        player = null;
-      }
-
-      try {
-        player = new Aliplayer({
+        log('กำลังสร้าง Aliplayer (DRM mode with STS)...', 'info');
+        const player = new Aliplayer({
           id: 'J_prismPlayer',
           vid: videoId,
-          accessKeyId: sts.accessKeyId,
-          accessKeySecret: sts.accessKeySecret,
-          securityToken: sts.securityToken,
-          region: sts.region || 'ap-southeast-1',
+          accessKeyId: data.accessKeyId,
+          accessKeySecret: data.accessKeySecret,
+          securityToken: data.securityToken,
+          region: data.region || 'ap-southeast-1',
           width: '100%',
           height: '400px',
           autoplay: false,
@@ -721,92 +368,23 @@
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           },
-          encryptType: 2  // DRM
+          encryptType: 2
         }, function (p) {
           log('✅ Aliplayer instance created', 'success');
-          setStep('instance', 'pass', 'instance สร้างสำเร็จ');
-          setStep('license', 'running', 'รอ license request...');
         });
 
-        player.on('ready', () => {
-          log('event: ready', 'info');
-          setStep('license', 'pass', 'license fetched');
-          setStep('decrypt', 'running');
-        });
-        player.on('canplay', () => {
-          log('✅ event: canplay - DRM decrypted!', 'success');
-          setStep('decrypt', 'pass', 'video decrypted, พร้อมเล่น');
-        });
-        player.on('play', () => {
-          log('▶ event: play', 'success');
-          setStep('play', 'pass', 'video กำลังเล่น');
-        });
+        player.on('ready', () => log('event: ready', 'info'));
+        player.on('canplay', () => log('✅ event: canplay - DRM decrypted!', 'success'));
+        player.on('play', () => log('▶️ event: play', 'info'));
         player.on('error', (e) => {
           const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {});
           log('❌ ERROR: ' + details, 'err');
-          // Mark next unfinished step as fail
-          const failing = ['license', 'decrypt', 'play'].find(id => {
-            const el = document.getElementById('step-' + id);
-            return el && (el.classList.contains('running') || el.classList.contains('pending'));
-          });
-          if (failing) setStep(failing, 'fail', details.substring(0, 80));
         });
         player.on('waiting', () => log('event: waiting (buffer)', 'warn'));
       } catch (err) {
-        log('❌ createPlayer ล้มเหลว: ' + err.message, 'err');
-        setStep('instance', 'fail', err.message);
+        log('❌ Exception: ' + err.message, 'err');
       }
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // MASTER: Run full checklist
-    // ═══════════════════════════════════════════════════════════
-    async function runFullChecklist() {
-      const videoId = document.getElementById('vidInput').value.trim();
-      if (!videoId) {
-        log('❌ กรุณากรอก Video ID หรือกด List เพื่อเลือก', 'err');
-        return;
-      }
-      localStorage.setItem('drmTest_lastVideoId', videoId);
-
-      // Reset player-related steps
-      ['videolist', 'sts', 'assumerole', 'instance', 'license', 'decrypt', 'play'].forEach(id => setStep(id, 'pending'));
-
-      const videos = await listVideos();
-      if (!videos) { await saveTestResult('fail', { at: 'videolist', videoId }); return; }
-      const sts = await getSTS(videoId);
-      if (!sts) { await saveTestResult('fail', { at: 'sts', videoId }); return; }
-      await createPlayer(videoId, sts);
-
-      // Save summary after 10s (allow time for canplay/play events)
-      setTimeout(() => saveTestResult('done', { videoId }), 10000);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // AUTO RUN on load: ทำทุกอย่าง PARALLEL (SDK, DRM, IP, list)
-    // เพื่อไม่ให้ตัวใดตัวหนึ่งค้างทั้งระบบ
-    // ═══════════════════════════════════════════════════════════
-    (async () => {
-      // Restore last video id
-      const saved = localStorage.getItem('drmTest_lastVideoId') || '';
-      document.getElementById('vidInput').value = saved;
-
-      log('🚀 เริ่ม auto-detection (parallel mode)...', 'info');
-
-      // Run ทั้งหมด parallel — ตัวไหนเสร็จก่อน update UI เลย
-      const results = await Promise.allSettled([
-        waitForSDK(30000).catch(e => { log('SDK error: ' + e.message, 'err'); return false; }),
-        detectDRMSupport().catch(e => { log('DRM error: ' + e.message, 'err'); }),
-        detectIP().catch(e => { log('IP error: ' + e.message, 'err'); }),
-        listVideos().catch(e => { log('List error: ' + e.message, 'err'); return null; })
-      ]);
-
-      log('ℹ️ Auto-detection เสร็จ ' + results.filter(r => r.status === 'fulfilled').length + '/' + results.length + ' pass', 'info');
-      log('ℹ️ กด "▶ Run Test" เพื่อทดสอบ DRM playback', 'info');
-
-      // Save initial detection to DB
-      await saveTestResult('detection-only', { phase: 'auto-detection' });
-    })();
   </script>
 </body>
 </html>
