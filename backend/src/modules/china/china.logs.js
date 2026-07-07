@@ -1,6 +1,6 @@
 // In-memory log store สำหรับ debug page /china
 // Cap 500 entries — pop เก่าสุดออก
-const MAX_LOGS = 500
+const MAX_LOGS = 3000  // เพิ่มจาก 500 (iPhone/Safari session ถูก rotate เร็วเกินไป)
 const logs = []
 
 // Test result store — บันทึกผลการ test DRM
