@@ -565,6 +565,16 @@
         setFlow('player', 'fail', 'กรุณากรอก Video ID');
         return;
       }
+
+      // 🔒 LOCK: หน้านี้เล่นได้เฉพาะ Video Widevine เท่านั้น
+      if (videoId !== '70084e4a79dc71f185e5e6e7c74a0102') {
+        log('🚨 [Flow 4] Video ID ไม่ตรงกับ Widevine! หน้านี้เล่นได้เฉพาะ 70084e4a...', 'err');
+        setFlow('player', 'fail', 'หน้านี้เล่นได้เฉพาะ Video Widevine (70084e4a...) เท่านั้น');
+        // Force reset input to correct video
+        document.getElementById('vidInput').value = '70084e4a79dc71f185e5e6e7c74a0102';
+        return;
+      }
+
       setFlow('player', 'running', 'ตรวจ pre-req...');
 
       // Check pre-req: Aliplayer

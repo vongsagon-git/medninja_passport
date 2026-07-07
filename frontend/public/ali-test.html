@@ -552,7 +552,7 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FLOW 4: Player + Widevine Test
+    // FLOW 4: Player + Alibaba Proprietary Test
     // ═══════════════════════════════════════════════════════════
     let player = null;
     async function testPlayer() {
@@ -563,6 +563,15 @@
       if (!videoId) {
         log('❌ [Flow 4] no videoId', 'err');
         setFlow('player', 'fail', 'กรุณากรอก Video ID');
+        return;
+      }
+
+      // 🔒 LOCK: หน้านี้เล่นได้เฉพาะ Video Proprietary เท่านั้น
+      if (videoId !== 'f0a10c4f79dc71f1a46bf6f7f45a0102') {
+        log('🚨 [Flow 4] Video ID ไม่ตรงกับ Proprietary! หน้านี้เล่นได้เฉพาะ f0a10c4f...', 'err');
+        setFlow('player', 'fail', 'หน้านี้เล่นได้เฉพาะ Video Proprietary (f0a10c4f...) เท่านั้น');
+        // Force reset input to correct video
+        document.getElementById('vidInput').value = 'f0a10c4f79dc71f1a46bf6f7f45a0102';
         return;
       }
       setFlow('player', 'running', 'ตรวจ pre-req...');
