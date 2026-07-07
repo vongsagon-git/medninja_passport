@@ -148,7 +148,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "blob:", 'https://static.line-scdn.net', 'https://liff.line.me', 'https://assets.mediadelivery.net', 'https://connect.facebook.net', 'https://g.alicdn.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:", 'https://static.line-scdn.net', 'https://liff.line.me', 'https://assets.mediadelivery.net', 'https://connect.facebook.net', 'https://g.alicdn.com'],
       styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
       fontSrc: ["'self'", 'https:', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],

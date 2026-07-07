@@ -5,67 +5,66 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test</title>
-  <!-- BUILD_VERSION: 2026-07-07-15:15-v20-umd-force-browser -->
-  <meta name="build-version" content="v20 · 15:15">
+  <!-- BUILD_VERSION: 2026-07-07-15:30-v21-fetch-eval -->
+  <meta name="build-version" content="v21 · 15:30">
 
-  <!-- Aliplayer SDK 2.35.4 - Self-host + UMD force browser mode -->
+  <!-- Aliplayer SDK 2.35.4 - fetch + Blob approach (bypass script tag issues) -->
   <script>
-    // ⚠️ CRITICAL: บาง Android Chrome มี module/exports/define ใน scope
-    //     UMD จะ export ผ่าน CommonJS/AMD path แทน window.Aliplayer
-    //     ต้อง force delete ก่อน SDK รัน
-    (function() {
-      try { if (typeof module !== 'undefined') { window.__origModule = module; module = undefined; } } catch(e) {}
-      try { if (typeof exports !== 'undefined') { window.__origExports = exports; exports = undefined; } } catch(e) {}
-      try { if (typeof define !== 'undefined' && define.amd) { window.__origDefine = define; define = undefined; } } catch(e) {}
-    })();
+    window.__sdkStatus = { attempts: [], loaded: false, error: null, method: 'fetch+blob' };
 
-    // Track SDK loading status
-    window.__sdkStatus = { attempts: [], loaded: false, error: null };
-    window.__sdkLoad = function(url, isPrimary) {
-      var start = Date.now();
-      var attempt = { url: url, start: start, isPrimary: isPrimary, ok: null };
-      window.__sdkStatus.attempts.push(attempt);
-
-      var s = document.createElement('script');
-      s.src = url;
-      s.async = false;
-      s.onload = function() {
-        attempt.ok = true;
-        attempt.duration = Date.now() - start;
-        attempt.hasAliplayer = typeof window.Aliplayer !== 'undefined';
-        window.__sdkStatus.loaded = attempt.hasAliplayer;
-
-        // Post-load debugging: หา Aliplayer จากทุกที่
-        if (!attempt.hasAliplayer) {
-          attempt.altSearch = {
-            module: typeof module,
-            exports: typeof exports,
-            hasModuleExports: typeof module !== 'undefined' && !!module.exports,
-            hasWindowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('player')).slice(0, 5)
-          };
-        }
-      };
-      s.onerror = function(e) {
-        attempt.ok = false;
-        attempt.duration = Date.now() - start;
-        attempt.error = 'script.onerror';
-        window.__sdkStatus.error = attempt;
-        if (isPrimary) {
-          console.warn('[SDK] Primary fail, loading fallback');
-          window.__sdkLoad('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', false);
-        }
-      };
-      document.head.appendChild(s);
-    };
-
-    // Load CSS
+    // Load CSS (normal way)
     var css = document.createElement('link');
     css.rel = 'stylesheet';
     css.href = '/vendor/aliplayer/aliplayer-2.35.4.css';
     document.head.appendChild(css);
 
-    // Load primary SDK
-    window.__sdkLoad('/vendor/aliplayer/aliplayer-2.35.4.js', true);
+    // Load JS via fetch → blob → script tag (bypass MIME sniff / CSP issues)
+    // ทำแบบนี้เพราะ v20 พบว่า script.onload fired แต่ code ไม่ execute!
+    function loadSDKViaFetch(url, isPrimary) {
+      var start = Date.now();
+      var attempt = { url: url, start: start, isPrimary: isPrimary, method: 'fetch', ok: null };
+      window.__sdkStatus.attempts.push(attempt);
+
+      fetch(url)
+        .then(function(res) {
+          attempt.status = res.status;
+          attempt.fetchOk = res.ok;
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.text();
+        })
+        .then(function(code) {
+          attempt.codeSize = code.length;
+          attempt.codeStart = code.substring(0, 60);
+          try {
+            // Eval directly in global scope (indirect eval = global scope)
+            (0, eval)(code);
+            attempt.evalOk = true;
+            attempt.duration = Date.now() - start;
+            attempt.hasAliplayer = typeof window.Aliplayer !== 'undefined';
+            attempt.ok = attempt.hasAliplayer;
+            window.__sdkStatus.loaded = attempt.hasAliplayer;
+            if (!attempt.hasAliplayer) {
+              attempt.altSearch = {
+                module: typeof module,
+                exports: typeof exports,
+                hasWindowKeys: Object.keys(window).filter(function(k) { return k.toLowerCase().indexOf('player') !== -1; }).slice(0, 5)
+              };
+            }
+          } catch (evalErr) {
+            attempt.evalOk = false;
+            attempt.evalError = evalErr.message;
+            attempt.ok = false;
+            if (isPrimary) loadSDKViaFetch('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', false);
+          }
+        })
+        .catch(function(err) {
+          attempt.ok = false;
+          attempt.error = err.message;
+          if (isPrimary) loadSDKViaFetch('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', false);
+        });
+    }
+
+    loadSDKViaFetch('/vendor/aliplayer/aliplayer-2.35.4.js', true);
   </script>
 
   <style>
@@ -202,7 +201,7 @@
   <div class="header-row">
     <h1>🔐 MedNinja DRM Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v20 · 15:15</span>
+      <span class="version-badge" id="versionBadge">v21 · 15:30</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -358,16 +357,21 @@
         const lastAttempt = sdkStatus.attempts ? sdkStatus.attempts[sdkStatus.attempts.length - 1] : null;
         const sdkInfo = lastAttempt ? 'sdk:' + (lastAttempt.ok === true ? 'ok' : lastAttempt.ok === false ? 'FAIL' : 'loading') : 'no-sdk';
         log('⏳ รอ Aliplayer... ' + elapsed + 's (' + sdkInfo + ', type=' + typeof alp + ', null=' + (alp === null) + ', keys=' + dbgKeys + ')', 'warn');
-        // เมื่อครบ 10s แสดง altSearch เพื่อหา Aliplayer ที่อื่น
+        // v21: log fetch details when elapsed === 5
+        if (elapsed === 5 && lastAttempt) {
+          const dbg = {
+            method: lastAttempt.method,
+            status: lastAttempt.status,
+            codeSize: lastAttempt.codeSize,
+            codeStart: lastAttempt.codeStart,
+            evalOk: lastAttempt.evalOk,
+            evalError: lastAttempt.evalError,
+            hasAliplayer: lastAttempt.hasAliplayer
+          };
+          log('DEBUG fetch: ' + JSON.stringify(dbg).substring(0, 200), 'info');
+        }
         if (elapsed === 10 && lastAttempt && lastAttempt.altSearch) {
           log('DEBUG altSearch: ' + JSON.stringify(lastAttempt.altSearch), 'info');
-          // Try recovery: หา Aliplayer จาก module.exports
-          try {
-            if (typeof module !== 'undefined' && module.exports && typeof module.exports === 'function') {
-              log('🔧 Recovery: พบ Aliplayer ใน module.exports — copy ไป window.Aliplayer', 'success');
-              window.Aliplayer = module.exports;
-            }
-          } catch(e) {}
         }
       }
     }, 500);
