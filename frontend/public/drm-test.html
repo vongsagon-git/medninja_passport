@@ -4,50 +4,9 @@
   <meta charset="UTF-8">
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
-  <title>MedNinja DRM Comparison - Side by Side</title>
-  <!-- BUILD_VERSION: 2026-07-07-19:00-v32-robust-sdk-loader -->
-  <meta name="build-version" content="v32 · 19:00">
-
-  <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
-  <script>
-    // Robust SDK loader — ทำงานได้กับ Incognito + Edge (ไม่พึ่ง browser cache)
-    window.__sdkStatus = { loaded: false, method: null, error: null };
-
-    function loadSDKViaScript(url, callback) {
-      var s = document.createElement('script');
-      s.src = url;
-      s.async = false;
-      s.onload = function() {
-        // ตรวจ Aliplayer หลาย location
-        var alp = window.Aliplayer;
-        if (!alp && typeof Aliplayer !== 'undefined') alp = Aliplayer;
-        if (alp) {
-          window.Aliplayer = alp;
-          window.__sdkStatus.loaded = true;
-          window.__sdkStatus.method = 'script-tag';
-          if (callback) callback(true);
-        } else {
-          window.__sdkStatus.error = 'onload fired but Aliplayer undefined';
-          if (callback) callback(false);
-        }
-      };
-      s.onerror = function() {
-        window.__sdkStatus.error = 'script.onerror';
-        if (callback) callback(false);
-      };
-      document.head.appendChild(s);
-    }
-
-    // โหลด SDK: self-host primary, CDN fallback
-    loadSDKViaScript('/vendor/aliplayer/aliplayer-2.35.4.js', function(ok) {
-      if (!ok && !window.Aliplayer) {
-        console.warn('[SDK] self-host failed, trying CDN Alibaba');
-        loadSDKViaScript('//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js', function(ok2) {
-          if (!ok2) console.error('[SDK] CDN fallback also failed');
-        });
-      }
-    });
-  </script>
+  <title>MedNinja DRM Test - Flow Diagnostics</title>
+  <!-- BUILD_VERSION: 2026-07-07-16:45-v26-addEventListener -->
+  <meta name="build-version" content="v33 · 19:30 (v26 restore)">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -55,260 +14,325 @@
       font-family: sans-serif;
       background: linear-gradient(135deg, #1a0033 0%, #0f172a 100%);
       color: #f1f5f9;
-      padding: 10px;
+      padding: 16px;
     }
-    h1 { font-size: 18px; color: #a855f7; margin-bottom: 4px; }
+    h1 { font-size: 22px; color: #a855f7; margin-bottom: 4px; }
     .header-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     .version-badge {
       background: #4ade80;
       color: #052e16;
-      padding: 3px 10px;
+      padding: 4px 10px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: bold;
       font-family: monospace;
     }
-    button.reload-btn {
-      background: #64748b;
-      color: white;
-      border: none;
-      padding: 3px 10px;
-      font-size: 11px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .top-info {
+    .info {
       background: rgba(168, 85, 247, 0.1);
       border: 1px solid rgba(168, 85, 247, 0.3);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 11px;
-      margin-bottom: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 12px;
       word-break: break-all;
     }
 
-    /* Video list chips */
-    .videos-list {
+    /* Flow sections */
+    .flow-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    @media (min-width: 900px) {
+      .flow-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .flow-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .flow-card.pass { border-color: rgba(74, 222, 128, 0.4); background: rgba(20, 83, 45, 0.15); }
+    .flow-card.fail { border-color: rgba(239, 68, 68, 0.4); background: rgba(127, 29, 29, 0.15); }
+    .flow-card.running { border-color: rgba(59, 130, 246, 0.4); background: rgba(30, 58, 138, 0.15); }
+    .flow-card h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .flow-card .status-icon { font-size: 18px; }
+    .flow-card .details {
+      font-size: 11px;
+      color: #94a3b8;
+      font-family: monospace;
+      word-break: break-all;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    .flow-card button {
+      background: #a855f7;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-top: 6px;
+      font-weight: bold;
+    }
+    .flow-card .kv {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 0;
+    }
+    .flow-card .kv .k { color: #64748b; }
+    .flow-card .kv .v { color: #e2e8f0; font-family: monospace; word-break: break-all; }
+    .flow-card .kv .v.ok { color: #4ade80; }
+    .flow-card .kv .v.err { color: #f87171; }
+
+    /* Video input */
+    .video-input {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .video-input input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 12px;
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 6px;
+      color: #f1f5f9;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .video-input button {
+      background: #a855f7;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .video-input button.list-btn { background: #22c55e; }
+
+    .quick-picks {
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
       margin-bottom: 10px;
-      font-size: 11px;
-      align-items: center;
+      font-size: 12px;
     }
-    .video-chip {
-      background: rgba(74, 222, 128, 0.15);
+    .quick-picks .quick {
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.3);
       color: #4ade80;
       padding: 4px 10px;
       border-radius: 999px;
       cursor: pointer;
       font-family: monospace;
-      border: 1px solid rgba(74, 222, 128, 0.3);
-      font-size: 10px;
-    }
-    .video-chip:hover { background: rgba(74, 222, 128, 0.3); }
-
-    /* Side-by-side grid */
-    .compare-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
-    @media (min-width: 1024px) {
-      .compare-grid { grid-template-columns: 1fr 1fr; }
-    }
-
-    .side {
-      background: rgba(30, 41, 59, 0.4);
-      border: 2px solid rgba(148, 163, 184, 0.15);
-      border-radius: 10px;
-      padding: 12px;
-    }
-    .side.widevine {
-      border-color: rgba(168, 85, 247, 0.4);
-      background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(30, 41, 59, 0.4));
-    }
-    .side.proprietary {
-      border-color: rgba(59, 130, 246, 0.4);
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(30, 41, 59, 0.4));
-    }
-    .side h2 {
-      font-size: 15px;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .side.widevine h2 { color: #c4b5fd; }
-    .side.proprietary h2 { color: #93c5fd; }
-    .side .subtitle {
-      font-size: 11px;
-      color: #94a3b8;
-      margin-bottom: 8px;
-    }
-
-    .video-input {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .video-input input {
-      flex: 1;
-      min-width: 150px;
-      padding: 8px 10px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      border-radius: 5px;
-      color: #f1f5f9;
-      font-family: monospace;
       font-size: 11px;
     }
-    .video-input button {
-      padding: 8px 12px;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: bold;
-    }
-    .widevine .video-input button { background: #a855f7; }
-    .proprietary .video-input button { background: #3b82f6; }
-
-    .flow-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 8px;
-      background: rgba(255,255,255,0.03);
-      border-radius: 4px;
-      margin-bottom: 3px;
-      font-size: 11px;
-    }
-    .flow-row.pass { background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; }
-    .flow-row.fail { background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; }
-    .flow-row.running { background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; }
-    .flow-row .icon { font-size: 12px; min-width: 16px; }
-    .flow-row .title { flex: 1; font-weight: bold; }
-    .flow-row .detail { font-size: 10px; color: #94a3b8; font-family: monospace; }
 
     .player-box {
       background: #000;
-      border-radius: 6px;
+      border-radius: 8px;
       overflow: hidden;
-      margin: 8px 0;
-      aspect-ratio: 16/9;
+      margin-bottom: 12px;
+      max-width: 720px;
     }
-    .player-box > div { width: 100%; height: 100%; }
+    #J_prismPlayer { width: 100%; min-height: 300px; }
 
-    .side-log {
+    #log {
       background: #000;
       border: 1px solid rgba(74,222,128,0.2);
-      border-radius: 5px;
-      padding: 6px;
+      border-radius: 8px;
+      padding: 10px;
       font-family: 'Consolas', monospace;
-      font-size: 9px;
-      max-height: 150px;
+      font-size: 10px;
+      max-height: 300px;
       overflow-y: auto;
       color: #4ade80;
     }
-    .side-log .err { color: #f87171; }
-    .side-log .warn { color: #fbbf24; }
-    .side-log .info { color: #38bdf8; }
-    .side-log .success { color: #4ade80; font-weight: bold; }
+    #log .err { color: #f87171; }
+    #log .warn { color: #fbbf24; }
+    #log .info { color: #38bdf8; }
+    #log .success { color: #4ade80; font-weight: bold; }
 
-    .config-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: bold;
-      font-family: monospace;
-      margin-right: 4px;
+    button.reload-btn {
+      background: #64748b;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
     }
-    .widevine .config-badge { background: rgba(168, 85, 247, 0.3); color: #c4b5fd; }
-    .proprietary .config-badge { background: rgba(59, 130, 246, 0.3); color: #93c5fd; }
   </style>
 </head>
 <body>
   <div class="header-row">
-    <h1>🔐 DRM Comparison — Side by Side</h1>
+    <h1>🔐 DRM Flow Diagnostics</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v32 · 19:00</span>
+      <span class="version-badge" id="versionBadge">v33 · 19:30 (v26 restore)</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
 
-  <div class="top-info">
-    <b>Your IP:</b> <span id="ipAddr">...</span> ·
-    <b>Country:</b> <span id="ipCountry">-</span> ·
+  <div class="info">
+    <b>Your IP:</b> <span id="ipAddr">...</span> · <b>Country:</b> <span id="ipCountry">-</span> ·
     <b>Device:</b> <span id="devInfo">-</span>
   </div>
 
-  <!-- Video chips (จาก /api/china/videos) -->
-  <div class="videos-list" id="videosList">
-    <span style="color: #94a3b8;">📋 Videos:</span>
+  <!-- Video selector -->
+  <div class="video-input">
+    <input id="vidInput" type="text" placeholder="กรอก Alibaba Video ID..." />
+    <button class="list-btn" onclick="listVideos()">📋 List Videos</button>
+  </div>
+  <div class="quick-picks" id="quickPicks">
+    <span style="align-self: center; color: #94a3b8;">Quick:</span>
   </div>
 
-  <div class="compare-grid">
-    <!-- LEFT: Widevine -->
-    <div class="side widevine">
-      <h2>🎯 Widevine DRM
-        <span class="config-badge">encryptType: 2</span>
-      </h2>
-      <p class="subtitle">Enterprise-grade · Best for PC/Laptop · Widevine L1 required</p>
-
-      <div class="video-input">
-        <input id="vidW" type="text" placeholder="Video ID (Widevine transcode)..." />
-        <button onclick="runSide('W')">▶ Test</button>
+  <!-- 4 Flow Cards -->
+  <div class="flow-grid">
+    <!-- Flow 1: STS Token (Backend + Alibaba API) -->
+    <div class="flow-card" id="flow-sts">
+      <h3><span class="status-icon">⏸️</span> Flow 1: STS Token (Backend → Alibaba)</h3>
+      <div class="details" id="flow-sts-details">
+        ทดสอบ: backend /api/china/sts เรียก Alibaba STS AssumeRole ได้ครบ 3 keys ไหม
       </div>
-
-      <div class="flow-row pending" id="W-flow1"><span class="icon">⏸️</span><span class="title">1. STS</span><span class="detail" id="W-flow1-d"></span></div>
-      <div class="flow-row pending" id="W-flow2"><span class="icon">⏸️</span><span class="title">2. Manifest</span><span class="detail" id="W-flow2-d"></span></div>
-      <div class="flow-row pending" id="W-flow3"><span class="icon">⏸️</span><span class="title">3. SDK</span><span class="detail" id="W-flow3-d"></span></div>
-      <div class="flow-row pending" id="W-flow4"><span class="icon">⏸️</span><span class="title">4. Player + Widevine</span><span class="detail" id="W-flow4-d"></span></div>
-
-      <div class="player-box"><div id="playerW"></div></div>
-
-      <div class="side-log" id="logW"></div>
+      <button onclick="testSTS()">🔑 Test STS</button>
     </div>
 
-    <!-- RIGHT: Alibaba Proprietary -->
-    <div class="side proprietary">
-      <h2>⚡ Alibaba Proprietary
-        <span class="config-badge">encryptType: 1</span>
-      </h2>
-      <p class="subtitle">HTTP-DRM · Works everywhere · Mobile-friendly</p>
-
-      <div class="video-input">
-        <input id="vidP" type="text" placeholder="Video ID (Proprietary transcode)..." />
-        <button onclick="runSide('P')">▶ Test</button>
+    <!-- Flow 2: HLS Manifest (Alibaba CDN) -->
+    <div class="flow-card" id="flow-manifest">
+      <h3><span class="status-icon">⏸️</span> Flow 2: HLS Manifest (Alibaba CDN)</h3>
+      <div class="details" id="flow-manifest-details">
+        ทดสอบ: video m3u8 manifest URL เข้าถึงได้ + encrypted (Widevine)
       </div>
+      <button onclick="testManifest()">📄 Test Manifest</button>
+    </div>
 
-      <div class="flow-row pending" id="P-flow1"><span class="icon">⏸️</span><span class="title">1. STS</span><span class="detail" id="P-flow1-d"></span></div>
-      <div class="flow-row pending" id="P-flow2"><span class="icon">⏸️</span><span class="title">2. Manifest</span><span class="detail" id="P-flow2-d"></span></div>
-      <div class="flow-row pending" id="P-flow3"><span class="icon">⏸️</span><span class="title">3. SDK</span><span class="detail" id="P-flow3-d"></span></div>
-      <div class="flow-row pending" id="P-flow4"><span class="icon">⏸️</span><span class="title">4. Player + Proprietary</span><span class="detail" id="P-flow4-d"></span></div>
+    <!-- Flow 3: SDK Loading -->
+    <div class="flow-card" id="flow-sdk">
+      <h3><span class="status-icon">⏸️</span> Flow 3: Aliplayer SDK Loading</h3>
+      <div class="details" id="flow-sdk-details">
+        ทดสอบ: SDK 691KB โหลด + execute + window.Aliplayer available
+      </div>
+      <button onclick="testSDK()">📦 Test SDK</button>
+    </div>
 
-      <div class="player-box"><div id="playerP"></div></div>
-
-      <div class="side-log" id="logP"></div>
+    <!-- Flow 4: Player + Widevine + Play -->
+    <div class="flow-card" id="flow-player">
+      <h3><span class="status-icon">⏸️</span> Flow 4: Player + Widevine + Play</h3>
+      <div class="details" id="flow-player-details">
+        ทดสอบ: สร้าง Aliplayer instance + license + DRM decrypt + play (ต้องรอ Flow 1+3)
+      </div>
+      <button id="btnTestPlayer">▶ Test Player</button>
+      <div id="btnClickDebug" style="font-size:10px;color:#f59e0b;margin-top:4px;">รอกดปุ่ม...</div>
     </div>
   </div>
+
+  <!-- Video Player -->
+  <div class="player-box">
+    <div id="J_prismPlayer"></div>
+  </div>
+
+  <!-- Log -->
+  <div id="log"></div>
+
+  <!-- SDK loader -->
+  <script>
+    window.__sdkStatus = { attempts: [], loaded: false, error: null };
+
+    // Load CSS
+    var css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/vendor/aliplayer/aliplayer-2.35.4.css';
+    document.head.appendChild(css);
+
+    // Load JS via script tag (standard)
+    var sdkStart = Date.now();
+    var s = document.createElement('script');
+    s.src = '/vendor/aliplayer/aliplayer-2.35.4.js';
+    s.async = false;
+    s.onload = function() {
+      window.__sdkStatus.attempts.push({
+        method: 'script-tag',
+        ok: true,
+        duration: Date.now() - sdkStart,
+        hasAliplayer: typeof window.Aliplayer !== 'undefined',
+        aliplayerType: typeof window.Aliplayer
+      });
+    };
+    s.onerror = function() {
+      window.__sdkStatus.attempts.push({ method: 'script-tag', ok: false, error: 'onerror' });
+    };
+    document.head.appendChild(s);
+  </script>
 
   <script>
-    const sessionId = 'drm-cmp-' + Math.random().toString(36).substring(2, 10);
+    // Global error handler - catch any uncaught error ที่หยุด script
+    window.__scriptErrors = [];
+    window.addEventListener('error', function(e) {
+      window.__scriptErrors.push({
+        message: e.message,
+        filename: e.filename,
+        lineno: e.lineno,
+        colno: e.colno,
+        error: e.error ? e.error.stack : null
+      });
+      // Log to backend
+      try {
+        fetch('/api/china/log/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'error-' + Math.random().toString(36).substring(2, 8),
+            entries: [{
+              level: 'err',
+              msg: '🚨 GLOBAL ERROR: ' + e.message + ' at ' + (e.filename || '?') + ':' + (e.lineno || '?'),
+              clientTs: new Date().toISOString()
+            }]
+          })
+        }).catch(function(){});
+      } catch(err) {}
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // Log system
+    // ═══════════════════════════════════════════════════════════
+    const sessionId = 'drm-' + Math.random().toString(36).substring(2, 10);
     const logBuffer = [];
     let flushTimer = null;
+    const logEl = document.getElementById('log');
 
+    function log(msg, type) {
+      const line = document.createElement('div');
+      line.className = type || '';
+      line.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      logBuffer.push({ level: type || 'info', msg, clientTs: new Date().toISOString() });
+      if (flushTimer) clearTimeout(flushTimer);
+      flushTimer = setTimeout(flushLogs, 500);
+    }
     function flushLogs() {
       if (!logBuffer.length) return;
       const batch = logBuffer.splice(0, logBuffer.length);
@@ -319,32 +343,27 @@
       }).catch(() => {});
     }
 
-    function log(side, msg, type) {
-      const logEl = document.getElementById('log' + side);
-      const line = document.createElement('div');
-      line.className = type || '';
-      line.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + msg;
-      logEl.appendChild(line);
-      logEl.scrollTop = logEl.scrollHeight;
-      logBuffer.push({ level: type || 'info', msg: '[' + side + '] ' + msg, clientTs: new Date().toISOString() });
-      if (flushTimer) clearTimeout(flushTimer);
-      flushTimer = setTimeout(flushLogs, 500);
-    }
-
-    function setFlow(side, num, status, detail) {
-      const row = document.getElementById(side + '-flow' + num);
-      if (!row) return;
-      row.classList.remove('pass', 'fail', 'running', 'pending');
-      row.classList.add(status);
-      const iconEl = row.querySelector('.icon');
+    // ═══════════════════════════════════════════════════════════
+    // Flow status setter
+    // ═══════════════════════════════════════════════════════════
+    function setFlow(id, status, details) {
+      const card = document.getElementById('flow-' + id);
+      if (!card) return;
+      card.classList.remove('pass', 'fail', 'running');
+      if (status !== 'pending') card.classList.add(status);
+      const iconEl = card.querySelector('.status-icon');
       iconEl.textContent = { running: '⏳', pass: '✅', fail: '❌', pending: '⏸️' }[status] || '⏸️';
-      if (detail) document.getElementById(side + '-flow' + num + '-d').textContent = detail;
+      if (details) {
+        document.getElementById('flow-' + id + '-details').innerHTML = details;
+      }
     }
 
-    // Init
+    // ═══════════════════════════════════════════════════════════
+    // Build info + Device
+    // ═══════════════════════════════════════════════════════════
     const buildVer = document.querySelector('meta[name="build-version"]').content;
-    log('W', '🏷️ Build: ' + buildVer, 'success');
-    log('P', '🏷️ Build: ' + buildVer, 'success');
+    log('🏷️ Build: ' + buildVer, 'success');
+    log('Session: ' + sessionId, 'info');
 
     function detectDevice() {
       const ua = navigator.userAgent;
@@ -354,14 +373,20 @@
       else if (/Android.*Mobile/.test(ua)) dev = '📱 Android';
       else if (/Windows/.test(ua)) dev = '💻 Windows';
       else if (/Macintosh/.test(ua)) dev = '💻 Mac';
+
       if (/Edg\/([\d.]+)/.exec(ua)) browser = 'Edge ' + RegExp.$1;
       else if (/Chrome\/([\d.]+)/.exec(ua)) browser = 'Chrome ' + RegExp.$1;
       else if (/Firefox\/([\d.]+)/.exec(ua)) browser = 'Firefox ' + RegExp.$1;
       else if (/Version\/([\d.]+).*Safari/.exec(ua)) browser = 'Safari ' + RegExp.$1;
+
       document.getElementById('devInfo').textContent = dev + ' · ' + browser;
+      log('📱 ' + dev + ' · ' + browser, 'info');
     }
     detectDevice();
 
+    // ═══════════════════════════════════════════════════════════
+    // IP Detection (Cloudflare)
+    // ═══════════════════════════════════════════════════════════
     (async () => {
       try {
         const res = await fetch('/api/china/whoami');
@@ -369,165 +394,236 @@
         const flag = { CN: '🇨🇳', TH: '🇹🇭', HK: '🇭🇰', SG: '🇸🇬', US: '🇺🇸' }[data.country] || '🌐';
         document.getElementById('ipAddr').textContent = data.ip || '-';
         document.getElementById('ipCountry').textContent = flag + ' ' + (data.country || '-');
-      } catch (e) {}
+        log('✅ IP: ' + data.ip + ' · ' + data.country, 'success');
+      } catch (e) {
+        log('⚠️ IP: ' + e.message, 'warn');
+      }
     })();
 
-    // Auto-fetch video list & fill chips
-    async function fetchVideosList() {
-      try {
-        const res = await fetch('/api/china/videos');
-        const data = await res.json();
-        const videos = data.videos || [];
-        const listEl = document.getElementById('videosList');
-        videos.forEach(v => {
-          const chip = document.createElement('span');
-          chip.className = 'video-chip';
-          chip.textContent = v.videoId.substring(0, 12) + '...';
-          chip.title = 'Click ซ้าย=W, ขวา=P | ' + v.videoId;
-          chip.oncontextmenu = (e) => { e.preventDefault(); document.getElementById('vidP').value = v.videoId; localStorage.setItem('drmP', v.videoId); log('P', 'set: ' + v.videoId.substring(0, 12) + '...', 'info'); };
-          chip.onclick = () => { document.getElementById('vidW').value = v.videoId; localStorage.setItem('drmW', v.videoId); log('W', 'set: ' + v.videoId.substring(0, 12) + '...', 'info'); };
-          listEl.appendChild(chip);
-        });
-        const hint = document.createElement('span');
-        hint.style.cssText = 'color: #64748b; font-size: 10px;';
-        hint.textContent = '(click = ซ้าย, right-click = ขวา)';
-        listEl.appendChild(hint);
-      } catch (e) {}
-    }
-    fetchVideosList();
-
-    // Restore last IDs
-    document.getElementById('vidW').value = localStorage.getItem('drmW') || '';
-    document.getElementById('vidP').value = localStorage.getItem('drmP') || '';
-
-    // Configs per side
-    const players = { W: null, P: null };
-    const configs = {
-      W: { encryptType: 2, label: 'Widevine DRM', playerId: 'playerW' },
-      P: { encryptType: 1, label: 'Alibaba Proprietary', playerId: 'playerP' }
-    };
-
-    async function runSide(side) {
-      const videoId = document.getElementById('vid' + side).value.trim();
+    // ═══════════════════════════════════════════════════════════
+    // FLOW 1: STS Token Test (Backend + Alibaba API)
+    // ═══════════════════════════════════════════════════════════
+    let cachedSTS = null;
+    async function testSTS() {
+      const videoId = document.getElementById('vidInput').value.trim();
       if (!videoId) {
-        log(side, '❌ กรุณากรอก Video ID', 'err');
+        setFlow('sts', 'fail', 'กรุณากรอก Video ID');
         return;
       }
-      localStorage.setItem('drm' + side, videoId);
-      [1, 2, 3, 4].forEach(n => setFlow(side, n, 'pending'));
-
-      const sts = await testSTS(side, videoId);
-      if (!sts) return;
-
-      const manifest = await testManifest(side, videoId);
-      if (!manifest) return;
-
-      const sdkOk = await testSDK(side);
-      if (!sdkOk) return;
-
-      await testPlayer(side, videoId, sts);
-    }
-
-    async function testSTS(side, videoId) {
-      setFlow(side, 1, 'running');
-      log(side, '🔑 [Flow 1] Test STS', 'info');
+      setFlow('sts', 'running', 'กำลังเรียก /api/china/sts/' + videoId.substring(0, 8) + '...');
+      log('🔑 [Flow 1] Test STS: ' + videoId, 'info');
       const t0 = Date.now();
       try {
         const res = await fetch('/api/china/sts/' + videoId);
         const ms = Date.now() - t0;
         const data = await res.json();
-        if (!data.accessKeyId || !data.securityToken) {
-          setFlow(side, 1, 'fail', 'no keys');
-          log(side, '❌ STS: ' + JSON.stringify(data).substring(0, 100), 'err');
+
+        const hasAK = !!data.accessKeyId;
+        const hasSK = !!data.accessKeySecret;
+        const hasST = !!data.securityToken;
+
+        const detailHtml = `
+          <div class="kv"><span class="k">HTTP:</span><span class="v ${res.ok ? 'ok' : 'err'}">${res.status} (${ms}ms)</span></div>
+          <div class="kv"><span class="k">accessKeyId:</span><span class="v ${hasAK ? 'ok' : 'err'}">${hasAK ? data.accessKeyId.substring(0, 16) + '...' + ' (' + data.accessKeyId.length + 'ch)' : '❌ MISSING'}</span></div>
+          <div class="kv"><span class="k">accessKeySecret:</span><span class="v ${hasSK ? 'ok' : 'err'}">${hasSK ? '***hidden*** (' + data.accessKeySecret.length + 'ch)' : '❌ MISSING'}</span></div>
+          <div class="kv"><span class="k">securityToken:</span><span class="v ${hasST ? 'ok' : 'err'}">${hasST ? '***hidden*** (' + data.securityToken.length + 'ch)' : '❌ MISSING'}</span></div>
+          <div class="kv"><span class="k">region:</span><span class="v">${data.region || '(default)'}</span></div>
+          <div class="kv"><span class="k">expiration:</span><span class="v">${data.expiration || '-'}</span></div>
+          ${data.error ? '<div class="kv"><span class="k">error:</span><span class="v err">' + data.error + '</span></div>' : ''}
+        `;
+
+        if (hasAK && hasSK && hasST) {
+          setFlow('sts', 'pass', detailHtml);
+          log('✅ [Flow 1] STS สำเร็จ - 3 keys ครบ (' + ms + 'ms)', 'success');
+          cachedSTS = data;
+          return data;
+        } else {
+          setFlow('sts', 'fail', detailHtml);
+          log('❌ [Flow 1] STS ไม่ครบ 3 keys', 'err');
           return null;
         }
-        setFlow(side, 1, 'pass', ms + 'ms · 3 keys ok');
-        log(side, '✅ STS ' + ms + 'ms', 'success');
-        return data;
       } catch (err) {
-        setFlow(side, 1, 'fail', err.message);
-        log(side, '❌ STS: ' + err.message, 'err');
+        setFlow('sts', 'fail', 'Exception: ' + err.message);
+        log('❌ [Flow 1] Exception: ' + err.message, 'err');
         return null;
       }
     }
 
-    async function testManifest(side, videoId) {
-      setFlow(side, 2, 'running');
-      log(side, '📄 [Flow 2] Test Manifest', 'info');
+    // ═══════════════════════════════════════════════════════════
+    // FLOW 2: HLS Manifest Test (Alibaba CDN)
+    // ═══════════════════════════════════════════════════════════
+    async function testManifest() {
+      const videoId = document.getElementById('vidInput').value.trim();
+      if (!videoId) {
+        setFlow('manifest', 'fail', 'กรุณากรอก Video ID');
+        return;
+      }
+      setFlow('manifest', 'running', 'ขอ playinfo จาก backend...');
+      log('📄 [Flow 2] Test Manifest: ' + videoId, 'info');
       const t0 = Date.now();
       try {
         const res = await fetch('/api/china/playinfo/' + videoId);
         const ms = Date.now() - t0;
         const data = await res.json();
-        const encStream = (data.streams || []).find(s => s.encrypt);
-        if (!encStream) {
-          setFlow(side, 2, 'fail', 'no encrypted');
-          log(side, '❌ no encrypted stream', 'err');
-          return null;
+
+        const streams = data.streams || [];
+        const m3u8 = streams.find(s => s.format === 'm3u8' && s.encrypt);
+        const hasM3U8 = !!m3u8;
+
+        let detailHtml = `
+          <div class="kv"><span class="k">HTTP:</span><span class="v ${res.ok ? 'ok' : 'err'}">${res.status} (${ms}ms)</span></div>
+          <div class="kv"><span class="k">Title:</span><span class="v">${(data.videoBase && data.videoBase.Title) || '-'}</span></div>
+          <div class="kv"><span class="k">Duration:</span><span class="v">${(data.videoBase && data.videoBase.Duration) || '-'}s</span></div>
+          <div class="kv"><span class="k">Streams:</span><span class="v">${streams.length}</span></div>
+          <div class="kv"><span class="k">Encrypted:</span><span class="v ${data.encrypted ? 'ok' : 'err'}">${data.encrypted ? '✅ YES' : '❌ NO'}</span></div>
+        `;
+        if (m3u8) {
+          detailHtml += `
+            <div class="kv"><span class="k">m3u8 URL:</span><span class="v ok">${m3u8.playUrl.substring(0, 60)}...</span></div>
+            <div class="kv"><span class="k">Encryption:</span><span class="v ok">${m3u8.encryptType || 'unknown'}</span></div>
+            <div class="kv"><span class="k">Resolution:</span><span class="v">${m3u8.width}×${m3u8.height}</span></div>
+            <div class="kv"><span class="k">Bitrate:</span><span class="v">${m3u8.bitrate} kbps</span></div>
+          `;
         }
-        const detail = (encStream.encryptType || 'encrypted') + ' · ' + encStream.width + 'x' + encStream.height;
-        setFlow(side, 2, 'pass', detail);
-        log(side, '✅ Manifest: ' + encStream.encryptType, 'success');
+
+        if (hasM3U8) {
+          setFlow('manifest', 'pass', detailHtml);
+          log('✅ [Flow 2] Manifest OK - HLS encrypted stream พร้อม', 'success');
+        } else {
+          setFlow('manifest', 'fail', detailHtml + '<br><span class="err">⚠️ ไม่พบ encrypted m3u8 stream</span>');
+          log('⚠️ [Flow 2] ไม่พบ encrypted m3u8', 'warn');
+        }
         return data;
       } catch (err) {
-        setFlow(side, 2, 'fail', err.message);
-        log(side, '❌ Manifest: ' + err.message, 'err');
+        setFlow('manifest', 'fail', 'Exception: ' + err.message);
+        log('❌ [Flow 2] Exception: ' + err.message, 'err');
         return null;
       }
     }
 
-    async function testSDK(side) {
-      setFlow(side, 3, 'running');
+    // ═══════════════════════════════════════════════════════════
+    // FLOW 3: SDK Loading Test
+    // ═══════════════════════════════════════════════════════════
+    async function testSDK() {
+      setFlow('sdk', 'running', 'ตรวจ SDK loading status...');
+      log('📦 [Flow 3] Test SDK', 'info');
+
+      // Wait up to 15s for SDK to load
       const start = Date.now();
-      return new Promise((resolve) => {
-        const check = () => {
-          const elapsed = Math.round((Date.now() - start) / 1000);
-          const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
-          const isReady = alp !== null && alp !== undefined &&
-                          (typeof alp === 'function' ||
-                           (typeof alp === 'object' && Object.keys(alp).length > 0));
-          if (isReady) {
-            if (!window.Aliplayer) window.Aliplayer = alp;
-            const method = (window.__sdkStatus && window.__sdkStatus.method) || 'unknown';
-            setFlow(side, 3, 'pass', elapsed + 's · ' + method);
-            log(side, '✅ SDK พร้อม (' + method + ')', 'success');
-            resolve(true);
-          } else if (elapsed >= 30) {
-            const err = (window.__sdkStatus && window.__sdkStatus.error) || 'timeout';
-            setFlow(side, 3, 'fail', err);
-            log(side, '❌ SDK timeout: ' + err, 'err');
-            resolve(false);
-          } else {
-            if (elapsed % 5 === 0 && elapsed > 0) {
-              log(side, '⏳ รอ SDK... ' + elapsed + 's (type=' + typeof alp + ')', 'warn');
-            }
-            setTimeout(check, 300);
-          }
-        };
-        check();
-      });
+      let attempts = 0;
+      const check = () => {
+        attempts++;
+        const elapsed = Math.round((Date.now() - start) / 1000);
+        const status = window.__sdkStatus || {};
+        const lastAttempt = status.attempts && status.attempts.length > 0 ? status.attempts[status.attempts.length - 1] : null;
+        const hasAliplayer = typeof window.Aliplayer !== 'undefined' && window.Aliplayer !== null;
+
+        if (hasAliplayer) {
+          const alp = window.Aliplayer;
+          const keys = typeof alp === 'object' ? Object.keys(alp).length : 'N/A';
+          const detailHtml = `
+            <div class="kv"><span class="k">Method:</span><span class="v">${lastAttempt ? lastAttempt.method : 'unknown'}</span></div>
+            <div class="kv"><span class="k">Load time:</span><span class="v ok">${lastAttempt ? lastAttempt.duration + 'ms' : '?'}</span></div>
+            <div class="kv"><span class="k">script.onload:</span><span class="v ok">${lastAttempt && lastAttempt.ok ? '✅ fired' : '❌'}</span></div>
+            <div class="kv"><span class="k">window.Aliplayer:</span><span class="v ok">${typeof alp}</span></div>
+            <div class="kv"><span class="k">Keys count:</span><span class="v">${keys}</span></div>
+            <div class="kv"><span class="k">Version:</span><span class="v">2.35.4 (self-host)</span></div>
+          `;
+          setFlow('sdk', 'pass', detailHtml);
+          log('✅ [Flow 3] SDK พร้อม (' + elapsed + 's)', 'success');
+          return;
+        }
+
+        if (elapsed >= 15) {
+          const detailHtml = `
+            <div class="kv"><span class="k">Elapsed:</span><span class="v err">${elapsed}s (timeout)</span></div>
+            <div class="kv"><span class="k">script.onload:</span><span class="v ${lastAttempt && lastAttempt.ok ? 'ok' : 'err'}">${lastAttempt ? (lastAttempt.ok ? '✅ fired' : '❌') : 'ไม่มี attempt'}</span></div>
+            <div class="kv"><span class="k">window.Aliplayer:</span><span class="v err">${typeof window.Aliplayer}</span></div>
+            <div class="kv"><span class="k">Error:</span><span class="v err">${lastAttempt && lastAttempt.error ? lastAttempt.error : 'SDK loaded but code did not execute'}</span></div>
+          `;
+          setFlow('sdk', 'fail', detailHtml);
+          log('❌ [Flow 3] SDK timeout', 'err');
+          return;
+        }
+
+        setTimeout(check, 500);
+      };
+      check();
     }
 
-    async function testPlayer(side, videoId, sts) {
-      const cfg = configs[side];
-      setFlow(side, 4, 'running', 'creating...');
-      log(side, '🏗️ [Flow 4] Create player (encryptType=' + cfg.encryptType + ')', 'info');
+    // ═══════════════════════════════════════════════════════════
+    // FLOW 4: Player + Widevine Test
+    // ═══════════════════════════════════════════════════════════
+    let player = null;
+    async function testPlayer() {
+      log('▶ [Flow 4] === CLICKED Test Player ===', 'info');
+      const videoId = document.getElementById('vidInput').value.trim();
+      log('  videoId: ' + (videoId || '(empty)'), 'info');
 
-      if (players[side]) {
-        try { players[side].dispose(); } catch (e) {}
-        players[side] = null;
+      if (!videoId) {
+        log('❌ [Flow 4] no videoId', 'err');
+        setFlow('player', 'fail', 'กรุณากรอก Video ID');
+        return;
+      }
+      setFlow('player', 'running', 'ตรวจ pre-req...');
+
+      // Check pre-req: Aliplayer
+      log('  window.Aliplayer type: ' + typeof window.Aliplayer, 'info');
+      if (typeof window.Aliplayer === 'undefined' || window.Aliplayer === null) {
+        log('❌ [Flow 4] Aliplayer ไม่พร้อม (' + typeof window.Aliplayer + ')', 'err');
+        setFlow('player', 'fail', 'Aliplayer SDK ไม่พร้อม');
+        return;
       }
 
+      // Check pre-req: STS
+      log('  cachedSTS: ' + (cachedSTS ? 'มี (accessKeyId: ' + cachedSTS.accessKeyId.substring(0, 8) + '...)' : 'null'), 'info');
+      if (!cachedSTS) {
+        log('  ⏳ STS ไม่มี - เรียก Flow 1 ก่อน', 'warn');
+        setFlow('player', 'running', 'เรียก Flow 1...');
+        try {
+          const sts = await testSTS();
+          log('  testSTS return: ' + (sts ? 'ok' : 'null'), 'info');
+          if (!sts) {
+            log('❌ [Flow 4] STS ล้ม', 'err');
+            setFlow('player', 'fail', 'STS fail');
+            return;
+          }
+          cachedSTS = sts;
+        } catch (stsErr) {
+          log('❌ [Flow 4] STS exception: ' + stsErr.message, 'err');
+          setFlow('player', 'fail', 'STS exception');
+          return;
+        }
+      }
+
+      // ตรวจ #J_prismPlayer element
+      const playerEl = document.getElementById('J_prismPlayer');
+      log('  #J_prismPlayer: ' + (playerEl ? 'พบ (offsetWidth=' + playerEl.offsetWidth + ')' : '❌ ไม่มี'), 'info');
+      if (!playerEl) {
+        setFlow('player', 'fail', 'ไม่มี #J_prismPlayer element');
+        return;
+      }
+
+      setFlow('player', 'running', 'สร้าง Aliplayer instance...');
+      log('  🏗️ กำลังสร้าง new Aliplayer(...)', 'info');
+
       try {
-        players[side] = new window.Aliplayer({
-          id: cfg.playerId,
+        // Cleanup previous
+        if (player) {
+          log('  cleanup player เก่า', 'info');
+          try { player.dispose(); } catch (e) { log('  dispose error: ' + e.message, 'warn'); }
+          player = null;
+        }
+
+        const config = {
+          id: 'J_prismPlayer',
           vid: videoId,
-          accessKeyId: sts.accessKeyId,
-          accessKeySecret: sts.accessKeySecret,
-          securityToken: sts.securityToken,
-          region: sts.region || 'ap-southeast-1',
+          accessKeyId: cachedSTS.accessKeyId,
+          accessKeySecret: cachedSTS.accessKeySecret,
+          securityToken: cachedSTS.securityToken,
+          region: cachedSTS.region || 'ap-southeast-1',
           width: '100%',
-          height: '100%',
+          height: '400px',
           autoplay: false,
           isLive: false,
           rePlay: false,
@@ -539,39 +635,136 @@
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           },
-          encryptType: cfg.encryptType
-        }, function (p) {
-          log(side, '✅ Instance created', 'success');
-          setFlow(side, 4, 'running', 'instance ok');
+          encryptType: 2
+        };
+        log('  config: vid=' + videoId.substring(0, 8) + '..., region=' + config.region + ', ak=' + config.accessKeyId.substring(0, 8) + '...', 'info');
+
+        player = new window.Aliplayer(config, function (p) {
+          log('✅ [Flow 4] Aliplayer instance created!', 'success');
+          setFlow('player', 'running', 'instance created → รอ ready...');
         });
 
-        players[side].on('ready', () => {
-          log(side, '✅ ready', 'success');
-          setFlow(side, 4, 'running', 'ready');
+        log('  new Aliplayer() returned: ' + (player ? 'ok' : 'null'), 'info');
+        if (!player) {
+          log('❌ [Flow 4] new Aliplayer() returned null!', 'err');
+          setFlow('player', 'fail', 'constructor return null');
+          return;
+        }
+
+        let events = [];
+        player.on('ready', () => {
+          events.push('ready');
+          log('✅ event: ready', 'success');
+          setFlow('player', 'running', 'ready → รอ canplay...');
         });
-        players[side].on('canplay', () => {
-          log(side, '✅ canplay - decrypted!', 'success');
-          setFlow(side, 4, 'pass', 'DRM decrypted!');
+        player.on('canplay', () => {
+          events.push('canplay');
+          log('✅ [Flow 4] DRM decrypted! (canplay)', 'success');
+          setFlow('player', 'pass', 'canplay - DRM decrypted! Events: ' + events.join(' → '));
         });
-        players[side].on('play', () => log(side, '▶ playing', 'success'));
-        players[side].on('error', (e) => {
+        player.on('play', () => {
+          events.push('play');
+          log('▶ [Flow 4] Playing!', 'success');
+        });
+        player.on('error', (e) => {
           const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {});
-          log(side, '❌ ERROR: ' + details, 'err');
-          setFlow(side, 4, 'fail', details.substring(0, 60));
+          log('❌ [Flow 4] Player error: ' + details, 'err');
+          setFlow('player', 'fail', 'Error: ' + details.substring(0, 100));
         });
+        player.on('waiting', () => log('event: waiting (buffer)', 'warn'));
+
+        log('  event listeners attached: ready, canplay, play, error, waiting', 'info');
       } catch (err) {
-        log(side, '❌ Exception: ' + err.message, 'err');
-        setFlow(side, 4, 'fail', err.message);
+        log('❌ [Flow 4] CATCH exception: ' + err.message + ' | stack: ' + (err.stack ? err.stack.substring(0, 200) : 'no stack'), 'err');
+        setFlow('player', 'fail', 'Exception: ' + err.message);
       }
     }
 
-    // Hint
-    setTimeout(() => {
-      log('W', 'ℹ️ กด chip video ด้านบน = set ซ้าย (Widevine)', 'info');
-      log('P', 'ℹ️ กด chip video ค้างขวา = set ขวา (Proprietary)', 'info');
-      log('W', 'หรือกรอก Video ID เอง แล้วกด ▶ Test', 'info');
-      log('P', 'ใช้ Video ID ที่ transcode ด้วย template แต่ละแบบ', 'info');
-    }, 1000);
+    // ═══════════════════════════════════════════════════════════
+    // Video List
+    // ═══════════════════════════════════════════════════════════
+    const LAST_VID_KEY = 'drmTest_lastVideoId';
+    document.getElementById('vidInput').value = localStorage.getItem(LAST_VID_KEY) || '';
+
+    async function listVideos() {
+      log('📋 กำลังโหลดรายการ video...', 'info');
+      try {
+        const res = await fetch('/api/china/videos');
+        const data = await res.json();
+        log('✅ พบ ' + data.count + ' videos', 'success');
+        const picks = document.getElementById('quickPicks');
+        picks.querySelectorAll('.quick').forEach(el => el.remove());
+        (data.videos || []).forEach(v => {
+          const span = document.createElement('span');
+          span.className = 'quick';
+          span.textContent = v.videoId.substring(0, 8) + '…';
+          span.title = v.videoId;
+          span.onclick = () => {
+            document.getElementById('vidInput').value = v.videoId;
+            localStorage.setItem(LAST_VID_KEY, v.videoId);
+            log('เลือก video: ' + v.videoId.substring(0, 8) + '...', 'info');
+          };
+          picks.appendChild(span);
+        });
+        if (data.videos.length > 0 && !document.getElementById('vidInput').value) {
+          document.getElementById('vidInput').value = data.videos[0].videoId;
+        }
+      } catch (err) {
+        log('❌ list: ' + err.message, 'err');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Attach button listener with MULTIPLE approaches (browser quirks)
+    // ═══════════════════════════════════════════════════════════
+    function attachTestPlayerButton() {
+      const btn = document.getElementById('btnTestPlayer');
+      const dbg = document.getElementById('btnClickDebug');
+      if (!btn) {
+        if (dbg) dbg.textContent = '❌ ไม่พบปุ่ม #btnTestPlayer';
+        return;
+      }
+      if (dbg) dbg.textContent = '✅ ปุ่มพร้อมกดได้';
+
+      let clickCount = 0;
+      const handleClick = function(evtType) {
+        clickCount++;
+        const t = new Date().toTimeString().slice(0,8);
+        if (dbg) dbg.innerHTML = '🖱️ ' + t + ' event=' + evtType + ' count=' + clickCount + ' testPlayer=' + typeof testPlayer;
+        log('🖱️ BUTTON EVENT: ' + evtType + ' (click #' + clickCount + ') typeof testPlayer=' + typeof testPlayer, 'success');
+
+        if (typeof testPlayer === 'function') {
+          try {
+            log('  → calling testPlayer()', 'info');
+            testPlayer();
+          } catch (e) {
+            log('❌ testPlayer() exception: ' + e.message, 'err');
+          }
+        } else {
+          log('❌ testPlayer is ' + typeof testPlayer + ' - script error!', 'err');
+        }
+      };
+
+      // Attach ทุกแบบ (browser quirks compatibility)
+      btn.addEventListener('click', function() { handleClick('click'); });
+      btn.addEventListener('touchend', function(e) { e.preventDefault(); handleClick('touchend'); });
+      btn.onclick = function() { handleClick('onclick'); };
+      log('✅ ปุ่ม Test Player attached (click + touchend + onclick)', 'success');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Auto-run: list → STS → manifest → SDK → attach button
+    // Flow 4 (Player) = manual (ผู้ใช้กด)
+    // ═══════════════════════════════════════════════════════════
+    (async () => {
+      await listVideos();
+      await new Promise(r => setTimeout(r, 300));
+      await testSTS();
+      await testManifest();
+      testSDK(); // async ไม่รอ
+      // Attach button ทีหลัง — หลัง function definitions ทั้งหมดพร้อม
+      setTimeout(attachTestPlayerButton, 500);
+    })();
   </script>
 </body>
 </html>
