@@ -5,8 +5,8 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test</title>
-  <!-- BUILD_VERSION: 2026-07-07-14:30-v17-debug-new-Aliplayer -->
-  <meta name="build-version" content="v17 · 14:30">
+  <!-- BUILD_VERSION: 2026-07-07-14:45-v18-null-check-fix -->
+  <meta name="build-version" content="v18 · 14:45">
 
   <!-- Aliplayer SDK 2.35.4 - Self-host (Server เรา) + fallback CDN Alibaba -->
   <!-- ทดสอบ Cache Theory ยืนยันแล้ว: g.alicdn.com ช้ามากจาก network ไทย/มือถือ -->
@@ -161,7 +161,7 @@
   <div class="header-row">
     <h1>🔐 MedNinja DRM Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v17 · 14:30</span>
+      <span class="version-badge" id="versionBadge">v18 · 14:45</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -285,23 +285,35 @@
       log('❌ EME ไม่รองรับใน browser นี้', 'err');
     }
 
-    // Wait for SDK (up to 30s) — ครอบทุก export type (SDK 2.35.4 export เป็น object)
+    // Wait for SDK (up to 30s) — ต้องเช็คว่าไม่ใช่ null (typeof null === 'object')
     const sdkStart = Date.now();
     const sdkPoll = setInterval(() => {
       const elapsed = Math.round((Date.now() - sdkStart) / 1000);
-      const alp = window.Aliplayer || (typeof Aliplayer !== 'undefined' ? Aliplayer : null);
-      // SDK 2.35.4 = object (UMD pattern), SDK เก่า = function
-      // เช็คแบบครอบทุกกรณี: มี Aliplayer + callable (function หรือ object ที่มี prototype)
-      const isReady = alp && (typeof alp === 'function' || typeof alp === 'object');
+      // Get Aliplayer จากทุกแหล่ง
+      let alp = null;
+      try { alp = window.Aliplayer; } catch (e) {}
+      if (!alp) { try { alp = (typeof Aliplayer !== 'undefined') ? Aliplayer : null; } catch (e) {} }
+      if (!alp) { try { alp = (typeof globalThis !== 'undefined') ? globalThis.Aliplayer : null; } catch (e) {} }
+
+      // ตรวจว่าเป็น non-null value ที่ใช้ new ได้ (function หรือ object callable)
+      // typeof null === 'object' — ต้องกัน explicit
+      const isReady = alp !== null && alp !== undefined &&
+                      (typeof alp === 'function' ||
+                       (typeof alp === 'object' && (typeof alp.default === 'function' || Object.keys(alp).length > 0)));
+
       if (isReady) {
         clearInterval(sdkPoll);
-        if (!window.Aliplayer) window.Aliplayer = alp;
-        log('✅ Aliplayer พร้อม (โหลดใช้เวลา ' + elapsed + 's, type=' + typeof alp + ')', 'success');
+        // ถ้า Aliplayer เป็น { default: fn } (ES module wrap) — ใช้ default
+        const finalAlp = (typeof alp === 'object' && typeof alp.default === 'function') ? alp.default : alp;
+        window.Aliplayer = finalAlp;
+        log('✅ Aliplayer พร้อม (' + elapsed + 's, type=' + typeof finalAlp + ', keys=' + (typeof finalAlp === 'object' ? Object.keys(finalAlp).length : 'N/A') + ')', 'success');
       } else if (elapsed >= 30) {
         clearInterval(sdkPoll);
-        log('❌ Aliplayer โหลดไม่สำเร็จหลัง 30s (type=' + typeof alp + ')', 'err');
+        const dbgKeys = (alp && typeof alp === 'object') ? Object.keys(alp).slice(0, 5).join(',') : 'none';
+        log('❌ Aliplayer timeout 30s (type=' + typeof alp + ', null=' + (alp === null) + ', keys=[' + dbgKeys + '])', 'err');
       } else if (elapsed % 5 === 0 && elapsed > 0) {
-        log('⏳ รอ Aliplayer... ' + elapsed + 's (type=' + typeof alp + ')', 'warn');
+        const dbgKeys = (alp && typeof alp === 'object') ? Object.keys(alp).length : 'N/A';
+        log('⏳ รอ Aliplayer... ' + elapsed + 's (type=' + typeof alp + ', null=' + (alp === null) + ', keys=' + dbgKeys + ')', 'warn');
       }
     }, 500);
 
