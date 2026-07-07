@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja Alibaba Proprietary Test</title>
   <!-- BUILD_VERSION: 2026-07-07-19:30-ali-test-v1 -->
-  <meta name="build-version" content="ali-v1 · 19:30">
+  <meta name="build-version" content="ali-v2 · 19:45">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -190,7 +190,7 @@
   <div class="header-row">
     <h1>⚡ Alibaba Proprietary Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge" style="background: #3b82f6; color: white">ali-v1 · 19:30</span>
+      <span class="version-badge" id="versionBadge" style="background: #3b82f6; color: white">ali-v2 · 19:45</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
@@ -683,8 +683,11 @@
     // ═══════════════════════════════════════════════════════════
     // Video List
     // ═══════════════════════════════════════════════════════════
-    const LAST_VID_KEY = 'drmTest_lastVideoId';
-    document.getElementById('vidInput').value = localStorage.getItem(LAST_VID_KEY) || '';
+    // ⭐ Hardcode Proprietary Video ID (auto-fill ทุกครั้ง — แยก localStorage key)
+    const PROPRIETARY_VID = 'f0a10c4f79dc71f1a46bf6f7f45a0102';
+    const LAST_VID_KEY = 'aliTest_lastVideoId';
+    document.getElementById('vidInput').value = PROPRIETARY_VID;
+    localStorage.setItem(LAST_VID_KEY, PROPRIETARY_VID);
 
     async function listVideos() {
       log('📋 กำลังโหลดรายการ video...', 'info');
