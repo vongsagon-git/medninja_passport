@@ -199,6 +199,10 @@ async function initPlayer() {
       preload: true,
       controlBarVisibility: 'hover',
       useH5Prism: true,
+      license: {
+        domain: 'passport.medninja.academy',
+        key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
+      },
       encryptType: 1
     }, function (p) {
       log('Aliplayer instance สร้างสำเร็จ (encrypted mode)', 'success')
