@@ -5,12 +5,27 @@
   <meta http-equiv="x-ua-compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
   <title>MedNinja DRM Test</title>
-  <!-- BUILD_VERSION: 2026-07-07-13:45-v14-cdn-simple -->
-  <meta name="build-version" content="v14 · 13:45">
+  <!-- BUILD_VERSION: 2026-07-07-14:00-v15-selfhost-with-fallback -->
+  <meta name="build-version" content="v15 · 14:00">
 
-  <!-- Aliplayer SDK 2.35.4 - CDN Alibaba (v6 style: ที่เคยเล่นได้) -->
-  <link rel="stylesheet" href="//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/skins/default/aliplayer-min.css" />
-  <script src="//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js"></script>
+  <!-- Aliplayer SDK 2.35.4 - Self-host (Server เรา) + fallback CDN Alibaba -->
+  <!-- ทดสอบ Cache Theory ยืนยันแล้ว: g.alicdn.com ช้ามากจาก network ไทย/มือถือ -->
+  <!-- แก้: self-host จาก server เรา (โหลดเร็ว + reliable ทุก location) -->
+  <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css" />
+  <script src="/vendor/aliplayer/aliplayer-2.35.4.js" onerror="loadFallbackSDK()"></script>
+  <script>
+    // Fallback: ถ้า self-host โหลดไม่ได้ → ลอง CDN Alibaba
+    function loadFallbackSDK() {
+      console.warn('[MedNinja] Self-host SDK failed, fallback to g.alicdn.com');
+      var css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = '//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/skins/default/aliplayer-min.css';
+      document.head.appendChild(css);
+      var s = document.createElement('script');
+      s.src = '//g.alicdn.com/apsara-media-box/imp-web-player/2.35.4/aliplayer-min.js';
+      document.head.appendChild(s);
+    }
+  </script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -146,7 +161,7 @@
   <div class="header-row">
     <h1>🔐 MedNinja DRM Test</h1>
     <div style="display: flex; gap: 6px; align-items: center;">
-      <span class="version-badge" id="versionBadge">v14 · 13:45</span>
+      <span class="version-badge" id="versionBadge">v15 · 14:00</span>
       <button class="reload-btn" onclick="location.reload(true)">🔄 Reload</button>
     </div>
   </div>
