@@ -1,9 +1,8 @@
 <!--
-  CountryBanner — แถบเดียวรวม: Country + IP + Device info
-  แสดงบนสุดทุกหน้า (ยกเว้น /live)
+  CountryBanner — แถบบางสุด 1 บรรทัด บนสุดทุกหน้า (ยกเว้น /live)
 
-  Layout:
-    🇹🇭 ไทย · 2403:6200:... | 📱 Mobile · Android · Chrome · 1920×953
+  Desktop:  ● 🇹🇭 TH · 2403:6200:...:bbf4 · Desktop · Windows · Chrome · 1920×953 · [ออก]
+  Mobile:   ● 🇹🇭 TH · 2403:...bbf4 · [🚪]
 -->
 <template>
   <transition name="banner-slide">
@@ -15,39 +14,36 @@
       aria-live="polite"
     >
       <div class="banner-inner">
-        <!-- LEFT: Country + IP -->
-        <div class="section section-country">
-          <span class="dot" :class="'dot-' + tone"></span>
-          <span class="flag">{{ loading ? '🌐' : flag }}</span>
-          <span class="country-name">{{ loading ? 'ตรวจสอบ...' : countryTh }}</span>
-          <template v-if="!loading && ip">
-            <span class="sep">·</span>
-            <span class="ip">{{ shortIp }}</span>
-          </template>
-        </div>
+        <!-- Left: Country -->
+        <span class="dot" :class="'dot-' + tone"></span>
+        <span class="flag">{{ loading ? '🌐' : flag }}</span>
+        <span class="country-code">{{ loading ? '...' : country }}</span>
 
-        <span class="divider">|</span>
-
-        <!-- RIGHT: Device info -->
-        <div class="section section-device">
-          <span class="device-icon">{{ deviceIcon }}</span>
-          <span class="device-item">{{ deviceCategoryLabel }}</span>
+        <!-- IP (always show) -->
+        <template v-if="!loading && ip">
           <span class="sep">·</span>
-          <span class="device-item">{{ deviceOS }}</span>
-          <span class="sep">·</span>
-          <span class="device-item">{{ deviceBrowser }}</span>
-          <span class="sep sep-hide-sm">·</span>
-          <span class="device-item screen-size sep-hide-sm">{{ screenSize }}</span>
-        </div>
+          <span class="ip">{{ shortIp }}</span>
+        </template>
 
-        <!-- LOGOUT (visible only when logged in) -->
+        <!-- Device info (desktop only) -->
+        <span class="sep hide-mobile">·</span>
+        <span class="item hide-mobile">{{ deviceCategoryLabel }}</span>
+        <span class="sep hide-mobile">·</span>
+        <span class="item hide-mobile">{{ deviceOS }}</span>
+        <span class="sep hide-mobile">·</span>
+        <span class="item hide-mobile">{{ deviceBrowser }}</span>
+        <span class="sep hide-mobile">·</span>
+        <span class="item screen-size hide-mobile">{{ screenSize }}</span>
+
+        <!-- Logout button (only if logged in) -->
         <button
           v-if="isLoggedIn"
           class="logout-btn"
           @click="handleLogout"
           title="ออกจากระบบ"
+          aria-label="ออกจากระบบ"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="11" height="11" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
           <span class="logout-label">ออก</span>
@@ -88,18 +84,10 @@ const deviceCategoryLabel = computed(() => {
   return map[deviceCategory.value] || 'Device'
 })
 
-const deviceIcon = computed(() => {
-  if (deviceCategory.value === 'mobile') return '📱'
-  if (deviceCategory.value === 'tablet') return '📱'
-  return '💻'
-})
-
 let _resizeHandler = null
 
 function updateScreenSize () {
-  const w = window.innerWidth
-  const h = window.innerHeight
-  screenSize.value = `${w}×${h}`
+  screenSize.value = `${window.innerWidth}×${window.innerHeight}`
 }
 
 function detectDevice () {
@@ -124,20 +112,20 @@ onBeforeUnmount(() => {
   }
 })
 
-// ─── Route/visibility ───
-const isLivePage = computed(() => {
-  const p = route.path || ''
-  return p.startsWith('/live')
-})
-
+const isLivePage = computed(() => (route.path || '').startsWith('/live'))
 const show = computed(() => !isLivePage.value)
 
-// Shorten IPv6 for display
+// IPv6 shortener: 2403:6200:8830:7006:d599:e1c8:d863:bbf4 → 2403:6200...bbf4
 const shortIp = computed(() => {
   const v = ip.value || ''
-  if (v.length > 24 && v.includes(':')) {
-    return v.slice(0, 12) + '...' + v.slice(-8)
+  if (!v) return ''
+  // IPv6
+  if (v.includes(':')) {
+    if (v.length > 20) {
+      return v.slice(0, 9) + '…' + v.slice(-4)
+    }
   }
+  // IPv4 keep full
   return v
 })
 
@@ -156,40 +144,30 @@ const tone = computed(() => {
   left: 0;
   right: 0;
   z-index: 99997;
-  color: #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans Thai', sans-serif;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
 }
-.tone-cn {
-  background: linear-gradient(90deg, #7f1d1d 0%, #991b1b 50%, #7f1d1d 100%);
-}
-.tone-th {
-  background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-}
-.tone-other {
-  background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
-}
-.tone-loading {
-  background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-}
+
+.tone-cn      { background: linear-gradient(90deg, #7f1d1d 0%, #991b1b 50%, #7f1d1d 100%); color: #fff; }
+.tone-th      { background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+.tone-other   { background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%); }
+.tone-loading { background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
 
 .banner-inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 6px 14px;
+  padding: 5px 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  font-size: 12px;
+  gap: 7px;
+  font-size: 11.5px;
   font-weight: 500;
-  flex-wrap: wrap;
-}
-.section {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  line-height: 1;
+  flex-wrap: nowrap;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .dot {
@@ -198,101 +176,94 @@ const tone = computed(() => {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.dot-tone-cn { background: #fbbf24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.6); }
-.dot-tone-th { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
-.dot-tone-other { background: #94a3b8; }
+.dot-tone-cn      { background: #fbbf24; box-shadow: 0 0 6px rgba(251, 191, 36, 0.6); }
+.dot-tone-th      { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); }
+.dot-tone-other   { background: #94a3b8; }
 .dot-tone-loading {
   background: #f59e0b;
   animation: pulse-dot 1.2s ease-in-out infinite;
 }
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 0.4; transform: scale(0.75); }
 }
 
 .flag {
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1;
+  flex-shrink: 0;
 }
-.country-name {
+.country-code {
   font-weight: 700;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.5px;
+  font-size: 11px;
 }
 .sep {
   opacity: 0.35;
-  font-weight: 400;
+  font-weight: 300;
+  flex-shrink: 0;
 }
 .ip {
   font-family: 'SF Mono', ui-monospace, Consolas, monospace;
-  font-size: 11px;
-  opacity: 0.85;
+  font-size: 10.5px;
+  opacity: 0.75;
   letter-spacing: 0.2px;
 }
-
-.divider {
-  opacity: 0.25;
-  font-weight: 300;
-}
-
-.device-icon {
-  font-size: 12px;
-  line-height: 1;
-}
-.device-item {
+.item {
   font-weight: 500;
-  opacity: 0.9;
+  opacity: 0.85;
 }
 .screen-size {
   font-family: 'SF Mono', ui-monospace, Consolas, monospace;
-  font-size: 11px;
-  opacity: 0.7;
+  font-size: 10.5px;
+  opacity: 0.6;
 }
 
 /* Logout button */
 .logout-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(239, 68, 68, 0.85);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  gap: 3px;
+  background: rgba(239, 68, 68, 0.75);
+  border: none;
   color: #fff;
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
-  margin-left: 6px;
+  transition: background 0.15s;
+  margin-left: 4px;
   font-family: inherit;
+  line-height: 1;
+  flex-shrink: 0;
 }
 .logout-btn:hover {
   background: #dc2626;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
-}
-.logout-btn:active {
-  transform: translateY(0);
 }
 .logout-btn svg {
   flex-shrink: 0;
 }
 
-/* Responsive */
+/* ─── Mobile: ซ่อน device info + label ─── */
 @media (max-width: 640px) {
+  .hide-mobile {
+    display: none !important;
+  }
   .banner-inner {
-    padding: 5px 10px;
-    gap: 8px;
-    font-size: 11px;
+    padding: 4px 10px;
+    gap: 5px;
+    font-size: 10.5px;
   }
-  .divider,
-  .sep-hide-sm {
-    display: none;
+  .flag { font-size: 11px; }
+  .country-code { font-size: 10px; }
+  .ip { font-size: 9.5px; }
+  .logout-btn {
+    padding: 2px 5px;
+    font-size: 0; /* hide label */
+    gap: 0;
+    margin-left: auto; /* push to right */
   }
-  .flag { font-size: 13px; }
-  .ip { font-size: 10px; }
-  .country-name { font-size: 11px; }
-  .device-item { font-size: 10px; }
-  .logout-btn { padding: 2px 8px; font-size: 10px; }
   .logout-label { display: none; }
 }
 
