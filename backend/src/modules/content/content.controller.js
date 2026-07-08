@@ -96,7 +96,12 @@ exports.getSection = async (req, res, next) => {
           bonusDuration: bonusLocked ? '' : (v.bonusDuration || ''),
           bonusHasPdf: !!v.bonusPdfFile,
           bonusPdfFile: (bonusLocked || !v.bonusPdfFile) ? '' : v.bonusPdfFile,
-          bonusPdfFileName: (bonusLocked || !v.bonusPdfFile) ? '' : (v.bonusPdfFileName || v.bonusPdfFile)
+          bonusPdfFileName: (bonusLocked || !v.bonusPdfFile) ? '' : (v.bonusPdfFileName || v.bonusPdfFile),
+          // ⭐ CN: Ali video IDs (SectionCnPage เช็ค hasCnVideo() = aliVideoId && aliDrmVideoId)
+          aliVideoId: locked ? '' : (v.aliVideoId || ''),
+          aliDrmVideoId: locked ? '' : (v.aliDrmVideoId || ''),
+          bonusAliVideoId: bonusLocked ? '' : (v.bonusAliVideoId || ''),
+          bonusAliDrmVideoId: bonusLocked ? '' : (v.bonusAliDrmVideoId || '')
         }
       })
 
