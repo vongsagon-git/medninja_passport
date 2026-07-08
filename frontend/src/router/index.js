@@ -41,7 +41,6 @@ const ValkeyDebug = () => import('../views/admin/ValkeyDebug.vue')
 const ManageDemoWeb = () => import('../views/admin/ManageDemoWeb.vue')
 const VisitorAnalytics = () => import('../views/admin/VisitorAnalytics.vue')
 const PdfDownloadCenter = () => import('../views/admin/PdfDownloadCenter.vue')
-const ManageLive = () => import('../views/admin/ManageLive.vue')
 const VideoPdfMap = () => import('../views/admin/VideoPdfMap.vue')
 const PdfLibrary = () => import('../views/admin/PdfLibrary.vue')
 const DbViewer = () => import('../views/admin/DbViewer.vue')
@@ -49,7 +48,6 @@ const ActivityLog = () => import('../views/admin/ActivityLog.vue')
 // Knowledge Hub — prototype รวม P'Nut + Siriraj DDx (admin-only, internal)
 const ManageSelfChecks = () => import('../views/admin/ManageSelfChecks.vue')
 const SelfCheckAnalytics = () => import('../views/admin/SelfCheckAnalytics.vue')
-const WatchLive = () => import('../views/WatchLive.vue')
 
 const routes = [
   {
@@ -309,12 +307,6 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
-    path: '/admin/live',
-    name: 'ManageLive',
-    component: ManageLive,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
     path: '/admin/qa',
     name: 'ManageQA',
     component: () => import('../views/admin/ManageQA.vue'),
@@ -359,24 +351,6 @@ const routes = [
   { path: '/ddx-mindmap', beforeEnter: () => { window.location.href = 'https://ddx.medninja.academy/mindmap'; return false } },
   { path: '/ninja-ddx', beforeEnter: () => { window.location.href = 'https://ddx.medninja.academy/ddx-arena'; return false } },
   { path: '/ddx-arena', beforeEnter: () => { window.location.href = 'https://ddx.medninja.academy/ddx-arena'; return false } },
-  {
-    path: '/live/room/:packageId',
-    name: 'WatchLiveRoom',
-    component: WatchLive,
-    meta: { requiresAuth: true, requiresProfile: true, immersive: true }
-  },
-  {
-    path: '/qa/:packageId',
-    name: 'CourseQA',
-    component: () => import('../views/LiveQA.vue'),
-    meta: { requiresAuth: true, requiresProfile: true }
-  },
-  {
-    path: '/live/:id',
-    name: 'WatchLive',
-    component: WatchLive,
-    meta: { requiresAuth: true, requiresProfile: true, immersive: true }
-  },
   {
     path: '/admin/warroom',
     name: 'Warroom',

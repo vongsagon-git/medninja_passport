@@ -332,15 +332,6 @@ exports.createPackage = async (req, res, next) => {
 
 exports.updatePackage = async (req, res, next) => {
   try {
-    // ป้องกันปิด liveEnabled ถ้ามีตารางอยู่
-    if (req.body.liveEnabled === false) {
-      const LiveSession = require('../live/LiveSession.model')
-      const sessionCount = await LiveSession.countDocuments({ packageId: req.params.id })
-      if (sessionCount > 0) {
-        return res.status(403).json({ message: `ปิด Live ไม่ได้ — มีตาราง ${sessionCount} รายการอยู่ ต้องลบตารางก่อน` })
-      }
-    }
-
     const pkg = await Package.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true

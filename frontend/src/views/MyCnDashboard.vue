@@ -151,18 +151,9 @@
               ติดต่อต่ออายุ
             </a>
 
-            <!-- ปกติ — เข้าห้องสด/ถามตอบเท่านั้น, section ให้กดที่ list ด้านล่าง -->
+            <!-- (Live/Q&A ปิดใน passport — ระบบใหม่ไม่มี live) -->
             <template v-else>
-              <router-link
-                v-if="isLive(act)"
-                :to="`/live/room/${act.packageId || act.package._id}`"
-                class="btn btn-live"
-              >เข้าห้องสด</router-link>
-              <router-link
-                v-if="act.qaEnabled"
-                :to="`/qa/${act.packageId || act.package?._id}`"
-                class="btn btn-ghost"
-              >ห้องถามตอบ</router-link>
+              <span></span>
             </template>
           </div>
         </div>
@@ -323,8 +314,7 @@ export default {
     this.activationStore.fetchMyActivations()
     this.activationStore.fetchConsentStatus()
     this.authStore.fetchProfile().catch(() => {})
-    this._fetchLiveSessions()
-    this._livePoll = setInterval(() => this._fetchLiveSessions(), 10000)
+    // Live disabled ใน passport — ระบบใหม่ไม่มี live
     this._linePoll = setInterval(() => {
       if (!this.user?.lineUserId) this.authStore.fetchProfile().catch(() => {})
       else clearInterval(this._linePoll)
@@ -335,19 +325,8 @@ export default {
     if (this._linePoll) clearInterval(this._linePoll)
   },
   methods: {
-    async _fetchLiveSessions() {
-      try {
-        const res = await api.get('/my/live/current')
-        this.liveSessions = res.sessions || []
-      } catch { /* ignore */ }
-    },
-    getLiveForPackage(packageId) {
-      return this.liveSessions.find(s => s.packageId === packageId && (s.status === 'live' || s.status === 'waiting'))
-    },
-    isLive(act) {
-      if (!act.package?.liveEnabled || !act.liveEnabled) return false
-      return this.getLiveForPackage(act.packageId || act.package?._id)?.status === 'live'
-    },
+    // ⭐ Live ปิดใน passport — คืน false เสมอ (core badge/cover ยังใช้ helper นี้อยู่)
+    isLive() { return false },
     async goHandoff(target) {
       const urls = {
         synapse: import.meta.env.VITE_SYNAPSE_URL || 'https://synapse.medninja.academy',

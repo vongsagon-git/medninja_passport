@@ -235,8 +235,6 @@ function requireLine(req, res, next) {
 app.use('/api/my', auth, profileGuard, activationRoutes)
 app.use('/api/my', auth, profileGuard, requireLine, contentRoutes)
 app.use('/api/my', auth, profileGuard, requireLine, require('./modules/selfcheck/selfcheck.routes'))
-app.use('/api/my', auth, profileGuard, requireLine, require('./modules/live/live.routes'))
-app.use('/api', auth, profileGuard, requireLine, require('./modules/live/live.qa.routes'))
 app.use('/api/my', auth, profileGuard, requireLine, require('./modules/approach/approach.routes'))
 app.use('/api/my', auth, profileGuard, requireLine, require('./modules/meq/meq.routes'))
 // NLEX → ย้ายไป miniapp (nlex.medninja.academy) แล้ว
@@ -247,7 +245,6 @@ app.get('/api/admin/watermark', require('./modules/content/content.admin.control
 app.use('/api/admin', contentAdminRoutes)
 app.use('/api/admin/self-checks', require('./modules/selfcheck/selfcheck.admin.routes'))
 app.use('/api/admin/activations', activationAdminRoutes)
-app.use('/api/admin/live', auth, require('./shared/middleware/admin'), require('./modules/live/live.admin.routes'))
 app.use('/api/admin/passport', preregisterAdminRoutes)
 // Visitor analytics (admin only) — reuse visitor routes with auth guard
 app.use('/api/admin/visitors', auth, require('./shared/middleware/admin'), require('./modules/visitor/visitor.routes'))

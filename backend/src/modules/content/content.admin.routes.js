@@ -262,8 +262,6 @@ router.post('/video-pdf-map/upload/:videoId', auth, admin, pdfMapUpload.single('
       if (changed) await sec.save()
     }
 
-    // Clear live PDF cache
-    try { require('../live/live.routes').clearPdfCache() } catch {}
     res.json({ ok: true })
   } catch (err) {
     console.error('video-pdf upload error:', err.message)
