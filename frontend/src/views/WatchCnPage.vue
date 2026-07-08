@@ -322,9 +322,10 @@
                 </div>
               </div>
               <div class="w-video-actions">
-                <button v-if="!isDemo" class="w-ask-btn" @click="showAskModal = true" title="ถามคุณหมอ">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2c-2.236 0-4.43.18-6.57.524C1.993 2.755 1 4.014 1 5.426v5.148c0 1.413.993 2.67 2.43 2.902 1.168.188 2.352.327 3.55.414.28.02.521.18.642.413l1.713 3.293a.75.75 0 001.33 0l1.713-3.293c.121-.233.362-.393.642-.413 1.198-.087 2.383-.226 3.55-.414 1.437-.231 2.43-1.49 2.43-2.902V5.426c0-1.413-.993-2.67-2.43-2.902A41.803 41.803 0 0010 2zM6.75 6a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 2.5a.75.75 0 000 1.5h3.5a.75.75 0 000-1.5h-3.5z" clip-rule="evenodd"/></svg>
-                  ถามคุณหมอ
+                <!-- ⭐ CN: ปิดปุ่ม 'ถามคุณหมอ' → แจ้งส่งคำถามทาง WeChat แทน -->
+                <button v-if="!isDemo" class="w-ask-btn w-ask-cn" @click="_alertWeChat" title="ส่งคำถามทาง WeChat">
+                  <span style="font-size:14px;line-height:1">💬</span>
+                  ส่งคำถามทาง WeChat
                 </button>
                 <button v-if="!isDemo" class="w-diag-btn" @click="openDiagModal" title="ตรวจสอบระบบ">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/></svg>
@@ -1381,7 +1382,13 @@ export default {
           isPlaying: this.isPlaying,
           playerError: this._playerError || '',
           appVersion: _getAppVersion(),
-          contentType: this.isBonus ? 'bonus' : 'video'
+          contentType: this.isBonus ? 'bonus' : 'video',
+          // ⭐ Warroom: แหล่ง + bucket + player + variant
+          source: 'passport',
+          bucket: 'CN',
+          player: 'aliplayer',
+          // aliVideoIdToPlay = aliDrmVideoId → 'drm' (Widevine), aliVideoId → 'noDrm' (Proprietary encryptType 1)
+          variant: (this.video && this.video.aliDrmVideoId === this.aliVideoIdToPlay) ? 'drm' : 'noDrm'
         })
         if (data.kicked) {
           // admin เตะ → redirect ออก
@@ -1889,7 +1896,12 @@ export default {
         duration: Math.round(this._videoDuration || 0),
         isPlaying: this.isPlaying,
         appVersion: _getAppVersion(),
-        drmMode: this.video?.drmMode || 'protection'
+        drmMode: this.video?.drmMode || 'protection',
+        // ⭐ Warroom: source + bucket + player + variant
+        source: 'passport',
+        bucket: 'CN',
+        player: 'aliplayer',
+        variant: (this.video && this.video.aliDrmVideoId === this.aliVideoIdToPlay) ? 'drm' : 'noDrm'
       }
       this._socket.emit('watch:start', data)
     },
@@ -2121,6 +2133,10 @@ export default {
     openDiagModal() {
       this.showDiagModal = true
       this._runModalDiag()
+    },
+    // ⭐ CN: แจ้งนักเรียนจีนว่าให้ส่งคำถามทาง WeChat
+    _alertWeChat() {
+      alert('🇨🇳 สำหรับผู้ใช้ในประเทศจีน\n\nกรุณาส่งคำถามทาง WeChat\n\nWeChat ID: MedNinja_TH\n(หรือแสกน QR ที่หน้า /my-cn)')
     },
     closeDiagModal() {
       this.showDiagModal = false
@@ -2456,24 +2472,95 @@ export default {
           console.log('[Ali] canplay — DRM decrypted OK')
           try { this.aliDuration = this._aliPlayer.getDuration() || 0 } catch {}
         })
+        // ⭐ Resume — ถ้ามี watch progress เดิม → seek ไปตำแหน่งเดิม (เหมือน Bunny #12)
+        if (!this.isDemo && !this._resumeAttempted) {
+          this._resumeAttempted = true
+          api.get(`/my/watch-progress/${this.sectionId}`).then(res => {
+            const prog = (res.progress || []).find(pr => pr.videoIndex === this.videoIndex)
+            if (prog && prog.currentTime > 10) {
+              const seekTo = Math.max(0, prog.currentTime - 3)
+              const doSeek = () => {
+                try { this._aliPlayer.seek(seekTo); console.log('[Ali Resume] seek to', seekTo) } catch (e) {}
+              }
+              // ลอง seek ทันที + ลองอีก 1 + 3 วิ (เผื่อ Aliplayer ยังไม่พร้อม)
+              doSeek()
+              setTimeout(doSeek, 1000)
+              setTimeout(doSeek, 3000)
+            }
+          }).catch(() => {})
+        }
+
+        // ⭐ Play — sync isPlaying + socket emit (เหมือน Bunny)
         this._aliPlayer.on('play', () => {
           this.isPlaying = true
+          this._playerError = ''
           this._scheduleHideControls()
+          // Socket: broadcast play → Warroom เห็น
+          if (this._socket?.connected) this._socket.emit('video:play')
+          // ยกเลิก idle timer
+          if (this._clearIdleTimer) this._clearIdleTimer()
+          this._diagLog && this._diagLog('play_event', 'Ali play')
         })
+        // ⭐ Pause — sync + socket + idle timer
         this._aliPlayer.on('pause', () => {
           this.isPlaying = false
           this._showControlsSticky()
+          if (this._socket?.connected) this._socket.emit('video:pause')
+          if (!this.isDemo && this._startIdleTimer) this._startIdleTimer()
+          this._diagLog && this._diagLog('pause_event', 'Ali pause', { detail: `t=${Math.round(this._currentTime||0)}` })
         })
+        // ⭐ Ended — sync + socket + auto mark watched
         this._aliPlayer.on('ended', () => {
           this.isPlaying = false
           this._showControlsSticky()
+          if (this._socket?.connected) this._socket.emit('video:ended')
+          if (!this.isDemo && !this.isWatched(this.videoIndex)) {
+            this.toggleWatched(this.videoIndex)
+          }
         })
+        // ⭐ Timeupdate — sync ทุก state + socket state ทุก 3 วิ (เหมือน Bunny)
         this._aliPlayer.on('timeupdate', () => {
-          try { this.aliCurrentTime = this._aliPlayer.getCurrentTime() || 0 } catch {}
+          try {
+            const t = this._aliPlayer.getCurrentTime() || 0
+            const d = this._aliPlayer.getDuration() || 0
+            this.aliCurrentTime = t
+            if (d > 0) this.aliDuration = d
+            // Sync heartbeat vars (Warroom + kick check ใช้ตัวนี้)
+            this._currentTime = t
+            if (d > 0) this._videoDuration = d
+            // Fallback isPlaying — ถ้า timeupdate ยิงแปลว่าเล่นอยู่จริง
+            if (!this.isPlaying) this.isPlaying = true
+            // Auto mark watched ที่ 90%
+            if (!this.isDemo && this._videoDuration > 0 &&
+                t >= this._videoDuration * 0.9 && !this.isWatched(this.videoIndex)) {
+              this.toggleWatched(this.videoIndex)
+            }
+            // Socket state ทุก 3 วิ (Warroom monitoring)
+            const now = Date.now()
+            if (!this._lastSocketState || now - this._lastSocketState > 3000) {
+              this._lastSocketState = now
+              if (this._socket?.connected) {
+                this._socket.emit('video:state', {
+                  currentTime: Math.round(t),
+                  duration: Math.round(d),
+                  isPlaying: this.isPlaying,
+                  appVersion: _getAppVersion()
+                })
+              }
+            }
+          } catch {}
         })
+        // ⭐ Error — log + socket
         this._aliPlayer.on('error', (e) => {
           const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {})
+          this._playerError = details
           console.error('[Ali] Player error:', details)
+          if (this._socket?.connected) this._socket.emit('video:error', { detail: details })
+          this._diagLog && this._diagLog('player_error', 'Ali error', { detail: details })
+        })
+        // ⭐ Waiting/Loading (buffering)
+        this._aliPlayer.on('waiting', () => {
+          this._diagLog && this._diagLog('waiting_event', 'buffering')
         })
 
       } catch (err) {
@@ -2520,10 +2607,25 @@ export default {
     },
     aliTogglePlay () {
       if (!this._aliPlayer) return
+      // ⭐ ป้องกัน rapid tap (300ms throttle) → Aliplayer race condition
+      const now = Date.now()
+      if (this._lastTogglePlay && now - this._lastTogglePlay < 300) return
+      this._lastTogglePlay = now
       try {
-        if (this.isPlaying) this._aliPlayer.pause()
-        else this._aliPlayer.play()
-      } catch {}
+        // ⭐ Optimistic UI: อัปเดต isPlaying ทันที (ไม่รอ event)
+        // แล้ว event 'play'/'pause' จะ sync ทีหลัง (ถ้าล้มเหลว event จะ correct)
+        if (this.isPlaying) {
+          this.isPlaying = false
+          this._aliPlayer.pause()
+          this._showControlsSticky()
+        } else {
+          this.isPlaying = true
+          this._aliPlayer.play()
+          this._scheduleHideControls()
+        }
+      } catch (e) {
+        console.warn('[Ali] toggle play failed', e)
+      }
     },
     aliSeek (sec) {
       if (!this._aliPlayer) return
@@ -4147,8 +4249,15 @@ kbd {
   display: flex; flex-direction: column;
   background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0,0,0,0.7) 100%);
 }
+/* ⭐ ตอน hidden — ยังต้องรับ tap เพื่อ show กลับ (แค่ซ่อนภาพ) */
 .ali-ctl-layer.hidden {
-  opacity: 0; pointer-events: none;
+  background: transparent;
+}
+.ali-ctl-layer.hidden .ali-ctl-big-play,
+.ali-ctl-layer.hidden .ali-ctl-bar {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
 }
 .ali-ctl-big-play {
   position: absolute; left: 50%; top: 50%;

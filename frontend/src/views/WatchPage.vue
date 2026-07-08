@@ -1224,7 +1224,13 @@ export default {
           isPlaying: this.isPlaying,
           playerError: this._playerError || '',
           appVersion: _getAppVersion(),
-          contentType: this.isBonus ? 'bonus' : 'video'
+          contentType: this.isBonus ? 'bonus' : 'video',
+          // ⭐ Warroom: แหล่ง + bucket + player + variant
+          source: 'passport',
+          bucket: 'GLOBAL',
+          player: 'bunny',
+          // drmMode 'widevine' → variant 'drm', 'protection' → 'noDrm'
+          variant: this.video?.drmMode === 'widevine' ? 'drm' : 'noDrm'
         })
         if (data.kicked) {
           // admin เตะ → redirect ออก
