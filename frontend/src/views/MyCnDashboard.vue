@@ -7,8 +7,9 @@
         <div class="pp-header-left">
           <div class="pp-logo">M</div>
           <div>
-            <div class="pp-title">MedNinja Academy</div>
+            <div class="pp-title">MedNinja China</div>
             <div class="pp-subtitle">Your Medical Education Passport</div>
+            <div class="pp-tagline">ดูได้ไม่ต้องใช้ VPN</div>
           </div>
         </div>
         <div class="pp-header-right">
@@ -473,6 +474,7 @@ export default {
 }
 .pp-title { color: #fff; font-size: 16px; font-weight: 700; line-height: 1.1; letter-spacing: -0.2px; }
 .pp-subtitle { color: rgba(255,255,255,.7); font-size: 11px; font-weight: 500; margin-top: 2px; }
+.pp-tagline { color: rgba(252,165,165,.95); font-size: 10.5px; font-weight: 600; margin-top: 4px; letter-spacing: 0.2px; }
 .pp-country { color: rgba(255,255,255,.85); font-size: 12px; font-weight: 600; }
 .pp-header-right { display: flex; align-items: center; gap: 8px; }
 .cn-badge {
@@ -811,6 +813,7 @@ export default {
   .pp-header { padding: 12px 14px; gap: 8px; flex-wrap: wrap; }
   .pp-title { font-size: 14px; }
   .pp-subtitle { font-size: 10px; }
+  .pp-tagline { font-size: 9.5px; }
   .pp-country { font-size: 11px; }
   .pp-body { gap: 14px; padding: 16px 14px; }
   .pp-avatar { width: 64px; height: 76px; }
