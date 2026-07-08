@@ -296,7 +296,7 @@
                   <span style="font-size:14px;line-height:1">💬</span>
                   ส่งคำถามทาง WeChat
                 </button>
-                <button v-if="!isDemo" class="w-diag-btn" @click="openDiagModal" title="ตรวจสอบระบบ">
+                <button v-if="!isDemo" class="w-diag-btn" @click="$router.push('/doctor-cn')" title="ตรวจสอบระบบ Alibaba">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/></svg>
                   ตรวจสอบระบบ
                 </button>
@@ -1029,50 +1029,10 @@ export default {
       }
     }, 2000)
 
-    // ═══ Block scroll + zoom (wheel, Ctrl+scroll, trackpad pinch) ═══
-    this._onWheel = (e) => {
-      // ปล่อยให้ sidebar playlist scroll ได้
-      if (e.target.closest('.w-playlist')) return
-      e.preventDefault()
-    }
-    document.addEventListener('wheel', this._onWheel, { passive: false })
-
-    // Block wheel/zoom บน player-box ด้วย (iframe cross-origin จับจาก document ไม่ได้)
-    this.$nextTick(() => {
-      const box = this.$el?.querySelector('.w-player-box')
-      if (box && !box._wheelProtected) {
-        box._wheelProtected = true
-        box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
-        box.addEventListener('keydown', (e) => {
-          if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault()
-        })
-      }
-    })
-
-    // ═══ Block DevTools + zoom + PrintScreen ═══
-    this._onKeydown = (e) => {
-      // Block zoom: Ctrl+plus/minus/0
-      if (e.ctrlKey && ['+', '-', '=', '0'].includes(e.key)) { e.preventDefault(); return }
-      // Block F12
-      if (e.key === 'F12') { e.preventDefault(); return }
-      // Block Ctrl+Shift+I/J/C (DevTools)
-      if (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) { e.preventDefault(); return }
-      // Block Ctrl+U (View Source)
-      if (e.ctrlKey && (e.key === 'u' || e.key === 'U')) { e.preventDefault(); return }
-      // Block Ctrl+S (Save Page)
-      if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); return }
-      // Block Ctrl+P (Print)
-      if (e.ctrlKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); return }
-    }
-    document.addEventListener('keydown', this._onKeydown)
-
-    // ═══ Block PrintScreen — clear clipboard ═══
-    this._onKeyup = (e) => {
-      if (e.key === 'PrintScreen') {
-        navigator.clipboard.writeText('').catch(() => {})
-      }
-    }
-    document.addEventListener('keyup', this._onKeyup)
+    // ⚠️ Strict Protection Mode (CN) = ปิดชั่วคราว (user request 2026-07-08)
+    // Reason: debug ให้ Ali player เล่นได้ก่อน — เปิดกลับหลัง stable
+    // เดิม block: wheel/zoom/F12/Ctrl+Shift+I/Ctrl+U/S/P + clear clipboard PrintScreen
+    // TODO: เอากลับหลัง Ali stable
 
     // ═══ Visibility API — pause hint when tab hidden ═══
     this._onVisChange = () => {

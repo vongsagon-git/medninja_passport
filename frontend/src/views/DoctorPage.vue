@@ -289,6 +289,20 @@ export default {
       const clientOS = os
       const clientBrowser = browser
 
+      // ⭐ Device precision — 4-layer iPad detection (เคสกุลจิรา 2026-07-03)
+      let deviceType = ''
+      try {
+        const { isIPhone, isIPad, isAndroid, isMacSafari } = await import('../utils/deviceDetect')
+        if (isIPhone(ua)) deviceType = 'iPhone'
+        else if (isIPad(ua)) deviceType = 'iPad'
+        else if (isAndroid(ua)) deviceType = 'Android'
+        else if (isMacSafari(ua)) deviceType = 'Mac'
+        else if (/Macintosh|Mac OS X/.test(ua)) deviceType = 'Mac'
+        else if (/Windows/.test(ua)) deviceType = 'Windows'
+        else if (/Linux|X11/.test(ua)) deviceType = 'Linux'
+        else deviceType = 'Unknown'
+      } catch { deviceType = clientOS || 'Unknown' }
+
       // ส่ง LINE Flex + plain text ให้เติ้ล
       try {
         const token = localStorage.getItem('token')
@@ -301,11 +315,16 @@ export default {
             userEmail: this.userEmail,
             failCount: this.failCount,
             resultId: this._resultId || '',
+            player: 'bunny',                   // ⭐ Bunny CDN
+            deviceType,                        // ⭐ iPad detection
+            bucket: 'bunny-global',            // ⭐ Bunny CDN Global
+            routingReason: deviceType === 'iPhone' || deviceType === 'iPad' || deviceType === 'Mac' ? 'iOS/Mac → No-DRM path' : 'Global → Widevine DRM',
             videoTitle: this.videoTitle || 'Demo',
             sectionName: '',
             sectionCode: '',
             page: 'DoctorPage',
             url: '/doctor',
+            watchUrl: document.referrer || '',
             clientReferer: document.referrer || window.location.href,
             clientHost: window.location.host,
             clientOS,

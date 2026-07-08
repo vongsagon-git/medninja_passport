@@ -390,6 +390,13 @@ const routes = [
     meta: { requiresAuth: true, immersive: true }
   },
   {
+    // ⭐ Doctor เฉพาะ Ali chain (CN mirror) — user บน /my-cn/watch ใช้ path นี้
+    path: '/doctor-cn',
+    name: 'DoctorCn',
+    component: () => import('../views/DoctorCnPage.vue'),
+    meta: { requiresAuth: true, immersive: true }
+  },
+  {
     path: '/screen-check',
     name: 'ScreenCheck',
     component: () => import('../views/ScreenCheck.vue'),

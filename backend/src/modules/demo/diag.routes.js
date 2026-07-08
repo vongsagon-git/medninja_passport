@@ -353,9 +353,22 @@ router.post('/doctor', auth, async (req, res) => {
  */
 // ⚠️ ห้าม require auth — ต้องส่ง flex ได้แม้ token หาย/expired (จะได้รู้ว่ามีนักเรียนเปิดไม่ได้)
 router.post('/doctor-line', async (req, res) => {
-  const { plainText, userName, userEmail, failCount, resultId, videoTitle, sectionName, sectionCode, page, url, clientReferer, clientHost, clientOS, clientBrowser, browserBlocked, browserBlockReason } = req.body
+  const {
+    plainText, userName, userEmail, failCount, resultId,
+    videoTitle, sectionName, sectionCode, page, url,
+    clientReferer, clientHost, clientOS, clientBrowser,
+    browserBlocked, browserBlockReason,
+    // ⭐ new: player + device precision (iPad detection) + bucket
+    player = 'bunny',         // 'ali' | 'bunny'
+    watchUrl = '',            // URL ที่ user กดปุ่มมา (referrer)
+    deviceType = '',          // 'iPhone' | 'iPad' | 'Android' | 'Mac' | 'Windows' | 'Linux'
+    bucket = '',              // ⭐ CDN bucket ที่ serve จริง (Ali region / Bunny library ID)
+    videoId = '',             // Alibaba videoId or Bunny GUID
+    routingReason = ''        // ⭐ เหตุผลที่ route ไป bucket นี้ ("country=CN" / "iOS→NoDRM" / etc)
+  } = req.body
   // IP จาก request headers (server-side)
   const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '?'
+  const clientCountry = req.headers['cf-ipcountry'] || ''  // Cloudflare
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
   if (!token) return res.json({ ok: false, reason: 'no LINE token' })
 
@@ -386,22 +399,46 @@ router.post('/doctor-line', async (req, res) => {
   // สีตาม status (browser block = ส้ม ไม่ใช่แดง — ไม่ใช่ bug)
   const isBlocked = !!browserBlocked
   const isFail = failCount > 0
-  const headerColor = isBlocked ? '#f97316' : (isFail ? '#dc2626' : '#0ea5e9')
+  const isAli = player === 'ali'
+  // ⭐ Player color: Ali = แดง (China), Bunny = ฟ้า
+  const playerColor = isAli ? '#dc2626' : '#0ea5e9'
+  const playerLabel = isAli ? 'Alibaba VOD' : 'Bunny CDN'
+  const playerEmoji = isAli ? '🇨🇳' : '🌍'
+  const headerColor = isBlocked ? '#f97316' : (isFail ? '#dc2626' : playerColor)
   const statusText = isBlocked
-    ? `🌐 ปิดกั้น Browser`
-    : (isFail ? `❌ พบปัญหา ${failCount} จุด` : `✅ ระบบปกติ`)
-  const statusBg = isBlocked ? '#fff7ed' : (isFail ? '#fef2f2' : '#f0f9ff')
-  const statusFg = isBlocked ? '#c2410c' : (isFail ? '#991b1b' : '#0369a1')
+    ? `ปิดกั้น Browser`
+    : (isFail ? `พบปัญหา ${failCount} จุด` : `ระบบปกติ`)
+  const statusIcon = isBlocked ? '⚠️' : (isFail ? '❌' : '✅')
+  const statusBg = isBlocked ? '#fff7ed' : (isFail ? '#fef2f2' : '#f0fdf4')
+  const statusFg = isBlocked ? '#c2410c' : (isFail ? '#991b1b' : '#166534')
 
-  // helper row
+  // ⭐ Device precision — ใช้ deviceType ถ้า frontend ส่งมา ไม่งั้น fallback UA
+  const ua = req.headers['user-agent'] || ''
+  let precisionDevice = deviceType
+  if (!precisionDevice) {
+    if (/iPhone|iPod/.test(ua)) precisionDevice = 'iPhone'
+    else if (/iPad/.test(ua)) precisionDevice = 'iPad'
+    else if (/Android/.test(ua)) precisionDevice = 'Android'
+    else if (/Windows/.test(ua)) precisionDevice = 'Windows'
+    else if (/Macintosh|Mac OS X/.test(ua)) precisionDevice = 'Mac'  // อาจเป็น iPad ปลอม UA — frontend ควรส่ง deviceType
+    else precisionDevice = clientOS || 'Unknown'
+  }
+  // Device emoji
+  const devEmoji = precisionDevice === 'iPhone' ? '📱' :
+                   precisionDevice === 'iPad' ? '📱' :
+                   precisionDevice === 'Android' ? '🤖' :
+                   precisionDevice === 'Mac' ? '🍎' :
+                   precisionDevice === 'Windows' ? '🪟' : '💻'
+
+  // helper row — เหลี่ยม ไม่โค้ง
   const row = (label, value, valueColor = '#0f172a', size = 'sm') => ({
     type: 'box', layout: 'horizontal', spacing: 'md', contents: [
       { type: 'text', text: label, size: 'xs', color: '#94a3b8', flex: 3 },
-      { type: 'text', text: value || '-', size, weight: 'bold', flex: 6, wrap: true, color: valueColor }
+      { type: 'text', text: value || '-', size, weight: 'bold', flex: 7, wrap: true, color: valueColor }
     ]
   })
 
-  // Header: avatar + ชื่อ LINE
+  // Header: avatar + ชื่อ LINE + Player badge
   const headerContents = [
     { type: 'box', layout: 'horizontal', spacing: 'md', contents: [
       ...(linePictureUrl ? [{
@@ -410,15 +447,15 @@ router.post('/doctor-line', async (req, res) => {
       }] : []),
       { type: 'box', layout: 'vertical', flex: 1, contents: [
         { type: 'text', text: lineDisplayName || resolvedUserName || 'นักเรียน', color: '#FFFFFF', size: 'md', weight: 'bold', wrap: true },
-        { type: 'text', text: '🩺 Doctor Diagnostic', color: '#FFFFFFCC', size: 'xxs', margin: 'xs' }
+        { type: 'text', text: `Doctor Diagnostic`, color: '#FFFFFFCC', size: 'xxs', margin: 'xs' }
       ]}
     ]}
   ]
 
-  // Flex Message — กระทัดรัด สวยขึ้น
+  // Flex Message — เหลี่ยม (cornerRadius: '0px' ทุกจุด) + Player badge + Device precision
   const flex = {
     type: 'flex',
-    altText: `🩺 ${lineDisplayName || resolvedUserName || 'นักเรียน'} — ${isBlocked ? 'Browser Block' : (isFail ? `${failCount} FAIL` : 'PASS')}`,
+    altText: `${statusIcon} ${lineDisplayName || resolvedUserName || 'นักเรียน'} · ${playerLabel} · ${precisionDevice}`,
     contents: {
       type: 'bubble', size: 'mega',
       header: {
@@ -426,21 +463,44 @@ router.post('/doctor-line', async (req, res) => {
         contents: headerContents
       },
       body: {
-        type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
+        type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '16px',
         contents: [
-          // Status banner (เด่นชัด)
-          { type: 'box', layout: 'vertical', backgroundColor: statusBg, cornerRadius: '8px', paddingAll: '10px',
+          // ⭐ Player + Bucket + Reason (เหลี่ยม เด่นชัด)
+          // Bucket ชื่อย่อ (Ali: sg/cn/tk / Bunny: library ID สั้น)
+          { type: 'box', layout: 'vertical', backgroundColor: playerColor, paddingAll: '10px', spacing: 'xs',
             contents: [
-              { type: 'text', text: statusText, size: 'sm', weight: 'bold', color: statusFg, align: 'center' },
-              ...(isBlocked && browserBlockReason ? [{
-                type: 'text', text: browserBlockReason, size: 'xxs', color: statusFg, align: 'center', wrap: true, margin: 'xs'
+              { type: 'box', layout: 'horizontal', contents: [
+                { type: 'text', text: playerEmoji, size: 'md', flex: 0, color: '#FFFFFF' },
+                { type: 'text', text: playerLabel, size: 'sm', weight: 'bold', color: '#FFFFFF', flex: 1, margin: 'md' },
+                ...(bucket ? [{ type: 'text', text: bucket, size: 'xxs', color: '#FFFFFFCC', align: 'end', gravity: 'center' }] : [])
+              ]},
+              ...(routingReason ? [{
+                type: 'text', text: `เนื่องด้วย: ${routingReason}`, size: 'xxs', color: '#FFFFFFCC', wrap: true
               }] : [])
             ]
           },
-          // Browser/Device — เน้น ถ้า block
-          { type: 'separator', color: '#e2e8f0', margin: 'md' },
-          row('Browser', `${clientOS || '?'} · ${clientBrowser || '?'}`, isBlocked ? '#c2410c' : '#0f172a'),
-          { type: 'separator', color: '#f1f5f9' },
+          // Status banner (เหลี่ยม)
+          { type: 'box', layout: 'horizontal', backgroundColor: statusBg, paddingAll: '10px',
+            contents: [
+              { type: 'text', text: statusIcon, size: 'md', flex: 0 },
+              { type: 'text', text: statusText, size: 'sm', weight: 'bold', color: statusFg, flex: 1, margin: 'md' }
+            ]
+          },
+          ...(isBlocked && browserBlockReason ? [{
+            type: 'text', text: browserBlockReason, size: 'xxs', color: statusFg, wrap: true
+          }] : []),
+          // Device precision box (เน้น iPad detection)
+          { type: 'box', layout: 'horizontal', backgroundColor: '#f8fafc', paddingAll: '10px',
+            contents: [
+              { type: 'text', text: devEmoji, size: 'md', flex: 0 },
+              { type: 'box', layout: 'vertical', flex: 1, margin: 'md', contents: [
+                { type: 'text', text: precisionDevice, size: 'sm', weight: 'bold', color: '#0f172a' },
+                { type: 'text', text: `${clientBrowser || '?'} · ${clientOS || '?'}`, size: 'xxs', color: '#64748b', margin: 'xs' }
+              ]}
+            ]
+          },
+          // Details (rows)
+          { type: 'separator', color: '#e2e8f0', margin: 'sm' },
           row('นักเรียน', userName),
           { type: 'separator', color: '#f1f5f9' },
           row('อีเมล', userEmail, '#0f172a', 'xs'),
@@ -452,8 +512,12 @@ router.post('/doctor-line', async (req, res) => {
             { type: 'separator', color: '#f1f5f9' },
             row('Section', `${sectionCode || ''} ${sectionName || ''}`.trim(), '#0f172a', 'xs')
           ] : []),
+          ...(watchUrl ? [
+            { type: 'separator', color: '#f1f5f9' },
+            row('URL', watchUrl.replace(/^https?:\/\/[^/]+/, ''), '#0369a1', 'xs')
+          ] : []),
           { type: 'separator', color: '#f1f5f9' },
-          row('IP', clientIp, '#475569', 'xs'),
+          row('IP', `${clientIp}${clientCountry ? ' · ' + clientCountry : ''}`, '#475569', 'xs'),
           { type: 'separator', color: '#f1f5f9' },
           row('Host', clientHost || '?', clientHost?.includes('www.') ? '#ef4444' : '#10b981', 'xs'),
           { type: 'separator', color: '#f1f5f9' },
@@ -463,8 +527,13 @@ router.post('/doctor-line', async (req, res) => {
       footer: {
         type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '12px',
         contents: [
-          { type: 'button', action: { type: 'uri', label: 'ดูรายละเอียดทุก byte', uri: resultUrl }, style: 'primary', color: '#0ea5e9', height: 'sm' }
+          { type: 'button', action: { type: 'uri', label: 'ดูรายละเอียดทุก byte', uri: resultUrl }, style: 'primary', color: playerColor, height: 'sm' }
         ]
+      },
+      styles: {
+        header: { separator: false },
+        body: { separator: false },
+        footer: { separator: false }
       }
     }
   }
