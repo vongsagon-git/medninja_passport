@@ -196,16 +196,71 @@
                   <span v-for="(line, idx) in wmParts" :key="idx">{{ line }}</span>
                 </div>
               </div>
-              <!-- Custom play/pause button — ใช้ aliTogglePlay สำหรับ Ali page (CN mirror) -->
-              <button v-if="playerReady" class="wm-play-btn" @click="hasAliVideo ? aliTogglePlay() : togglePlay()" :title="isPlaying ? 'หยุด' : 'เล่น'">
-                <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
-              </button>
-              <!-- Custom fullscreen button (ทำให้ทั้ง box fullscreen รวมลายน้ำ) -->
-              <button class="wm-fs-btn" @click="toggleFullscreen" :title="isFullscreen ? 'ออกจากเต็มจอ' : 'เต็มจอ'">
-                <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
-              </button>
+              <!-- ⭐ Custom Aliplayer Controls Layer (seek bar + play + time + speed + volume + fullscreen) -->
+              <div v-if="hasAliVideo && playerReady" class="ali-ctl-layer" :class="{ hidden: !aliControlsVisible }" @click.self="aliOnPlayerTap">
+                <!-- Big center play/pause -->
+                <button class="ali-ctl-big-play" @click="aliTogglePlay" :title="isPlaying ? 'หยุด' : 'เล่น'">
+                  <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
+                </button>
+                <!-- Bottom bar: seek + controls -->
+                <div class="ali-ctl-bar">
+                  <div class="ali-ctl-timeline">
+                    <input
+                      type="range"
+                      class="ali-ctl-seek"
+                      :min="0"
+                      :max="aliDuration || 100"
+                      :step="0.1"
+                      :value="aliSeeking ? aliSeekValue : aliCurrentTime"
+                      :style="{ '--pct': (((aliSeeking ? aliSeekValue : aliCurrentTime) / (aliDuration || 1)) * 100) + '%' }"
+                      @mousedown="aliSeekStart"
+                      @touchstart="aliSeekStart"
+                      @input="aliSeekMove"
+                      @mouseup="aliSeekEnd"
+                      @touchend="aliSeekEnd"
+                    />
+                  </div>
+                  <div class="ali-ctl-row">
+                    <button class="ali-ctl-btn" @click="aliTogglePlay" :title="isPlaying ? 'หยุด' : 'เล่น'">
+                      <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
+                    </button>
+                    <button class="ali-ctl-btn" @click="aliSeek(Math.max(0, aliCurrentTime - 10))" title="ย้อน 10 วิ">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12.5 5.5v-3l-4 4 4 4v-3c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                    </button>
+                    <button class="ali-ctl-btn" @click="aliSeek(Math.min(aliDuration, aliCurrentTime + 10))" title="ข้าม 10 วิ">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M11.5 5.5v-3l4 4-4 4v-3c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+                    </button>
+                    <div class="ali-ctl-time">
+                      <span>{{ aliFmtTime(aliCurrentTime) }}</span>
+                      <span class="ali-ctl-time-sep">/</span>
+                      <span class="ali-ctl-time-total">{{ aliFmtTime(aliDuration) }}</span>
+                    </div>
+                    <div class="ali-ctl-spacer"></div>
+                    <!-- Volume (hide on mobile) -->
+                    <div class="ali-ctl-volume hide-mobile">
+                      <button class="ali-ctl-btn" @click="aliToggleMute" :title="aliMuted ? 'เปิดเสียง' : 'ปิดเสียง'">
+                        <svg v-if="!aliMuted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.17v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                      </button>
+                      <input type="range" class="ali-ctl-vol" :min="0" :max="1" :step="0.05" :value="aliMuted ? 0 : aliVolume" @input="aliOnVolumeInput" />
+                    </div>
+                    <!-- Speed -->
+                    <div class="ali-ctl-speed-wrap">
+                      <button class="ali-ctl-btn ali-ctl-speed-btn" @click="aliShowSpeedMenu = !aliShowSpeedMenu" title="ความเร็ว">{{ aliSpeed }}x</button>
+                      <div v-if="aliShowSpeedMenu" class="ali-ctl-speed-menu">
+                        <button v-for="s in [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]" :key="s" class="ali-ctl-speed-item" :class="{ active: aliSpeed === s }" @click="aliSetSpeed(s)">{{ s }}x</button>
+                      </div>
+                    </div>
+                    <!-- Fullscreen -->
+                    <button class="ali-ctl-btn" @click="aliToggleFullscreen" :title="isFullscreen ? 'ออกจากเต็มจอ' : 'เต็มจอ'">
+                      <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Video info bar (below player) -->
@@ -2353,10 +2408,10 @@ export default {
           rePlay: false,
           playsinline: true,
           preload: true,
-          // ⭐ ใช้ Aliplayer native controls (ง่าย — ไม่ต้องเขียนเอง)
-          // 'always' = แสดง control bar ตลอด (mobile touch friendly)
-          controlBarVisibility: 'always',
-          showBigPlayButton: true,
+          // ⭐ ปิด Aliplayer native controls — ใช้ Custom UI (ali-ctl-layer) เอง
+          controlBarVisibility: 'never',
+          showBigPlayButton: false,
+          skinLayout: false,
           useH5Prism: true,
           license: {
             domain: 'passport.medninja.academy',
