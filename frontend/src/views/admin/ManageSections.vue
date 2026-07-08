@@ -162,7 +162,7 @@
                               <div class="video-ids-grid">
                                 <div class="vid-slot">
                                   <div class="vid-input-wrap">
-                                    <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Bunny NoDRM UUID" :disabled="vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
+                                    <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="GLOBAL NoDRM UUID" :disabled="vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
                                     <span v-if="vid.ref._verifying" class="verify-status verifying">...</span>
                                     <span v-else-if="vid.ref._verified === true" class="verify-status ok">✓</span>
                                     <span v-else-if="vid.ref._verified === false" class="verify-status fail">✗</span>
@@ -171,7 +171,7 @@
                                 </div>
                                 <div class="vid-slot">
                                   <div class="vid-input-wrap">
-                                    <input v-model="vid.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Bunny DRM UUID" :disabled="vid.ref._locked" @input="scheduleDrmVerify(vid.flatIdx)" />
+                                    <input v-model="vid.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="GLOBAL DRM UUID" :disabled="vid.ref._locked" @input="scheduleDrmVerify(vid.flatIdx)" />
                                     <span v-if="vid.ref._drmVerifying" class="verify-status verifying">...</span>
                                     <span v-else-if="vid.ref._drmVerified === true" class="verify-status ok">✓</span>
                                     <span v-else-if="vid.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -181,7 +181,7 @@
                                 </div>
                                 <div class="vid-slot">
                                   <div class="vid-input-wrap">
-                                    <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(vid.flatIdx)" />
+                                    <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 CHINA NoDRM VID" @input="scheduleAliVerify(vid.flatIdx)" />
                                     <span v-if="vid.ref._aliVerifying" class="verify-status verifying">...</span>
                                     <span v-else-if="vid.ref._aliVerified === true" class="verify-status ok">✓</span>
                                     <span v-else-if="vid.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -190,7 +190,7 @@
                                 </div>
                                 <div class="vid-slot">
                                   <div class="vid-input-wrap">
-                                    <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(vid.flatIdx)" />
+                                    <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 CHINA DRM VID" @input="scheduleAliDrmVerify(vid.flatIdx)" />
                                     <span v-if="vid.ref._aliDrmVerifying" class="verify-status verifying">...</span>
                                     <span v-else-if="vid.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
                                     <span v-else-if="vid.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
@@ -208,13 +208,20 @@
                                 <option :value="6">ระดับ 6</option>
                               </select>
                               <span class="tree-video-dur">{{ vid.ref.duration && vid.ref.duration !== '--:--' ? vid.ref.duration : '--:--' }}</span>
-                              <div class="tree-video-actions">
-                                <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(vid.flatIdx)" title="แทรก VDO ข้างบน">+</button>
-                                <button type="button" class="btn-assign-sub" @click="moveVideoTo(vid.flatIdx)" title="ย้ายไป Topic/Subtopic อื่น">⇄</button>
-                                <button type="button" class="btn-move btn-move-sm" :disabled="vIdx === 0" @click="moveVideoInGroup(node.name, child.name, vIdx, -1)" title="ขึ้น">↑</button>
-                                <button type="button" class="btn-move btn-move-sm" :disabled="vIdx === child.videos.length - 1" @click="moveVideoInGroup(node.name, child.name, vIdx, 1)" title="ลง">↓</button>
-                                <button type="button" class="btn-move btn-move-sm btn-move-danger" @click="removeVideo(vid.flatIdx)" title="ลบ">✕</button>
-                                <button type="button" class="btn-bonus-toggle" @click="toggleBonus(vid.flatIdx)" :title="vid.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ vid.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                              <div class="tree-video-actions actions-clean">
+                                <!-- ⭐ ปุ่ม bonus (ใช้บ่อย — เห็นตลอด) -->
+                                <button type="button" class="action-btn bonus" @click="toggleBonus(vid.flatIdx)" :title="vid.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ vid.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                                <!-- ⋯ menu: จัดเรียง, ย้าย, ลบ -->
+                                <div class="action-menu-wrap">
+                                  <button type="button" class="action-btn menu-toggle" @click.stop="toggleActionMenu(vid.flatIdx)" title="เมนู">⋯</button>
+                                  <div v-if="_openMenuIdx === vid.flatIdx" class="action-menu" @click.stop>
+                                    <button type="button" class="menu-item" :disabled="vIdx === 0" @click="moveVideoInGroup(node.name, child.name, vIdx, -1); _openMenuIdx = null">↑ เลื่อนขึ้น</button>
+                                    <button type="button" class="menu-item" :disabled="vIdx === child.videos.length - 1" @click="moveVideoInGroup(node.name, child.name, vIdx, 1); _openMenuIdx = null">↓ เลื่อนลง</button>
+                                    <button type="button" class="menu-item" @click="insertVideoBefore(vid.flatIdx); _openMenuIdx = null">+ แทรกข้างบน</button>
+                                    <button type="button" class="menu-item" @click="moveVideoTo(vid.flatIdx); _openMenuIdx = null">⇄ ย้ายไป Topic อื่น</button>
+                                    <button type="button" class="menu-item menu-danger" @click="removeVideo(vid.flatIdx); _openMenuIdx = null">✕ ลบ</button>
+                                  </div>
+                                </div>
                               </div>
                               </div>
                               <!-- Bonus Video Sub-form -->
@@ -229,7 +236,7 @@
                                   <span v-if="vid.ref._bonusLocked" class="lock-badge" @click="vid.ref._bonusLocked = false" title="ปลดล็อก">🔒</span>
                                   <div style="min-width:160px;">
                                     <div style="display:flex;gap:3px;align-items:center;">
-                                      <input v-model="vid.ref.bonusBunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="vid.ref._bonusLocked" @input="scheduleBonusVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.bonusBunnyVideoId" type="text" class="form-control form-control-sm" placeholder="GLOBAL NoDRM UUID" :disabled="vid.ref._bonusLocked" @input="scheduleBonusVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._bonusVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._bonusVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._bonusVerified === false" class="verify-status fail">✗</span>
@@ -262,7 +269,7 @@
                           <div class="video-ids-grid">
                             <div class="vid-slot">
                               <div class="vid-input-wrap">
-                                <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Bunny NoDRM UUID" :disabled="child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
+                                <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="GLOBAL NoDRM UUID" :disabled="child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
                                 <span v-if="child.ref._verifying" class="verify-status verifying">...</span>
                                 <span v-else-if="child.ref._verified === true" class="verify-status ok">✓</span>
                                 <span v-else-if="child.ref._verified === false" class="verify-status fail">✗</span>
@@ -271,7 +278,7 @@
                             </div>
                             <div class="vid-slot">
                               <div class="vid-input-wrap">
-                                <input v-model="child.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Bunny DRM UUID" :disabled="child.ref._locked" @input="scheduleDrmVerify(child.flatIdx)" />
+                                <input v-model="child.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="GLOBAL DRM UUID" :disabled="child.ref._locked" @input="scheduleDrmVerify(child.flatIdx)" />
                                 <span v-if="child.ref._drmVerifying" class="verify-status verifying">...</span>
                                 <span v-else-if="child.ref._drmVerified === true" class="verify-status ok">✓</span>
                                 <span v-else-if="child.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -281,7 +288,7 @@
                             </div>
                             <div class="vid-slot">
                               <div class="vid-input-wrap">
-                                <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(child.flatIdx)" />
+                                <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 CHINA NoDRM VID" @input="scheduleAliVerify(child.flatIdx)" />
                                 <span v-if="child.ref._aliVerifying" class="verify-status verifying">...</span>
                                 <span v-else-if="child.ref._aliVerified === true" class="verify-status ok">✓</span>
                                 <span v-else-if="child.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -290,7 +297,7 @@
                             </div>
                             <div class="vid-slot">
                               <div class="vid-input-wrap">
-                                <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(child.flatIdx)" />
+                                <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 CHINA DRM VID" @input="scheduleAliDrmVerify(child.flatIdx)" />
                                 <span v-if="child.ref._aliDrmVerifying" class="verify-status verifying">...</span>
                                 <span v-else-if="child.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
                                 <span v-else-if="child.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
@@ -308,13 +315,18 @@
                             <option :value="6">ระดับ 6</option>
                           </select>
                           <span class="tree-video-dur">{{ child.ref.duration && child.ref.duration !== '--:--' ? child.ref.duration : '--:--' }}</span>
-                          <div class="tree-video-actions">
-                            <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(child.flatIdx)" title="แทรก VDO ข้างบน">+</button>
-                            <button type="button" class="btn-assign-sub" @click="moveVideoTo(child.flatIdx)" title="ย้ายไป Topic/Subtopic อื่น">⇄</button>
-                            <button type="button" class="btn-move btn-move-sm" :disabled="sIdx === 0 || node.children[sIdx-1].type === 'subtopic'" @click="moveVideoInGroup(node.name, '', sIdx, -1)" title="ขึ้น">↑</button>
-                            <button type="button" class="btn-move btn-move-sm" :disabled="sIdx === node.children.length - 1" @click="moveVideoInGroup(node.name, '', sIdx, 1)" title="ลง">↓</button>
-                            <button type="button" class="btn-move btn-move-sm btn-move-danger" @click="removeVideo(child.flatIdx)" title="ลบ">✕</button>
-                            <button type="button" class="btn-bonus-toggle" @click="toggleBonus(child.flatIdx)" :title="child.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ child.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                          <div class="tree-video-actions actions-clean">
+                            <button type="button" class="action-btn bonus" @click="toggleBonus(child.flatIdx)" :title="child.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ child.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                            <div class="action-menu-wrap">
+                              <button type="button" class="action-btn menu-toggle" @click.stop="toggleActionMenu(child.flatIdx)" title="เมนู">⋯</button>
+                              <div v-if="_openMenuIdx === child.flatIdx" class="action-menu" @click.stop>
+                                <button type="button" class="menu-item" :disabled="sIdx === 0 || node.children[sIdx-1].type === 'subtopic'" @click="moveVideoInGroup(node.name, '', sIdx, -1); _openMenuIdx = null">↑ เลื่อนขึ้น</button>
+                                <button type="button" class="menu-item" :disabled="sIdx === node.children.length - 1" @click="moveVideoInGroup(node.name, '', sIdx, 1); _openMenuIdx = null">↓ เลื่อนลง</button>
+                                <button type="button" class="menu-item" @click="insertVideoBefore(child.flatIdx); _openMenuIdx = null">+ แทรกข้างบน</button>
+                                <button type="button" class="menu-item" @click="moveVideoTo(child.flatIdx); _openMenuIdx = null">⇄ ย้ายไป Topic อื่น</button>
+                                <button type="button" class="menu-item menu-danger" @click="removeVideo(child.flatIdx); _openMenuIdx = null">✕ ลบ</button>
+                              </div>
+                            </div>
                           </div>
                           </div>
                           <!-- Bonus Video Sub-form -->
@@ -329,7 +341,7 @@
                               <span v-if="child.ref._bonusLocked" class="lock-badge" @click="child.ref._bonusLocked = false" title="ปลดล็อก">🔒</span>
                               <div style="min-width:160px;">
                                 <div style="display:flex;gap:3px;align-items:center;">
-                                  <input v-model="child.ref.bonusBunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="child.ref._bonusLocked" @input="scheduleBonusVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.bonusBunnyVideoId" type="text" class="form-control form-control-sm" placeholder="GLOBAL NoDRM UUID" :disabled="child.ref._bonusLocked" @input="scheduleBonusVerify(child.flatIdx)" />
                                   <span v-if="child.ref._bonusVerifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._bonusVerified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._bonusVerified === false" class="verify-status fail">✗</span>
@@ -364,7 +376,7 @@
                     <div class="video-ids-grid">
                       <div class="vid-slot">
                         <div class="vid-input-wrap">
-                          <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Bunny NoDRM UUID" :disabled="node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
+                          <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="GLOBAL NoDRM UUID" :disabled="node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
                           <span v-if="node.ref._verifying" class="verify-status verifying">...</span>
                           <span v-else-if="node.ref._verified === true" class="verify-status ok">✓</span>
                           <span v-else-if="node.ref._verified === false" class="verify-status fail">✗</span>
@@ -373,7 +385,7 @@
                       </div>
                       <div class="vid-slot">
                         <div class="vid-input-wrap">
-                          <input v-model="node.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Bunny DRM UUID" :disabled="node.ref._locked" @input="scheduleDrmVerify(node.flatIdx)" />
+                          <input v-model="node.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="GLOBAL DRM UUID" :disabled="node.ref._locked" @input="scheduleDrmVerify(node.flatIdx)" />
                           <span v-if="node.ref._drmVerifying" class="verify-status verifying">...</span>
                           <span v-else-if="node.ref._drmVerified === true" class="verify-status ok">✓</span>
                           <span v-else-if="node.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -383,7 +395,7 @@
                       </div>
                       <div class="vid-slot">
                         <div class="vid-input-wrap">
-                          <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(node.flatIdx)" />
+                          <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 CHINA NoDRM VID" @input="scheduleAliVerify(node.flatIdx)" />
                           <span v-if="node.ref._aliVerifying" class="verify-status verifying">...</span>
                           <span v-else-if="node.ref._aliVerified === true" class="verify-status ok">✓</span>
                           <span v-else-if="node.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -392,7 +404,7 @@
                       </div>
                       <div class="vid-slot">
                         <div class="vid-input-wrap">
-                          <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(node.flatIdx)" />
+                          <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 CHINA DRM VID" @input="scheduleAliDrmVerify(node.flatIdx)" />
                           <span v-if="node.ref._aliDrmVerifying" class="verify-status verifying">...</span>
                           <span v-else-if="node.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
                           <span v-else-if="node.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
@@ -410,13 +422,18 @@
                       <option :value="6">ระดับ 6</option>
                     </select>
                     <span class="tree-video-dur">{{ node.ref.duration && node.ref.duration !== '--:--' ? node.ref.duration : '--:--' }}</span>
-                    <div class="tree-video-actions">
-                      <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(node.flatIdx)" title="แทรก VDO ข้างบน">+</button>
-                      <button type="button" class="btn-assign-sub" @click="moveVideoTo(node.flatIdx)" title="ย้ายไป Topic/Subtopic">⇄</button>
-                      <button type="button" class="btn-move btn-move-sm" :disabled="tIdx === 0" @click="moveVideo(node.flatIdx, -1)" title="ขึ้น">↑</button>
-                      <button type="button" class="btn-move btn-move-sm" :disabled="tIdx === treeStructure.length - 1" @click="moveVideo(node.flatIdx, 1)" title="ลง">↓</button>
-                      <button type="button" class="btn-move btn-move-sm btn-move-danger" @click="removeVideo(node.flatIdx)" title="ลบ">✕</button>
-                      <button type="button" class="btn-bonus-toggle" @click="toggleBonus(node.flatIdx)" :title="node.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ node.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                    <div class="tree-video-actions actions-clean">
+                      <button type="button" class="action-btn bonus" @click="toggleBonus(node.flatIdx)" :title="node.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ node.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                      <div class="action-menu-wrap">
+                        <button type="button" class="action-btn menu-toggle" @click.stop="toggleActionMenu(node.flatIdx)" title="เมนู">⋯</button>
+                        <div v-if="_openMenuIdx === node.flatIdx" class="action-menu" @click.stop>
+                          <button type="button" class="menu-item" :disabled="tIdx === 0" @click="moveVideo(node.flatIdx, -1); _openMenuIdx = null">↑ เลื่อนขึ้น</button>
+                          <button type="button" class="menu-item" :disabled="tIdx === treeStructure.length - 1" @click="moveVideo(node.flatIdx, 1); _openMenuIdx = null">↓ เลื่อนลง</button>
+                          <button type="button" class="menu-item" @click="insertVideoBefore(node.flatIdx); _openMenuIdx = null">+ แทรกข้างบน</button>
+                          <button type="button" class="menu-item" @click="moveVideoTo(node.flatIdx); _openMenuIdx = null">⇄ ย้ายไป Topic อื่น</button>
+                          <button type="button" class="menu-item menu-danger" @click="removeVideo(node.flatIdx); _openMenuIdx = null">✕ ลบ</button>
+                        </div>
+                      </div>
                     </div>
                     </div>
                     <!-- Bonus Video Sub-form -->
@@ -431,7 +448,7 @@
                         <span v-if="node.ref._bonusLocked" class="lock-badge" @click="node.ref._bonusLocked = false" title="ปลดล็อก">🔒</span>
                         <div style="min-width:160px;">
                           <div style="display:flex;gap:3px;align-items:center;">
-                            <input v-model="node.ref.bonusBunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="node.ref._bonusLocked" @input="scheduleBonusVerify(node.flatIdx)" />
+                            <input v-model="node.ref.bonusBunnyVideoId" type="text" class="form-control form-control-sm" placeholder="GLOBAL NoDRM UUID" :disabled="node.ref._bonusLocked" @input="scheduleBonusVerify(node.flatIdx)" />
                             <span v-if="node.ref._bonusVerifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._bonusVerified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._bonusVerified === false" class="verify-status fail">✗</span>
@@ -639,6 +656,7 @@ export default {
       editingId: null,
       deletingId: null,
       cloningId: null,
+      _openMenuIdx: null,  // ⭐ index of open action menu (null = closed)
       pdfPanelId: null,
       pdfLibrary: [], // PDF files from Bunny Storage
       refreshing: false,
@@ -709,8 +727,21 @@ export default {
   async mounted() {
     await this.fetchSections()
     this.loadSelfCheckTemplates()
+    // ⭐ ปิด action menu เมื่อคลิกที่อื่น
+    this._onDocClick = () => { this._openMenuIdx = null }
+    document.addEventListener('click', this._onDocClick)
+  },
+  beforeUnmount() {
+    if (this._onDocClick) document.removeEventListener('click', this._onDocClick)
   },
   methods: {
+    // ⭐ Toggle action menu (⋯ dropdown)
+    toggleActionMenu(idx) {
+      this._openMenuIdx = this._openMenuIdx === idx ? null : idx
+    },
+    _closeActionMenu() {
+      this._openMenuIdx = null
+    },
     // ─── Self Check ───
     async loadSelfCheckTemplates() {
       try {
@@ -2313,7 +2344,7 @@ export default {
 }
 .btn-assign-sub:hover { background: #e0f2fe; border-color: #0369a1; }
 
-/* ⭐ 4 video IDs in 2 rows grid — Bunny (บน) + Ali (ล่าง) */
+/* ⭐ 4 video IDs in 2 rows grid — GLOBAL (บน) + CHINA (ล่าง) */
 .video-ids-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2336,6 +2367,102 @@ export default {
 }
 @media (max-width: 900px) {
   .video-ids-grid { grid-template-columns: 1fr; max-width: none; }
+}
+
+/* ⭐ Video row card style — แยก row ชัดเจน */
+.tree-video-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px !important;
+  margin-bottom: 6px;
+  background: #ffffff;
+  flex-wrap: wrap;
+  gap: 6px !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tree-video-row:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.tree-video-row:first-child { border-top: 1px solid #e2e8f0 !important; }
+
+/* Clean actions area (bonus + ⋯ menu) */
+.actions-clean {
+  display: flex !important;
+  gap: 4px !important;
+  align-items: center;
+  margin-left: auto;
+}
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  transition: all 0.15s;
+}
+.action-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.action-btn.bonus {
+  color: #f59e0b;
+  font-size: 16px;
+}
+.action-btn.menu-toggle {
+  color: #64748b;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* Dropdown menu */
+.action-menu-wrap {
+  position: relative;
+}
+.action-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 100;
+  min-width: 160px;
+  padding: 4px;
+}
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.menu-item:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+.menu-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.menu-item.menu-danger {
+  color: #dc2626;
+}
+.menu-item.menu-danger:hover {
+  background: #fef2f2;
 }
 
 .verify-status { font-size: 14px; font-weight: 800; width: 20px; text-align: center; flex-shrink: 0; }
