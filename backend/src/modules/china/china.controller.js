@@ -258,4 +258,77 @@ async function getTranscodeStatus(req, res) {
   }
 }
 
-module.exports = { getPlayAuth, getStsToken, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus }
+// Get single video info (title, duration, status) — Admin verify
+async function getVideoInfo(req, res) {
+  const { videoId } = req.params
+  if (!videoId) return res.status(400).json({ error: 'videoId required' })
+
+  try {
+    const result = await client.request('GetVideoInfo', {
+      VideoId: videoId
+    }, { method: 'POST' })
+
+    const v = result.Video || {}
+    // Alibaba VOD Status values: Uploading, UploadFail, UploadSucc, Transcoding, TranscodeFail, Blocked, Normal
+    const status = v.Status || 'Unknown'
+    const transcodeStatus =
+      status === 'Uploading' || status === 'UploadFail' ? 'Uploading' :
+      status === 'Transcoding' || status === 'TranscodeFail' ? 'Transcoding' :
+      status === 'Normal' ? 'Normal' : status
+
+    return res.json({
+      videoId: v.VideoId || videoId,
+      title: v.Title || '',
+      duration: Math.round(v.Duration || 0),   // seconds
+      status,
+      transcodeStatus,
+      createdTime: v.CreationTime || '',
+      coverUrl: v.CoverURL || '',
+      size: v.Size || 0,
+      requestId: result.RequestId
+    })
+  } catch (err) {
+    console.error('[china.getVideoInfo] error:', err.message, err.code)
+    // Alibaba returns InvalidVideo.NotFound when video does not exist
+    if ((err.code || '').includes('NotFound') || (err.message || '').toLowerCase().includes('not found')) {
+      return res.status(404).json({ error: 'VIDEO_NOT_FOUND', code: err.code || 'NotFound' })
+    }
+    return res.status(500).json({
+      error: err.message,
+      code: err.code || 'UNKNOWN'
+    })
+  }
+}
+
+// Rename video — Admin utility
+async function renameVideo(req, res) {
+  const { videoId } = req.params
+  const { title } = req.body || {}
+  if (!videoId) return res.status(400).json({ error: 'videoId required' })
+  if (!title || !String(title).trim()) return res.status(400).json({ error: 'title required' })
+
+  try {
+    const result = await client.request('UpdateVideoInfo', {
+      VideoId: videoId,
+      Title: String(title).trim()
+    }, { method: 'POST' })
+
+    return res.json({
+      success: true,
+      videoId,
+      title: String(title).trim(),
+      requestId: result.RequestId
+    })
+  } catch (err) {
+    console.error('[china.renameVideo] error:', err.message, err.code)
+    if ((err.code || '').includes('NotFound')) {
+      return res.status(404).json({ error: 'VIDEO_NOT_FOUND', code: err.code })
+    }
+    return res.status(500).json({
+      error: err.message,
+      code: err.code || 'UNKNOWN'
+    })
+  }
+}
+
+module.exports = { getPlayAuth, getStsToken, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus, getVideoInfo, renameVideo }

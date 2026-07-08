@@ -157,7 +157,7 @@
                               <div class="tree-video-row">
                               <span class="tree-video-num">{{ vid.flatIdx + 1 }}</span>
                               <input v-model="vid.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="vid.ref._locked" />
-                              <button v-if="vid.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameBunnyFiles(vid.ref)" :disabled="vid.ref._renaming" :title="'ตั้งชื่อไฟล์ Bunny ทั้ง 2 library'">{{ vid.ref._renaming ? '...' : '✏️' }}</button>
+                              <button v-if="vid.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(vid.ref)" :disabled="vid.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ vid.ref._renaming ? '...' : '✏️' }}</button>
                               <div style="min-width:180px;">
                                 <div style="display:flex;gap:3px;align-items:center;">
                                   <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
@@ -179,10 +179,22 @@
                               </div>
                               <!-- ⭐ CN: Alibaba VOD video IDs -->
                               <div style="min-width:170px;">
-                                <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" />
+                                <div style="display:flex;gap:3px;align-items:center;">
+                                  <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(vid.flatIdx)" />
+                                  <span v-if="vid.ref._aliVerifying" class="verify-status verifying">...</span>
+                                  <span v-else-if="vid.ref._aliVerified === true" class="verify-status ok">✓</span>
+                                  <span v-else-if="vid.ref._aliVerified === false" class="verify-status fail">✗</span>
+                                </div>
+                                <div v-if="vid.ref._aliName" class="bunny-filename" :title="vid.ref._aliName">{{ vid.ref._aliName }}</div>
                               </div>
                               <div style="min-width:170px;">
-                                <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" />
+                                <div style="display:flex;gap:3px;align-items:center;">
+                                  <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(vid.flatIdx)" />
+                                  <span v-if="vid.ref._aliDrmVerifying" class="verify-status verifying">...</span>
+                                  <span v-else-if="vid.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
+                                  <span v-else-if="vid.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                                </div>
+                                <div v-if="vid.ref._aliDrmName" class="bunny-filename drm" :title="vid.ref._aliDrmName">{{ vid.ref._aliDrmName }}</div>
                               </div>
                               <span v-if="vid.ref._locked" class="lock-badge" @click="unlockVideo(vid.flatIdx)">🔒</span>
                               <select v-model.number="vid.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (vid.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -243,7 +255,7 @@
                           <div class="tree-video-row tree-video-in-topic">
                           <span class="tree-video-num">{{ child.flatIdx + 1 }}</span>
                           <input v-model="child.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="child.ref._locked" />
-                          <button v-if="child.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameBunnyFiles(child.ref)" :disabled="child.ref._renaming" :title="'ตั้งชื่อไฟล์ Bunny ทั้ง 2 library'">{{ child.ref._renaming ? '...' : '✏️' }}</button>
+                          <button v-if="child.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(child.ref)" :disabled="child.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ child.ref._renaming ? '...' : '✏️' }}</button>
                           <div style="min-width:180px;">
                             <div style="display:flex;gap:3px;align-items:center;">
                               <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
@@ -265,10 +277,22 @@
                           </div>
                           <!-- ⭐ CN: Alibaba VOD -->
                           <div style="min-width:170px;">
-                            <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" />
+                            <div style="display:flex;gap:3px;align-items:center;">
+                              <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(child.flatIdx)" />
+                              <span v-if="child.ref._aliVerifying" class="verify-status verifying">...</span>
+                              <span v-else-if="child.ref._aliVerified === true" class="verify-status ok">✓</span>
+                              <span v-else-if="child.ref._aliVerified === false" class="verify-status fail">✗</span>
+                            </div>
+                            <div v-if="child.ref._aliName" class="bunny-filename" :title="child.ref._aliName">{{ child.ref._aliName }}</div>
                           </div>
                           <div style="min-width:170px;">
-                            <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" />
+                            <div style="display:flex;gap:3px;align-items:center;">
+                              <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(child.flatIdx)" />
+                              <span v-if="child.ref._aliDrmVerifying" class="verify-status verifying">...</span>
+                              <span v-else-if="child.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
+                              <span v-else-if="child.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                            </div>
+                            <div v-if="child.ref._aliDrmName" class="bunny-filename drm" :title="child.ref._aliDrmName">{{ child.ref._aliDrmName }}</div>
                           </div>
                           <span v-if="child.ref._locked" class="lock-badge" @click="unlockVideo(child.flatIdx)">🔒</span>
                           <select v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -331,7 +355,7 @@
                     <div class="tree-video-row tree-video-root">
                     <span class="tree-video-num">{{ node.flatIdx + 1 }}</span>
                     <input v-model="node.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="node.ref._locked" />
-                    <button v-if="node.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameBunnyFiles(node.ref)" :disabled="node.ref._renaming" :title="'ตั้งชื่อไฟล์ Bunny ทั้ง 2 library'">{{ node.ref._renaming ? '...' : '✏️' }}</button>
+                    <button v-if="node.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(node.ref)" :disabled="node.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ node.ref._renaming ? '...' : '✏️' }}</button>
                     <div style="min-width:180px;">
                       <div style="display:flex;gap:3px;align-items:center;">
                         <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
@@ -353,10 +377,22 @@
                     </div>
                     <!-- ⭐ CN: Alibaba VOD -->
                     <div style="min-width:170px;">
-                      <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" />
+                      <div style="display:flex;gap:3px;align-items:center;">
+                        <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(node.flatIdx)" />
+                        <span v-if="node.ref._aliVerifying" class="verify-status verifying">...</span>
+                        <span v-else-if="node.ref._aliVerified === true" class="verify-status ok">✓</span>
+                        <span v-else-if="node.ref._aliVerified === false" class="verify-status fail">✗</span>
+                      </div>
+                      <div v-if="node.ref._aliName" class="bunny-filename" :title="node.ref._aliName">{{ node.ref._aliName }}</div>
                     </div>
                     <div style="min-width:170px;">
-                      <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" />
+                      <div style="display:flex;gap:3px;align-items:center;">
+                        <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(node.flatIdx)" />
+                        <span v-if="node.ref._aliDrmVerifying" class="verify-status verifying">...</span>
+                        <span v-else-if="node.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
+                        <span v-else-if="node.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                      </div>
+                      <div v-if="node.ref._aliDrmName" class="bunny-filename drm" :title="node.ref._aliDrmName">{{ node.ref._aliDrmName }}</div>
                     </div>
                     <span v-if="node.ref._locked" class="lock-badge" @click="unlockVideo(node.flatIdx)">🔒</span>
                     <select v-model.number="node.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (node.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -763,10 +799,20 @@ export default {
         _verified: null,
         _verifying: false,
         _bunnyName: '',
+        _bunnyDuration: 0,
         _drmVerified: null,
         _drmVerifying: false,
         _drmDuration: '',
+        _drmDurationSec: 0,
         _drmName: '',
+        _aliVerified: null,
+        _aliVerifying: false,
+        _aliName: '',
+        _aliDuration: 0,
+        _aliDrmVerified: null,
+        _aliDrmVerifying: false,
+        _aliDrmName: '',
+        _aliDrmDuration: 0,
         _renaming: false,
         _durationMismatch: false,
         _locked: false,
@@ -849,9 +895,19 @@ export default {
         order: this.form.videos.length + 1,
         _verified: null,
         _verifying: false,
+        _bunnyDuration: 0,
         _drmVerified: null,
         _drmVerifying: false,
         _drmDuration: '',
+        _drmDurationSec: 0,
+        _aliVerified: null,
+        _aliVerifying: false,
+        _aliName: '',
+        _aliDuration: 0,
+        _aliDrmVerified: null,
+        _aliDrmVerifying: false,
+        _aliDrmName: '',
+        _aliDrmDuration: 0,
         _locked: false
       })
     },
@@ -1197,6 +1253,8 @@ export default {
       const vid = (video.bunnyVideoId || '').trim()
       if (!vid) {
         video._verified = null
+        video._bunnyDuration = 0
+        this.checkAllDurationsMatch(video)
         return
       }
       video._verifying = true
@@ -1208,6 +1266,7 @@ export default {
         const info = await api.get(endpoint)
         video._verified = true
         video._bunnyName = info.title || ''
+        if (info.length != null) video._bunnyDuration = Math.round(info.length)
         // auto-fill title + duration
         if (!video.title && info.title) video.title = info.title
         if (info.length != null && (!video.duration || video.duration === '--:--')) {
@@ -1222,6 +1281,7 @@ export default {
         video._verified = false
       } finally {
         video._verifying = false
+        this.checkAllDurationsMatch(video)
       }
     },
 
@@ -1236,6 +1296,8 @@ export default {
       if (!vid) {
         video._drmVerified = null
         video._drmDuration = ''
+        video._drmDurationSec = 0
+        this.checkAllDurationsMatch(video)
         return
       }
       video._drmVerifying = true
@@ -1250,6 +1312,7 @@ export default {
           const m = Math.floor(info.length / 60)
           const s = info.length % 60
           drmDur = `${m}:${String(s).padStart(2, '0')}`
+          video._drmDurationSec = Math.round(info.length)
         } else if (info.duration) {
           drmDur = info.duration
         }
@@ -1258,7 +1321,6 @@ export default {
         const protDur = (video.duration || '').replace('--:--', '')
         if (protDur && drmDur && protDur !== drmDur) {
           video._drmVerified = false
-          alert(`Duration ไม่ตรงกัน!\nProtection: ${protDur}\nWidevine: ${drmDur}\n\nอาจเป็นไฟล์คนละตัว`)
         } else {
           video._drmVerified = true
         }
@@ -1266,7 +1328,92 @@ export default {
         video._drmVerified = false
       } finally {
         video._drmVerifying = false
+        this.checkAllDurationsMatch(video)
       }
+    },
+    // ═══ Ali NoDRM verify ═══
+    scheduleAliVerify(idx) {
+      const video = this.form.videos[idx]
+      video._aliVerified = null
+      clearTimeout(video._aliVerifyTimer)
+      video._aliVerifyTimer = setTimeout(() => {
+        this.$nextTick(() => this.verifyAliVideo(idx))
+      }, 500)
+    },
+    async verifyAliVideo(idx) {
+      const video = this.form.videos[idx]
+      const vid = (video.aliVideoId || '').trim()
+      if (!vid) {
+        video._aliVerified = null
+        video._aliName = ''
+        video._aliDuration = 0
+        this.checkAllDurationsMatch(video)
+        return
+      }
+      video._aliVerifying = true
+      video._aliVerified = null
+      try {
+        const info = await api.get(`/admin/ali/video/${vid}`)
+        video._aliVerified = true
+        video._aliName = info.title || ''
+        video._aliDuration = Math.round(info.duration || 0)
+      } catch {
+        video._aliVerified = false
+      } finally {
+        video._aliVerifying = false
+        this.checkAllDurationsMatch(video)
+      }
+    },
+    // ═══ Ali DRM verify ═══
+    scheduleAliDrmVerify(idx) {
+      const video = this.form.videos[idx]
+      video._aliDrmVerified = null
+      clearTimeout(video._aliDrmVerifyTimer)
+      video._aliDrmVerifyTimer = setTimeout(() => {
+        this.$nextTick(() => this.verifyAliDrmVideo(idx))
+      }, 500)
+    },
+    async verifyAliDrmVideo(idx) {
+      const video = this.form.videos[idx]
+      const vid = (video.aliDrmVideoId || '').trim()
+      if (!vid) {
+        video._aliDrmVerified = null
+        video._aliDrmName = ''
+        video._aliDrmDuration = 0
+        this.checkAllDurationsMatch(video)
+        return
+      }
+      video._aliDrmVerifying = true
+      video._aliDrmVerified = null
+      try {
+        const info = await api.get(`/admin/ali/video/${vid}`)
+        video._aliDrmVerified = true
+        video._aliDrmName = info.title || ''
+        video._aliDrmDuration = Math.round(info.duration || 0)
+      } catch {
+        video._aliDrmVerified = false
+      } finally {
+        video._aliDrmVerifying = false
+        this.checkAllDurationsMatch(video)
+      }
+    },
+    // ═══ Check ALL 4 durations match (Bunny NoDRM + Bunny DRM + Ali NoDRM + Ali DRM) ═══
+    // ถ้าครบ 4 → ต้องไม่เกิน ±3 วิ ถึงจะ pass
+    checkAllDurationsMatch(video) {
+      const bd = video._bunnyDuration || 0
+      const bdrm = video._drmDurationSec || 0
+      const ad = video._aliDuration || 0
+      const adrm = video._aliDrmDuration || 0
+      // Only strict check when all 4 exist
+      if (bd > 0 && bdrm > 0 && ad > 0 && adrm > 0) {
+        const durs = [bd, bdrm, ad, adrm]
+        const max = Math.max(...durs)
+        const min = Math.min(...durs)
+        video._durationMismatch = (max - min) > 3
+        return
+      }
+      // Fallback: only Bunny 2 exist → keep old logic (compare strings via loadBunnyNames)
+      // Do nothing here — let loadBunnyNames / verifyDrmVideo handle Bunny-only case
     },
     // ═══ Bonus Video verify ═══
     scheduleBonusVerify(idx) {
@@ -1388,10 +1535,20 @@ export default {
             _verified: v.bunnyVideoId ? true : null,
             _verifying: false,
             _bunnyName: '',
+            _bunnyDuration: 0,
             _drmVerified: v.bunnyDrmVideoId ? true : null,
             _drmVerifying: false,
             _drmDuration: '',
+            _drmDurationSec: 0,
             _drmName: '',
+            _aliVerified: v.aliVideoId ? true : null,
+            _aliVerifying: false,
+            _aliName: '',
+            _aliDuration: 0,
+            _aliDrmVerified: v.aliDrmVideoId ? true : null,
+            _aliDrmVerifying: false,
+            _aliDrmName: '',
+            _aliDrmDuration: 0,
             _renaming: false,
             _durationMismatch: false,
             _locked: !!(v.bunnyVideoId && v.bunnyDrmVideoId),
@@ -1421,28 +1578,83 @@ export default {
     },
 
     async renameBunnyFiles(video) {
-      const current = video._bunnyName || video._drmName || video.title || ''
-      const newName = prompt('ตั้งชื่อไฟล์ Bunny (ทั้ง 2 library):', current)
+      // เหลือไว้เพื่อ backward compat — จริงๆ template ใช้ renameAllFiles แล้ว
+      return this.renameAllFiles(video)
+    },
+
+    // rename ครบ 4 ไฟล์ (Bunny NoDRM + Bunny DRM + Ali NoDRM + Ali DRM)
+    async renameAllFiles(video) {
+      const current = video._bunnyName || video._drmName || video._aliName || video._aliDrmName || video.title || ''
+      const newName = prompt('ตั้งชื่อไฟล์ (Bunny 2 + Ali 2):', current)
       if (!newName || newName === current) return
 
       video._renaming = true
-      try {
-        const promises = []
-        if (video.bunnyVideoId) {
-          promises.push(api.put(`/admin/bunny/video/${video.bunnyVideoId.trim()}/rename`, { title: newName, library: 'noDrm' }))
+      const results = { bunny: null, bunnyDrm: null, ali: null, aliDrm: null }
+      const errors = []
+
+      // Bunny NoDRM
+      if (video.bunnyVideoId) {
+        try {
+          await api.put(`/admin/bunny/video/${video.bunnyVideoId.trim()}/rename`, { title: newName, library: 'noDrm' })
+          results.bunny = true
+          video._bunnyName = newName
+        } catch (err) {
+          results.bunny = false
+          errors.push('Bunny NoDRM: ' + (err.message || err))
         }
-        if (video.bunnyDrmVideoId) {
-          promises.push(api.put(`/admin/bunny/video/${video.bunnyDrmVideoId.trim()}/rename`, { title: newName, library: 'drm' }))
-        }
-        await Promise.all(promises)
-        video._bunnyName = newName
-        video._drmName = video.bunnyDrmVideoId ? newName : ''
-        alert('เปลี่ยนชื่อสำเร็จทั้ง 2 library')
-      } catch (err) {
-        alert('เปลี่ยนชื่อไม่สำเร็จ: ' + (err.message || err))
-      } finally {
-        video._renaming = false
       }
+      // Bunny DRM
+      if (video.bunnyDrmVideoId) {
+        try {
+          await api.put(`/admin/bunny/video/${video.bunnyDrmVideoId.trim()}/rename`, { title: newName, library: 'drm' })
+          results.bunnyDrm = true
+          video._drmName = newName
+        } catch (err) {
+          results.bunnyDrm = false
+          errors.push('Bunny DRM: ' + (err.message || err))
+        }
+      }
+      // Ali NoDRM
+      if (video.aliVideoId) {
+        try {
+          await api.post(`/admin/ali/video/${video.aliVideoId.trim()}/rename`, { title: newName })
+          results.ali = true
+          video._aliName = newName
+        } catch (err) {
+          results.ali = false
+          errors.push('Ali NoDRM: ' + (err.response?.data?.error || err.message || err))
+        }
+      }
+      // Ali DRM
+      if (video.aliDrmVideoId) {
+        try {
+          await api.post(`/admin/ali/video/${video.aliDrmVideoId.trim()}/rename`, { title: newName })
+          results.aliDrm = true
+          video._aliDrmName = newName
+        } catch (err) {
+          results.aliDrm = false
+          errors.push('Ali DRM: ' + (err.response?.data?.error || err.message || err))
+        }
+      }
+
+      video._renaming = false
+
+      const done = Object.values(results).filter(r => r === true).length
+      const failed = errors.length
+      if (failed === 0) {
+        alert(`เปลี่ยนชื่อสำเร็จ ${done} ไฟล์`)
+      } else {
+        alert(`สำเร็จ ${done} ไฟล์ · ล้มเหลว ${failed} ไฟล์\n\n` + errors.join('\n'))
+      }
+    },
+
+    _parseMMSS(s) {
+      // "5:30" → 330 seconds
+      if (!s || typeof s !== 'string') return 0
+      const parts = s.split(':').map(x => parseInt(x, 10) || 0)
+      if (parts.length === 2) return parts[0] * 60 + parts[1]
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]
+      return 0
     },
 
     async loadBunnyNames() {
@@ -1453,19 +1665,38 @@ export default {
           const dr = video.bunnyDrmVideoId ? drm[video.bunnyDrmVideoId] : null
           video._bunnyName = nd ? `${nd.title} (${nd.duration})` : ''
           video._drmName = dr ? `${dr.title} (${dr.duration})` : ''
-          // เตือนถ้า duration ไม่ตรงกัน
-          if (nd && dr && nd.duration !== dr.duration) {
-            video._durationMismatch = true
-          } else {
-            video._durationMismatch = false
-          }
+          // เก็บ duration เป็นวินาที เพื่อเทียบข้าม platform
+          if (nd) video._bunnyDuration = this._parseMMSS(nd.duration)
+          if (dr) video._drmDurationSec = this._parseMMSS(dr.duration)
           // Bonus video names
           const bnd = video.bonusBunnyVideoId ? noDrm[video.bonusBunnyVideoId] : null
           const bdr = video.bonusBunnyDrmVideoId ? drm[video.bonusBunnyDrmVideoId] : null
           video._bonusBunnyName = bnd ? `${bnd.title} (${bnd.duration})` : ''
           video._bonusDrmName = bdr ? `${bdr.title} (${bdr.duration})` : ''
         }
+        // Ali durations โหลด async หลัง Bunny เสร็จ (ไม่ block)
+        this.loadAliNames()
       } catch { /* ignore */ }
+    },
+
+    // Verify Ali videos ทีละตัวเมื่อ open edit form (throttled)
+    async loadAliNames() {
+      const withAli = this.form.videos.filter(v => (v.aliVideoId || '').trim() || (v.aliDrmVideoId || '').trim())
+      // ทำทีละ 3 คู่ขนาน กัน Alibaba rate-limit
+      const CHUNK = 3
+      for (let i = 0; i < withAli.length; i += CHUNK) {
+        const chunk = withAli.slice(i, i + CHUNK)
+        await Promise.all(chunk.map(async v => {
+          const idx = this.form.videos.indexOf(v)
+          if (idx < 0) return
+          const tasks = []
+          if ((v.aliVideoId || '').trim()) tasks.push(this.verifyAliVideo(idx))
+          if ((v.aliDrmVideoId || '').trim()) tasks.push(this.verifyAliDrmVideo(idx))
+          await Promise.all(tasks)
+        }))
+      }
+      // recheck all mismatches after all durations loaded
+      this.form.videos.forEach(v => this.checkAllDurationsMatch(v))
     },
 
     cancelEdit() {
@@ -1488,6 +1719,21 @@ export default {
           this.saving = false
           return
         }
+        // ⭐ STRICT: กันบันทึกถ้ามี video ไหน duration ไม่ตรง (Bunny 2 + Ali 2 ครบ)
+        const mismatched = this.form.videos.filter(v => v._durationMismatch === true)
+        if (mismatched.length > 0) {
+          this.saving = false
+          const preview = mismatched.slice(0, 3).map(v => {
+            const bd = v._bunnyDuration || 0
+            const bdrm = v._drmDurationSec || 0
+            const ad = v._aliDuration || 0
+            const adrm = v._aliDrmDuration || 0
+            return `• ${v.title || '(ไม่มีชื่อ)'}: Bunny ${bd}/${bdrm} · Ali ${ad}/${adrm} วิ`
+          }).join('\n')
+          alert('⚠️ ความยาววิดีโอไม่ตรงกัน — โปรดตรวจสอบก่อนบันทึก\n(Bunny และ Ali ต้อง encode ให้ length เท่ากัน · tolerance ±3 วิ)\n\n' + preview)
+          return
+        }
+
         // กรอง video ที่มีข้อมูล — อนุญาตให้ save โครงสร้างเปล่า (มีแค่ title/topic/subtopic ยังไม่มี UUID)
         const validVideos = this.form.videos.filter(v =>
           (v.title || '').trim() || (v.bunnyVideoId || '').trim() || (v.topic || '').trim()
@@ -1504,6 +1750,8 @@ export default {
             subtopic: (v.subtopic || '').trim(),
             bunnyVideoId: (v.bunnyVideoId || '').trim(),
             bunnyDrmVideoId: (v.bunnyDrmVideoId || '').trim(),
+            aliVideoId: (v.aliVideoId || '').trim(),
+            aliDrmVideoId: (v.aliDrmVideoId || '').trim(),
             bunnyLibraryId: v.bunnyLibraryId || '628424',
             duration: v.duration || '',
             order: i,
