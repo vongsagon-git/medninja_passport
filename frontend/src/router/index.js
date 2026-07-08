@@ -461,11 +461,50 @@ router.beforeEach((to, from, next) => {
 // Version check — ถ้ามี pending reload + ออกจากหน้า watch → reload
 import { checkPendingReload, getVersion } from '../services/versionCheck'
 
-// ⭐ เช็ค version ทุก navigation ยกเว้นหน้าที่ดู VDO อยู่
-// /my/watch/ = ดู VDO ปกติ (ห้าม reload ไม่งั้นนักเรียนเสียที่ดู)
-// path อื่นๆ ทุกหน้า (รวม /my, /live, /demo) = เช็ค version → ไม่ตรง = hard reload
-const SKIP_RELOAD_PATHS = ['/my/watch/'] // กำลังดู VDO ปกติ ห้าม reload
+// ⭐ Global Country Guard — ทุก navigation ไปหน้าที่มี bucket ต้อง match IP
+// ถ้า IP=CN แต่ path=/my/... → redirect ไป /my-cn/... (bucket)
+// ถ้า IP≠CN แต่ path=/my-cn/... → redirect ไป /my/... (bucket)
+const BUCKET_PATHS = ['/my', '/my-cn', '/section', '/watch', '/doctor', '/doctor-cn']
+const isBucketPath = (p) => BUCKET_PATHS.some(bp => p === bp || p.startsWith(bp + '/'))
+const getPathBucket = (p) => {
+  if (p.startsWith('/my-cn') || p.startsWith('/doctor-cn')) return 'CN'
+  if (isBucketPath(p)) return 'GLOBAL'
+  return null
+}
 router.beforeResolve(async (to, from, next) => {
+  // ⭐ Country guard ก่อน version check — user อาจสลับ VPN ระหว่าง navigation
+  // ตรวจทุกครั้ง: เปลี่ยนคลิป, refresh, navigate — mismatch = redirect ทันที
+  const authStore = useAuthStore()
+  const pathBucket = getPathBucket(to.path)
+  if (pathBucket && authStore.isLoggedIn) {
+    try {
+      const r = await fetch('/api/geo/whoami', { cache: 'no-store', credentials: 'include' })
+      if (r.ok) {
+        const d = await r.json()
+        const ipBucket = d.country === 'CN' ? 'CN' : 'GLOBAL'
+        if (ipBucket !== pathBucket) {
+          // Mismatch → redirect ไป bucket ที่ถูก
+          const swap = (p) => {
+            if (ipBucket === 'CN') {
+              if (p.startsWith('/my/')) return p.replace('/my/', '/my-cn/')
+              if (p === '/my') return '/my-cn'
+              if (p === '/doctor') return '/doctor-cn'
+              return '/my-cn'
+            } else {
+              if (p.startsWith('/my-cn/')) return p.replace('/my-cn/', '/my/')
+              if (p === '/my-cn') return '/my'
+              if (p === '/doctor-cn') return '/doctor'
+              return '/my'
+            }
+          }
+          const target = swap(to.path)
+          console.warn(`[GlobalCountryGuard] IP=${ipBucket} path=${pathBucket} → redirect ${target}`)
+          return next(target)
+        }
+      }
+    } catch { /* geo fail — ปล่อยผ่าน ไม่ block user */ }
+  }
+
   // ถ้าเข้าหน้าที่กำลังดู VDO ปกติ → ข้าม (versionCheck.js เก่าจะ toast แทน)
   if (SKIP_RELOAD_PATHS.some(p => to.path.includes(p))) return next()
   const knownVer = getVersion()
