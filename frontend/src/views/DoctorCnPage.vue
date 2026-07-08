@@ -187,12 +187,12 @@ export default {
       this.progressPct = 100
 
       const { getOS, getBrowser, isIPhone, isIPad, isAndroid, isMacSafari } = await import('../utils/deviceDetect')
+      const { getExpectedServing, verifyServing } = await import('../utils/servingRules')
       const ua = navigator.userAgent
       const os = getOS(ua)
       const browser = getBrowser(ua)
 
-      // ⭐ Device precision — ใช้ 4-layer iPad detection (จากเคสกุลจิรา 2026-07-03)
-      // iPad iOS 13+ ปลอม UA เป็น Mac → ต้องเช็ค platform + userAgentData + maxTouchPoints + Mac fallback
+      // ⭐ Device precision — 4-layer iPad detection (เคสกุลจิรา 2026-07-03)
       let deviceType = ''
       if (isIPhone(ua)) deviceType = 'iPhone'
       else if (isIPad(ua)) deviceType = 'iPad'
@@ -202,6 +202,24 @@ export default {
       else if (/Windows/.test(ua)) deviceType = 'Windows'
       else if (/Linux|X11/.test(ua)) deviceType = 'Linux'
       else deviceType = 'Unknown'
+
+      // ⭐ Country detection (จาก geo whoami — ที่ Doctor เพิ่งเช็คไป)
+      const geoLine = this.lines.find(l => l.title === 'Geo whoami')
+      const country = geoLine?.raw?.country || ''
+
+      // ⭐ Expected serving ตามตารางกฎ
+      const expected = getExpectedServing(country, deviceType, browser)
+
+      // ⭐ Actual serving = ที่ระบบ serve จริง (จาก playinfo step ก่อนหน้า)
+      const playInfoLine = this.lines.find(l => l.title === 'Alibaba PlayInfo')
+      const actualEncType = playInfoLine?.raw?.encType || ''
+      let actualDrm = 'nodrm'
+      if (/widevine|fairplay/i.test(actualEncType)) actualDrm = 'widevine'
+      else if (/aliyunvodencryption/i.test(actualEncType) || actualEncType === '1') actualDrm = 'proprietary'
+      else if (/hlsencryption/i.test(actualEncType)) actualDrm = 'aes-128'
+
+      const actual = { player: 'ali', drm: actualDrm, bucket: 'ali-sg' }
+      const servingCheck = { ...verifyServing(expected, actual), expected, actual }
 
       // Plain text detail
       let plainText = `=== MedNinja Doctor (Alibaba VOD) ===\n`
@@ -255,8 +273,9 @@ export default {
             failCount: this.failCount,
             player: 'ali',                     // ⭐ tag ให้ backend เลือก card ถูก
             deviceType,                        // ⭐ 4-layer detection (iPad iOS 13+ ตรวจถูก)
-            bucket: 'ali-sg',                  // ⭐ Alibaba Singapore VOD (ap-southeast-1)
-            routingReason: 'country=CN → China mirror',
+            bucket: 'ali-sg',                  // ⭐ Alibaba Singapore VOD
+            routingReason: expected.reason,    // ⭐ จากตารางกฎ (ตรงเป๊ะ)
+            servingCheck,                      // ⭐ expected vs actual — บอกว่าตรงกฎไหม
             videoTitle: videoTitle || '',
             sectionName,
             sectionCode,

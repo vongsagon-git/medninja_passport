@@ -454,82 +454,87 @@ router.post('/doctor-line', async (req, res) => {
     ]}
   ]
 
-  // Flex Message — เหลี่ยม (cornerRadius: '0px' ทุกจุด) + Player badge + Device precision
+  // ⭐ Serving verification badge
+  const servingMatch = servingCheck?.match
+  const servingBadge = servingMatch === true ? '✓ Serve ถูกกฎ'
+                     : servingMatch === false ? '✗ Serve ผิดกฎ'
+                     : ''
+  const servingBadgeColor = servingMatch === true ? '#166534'
+                          : servingMatch === false ? '#991b1b'
+                          : '#94a3b8'
+  const countryLabel = clientCountry === 'CN' ? 'CN' : (clientCountry || 'Global')
+  const countryFlag = clientCountry === 'CN' ? '🇨🇳' : (clientCountry === 'TH' ? '🇹🇭' : '🌍')
+
+  // Flex Message — Compact + Flat (ไม่ซ้อน card)
+  // 1 กล่องเดียว: header สี player + body flat rows
   const flex = {
     type: 'flex',
-    altText: `${statusIcon} ${lineDisplayName || resolvedUserName || 'นักเรียน'} · ${playerLabel} · ${precisionDevice}`,
+    altText: `${statusIcon} ${lineDisplayName || resolvedUserName || 'นักเรียน'} · ${playerLabel} · ${precisionDevice} · ${countryLabel}`,
     contents: {
-      type: 'bubble', size: 'mega',
+      type: 'bubble', size: 'kilo',    // ⭐ kilo = เล็กกว่า mega
       header: {
-        type: 'box', layout: 'vertical', backgroundColor: headerColor, paddingAll: '16px',
-        contents: headerContents
+        type: 'box', layout: 'vertical', backgroundColor: headerColor, paddingAll: '12px', spacing: 'xs',
+        contents: [
+          // Row 1: avatar + ชื่อ + status
+          { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+            ...(linePictureUrl ? [{
+              type: 'image', url: linePictureUrl, size: '36px', aspectMode: 'cover', aspectRatio: '1:1', flex: 0
+            }] : []),
+            { type: 'box', layout: 'vertical', flex: 1, contents: [
+              { type: 'text', text: lineDisplayName || resolvedUserName || 'นักเรียน', color: '#FFFFFF', size: 'sm', weight: 'bold', wrap: false, maxLines: 1 },
+              { type: 'text', text: `${statusIcon} ${statusText}`, color: '#FFFFFFDD', size: 'xxs', margin: 'xs' }
+            ]}
+          ]},
+          // Row 2: Player + bucket + country flag (1 line)
+          { type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'sm', contents: [
+            { type: 'text', text: `${playerEmoji} ${playerLabel}`, color: '#FFFFFF', size: 'xs', weight: 'bold', flex: 1 },
+            ...(bucket ? [{ type: 'text', text: bucket, color: '#FFFFFFCC', size: 'xxs', gravity: 'center', flex: 0 }] : []),
+            { type: 'text', text: `${countryFlag} ${countryLabel}`, color: '#FFFFFFCC', size: 'xxs', align: 'end', gravity: 'center', flex: 0, margin: 'sm' }
+          ]}
+        ]
       },
       body: {
-        type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '16px',
+        type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '12px',
         contents: [
-          // ⭐ Player + Bucket + Reason (เหลี่ยม เด่นชัด)
-          // Bucket ชื่อย่อ (Ali: sg/cn/tk / Bunny: library ID สั้น)
-          { type: 'box', layout: 'vertical', backgroundColor: playerColor, paddingAll: '10px', spacing: 'xs',
+          // Serving verification (เด่นชัด — บอกว่าถูกกฎไหม)
+          ...(servingBadge ? [{
+            type: 'box', layout: 'horizontal', spacing: 'sm', paddingAll: '8px', backgroundColor: servingMatch ? '#f0fdf4' : '#fef2f2',
             contents: [
-              { type: 'box', layout: 'horizontal', contents: [
-                { type: 'text', text: playerEmoji, size: 'md', flex: 0, color: '#FFFFFF' },
-                { type: 'text', text: playerLabel, size: 'sm', weight: 'bold', color: '#FFFFFF', flex: 1, margin: 'md' },
-                ...(bucket ? [{ type: 'text', text: bucket, size: 'xxs', color: '#FFFFFFCC', align: 'end', gravity: 'center' }] : [])
-              ]},
-              ...(routingReason ? [{
-                type: 'text', text: `เนื่องด้วย: ${routingReason}`, size: 'xxs', color: '#FFFFFFCC', wrap: true
+              { type: 'text', text: servingBadge, size: 'xs', weight: 'bold', color: servingBadgeColor, flex: 1 },
+              ...(servingCheck?.expected?.drm ? [{
+                type: 'text', text: servingCheck.expected.drm, size: 'xxs', color: servingBadgeColor, align: 'end', gravity: 'center'
               }] : [])
             ]
-          },
-          // Status banner (เหลี่ยม)
-          { type: 'box', layout: 'horizontal', backgroundColor: statusBg, paddingAll: '10px',
-            contents: [
-              { type: 'text', text: statusIcon, size: 'md', flex: 0 },
-              { type: 'text', text: statusText, size: 'sm', weight: 'bold', color: statusFg, flex: 1, margin: 'md' }
-            ]
-          },
-          ...(isBlocked && browserBlockReason ? [{
-            type: 'text', text: browserBlockReason, size: 'xxs', color: statusFg, wrap: true
           }] : []),
-          // Device precision box (เน้น iPad detection)
-          { type: 'box', layout: 'horizontal', backgroundColor: '#f8fafc', paddingAll: '10px',
-            contents: [
-              { type: 'text', text: devEmoji, size: 'md', flex: 0 },
-              { type: 'box', layout: 'vertical', flex: 1, margin: 'md', contents: [
-                { type: 'text', text: precisionDevice, size: 'sm', weight: 'bold', color: '#0f172a' },
-                { type: 'text', text: `${clientBrowser || '?'} · ${clientOS || '?'}`, size: 'xxs', color: '#64748b', margin: 'xs' }
-              ]}
-            ]
-          },
-          // Details (rows)
+          // Diffs (ถ้ามี mismatch)
+          ...(servingCheck?.diffs?.length ? servingCheck.diffs.map(d => ({
+            type: 'text', text: `⚠ ${d}`, size: 'xxs', color: '#991b1b', wrap: true
+          })) : []),
+          // Routing reason (บอกทำไม serve แบบนี้)
+          ...(routingReason ? [{
+            type: 'text', text: `∵ ${routingReason}`, size: 'xxs', color: '#64748b', wrap: true, margin: 'xs'
+          }] : []),
           { type: 'separator', color: '#e2e8f0', margin: 'sm' },
-          row('นักเรียน', userName),
+          // Device 1 บรรทัด
+          row('Device', `${devEmoji} ${precisionDevice} · ${clientBrowser || '?'}`, '#0f172a', 'xs'),
           { type: 'separator', color: '#f1f5f9' },
-          row('อีเมล', userEmail, '#0f172a', 'xs'),
+          row('IP', `${clientIp}`, '#475569', 'xs'),
           ...(videoTitle && videoTitle !== 'Demo' ? [
             { type: 'separator', color: '#f1f5f9' },
             row('Video', videoTitle, '#0f172a', 'xs')
           ] : []),
-          ...(sectionCode || sectionName ? [
-            { type: 'separator', color: '#f1f5f9' },
-            row('Section', `${sectionCode || ''} ${sectionName || ''}`.trim(), '#0f172a', 'xs')
-          ] : []),
           ...(watchUrl ? [
             { type: 'separator', color: '#f1f5f9' },
-            row('URL', watchUrl.replace(/^https?:\/\/[^/]+/, ''), '#0369a1', 'xs')
+            row('URL', watchUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 40), '#0369a1', 'xs')
           ] : []),
           { type: 'separator', color: '#f1f5f9' },
-          row('IP', `${clientIp}${clientCountry ? ' · ' + clientCountry : ''}`, '#475569', 'xs'),
-          { type: 'separator', color: '#f1f5f9' },
-          row('Host', clientHost || '?', clientHost?.includes('www.') ? '#ef4444' : '#10b981', 'xs'),
-          { type: 'separator', color: '#f1f5f9' },
-          row('เวลา', new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }), '#94a3b8', 'xxs')
+          row('เวลา', new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }), '#94a3b8', 'xxs')
         ]
       },
       footer: {
-        type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '12px',
+        type: 'box', layout: 'vertical', paddingAll: '8px',
         contents: [
-          { type: 'button', action: { type: 'uri', label: 'ดูรายละเอียดทุก byte', uri: resultUrl }, style: 'primary', color: playerColor, height: 'sm' }
+          { type: 'button', action: { type: 'uri', label: 'รายละเอียด', uri: resultUrl }, style: 'primary', color: playerColor, height: 'sm' }
         ]
       },
       styles: {

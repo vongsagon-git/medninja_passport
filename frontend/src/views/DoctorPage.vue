@@ -291,6 +291,8 @@ export default {
 
       // ⭐ Device precision — 4-layer iPad detection (เคสกุลจิรา 2026-07-03)
       let deviceType = ''
+      let expected = null
+      let servingCheck = null
       try {
         const { isIPhone, isIPad, isAndroid, isMacSafari } = await import('../utils/deviceDetect')
         if (isIPhone(ua)) deviceType = 'iPhone'
@@ -301,6 +303,20 @@ export default {
         else if (/Windows/.test(ua)) deviceType = 'Windows'
         else if (/Linux|X11/.test(ua)) deviceType = 'Linux'
         else deviceType = 'Unknown'
+
+        // ⭐ Serving verification (Bunny path)
+        const { getExpectedServing, verifyServing } = await import('../utils/servingRules')
+        // Country = จาก Cloudflare header (backend เพิ่ม cf-ipcountry) → ใน journey จะมี
+        // ถ้าไม่มี fallback = ''  (backend จะเติมให้จาก req.headers)
+        expected = getExpectedServing('', deviceType, clientBrowser)
+        // Bunny actual = สรุปจาก drmMode ที่ video ใช้จริง (Widevine ถ้ามี, No-DRM ถ้าไม่มี)
+        // Doctor demo video ใช้ drmMode = protection (widevine) — เทียบกับ expected
+        const actual = {
+          player: 'bunny',
+          drm: (deviceType === 'iPhone' || deviceType === 'iPad' || (deviceType === 'Mac' && clientBrowser === 'Safari')) ? 'nodrm' : 'widevine',
+          bucket: 'bunny-global'
+        }
+        servingCheck = { ...verifyServing(expected, actual), expected, actual }
       } catch { deviceType = clientOS || 'Unknown' }
 
       // ส่ง LINE Flex + plain text ให้เติ้ล
@@ -318,7 +334,8 @@ export default {
             player: 'bunny',                   // ⭐ Bunny CDN
             deviceType,                        // ⭐ iPad detection
             bucket: 'bunny-global',            // ⭐ Bunny CDN Global
-            routingReason: deviceType === 'iPhone' || deviceType === 'iPad' || deviceType === 'Mac' ? 'iOS/Mac → No-DRM path' : 'Global → Widevine DRM',
+            routingReason: expected?.reason || '',   // ⭐ จากตารางกฎ
+            servingCheck,                      // ⭐ expected vs actual
             videoTitle: this.videoTitle || 'Demo',
             sectionName: '',
             sectionCode: '',
