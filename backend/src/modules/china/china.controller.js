@@ -320,11 +320,11 @@ async function getVideoInfo(req, res) {
         encryption.hasMp4 = formats.has('mp4')
 
         // Detect variant
-        // - mpd + encrypted = Widevine DRM (b0dd template)
-        // - m3u8 + AliyunVoDEncryption = Alibaba Proprietary AES-128 (f0a1 template)
-        // - m3u8 + HLSEncryption = HLS AES-128 (basic encryption)
+        // - EncryptType 'Widevine-FairPlay' (m3u8) = Widevine DRM (b0dd template) ⭐ verified via API
+        // - EncryptType 'AliyunVoDEncryption' = Alibaba Proprietary AES-128 (f0a1 template)
+        // - EncryptType 'HLSEncryption' = HLS AES-128 (basic encryption)
         // - mp4 only + not encrypted = NoDRM (mp4 raw)
-        if (encryption.hasMpd && encryption.isEncrypted) {
+        if (encTypes.has('Widevine-FairPlay') || (encryption.hasMpd && encryption.isEncrypted)) {
           encryption.variant = 'drm-widevine'
           encryption.hasWidevine = true
         } else if (encTypes.has('AliyunVoDEncryption')) {

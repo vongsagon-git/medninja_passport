@@ -245,7 +245,7 @@
                                   </div>
                                   <div style="min-width:160px;">
                                     <div style="display:flex;gap:3px;align-items:center;">
-                                      <input v-model="vid.ref.bonusBunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Widevine UUID" :disabled="vid.ref._bonusLocked" @input="scheduleBonusDrmVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.bonusBunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="GLOBAL DRM UUID" :disabled="vid.ref._bonusLocked" @input="scheduleBonusDrmVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._bonusDrmVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._bonusDrmVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._bonusDrmVerified === false" class="verify-status fail">✗</span>
@@ -350,7 +350,7 @@
                               </div>
                               <div style="min-width:160px;">
                                 <div style="display:flex;gap:3px;align-items:center;">
-                                  <input v-model="child.ref.bonusBunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Widevine UUID" :disabled="child.ref._bonusLocked" @input="scheduleBonusDrmVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.bonusBunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="GLOBAL DRM UUID" :disabled="child.ref._bonusLocked" @input="scheduleBonusDrmVerify(child.flatIdx)" />
                                   <span v-if="child.ref._bonusDrmVerifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._bonusDrmVerified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._bonusDrmVerified === false" class="verify-status fail">✗</span>
@@ -457,7 +457,7 @@
                         </div>
                         <div style="min-width:160px;">
                           <div style="display:flex;gap:3px;align-items:center;">
-                            <input v-model="node.ref.bonusBunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Widevine UUID" :disabled="node.ref._bonusLocked" @input="scheduleBonusDrmVerify(node.flatIdx)" />
+                            <input v-model="node.ref.bonusBunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="GLOBAL DRM UUID" :disabled="node.ref._bonusLocked" @input="scheduleBonusDrmVerify(node.flatIdx)" />
                             <span v-if="node.ref._bonusDrmVerifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._bonusDrmVerified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._bonusDrmVerified === false" class="verify-status fail">✗</span>
@@ -1482,23 +1482,74 @@ export default {
         this.checkAllDurationsMatch(video)
       }
     },
-    // ═══ Check ALL 4 durations match (Bunny NoDRM + Bunny DRM + Ali NoDRM + Ali DRM) ═══
-    // ถ้าครบ 4 → ต้องไม่เกิน ±3 วิ ถึงจะ pass
+    // ═══ Check duration match — เช็คทุกตัวที่มี duration (>0) ═══
+    // Tolerance ±3 วิ → ตัวไหนต่างเกิน → ✗ + slot error + _durationMismatch
     checkAllDurationsMatch(video) {
       const bd = video._bunnyDuration || 0
       const bdrm = video._drmDurationSec || 0
       const ad = video._aliDuration || 0
       const adrm = video._aliDrmDuration || 0
-      // Only strict check when all 4 exist
-      if (bd > 0 && bdrm > 0 && ad > 0 && adrm > 0) {
-        const durs = [bd, bdrm, ad, adrm]
-        const max = Math.max(...durs)
-        const min = Math.min(...durs)
-        video._durationMismatch = (max - min) > 3
+
+      // เก็บเฉพาะที่มี duration >0
+      const durs = [bd, bdrm, ad, adrm].filter(d => d > 0)
+
+      // ต้องมีอย่างน้อย 2 ตัวถึงจะเทียบได้
+      if (durs.length < 2) {
+        video._durationMismatch = false
+        video._aliDurationMismatch = false
+        video._aliDrmDurationMismatch = false
         return
       }
-      // Fallback: only Bunny 2 exist → keep old logic (compare strings via loadBunnyNames)
-      // Do nothing here — let loadBunnyNames / verifyDrmVideo handle Bunny-only case
+
+      const max = Math.max(...durs)
+      const min = Math.min(...durs)
+      const overall = (max - min) > 3
+
+      // Global mismatch flag (สำหรับ warning banner)
+      video._durationMismatch = overall
+
+      // ⭐ Per-slot check: ตัวไหน off เกิน ±3 วิ จาก min → ✗ ที่ slot นั้น
+      // ใช้ min เป็นฐาน (ถือว่าตัวที่สั้นสุดเป็นจริง — หรือใช้ median ก็ได้)
+      // เอาจริง ๆ ให้เช็คว่า Ali แต่ละตัวเทียบกับ Bunny ที่มี
+      const bunnyDurs = [bd, bdrm].filter(d => d > 0)
+      const bunnyMax = bunnyDurs.length ? Math.max(...bunnyDurs) : 0
+      const bunnyMin = bunnyDurs.length ? Math.min(...bunnyDurs) : 0
+
+      // ถ้ามี Bunny reference → เช็ค Ali เทียบกับ Bunny
+      if (bunnyDurs.length > 0) {
+        // Ali NoDRM: ต่างจาก Bunny range เกิน ±3 วิ = mismatch
+        if (ad > 0) {
+          const outsideBunny = ad < (bunnyMin - 3) || ad > (bunnyMax + 3)
+          video._aliDurationMismatch = outsideBunny
+          if (outsideBunny) {
+            video._aliVerified = false
+            video._aliSlotError = 'DURATION_MISMATCH'
+          } else if (video._aliSlotError === 'DURATION_MISMATCH') {
+            // clear error ถ้าเคย error เรื่องนี้แต่ตอนนี้ pass
+            video._aliSlotError = ''
+            if (video._aliVariant === 'ali-proprietary') video._aliVerified = true
+          }
+        } else {
+          video._aliDurationMismatch = false
+        }
+        // Ali DRM: เหมือนกัน
+        if (adrm > 0) {
+          const outsideBunny = adrm < (bunnyMin - 3) || adrm > (bunnyMax + 3)
+          video._aliDrmDurationMismatch = outsideBunny
+          if (outsideBunny) {
+            video._aliDrmVerified = false
+            video._aliDrmSlotError = 'DURATION_MISMATCH'
+          } else if (video._aliDrmSlotError === 'DURATION_MISMATCH') {
+            video._aliDrmSlotError = ''
+            if (video._aliDrmVariant === 'drm-widevine') video._aliDrmVerified = true
+          }
+        } else {
+          video._aliDrmDurationMismatch = false
+        }
+      } else {
+        video._aliDurationMismatch = false
+        video._aliDrmDurationMismatch = false
+      }
     },
     // ═══ Bonus Video verify ═══
     scheduleBonusVerify(idx) {

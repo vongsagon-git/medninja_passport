@@ -24,6 +24,9 @@ const videoSchema = new mongoose.Schema({
   bonusTitle: { type: String, default: '' },
   bonusBunnyVideoId: { type: String, default: '' },
   bonusBunnyDrmVideoId: { type: String, default: '' },
+  // ⭐ Bonus Ali (China)
+  bonusAliVideoId: { type: String, default: '' },
+  bonusAliDrmVideoId: { type: String, default: '' },
   bonusDuration: { type: String, default: '' },
   bonusPdfFile: { type: String, default: '' },
   bonusPdfFileName: { type: String, default: '' },
