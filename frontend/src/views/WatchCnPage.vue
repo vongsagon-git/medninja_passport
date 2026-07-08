@@ -790,7 +790,9 @@ export default {
     aliVideoIdToPlay() {
       const v = this.video
       if (!v) return ''
-      // ⭐ กฎเดียวกับ Bunny: iOS/Mac Safari → NoDRM, ที่เหลือ → DRM
+      // ⭐ Backend เลือกให้แล้ว (aliChosenId) — trust ค่าจาก server
+      if (v.aliChosenId) return v.aliChosenId
+      // Fallback (backend เก่ายังไม่ส่ง aliChosenId): เลือกเองตาม device
       const isIosOrSafari = detectIOS() || detectMacSafari()
       if (this.isBonus) {
         const drm = v.bonusAliDrmVideoId || ''
@@ -1305,7 +1307,7 @@ export default {
           bucket: 'CN',
           player: 'aliplayer',
           // aliVideoIdToPlay = aliDrmVideoId → 'drm' (Widevine), aliVideoId → 'noDrm' (Proprietary encryptType 1)
-          variant: (this.video && this.video.aliDrmVideoId === this.aliVideoIdToPlay) ? 'drm' : 'noDrm'
+          variant: this._resolveAliVariant()
         })
         if (data.kicked) {
           // admin เตะ → redirect ออก
@@ -1826,7 +1828,7 @@ export default {
         source: 'passport',
         bucket: 'CN',
         player: 'aliplayer',
-        variant: (this.video && this.video.aliDrmVideoId === this.aliVideoIdToPlay) ? 'drm' : 'noDrm'
+        variant: this._resolveAliVariant()
       }
       this._socket.emit('watch:start', data)
     },
@@ -2586,6 +2588,20 @@ export default {
     // Backward compat (บาง call site อาจเรียก)
     aliOnSeekbarInput (e) {
       this.aliSeekMove(e)
+    },
+    // ⭐ ตัดสินใจ variant สำหรับ Warroom — ใช้ backend เลือกก่อน (แม่นสุด)
+    _resolveAliVariant () {
+      const v = this.video
+      if (!v) return ''
+      // 1. Backend ส่ง aliChosenVariant มาแล้ว → ใช้ตรงๆ (source of truth)
+      if (v.aliChosenVariant) return v.aliChosenVariant
+      // 2. drmMode (Bunny compat)
+      if (v.drmMode === 'widevine') return 'drm'
+      // 3. Fallback compare ID
+      const drmId = (v.aliDrmVideoId || '').trim()
+      const chosen = (this.aliVideoIdToPlay || '').trim()
+      if (drmId && drmId === chosen) return 'drm'
+      return 'noDrm'
     },
     aliSetSpeed (s) {
       if (!this._aliPlayer) return

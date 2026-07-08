@@ -351,6 +351,12 @@ exports.getVideo = async (req, res, next) => {
       } catch {}
     }
 
+    // ⭐ CN: Backend เลือก Ali variant ตาม device (กฎเดียวกับ Bunny)
+    // Android/Chrome → DRM, iOS/Safari → NoDRM
+    const aliUseDrm = !!targetAliDrmId && !isIOS(req) && !isMacSafari(req)
+    const aliChosenId = aliUseDrm ? targetAliDrmId : (targetAliId || targetAliDrmId || '')
+    const aliChosenVariant = aliUseDrm ? 'drm' : 'noDrm'
+
     res.json({
       video: {
         index: idx,
@@ -360,9 +366,11 @@ exports.getVideo = async (req, res, next) => {
         isDemoLibrary: !useDrm,
         drmMode: useDrm ? 'widevine' : 'protection',
         libraryId: useDrm ? '626874' : '628424',
-        // ⭐ CN: Ali video IDs (ให้ WatchCnPage เห็น)
+        // ⭐ CN: Ali video IDs (Backend เลือก + ส่ง variant มาให้ตรง)
         aliVideoId: targetAliId || '',
         aliDrmVideoId: targetAliDrmId || '',
+        aliChosenId,               // ← ใช้ตัวนี้ init Aliplayer
+        aliChosenVariant,          // ← ใช้ตัวนี้ส่ง Warroom (ไม่ต้อง compare string)
         bonusAliVideoId: !isBonus ? (video.bonusAliVideoId || '') : '',
         bonusAliDrmVideoId: !isBonus ? (video.bonusAliDrmVideoId || '') : '',
         isBonus: !!isBonus,
