@@ -162,92 +162,6 @@
                 class="ali-player-box"
               ></div>
 
-              <!-- ⭐ Custom Player Controls (เขียนเอง ห้าม native ยุ่ง) -->
-              <div
-                v-if="hasAliVideo && !replaced && !recorderBlocked && playerReady"
-                class="ali-ctl-layer"
-                :class="{ 'hidden': !aliControlsVisible }"
-                @click.self="aliOnPlayerTap"
-              >
-                <!-- Middle: Big play/pause button -->
-                <button class="ali-ctl-big-play" @click.stop="aliTogglePlay">
-                  <svg v-if="isPlaying" viewBox="0 0 24 24" fill="currentColor" width="36" height="36">
-                    <rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>
-                  </svg>
-                  <svg v-else viewBox="0 0 24 24" fill="currentColor" width="36" height="36">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                </button>
-
-                <!-- Bottom control bar -->
-                <div class="ali-ctl-bar" @click.stop>
-                  <!-- Timeline -->
-                  <div class="ali-ctl-timeline">
-                    <input
-                      type="range"
-                      min="0"
-                      :max="aliDuration || 0"
-                      step="0.1"
-                      :value="aliCurrentTime"
-                      @input="aliOnSeekbarInput"
-                      class="ali-ctl-seek"
-                      :style="{ '--pct': ((aliCurrentTime / (aliDuration || 1)) * 100) + '%' }"
-                    />
-                  </div>
-
-                  <div class="ali-ctl-row">
-                    <!-- Play/Pause -->
-                    <button class="ali-ctl-btn" @click="aliTogglePlay" :title="isPlaying ? 'Pause' : 'Play'">
-                      <svg v-if="isPlaying" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-                      <svg v-else viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>
-                    </button>
-
-                    <!-- Time display -->
-                    <div class="ali-ctl-time">
-                      <span>{{ aliFmtTime(aliCurrentTime) }}</span>
-                      <span class="ali-ctl-time-sep">/</span>
-                      <span class="ali-ctl-time-total">{{ aliFmtTime(aliDuration) }}</span>
-                    </div>
-
-                    <div class="ali-ctl-spacer"></div>
-
-                    <!-- Volume (desktop only) -->
-                    <div class="ali-ctl-volume hide-mobile">
-                      <button class="ali-ctl-btn" @click="aliToggleMute">
-                        <svg v-if="aliMuted || aliVolume === 0" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M16.5 12A4.5 4.5 0 0014 8.03v2.21l2.45 2.45a4.6 4.6 0 00.05-.69zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0021 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 003.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-                        <svg v-else-if="aliVolume > 0.5" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8.03v7.94A4.5 4.5 0 0016.5 12zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4-.91 7-4.49 7-8.77s-3-7.86-7-8.77z"/></svg>
-                        <svg v-else viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18.5 12A4.5 4.5 0 0016 8.03v7.94A4.5 4.5 0 0018.5 12zM5 9v6h4l5 5V4L9 9H5z"/></svg>
-                      </button>
-                      <input
-                        type="range" min="0" max="1" step="0.05" :value="aliMuted ? 0 : aliVolume"
-                        @input="aliOnVolumeInput"
-                        class="ali-ctl-vol"
-                      />
-                    </div>
-
-                    <!-- Speed -->
-                    <div class="ali-ctl-speed-wrap">
-                      <button class="ali-ctl-btn ali-ctl-speed-btn" @click.stop="aliShowSpeedMenu = !aliShowSpeedMenu">
-                        {{ aliSpeed }}x
-                      </button>
-                      <div v-if="aliShowSpeedMenu" class="ali-ctl-speed-menu">
-                        <button
-                          v-for="s in [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]"
-                          :key="s"
-                          class="ali-ctl-speed-item"
-                          :class="{ active: s === aliSpeed }"
-                          @click.stop="aliSetSpeed(s)"
-                        >{{ s }}x</button>
-                      </div>
-                    </div>
-
-                    <!-- Fullscreen -->
-                    <button class="ali-ctl-btn" @click="aliToggleFullscreen" title="Fullscreen">
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
               <!-- Loading overlay — บังจน Ali player ready -->
               <div v-if="hasAliVideo && !replaced && !recorderBlocked && !playerReady" class="player-loading-overlay">
                 <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
@@ -738,6 +652,8 @@ export default {
       playerReady: false,
       // ⭐ Custom Ali controls state
       aliCurrentTime: 0,
+      aliSeeking: false,      // ⭐ user กำลัง drag slider — หยุด sync จาก timeupdate
+      aliSeekValue: 0,        // ค่า slider ระหว่าง drag (independent จาก currentTime)
       aliDuration: 0,
       aliVolume: 1,
       aliMuted: false,
@@ -2437,10 +2353,9 @@ export default {
           rePlay: false,
           playsinline: true,
           preload: true,
-          // ⭐ ซ่อน native controls — ใช้ custom controls เอง
-          skinLayout: false,
-          controlBarVisibility: 'never',
-          showBigPlayButton: false,
+          // ⭐ ใช้ Aliplayer native controls (ง่าย — ไม่ต้องเขียนเอง)
+          controlBarVisibility: 'click',
+          showBigPlayButton: true,
           useH5Prism: true,
           license: {
             domain: 'passport.medninja.academy',
@@ -2626,10 +2541,35 @@ export default {
       try { this._aliPlayer.seek(sec) } catch {}
       this.aliCurrentTime = sec
     },
-    aliOnSeekbarInput (e) {
-      const val = parseFloat(e.target.value) || 0
-      this.aliSeek(val)
+    // ⭐ Smooth seek: drag update seekValue เท่านั้น (ไม่ยิง seek ทุก frame)
+    aliSeekStart () {
+      this.aliSeeking = true
+      this.aliSeekValue = this.aliCurrentTime
       this._showControlsSticky()
+    },
+    aliSeekMove (e) {
+      // ระหว่าง drag — update seekValue แต่ยังไม่ commit
+      const val = parseFloat(e.target.value) || 0
+      this.aliSeekValue = val
+      // Throttle seek: 200ms หนึ่งครั้ง (preview effect — เห็นภาพเปลี่ยน)
+      const now = Date.now()
+      if (!this._lastPreviewSeek || now - this._lastPreviewSeek > 200) {
+        this._lastPreviewSeek = now
+        if (this._aliPlayer) { try { this._aliPlayer.seek(val) } catch {} }
+      }
+    },
+    aliSeekEnd () {
+      if (!this.aliSeeking) return
+      // ปล่อยแล้ว — commit ค่าจริง
+      const val = this.aliSeekValue
+      this.aliSeeking = false
+      this.aliCurrentTime = val
+      if (this._aliPlayer) { try { this._aliPlayer.seek(val) } catch {} }
+      this._showControlsSticky()
+    },
+    // Backward compat (บาง call site อาจเรียก)
+    aliOnSeekbarInput (e) {
+      this.aliSeekMove(e)
     },
     aliSetSpeed (s) {
       if (!this._aliPlayer) return
@@ -4362,22 +4302,13 @@ kbd {
   width: 100% !important;
   height: 100% !important;
 }
-/* ⭐ ซ่อน Aliplayer error/notice UI ทั้งหมด (เขียน controls เอง) */
+/* ⭐ ซ่อนแค่ Aliplayer error dialog (native controls ใช้ตามปกติ) */
 .ali-player-box :deep(.prism-ErrorMessage),
 .ali-player-box :deep(.prism-notice),
 .ali-player-box :deep(.prism-error),
 .ali-player-box :deep(.prism-info-display),
 .ali-player-box :deep(.prism-tips),
 .ali-player-box :deep(.prism-cover) {
-  display: none !important;
-}
-/* ซ่อน native controls ทั้งหมด (เขียนเอง) */
-.ali-player-box :deep(.prism-controlbar),
-.ali-player-box :deep(.prism-big-play-btn),
-.ali-player-box :deep(.prism-progress-bar),
-.ali-player-box :deep(.prism-setting-btn),
-.ali-player-box :deep(.prism-fullscreen-btn),
-.ali-player-box :deep(.prism-volume) {
   display: none !important;
 }
 .ali-player-box {
