@@ -719,8 +719,18 @@ export default {
     aliVideoIdToPlay() {
       const v = this.video
       if (!v) return ''
-      if (this.isBonus) return v.bonusAliDrmVideoId || v.bonusAliVideoId || ''
-      return v.aliDrmVideoId || v.aliVideoId || ''
+      // ⭐ กฎเดียวกับ Bunny: iOS/Mac Safari → NoDRM, ที่เหลือ → DRM
+      const isIosOrSafari = detectIOS() || detectMacSafari()
+      if (this.isBonus) {
+        const drm = v.bonusAliDrmVideoId || ''
+        const noDrm = v.bonusAliVideoId || ''
+        if (isIosOrSafari) return noDrm || drm
+        return drm || noDrm
+      }
+      const drm = v.aliDrmVideoId || ''
+      const noDrm = v.aliVideoId || ''
+      if (isIosOrSafari) return noDrm || drm
+      return drm || noDrm
     },
     watchedCount() {
       const key = this.sectionId
