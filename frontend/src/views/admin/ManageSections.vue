@@ -1353,16 +1353,39 @@ export default {
         video._aliVerified = null
         video._aliName = ''
         video._aliDuration = 0
+        video._aliVariant = ''
+        video._aliSlotError = ''
         this.checkAllDurationsMatch(video)
+        return
+      }
+      // ⭐ ต้องไม่ซ้ำกับ DRM slot
+      if (vid === (video.aliDrmVideoId || '').trim()) {
+        video._aliVerified = false
+        video._aliSlotError = 'DUPLICATE'
+        video._aliName = 'ห้ามซ้ำกับ Ali DRM VID'
         return
       }
       video._aliVerifying = true
       video._aliVerified = null
+      video._aliSlotError = ''
       try {
         const info = await api.get(`/admin/ali/video/${vid}`)
-        video._aliVerified = true
+        const variant = info.encryption?.variant || 'unknown'
+        video._aliVariant = variant
         video._aliName = info.title || ''
         video._aliDuration = Math.round(info.duration || 0)
+        // ⭐ Slot check: Ali NoDRM slot ต้องเป็น ali-proprietary (f0a1 template) เท่านั้น
+        if (variant === 'drm-widevine') {
+          video._aliVerified = false
+          video._aliSlotError = 'WRONG_SLOT'
+          video._aliName = '⚠️ นี่คือ Widevine DRM — ควรใส่ในช่อง Ali DRM'
+        } else if (variant !== 'ali-proprietary') {
+          video._aliVerified = false
+          video._aliSlotError = 'WRONG_TEMPLATE'
+          video._aliName = `⚠️ ต้องใช้ Alibaba Proprietary template (f0a1) เท่านั้น — พบ: ${variant}`
+        } else {
+          video._aliVerified = true
+        }
       } catch {
         video._aliVerified = false
       } finally {
@@ -1386,16 +1409,35 @@ export default {
         video._aliDrmVerified = null
         video._aliDrmName = ''
         video._aliDrmDuration = 0
+        video._aliDrmVariant = ''
+        video._aliDrmSlotError = ''
         this.checkAllDurationsMatch(video)
+        return
+      }
+      // ⭐ ต้องไม่ซ้ำกับ NoDRM slot
+      if (vid === (video.aliVideoId || '').trim()) {
+        video._aliDrmVerified = false
+        video._aliDrmSlotError = 'DUPLICATE'
+        video._aliDrmName = 'ห้ามซ้ำกับ Ali NoDRM VID'
         return
       }
       video._aliDrmVerifying = true
       video._aliDrmVerified = null
+      video._aliDrmSlotError = ''
       try {
         const info = await api.get(`/admin/ali/video/${vid}`)
-        video._aliDrmVerified = true
+        const variant = info.encryption?.variant || 'unknown'
+        video._aliDrmVariant = variant
         video._aliDrmName = info.title || ''
         video._aliDrmDuration = Math.round(info.duration || 0)
+        // ⭐ Slot check: Ali DRM slot ต้องเป็น drm-widevine เท่านั้น
+        if (variant !== 'drm-widevine') {
+          video._aliDrmVerified = false
+          video._aliDrmSlotError = 'WRONG_SLOT'
+          video._aliDrmName = `⚠️ นี่ไม่ใช่ Widevine DRM (พบ ${variant}) — ควรใส่ในช่อง Ali NoDRM`
+        } else {
+          video._aliDrmVerified = true
+        }
       } catch {
         video._aliDrmVerified = false
       } finally {
@@ -1723,6 +1765,24 @@ export default {
         if (!this.form.name.trim()) {
           this.error = 'กรุณากรอกชื่อ Section'
           this.saving = false
+          return
+        }
+        // ⭐ STRICT: กัน Ali slot ผิด (NoDRM ≠ ali-proprietary หรือ DRM ≠ drm-widevine)
+        const slotErrors = this.form.videos.filter(v =>
+          v._aliSlotError || v._aliDrmSlotError
+        )
+        if (slotErrors.length > 0) {
+          this.saving = false
+          const preview = slotErrors.slice(0, 3).map(v => {
+            const errs = []
+            if (v._aliSlotError) errs.push('NoDRM: ' + v._aliSlotError)
+            if (v._aliDrmSlotError) errs.push('DRM: ' + v._aliDrmSlotError)
+            return `• ${v.title || '(ไม่มีชื่อ)'}: ${errs.join(', ')}`
+          }).join('\n')
+          alert('⚠️ Ali VID ใส่ผิดช่อง — โปรดตรวจสอบ\n\n' +
+            '• Ali NoDRM slot ต้องเป็น Alibaba Proprietary (template f0a1) เท่านั้น\n' +
+            '• Ali DRM slot ต้องเป็น Widevine DRM (template b0dd) เท่านั้น\n\n' +
+            preview)
           return
         }
         // ⭐ STRICT: กันบันทึกถ้ามี video ไหน duration ไม่ตรง (Bunny 2 + Ali 2 ครบ)
