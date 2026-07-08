@@ -2262,7 +2262,10 @@ export default {
     },
     async _fetchAliStsToken () {
       try {
-        const res = await api.get('/china/sts')
+        // ⭐ Backend route: /api/china/sts/:videoId (บังคับต้องมี videoId)
+        const vid = this.aliVideoIdToPlay
+        if (!vid) throw new Error('No Ali videoId')
+        const res = await api.get(`/china/sts/${vid}`)
         // api.js interceptor unwraps → res = data
         const d = (res && res.data) ? res.data : (res || {})
         if (!d.accessKeyId) throw new Error('STS response missing accessKeyId')
