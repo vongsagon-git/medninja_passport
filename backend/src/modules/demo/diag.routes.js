@@ -398,21 +398,29 @@ router.post('/doctor-line', async (req, res) => {
   const baseUrl = process.env.FRONTEND_URL || 'https://medninja.academy'
   const resultUrl = `${baseUrl}/doctor-result/${resultId}`
 
-  // สีตาม status (browser block = ส้ม ไม่ใช่แดง — ไม่ใช่ bug)
+  // ⭐ Retro Amber CRT Theme (Linux Terminal)
   const isBlocked = !!browserBlocked
   const isFail = failCount > 0
   const isAli = player === 'ali'
-  // ⭐ Player color: Ali = แดง (China), Bunny = ฟ้า
-  const playerColor = isAli ? '#dc2626' : '#0ea5e9'
-  const playerLabel = isAli ? 'Alibaba VOD' : 'Bunny CDN'
-  const playerEmoji = isAli ? '🇨🇳' : '🌍'
-  const headerColor = isBlocked ? '#f97316' : (isFail ? '#dc2626' : playerColor)
-  const statusText = isBlocked
-    ? `ปิดกั้น Browser`
-    : (isFail ? `พบปัญหา ${failCount} จุด` : `ระบบปกติ`)
-  const statusIcon = isBlocked ? '⚠️' : (isFail ? '❌' : '✅')
-  const statusBg = isBlocked ? '#fff7ed' : (isFail ? '#fef2f2' : '#f0fdf4')
-  const statusFg = isBlocked ? '#c2410c' : (isFail ? '#991b1b' : '#166534')
+  // Theme colors
+  const THEME = {
+    bg: '#0a0a0a',           // background ดำ
+    bgAlt: '#141414',        // background alt (row เว้น)
+    amber: '#ffb000',         // อำพันเข้ม (headline / accent)
+    amberBright: '#ffd166',   // อำพันสว่าง (value)
+    amberDim: '#8b6f3f',      // อำพันอ่อน (label / muted)
+    green: '#00ff41',         // เขียว terminal (OK / success)
+    red: '#ff4444',           // แดง CRT (error / fail)
+    orange: '#ff8800',        // ส้ม (warning)
+    border: '#3a2f14',        // เส้นขอบสีเข้ม
+    white: '#e8e8e8'
+  }
+  const playerLabel = isAli ? 'ALIBABA_VOD' : 'BUNNY_CDN'
+  const playerEmoji = ''  // ไม่ใช้ emoji ใน terminal theme
+  const statusText = isBlocked ? 'BROWSER_BLOCK'
+                   : (isFail ? `FAIL_${failCount}` : 'HEALTHY')
+  const statusIcon = isBlocked ? '[!]' : (isFail ? '[X]' : '[OK]')
+  const statusFg = isBlocked ? THEME.orange : (isFail ? THEME.red : THEME.green)
 
   // ⭐ Device precision — ใช้ deviceType ถ้า frontend ส่งมา ไม่งั้น fallback UA
   const ua = req.headers['user-agent'] || ''
@@ -422,125 +430,121 @@ router.post('/doctor-line', async (req, res) => {
     else if (/iPad/.test(ua)) precisionDevice = 'iPad'
     else if (/Android/.test(ua)) precisionDevice = 'Android'
     else if (/Windows/.test(ua)) precisionDevice = 'Windows'
-    else if (/Macintosh|Mac OS X/.test(ua)) precisionDevice = 'Mac'  // อาจเป็น iPad ปลอม UA — frontend ควรส่ง deviceType
+    else if (/Macintosh|Mac OS X/.test(ua)) precisionDevice = 'Mac'
     else precisionDevice = clientOS || 'Unknown'
   }
-  // Device emoji
-  const devEmoji = precisionDevice === 'iPhone' ? '📱' :
-                   precisionDevice === 'iPad' ? '📱' :
-                   precisionDevice === 'Android' ? '🤖' :
-                   precisionDevice === 'Mac' ? '🍎' :
-                   precisionDevice === 'Windows' ? '🪟' : '💻'
 
-  // helper row — เหลี่ยม ไม่โค้ง
-  const row = (label, value, valueColor = '#0f172a', size = 'sm') => ({
-    type: 'box', layout: 'horizontal', spacing: 'md', contents: [
-      { type: 'text', text: label, size: 'xs', color: '#94a3b8', flex: 3 },
-      { type: 'text', text: value || '-', size, weight: 'bold', flex: 7, wrap: true, color: valueColor }
+  // ⭐ Terminal-style row: LABEL >> value
+  const trow = (label, value, valueColor = THEME.amberBright, size = 'xs') => ({
+    type: 'box', layout: 'horizontal', spacing: 'sm', paddingStart: '2px', contents: [
+      { type: 'text', text: (label || '').toUpperCase().padEnd(8, ' '), size: 'xxs', color: THEME.amberDim, flex: 0 },
+      { type: 'text', text: '>', size: 'xxs', color: THEME.amber, flex: 0 },
+      { type: 'text', text: String(value || '-'), size, weight: 'bold', flex: 1, wrap: true, color: valueColor }
     ]
   })
 
-  // Header: avatar + ชื่อ LINE + Player badge
-  const headerContents = [
-    { type: 'box', layout: 'horizontal', spacing: 'md', contents: [
-      ...(linePictureUrl ? [{
-        type: 'image', url: linePictureUrl, size: '48px', aspectMode: 'cover', aspectRatio: '1:1',
-        flex: 0, action: { type: 'uri', uri: resultUrl }
-      }] : []),
-      { type: 'box', layout: 'vertical', flex: 1, contents: [
-        { type: 'text', text: lineDisplayName || resolvedUserName || 'นักเรียน', color: '#FFFFFF', size: 'md', weight: 'bold', wrap: true },
-        { type: 'text', text: `Doctor Diagnostic`, color: '#FFFFFFCC', size: 'xxs', margin: 'xs' }
-      ]}
-    ]}
-  ]
+  // ⭐ Divider line (retro CRT)
+  const divider = { type: 'box', layout: 'vertical', height: '1px', backgroundColor: THEME.border, margin: 'xs', contents: [] }
 
-  // ⭐ Serving verification badge
+  // ⭐ Serving verification (terminal style)
   const servingMatch = servingCheck?.match
-  const servingBadge = servingMatch === true ? '✓ Serve ถูกกฎ'
-                     : servingMatch === false ? '✗ Serve ผิดกฎ'
+  const servingBadge = servingMatch === true ? '[OK] SERVE_MATCH'
+                     : servingMatch === false ? '[X]  SERVE_MISMATCH'
                      : ''
-  const servingBadgeColor = servingMatch === true ? '#166534'
-                          : servingMatch === false ? '#991b1b'
-                          : '#94a3b8'
-  const countryLabel = clientCountry === 'CN' ? 'CN' : (clientCountry || 'Global')
-  const countryFlag = clientCountry === 'CN' ? '🇨🇳' : (clientCountry === 'TH' ? '🇹🇭' : '🌍')
+  const servingBadgeColor = servingMatch === true ? THEME.green
+                          : servingMatch === false ? THEME.red
+                          : THEME.amberDim
+  const countryLabel = clientCountry === 'CN' ? 'CN'
+                     : (clientCountry ? clientCountry.toUpperCase() : 'GLOBAL')
+  const hostWarn = clientHost?.includes('www.') ? THEME.red : THEME.green
+  const timeStr = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', hour12: false })
+    .replace(',', '').split(' ').reverse().join(' ')
 
-  // Flex Message — Compact + Flat (ไม่ซ้อน card)
-  // 1 กล่องเดียว: header สี player + body flat rows
+  // ═══════════════════════════════════════════════════════════
+  // FLEX — Retro Amber CRT Terminal Theme
+  // ═══════════════════════════════════════════════════════════
   const flex = {
     type: 'flex',
-    altText: `${statusIcon} ${lineDisplayName || resolvedUserName || 'นักเรียน'} · ${playerLabel} · ${precisionDevice} · ${countryLabel}`,
+    altText: `${statusIcon} ${lineDisplayName || resolvedUserName || 'user'} @ ${playerLabel} [${countryLabel}]`,
     contents: {
-      type: 'bubble', size: 'kilo',    // ⭐ kilo = เล็กกว่า mega
+      type: 'bubble', size: 'kilo',
+      // ─── HEADER: Terminal Title Bar ─────────────────────────
       header: {
-        type: 'box', layout: 'vertical', backgroundColor: headerColor, paddingAll: '12px', spacing: 'xs',
+        type: 'box', layout: 'vertical', backgroundColor: THEME.bg, paddingAll: '12px', spacing: 'xs',
         contents: [
-          // Row 1: avatar + ชื่อ + status
-          { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+          // Title bar (mock terminal)
+          { type: 'box', layout: 'horizontal', spacing: 'xs', contents: [
+            { type: 'text', text: '●', size: 'xxs', color: THEME.red, flex: 0 },
+            { type: 'text', text: '●', size: 'xxs', color: THEME.orange, flex: 0 },
+            { type: 'text', text: '●', size: 'xxs', color: THEME.green, flex: 0 },
+            { type: 'text', text: 'medninja-diag ~ zsh', size: 'xxs', color: THEME.amberDim, flex: 1, align: 'center' }
+          ]},
+          // Command prompt
+          { type: 'text', text: `$ diagnostic --user`, size: 'xs', color: THEME.amber, weight: 'bold', margin: 'sm' },
+          // User line
+          { type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'sm', contents: [
             ...(linePictureUrl ? [{
-              type: 'image', url: linePictureUrl, size: '36px', aspectMode: 'cover', aspectRatio: '1:1', flex: 0
+              type: 'image', url: linePictureUrl, size: '40px', aspectMode: 'cover', aspectRatio: '1:1', flex: 0
             }] : []),
             { type: 'box', layout: 'vertical', flex: 1, contents: [
-              { type: 'text', text: lineDisplayName || resolvedUserName || 'นักเรียน', color: '#FFFFFF', size: 'sm', weight: 'bold', wrap: false, maxLines: 1 },
-              { type: 'text', text: `${statusIcon} ${statusText}`, color: '#FFFFFFDD', size: 'xxs', margin: 'xs' }
+              { type: 'text', text: `> ${lineDisplayName || resolvedUserName || 'anonymous'}`, color: THEME.amberBright, size: 'sm', weight: 'bold' },
+              { type: 'text', text: `${statusIcon} ${statusText}`, color: statusFg, size: 'xxs', margin: 'xs', weight: 'bold' }
             ]}
-          ]},
-          // Row 2: Player + bucket + country flag (1 line)
-          { type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'sm', contents: [
-            { type: 'text', text: `${playerEmoji} ${playerLabel}`, color: '#FFFFFF', size: 'xs', weight: 'bold', flex: 1 },
-            ...(bucket ? [{ type: 'text', text: bucket, color: '#FFFFFFCC', size: 'xxs', gravity: 'center', flex: 0 }] : []),
-            { type: 'text', text: `${countryFlag} ${countryLabel}`, color: '#FFFFFFCC', size: 'xxs', align: 'end', gravity: 'center', flex: 0, margin: 'sm' }
           ]}
         ]
       },
+      // ─── BODY: Terminal Output ──────────────────────────────
       body: {
-        type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '12px',
+        type: 'box', layout: 'vertical', backgroundColor: THEME.bg, paddingAll: '12px', spacing: 'xs',
         contents: [
-          // Serving verification (เด่นชัด — บอกว่าถูกกฎไหม)
+          // Serve verification (สำคัญที่สุด — บรรทัดแรก)
           ...(servingBadge ? [{
-            type: 'box', layout: 'horizontal', spacing: 'sm', paddingAll: '8px', backgroundColor: servingMatch ? '#f0fdf4' : '#fef2f2',
-            contents: [
-              { type: 'text', text: servingBadge, size: 'xs', weight: 'bold', color: servingBadgeColor, flex: 1 },
-              ...(servingCheck?.expected?.drm ? [{
-                type: 'text', text: servingCheck.expected.drm, size: 'xxs', color: servingBadgeColor, align: 'end', gravity: 'center'
-              }] : [])
-            ]
+            type: 'text', text: servingBadge, size: 'sm', weight: 'bold', color: servingBadgeColor
           }] : []),
-          // Diffs (ถ้ามี mismatch)
+          // Diffs (ถ้ามี)
           ...(servingCheck?.diffs?.length ? servingCheck.diffs.map(d => ({
-            type: 'text', text: `⚠ ${d}`, size: 'xxs', color: '#991b1b', wrap: true
+            type: 'text', text: `  ! ${d}`, size: 'xxs', color: THEME.red, wrap: true
           })) : []),
-          // Routing reason (บอกทำไม serve แบบนี้)
+          divider,
+          // Player + bucket + country
+          trow('serve', `${playerLabel}${bucket ? ' [' + bucket + ']' : ''}`, THEME.amberBright, 'xs'),
+          trow('region', countryLabel, THEME.amberBright, 'xs'),
+          trow('drm', servingCheck?.expected?.drm?.toUpperCase() || '-', THEME.amberBright, 'xs'),
           ...(routingReason ? [{
-            type: 'text', text: `∵ ${routingReason}`, size: 'xxs', color: '#64748b', wrap: true, margin: 'xs'
+            type: 'text', text: `  # ${routingReason}`, size: 'xxs', color: THEME.amberDim, wrap: true
           }] : []),
-          { type: 'separator', color: '#e2e8f0', margin: 'sm' },
-          // Device 1 บรรทัด
-          row('Device', `${devEmoji} ${precisionDevice} · ${clientBrowser || '?'}`, '#0f172a', 'xs'),
-          { type: 'separator', color: '#f1f5f9' },
-          row('IP', `${clientIp}`, '#475569', 'xs'),
+          divider,
+          // Client info
+          trow('device', `${precisionDevice.toUpperCase()} · ${(clientBrowser || '?').toUpperCase()}`, THEME.amberBright, 'xs'),
+          trow('ip', clientIp, THEME.amberBright, 'xs'),
+          trow('email', userEmail || '-', THEME.amberBright, 'xxs'),
           ...(videoTitle && videoTitle !== 'Demo' ? [
-            { type: 'separator', color: '#f1f5f9' },
-            row('Video', videoTitle, '#0f172a', 'xs')
+            trow('video', videoTitle, THEME.amberBright, 'xxs')
+          ] : []),
+          ...(sectionCode || sectionName ? [
+            trow('section', `${sectionCode || ''} ${sectionName || ''}`.trim(), THEME.amberBright, 'xxs')
           ] : []),
           ...(watchUrl ? [
-            { type: 'separator', color: '#f1f5f9' },
-            row('URL', watchUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 40), '#0369a1', 'xs')
+            trow('url', watchUrl.replace(/^https?:\/\/[^/]+/, '').slice(0, 40), THEME.amberBright, 'xxs')
           ] : []),
-          { type: 'separator', color: '#f1f5f9' },
-          row('เวลา', new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }), '#94a3b8', 'xxs')
+          trow('host', clientHost || '?', hostWarn, 'xxs'),
+          divider,
+          // Timestamp
+          { type: 'text', text: `[${timeStr}] end`, size: 'xxs', color: THEME.amberDim, align: 'end' },
+          { type: 'text', text: '$ _', size: 'sm', color: THEME.amber, margin: 'xs', weight: 'bold' }
         ]
       },
+      // ─── FOOTER: Amber Button ───────────────────────────────
       footer: {
-        type: 'box', layout: 'vertical', paddingAll: '8px',
+        type: 'box', layout: 'vertical', backgroundColor: THEME.bg, paddingAll: '8px',
         contents: [
-          { type: 'button', action: { type: 'uri', label: 'รายละเอียด', uri: resultUrl }, style: 'primary', color: playerColor, height: 'sm' }
+          { type: 'button', action: { type: 'uri', label: '> LOAD_DETAILS', uri: resultUrl }, style: 'primary', color: THEME.amber, height: 'sm' }
         ]
       },
       styles: {
-        header: { separator: false },
-        body: { separator: false },
-        footer: { separator: false }
+        header: { separator: false, backgroundColor: THEME.bg },
+        body: { separator: false, backgroundColor: THEME.bg },
+        footer: { separator: false, backgroundColor: THEME.bg }
       }
     }
   }
