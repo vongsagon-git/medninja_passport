@@ -461,6 +461,9 @@ router.beforeEach((to, from, next) => {
 // Version check — ถ้ามี pending reload + ออกจากหน้า watch → reload
 import { checkPendingReload, getVersion } from '../services/versionCheck'
 
+// ⭐ Skip version reload สำหรับ path ที่ดู VDO อยู่ (versionCheck.js จะ toast แทน)
+const SKIP_RELOAD_PATHS = ['/my/watch/', '/my-cn/watch/']
+
 // ⭐ Global Country Guard — ทุก navigation ไปหน้าที่มี bucket ต้อง match IP
 // ถ้า IP=CN แต่ path=/my/... → redirect ไป /my-cn/... (bucket)
 // ถ้า IP≠CN แต่ path=/my-cn/... → redirect ไป /my/... (bucket)
@@ -498,6 +501,11 @@ router.beforeResolve(async (to, from, next) => {
             }
           }
           const target = swap(to.path)
+          // ⭐ Safety: ถ้า target = path เดิม (swap ล้มเหลว) → ไม่ redirect (กัน loop)
+          if (target === to.path || target === from.path) {
+            console.warn(`[GlobalCountryGuard] skip — target=${target} same as current`)
+            return next()
+          }
           console.warn(`[GlobalCountryGuard] IP=${ipBucket} path=${pathBucket} → redirect ${target}`)
           return next(target)
         }
