@@ -790,6 +790,23 @@ export default {
       if (this.isBonus) return !!(v.bonusAliVideoId || v.bonusAliDrmVideoId)
       return !!(v.aliVideoId || v.aliDrmVideoId)
     },
+    aliServeCheck() {
+      // ⭐ Template ใช้ .ok / .variant / .idTail — คืน object เสมอ (กัน undefined.ok → หน้าขาว)
+      const v = this.video
+      const empty = { ok: false, variant: '', idTail: '' }
+      if (!v) return empty
+      const variant = (v.aliChosenVariant) || (this._resolveAliVariant ? this._resolveAliVariant() : '')
+      const chosen = (v.aliChosenId || this.aliVideoIdToPlay || '').trim()
+      const idTail = chosen ? chosen.slice(-6) : ''
+      const drmId = (v.aliDrmVideoId || '').trim()
+      const noDrmId = (v.aliVideoId || '').trim()
+      // ok = server เลือกตรงกับ variant ที่ device คาดหวัง
+      let ok = false
+      if (variant === 'drm' && chosen && chosen === drmId) ok = true
+      else if (variant === 'noDrm' && chosen && chosen === noDrmId) ok = true
+      else if (chosen && (chosen === drmId || chosen === noDrmId)) ok = true
+      return { ok, variant, idTail }
+    },
     aliVideoIdToPlay() {
       const v = this.video
       if (!v) return ''
@@ -2397,7 +2414,18 @@ export default {
         const sdkOk = await this._loadAliplayerSDK()
         if (!sdkOk) throw new Error('Aliplayer SDK not loaded')
 
-        // 2. Cleanup previous ก่อน fetch STS (กัน 2 STS ยิงซ้อน)
+        // 2. รอ DOM container ปรากฏก่อน (v-if async render → #J_prismPlayer อาจยังไม่มี)
+        await this.$nextTick()
+        let waitTries = 0
+        while (!document.getElementById('J_prismPlayer') && waitTries < 20) {
+          await new Promise(r => setTimeout(r, 100))
+          waitTries++
+        }
+        if (!document.getElementById('J_prismPlayer')) {
+          throw new Error('Container #J_prismPlayer not found in DOM')
+        }
+
+        // 3. Cleanup previous ก่อน fetch STS (กัน 2 STS ยิงซ้อน)
         if (this._aliPlayer) {
           try { this._aliPlayer.dispose() } catch {}
           this._aliPlayer = null
