@@ -3817,6 +3817,12 @@ kbd {
 
 /* ═══ Responsive — Mobile ═══ */
 @media (max-width: 768px) {
+  /* ป้องกัน horizontal overflow (ปุ่มตกขอบ) */
+  .watch-page, .w-layout, .w-main, .w-video-info {
+    max-width: 100vw;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
   .w-topbar {
     padding: 0 12px;
     gap: 8px;
@@ -3836,17 +3842,29 @@ kbd {
   }
   .w-video-title { font-size: 15px; margin-bottom: 4px; }
 
-  /* Actions as a full-width row */
+  /* Actions — wrap ให้ปุ่มไม่ตกขอบ (CN: WeChat + Diag + Mini + Prev + Next + Mark) */
   .w-video-actions {
     width: 100%;
-    display: grid;
-    grid-template-columns: auto auto 1fr;
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
+    box-sizing: border-box;
+  }
+  .w-video-actions > * {
+    flex-shrink: 0;
+    max-width: 100%;
+  }
+  .w-ask-btn, .w-diag-btn, .w-mini-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+    white-space: nowrap;
   }
   .w-mark-btn {
     justify-content: center;
     padding: 10px 12px;
     font-size: 12px;
+    flex: 1 1 100%;
+    order: 99;
   }
   .w-nav-btn { width: 44px; height: 44px; }
 
