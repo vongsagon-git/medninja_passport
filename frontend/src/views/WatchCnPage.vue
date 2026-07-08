@@ -1289,6 +1289,28 @@ export default {
       try {
         const ctx = getDeviceContext()
         const isFirst = !this._heartbeatSent
+        // ⭐ ดึงสถานะจริงจาก Aliplayer (Warroom = ต้องแม่น 100%)
+        let realIsPlaying = this.isPlaying
+        let realT = this._currentTime || 0
+        let realD = this._videoDuration || 0
+        try {
+          if (this._aliPlayer) {
+            if (typeof this._aliPlayer.getStatus === 'function') {
+              const s = this._aliPlayer.getStatus()
+              realIsPlaying = s === 'play' || s === 'playing'
+            }
+            if (typeof this._aliPlayer.getCurrentTime === 'function') {
+              realT = this._aliPlayer.getCurrentTime() || realT
+            }
+            if (typeof this._aliPlayer.getDuration === 'function') {
+              realD = this._aliPlayer.getDuration() || realD
+            }
+          }
+        } catch {}
+        // Sync local
+        this.isPlaying = realIsPlaying
+        this._currentTime = realT
+        if (realD > 0) this._videoDuration = realD
         const data = await api.post('/my/heartbeat', {
           firstBeat: isFirst || undefined,
           oldTabId: window.name || undefined,
@@ -1299,9 +1321,9 @@ export default {
           tabId: this.tabId,
           os: ctx.os,
           browser: ctx.browser,
-          currentTime: Math.round(this._currentTime || 0),
-          videoDuration: Math.round(this._videoDuration || 0),
-          isPlaying: this.isPlaying,
+          currentTime: Math.round(realT),
+          videoDuration: Math.round(realD),
+          isPlaying: realIsPlaying,
           playerError: this._playerError || '',
           appVersion: _getAppVersion(),
           contentType: this.isBonus ? 'bonus' : 'video',
@@ -1855,18 +1877,38 @@ export default {
         this._diagLog('ws_error', 'socket connect_error', { detail: err?.message || String(err) })
       })
 
-      // Periodic state emit ทุก 3 วิ — ใช้ค่าจาก event (timeupdate/play/pause) ไม่ใช้ callback
-      // เพราะ Safari บาง version callback ไม่ fire → warroom เห็น 0:00 + pause
+      // ⭐ Periodic state emit — ดึง state จริงจาก Aliplayer (Warroom ต้องแม่น 100%)
       this._socketStateInterval = setInterval(() => {
         if (!this._socket?.connected) return
-        const sd = {
-          currentTime: Math.round(this._currentTime || 0),
-          duration: Math.round(this._videoDuration || 0),
-          isPlaying: this.isPlaying,
+        // ดึงสถานะจริงจาก Aliplayer (getStatus, getCurrentTime, getDuration)
+        let realIsPlaying = false
+        let realT = this._currentTime || 0
+        let realD = this._videoDuration || 0
+        try {
+          if (this._aliPlayer && typeof this._aliPlayer.getStatus === 'function') {
+            const status = this._aliPlayer.getStatus() // 'play' | 'pause' | 'ended' | 'ready' | ...
+            realIsPlaying = status === 'play' || status === 'playing'
+          } else {
+            realIsPlaying = this.isPlaying
+          }
+          if (this._aliPlayer && typeof this._aliPlayer.getCurrentTime === 'function') {
+            realT = this._aliPlayer.getCurrentTime() || 0
+          }
+          if (this._aliPlayer && typeof this._aliPlayer.getDuration === 'function') {
+            realD = this._aliPlayer.getDuration() || 0
+          }
+        } catch { realIsPlaying = this.isPlaying }
+        // Sync local state ให้ตรงจริง (เผื่อ event หลุด)
+        this.isPlaying = realIsPlaying
+        this._currentTime = realT
+        if (realD > 0) this._videoDuration = realD
+        this._socket.emit('video:state', {
+          currentTime: Math.round(realT),
+          duration: Math.round(realD),
+          isPlaying: realIsPlaying,
           drmMode: this.video?.drmMode || '',
           appVersion: _getAppVersion()
-        }
-        this._socket.emit('video:state', sd)
+        })
       }, 3000)
 
       // Anti-share: ถูกแทนที่โดยจอใหม่
@@ -2450,7 +2492,7 @@ export default {
             this.toggleWatched(this.videoIndex)
           }
         })
-        // ⭐ Timeupdate — sync ทุก state + socket state ทุก 3 วิ (เหมือน Bunny)
+        // ⭐ Timeupdate — sync time + socket state (isPlaying = trust event play/pause เท่านั้น)
         this._aliPlayer.on('timeupdate', () => {
           try {
             const t = this._aliPlayer.getCurrentTime() || 0
@@ -2460,22 +2502,28 @@ export default {
             // Sync heartbeat vars (Warroom + kick check ใช้ตัวนี้)
             this._currentTime = t
             if (d > 0) this._videoDuration = d
-            // Fallback isPlaying — ถ้า timeupdate ยิงแปลว่าเล่นอยู่จริง
-            if (!this.isPlaying) this.isPlaying = true
             // Auto mark watched ที่ 90%
             if (!this.isDemo && this._videoDuration > 0 &&
                 t >= this._videoDuration * 0.9 && !this.isWatched(this.videoIndex)) {
               this.toggleWatched(this.videoIndex)
             }
-            // Socket state ทุก 3 วิ (Warroom monitoring)
+            // Socket state ทุก 3 วิ (Warroom monitoring) — ดึง getStatus จริง
             const now = Date.now()
             if (!this._lastSocketState || now - this._lastSocketState > 3000) {
               this._lastSocketState = now
               if (this._socket?.connected) {
+                let realIsPlaying = this.isPlaying
+                try {
+                  if (typeof this._aliPlayer.getStatus === 'function') {
+                    const s = this._aliPlayer.getStatus()
+                    realIsPlaying = s === 'play' || s === 'playing'
+                    this.isPlaying = realIsPlaying
+                  }
+                } catch {}
                 this._socket.emit('video:state', {
                   currentTime: Math.round(t),
                   duration: Math.round(d),
-                  isPlaying: this.isPlaying,
+                  isPlaying: realIsPlaying,
                   appVersion: _getAppVersion()
                 })
               }
