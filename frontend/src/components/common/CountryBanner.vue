@@ -13,12 +13,21 @@
       role="status"
       aria-live="polite"
     >
-      <!-- ⭐ Error mode: API /geo/whoami ล้ม → MedNinja Technology สีแดง -->
-      <div v-if="isError" class="banner-inner banner-error">
-        <span class="dot dot-error"></span>
-        <span class="brand-title">⚠️ MedNinja Technology</span>
-        <span class="sep">·</span>
-        <span class="brand-sub">การเชื่อมต่อขัดข้อง (fallback: TH)</span>
+      <!-- ⭐ Error mode: API /geo/whoami ล้ม → เนียนๆ แสดง MedNinja Technology + device (สีแดง) -->
+      <div v-if="isError" class="banner-inner">
+        <span class="dot" style="background:#fbbf24"></span>
+        <span class="brand-title">MedNinja Technology</span>
+
+        <!-- Device info (desktop only) -->
+        <span class="sep hide-mobile">·</span>
+        <span class="item hide-mobile">{{ deviceCategoryLabel }}</span>
+        <span class="sep hide-mobile">·</span>
+        <span class="item hide-mobile">{{ deviceOS }}</span>
+        <span class="sep hide-mobile">·</span>
+        <span class="item hide-mobile">{{ deviceBrowser }}</span>
+        <span class="sep hide-mobile">·</span>
+        <span class="item screen-size hide-mobile">{{ screenSize }}</span>
+
         <button
           v-if="isLoggedIn"
           class="logout-btn"
