@@ -161,6 +161,93 @@
                 ref="aliPlayerBox"
                 class="ali-player-box"
               ></div>
+
+              <!-- ⭐ Custom Player Controls (เขียนเอง ห้าม native ยุ่ง) -->
+              <div
+                v-if="hasAliVideo && !replaced && !recorderBlocked && playerReady"
+                class="ali-ctl-layer"
+                :class="{ 'hidden': !aliControlsVisible }"
+                @click.self="aliOnPlayerTap"
+              >
+                <!-- Middle: Big play/pause button -->
+                <button class="ali-ctl-big-play" @click.stop="aliTogglePlay">
+                  <svg v-if="isPlaying" viewBox="0 0 24 24" fill="currentColor" width="36" height="36">
+                    <rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="currentColor" width="36" height="36">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </button>
+
+                <!-- Bottom control bar -->
+                <div class="ali-ctl-bar" @click.stop>
+                  <!-- Timeline -->
+                  <div class="ali-ctl-timeline">
+                    <input
+                      type="range"
+                      min="0"
+                      :max="aliDuration || 0"
+                      step="0.1"
+                      :value="aliCurrentTime"
+                      @input="aliOnSeekbarInput"
+                      class="ali-ctl-seek"
+                      :style="{ '--pct': ((aliCurrentTime / (aliDuration || 1)) * 100) + '%' }"
+                    />
+                  </div>
+
+                  <div class="ali-ctl-row">
+                    <!-- Play/Pause -->
+                    <button class="ali-ctl-btn" @click="aliTogglePlay" :title="isPlaying ? 'Pause' : 'Play'">
+                      <svg v-if="isPlaying" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                      <svg v-else viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+
+                    <!-- Time display -->
+                    <div class="ali-ctl-time">
+                      <span>{{ aliFmtTime(aliCurrentTime) }}</span>
+                      <span class="ali-ctl-time-sep">/</span>
+                      <span class="ali-ctl-time-total">{{ aliFmtTime(aliDuration) }}</span>
+                    </div>
+
+                    <div class="ali-ctl-spacer"></div>
+
+                    <!-- Volume (desktop only) -->
+                    <div class="ali-ctl-volume hide-mobile">
+                      <button class="ali-ctl-btn" @click="aliToggleMute">
+                        <svg v-if="aliMuted || aliVolume === 0" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M16.5 12A4.5 4.5 0 0014 8.03v2.21l2.45 2.45a4.6 4.6 0 00.05-.69zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0021 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 003.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                        <svg v-else-if="aliVolume > 0.5" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8.03v7.94A4.5 4.5 0 0016.5 12zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4-.91 7-4.49 7-8.77s-3-7.86-7-8.77z"/></svg>
+                        <svg v-else viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18.5 12A4.5 4.5 0 0016 8.03v7.94A4.5 4.5 0 0018.5 12zM5 9v6h4l5 5V4L9 9H5z"/></svg>
+                      </button>
+                      <input
+                        type="range" min="0" max="1" step="0.05" :value="aliMuted ? 0 : aliVolume"
+                        @input="aliOnVolumeInput"
+                        class="ali-ctl-vol"
+                      />
+                    </div>
+
+                    <!-- Speed -->
+                    <div class="ali-ctl-speed-wrap">
+                      <button class="ali-ctl-btn ali-ctl-speed-btn" @click.stop="aliShowSpeedMenu = !aliShowSpeedMenu">
+                        {{ aliSpeed }}x
+                      </button>
+                      <div v-if="aliShowSpeedMenu" class="ali-ctl-speed-menu">
+                        <button
+                          v-for="s in [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]"
+                          :key="s"
+                          class="ali-ctl-speed-item"
+                          :class="{ active: s === aliSpeed }"
+                          @click.stop="aliSetSpeed(s)"
+                        >{{ s }}x</button>
+                      </div>
+                    </div>
+
+                    <!-- Fullscreen -->
+                    <button class="ali-ctl-btn" @click="aliToggleFullscreen" title="Fullscreen">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
               <!-- Loading overlay — บังจน Ali player ready -->
               <div v-if="hasAliVideo && !replaced && !recorderBlocked && !playerReady" class="player-loading-overlay">
                 <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
@@ -661,6 +748,16 @@ export default {
       showLineLinkPopup: false,
       isPlaying: false,
       playerReady: false,
+      // ⭐ Custom Ali controls state
+      aliCurrentTime: 0,
+      aliDuration: 0,
+      aliVolume: 1,
+      aliMuted: false,
+      aliSpeed: 1,
+      aliShowSpeedMenu: false,
+      aliShowVolumeSlider: false,
+      aliControlsVisible: true,
+      _aliHideControlsTimer: null,
       _debugTime: '',
       drmType: null,
       linkCopied: false,
@@ -2330,10 +2427,10 @@ export default {
           rePlay: false,
           playsinline: true,
           preload: true,
-          // ⭐ 'click' → mobile/desktop แตะ/คลิกเพื่อ show/hide controls
-          // ('hover' ทำงานแค่ desktop เมาส์เท่านั้น mobile จะไม่มีปุ่ม play)
-          controlBarVisibility: 'click',
-          showBigPlayButton: true, // ⭐ ปุ่ม play ใหญ่กลางจอ
+          // ⭐ ซ่อน native controls — ใช้ custom controls เอง
+          skinLayout: false,
+          controlBarVisibility: 'never',
+          showBigPlayButton: false,
           useH5Prism: true,
           license: {
             domain: 'passport.medninja.academy',
@@ -2352,18 +2449,27 @@ export default {
         this._aliPlayer.on('ready', () => {
           console.log('[Ali] Player ready')
           this.playerReady = true
+          try { this.aliDuration = this._aliPlayer.getDuration() || 0 } catch {}
+          this._startAliTimePolling()
         })
         this._aliPlayer.on('canplay', () => {
           console.log('[Ali] canplay — DRM decrypted OK')
+          try { this.aliDuration = this._aliPlayer.getDuration() || 0 } catch {}
         })
         this._aliPlayer.on('play', () => {
           this.isPlaying = true
+          this._scheduleHideControls()
         })
         this._aliPlayer.on('pause', () => {
           this.isPlaying = false
+          this._showControlsSticky()
         })
         this._aliPlayer.on('ended', () => {
           this.isPlaying = false
+          this._showControlsSticky()
+        })
+        this._aliPlayer.on('timeupdate', () => {
+          try { this.aliCurrentTime = this._aliPlayer.getCurrentTime() || 0 } catch {}
         })
         this._aliPlayer.on('error', (e) => {
           const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {})
@@ -2377,11 +2483,107 @@ export default {
       }
     },
     _disposeAliPlayer () {
+      this._stopAliTimePolling()
       if (this._aliPlayer) {
         try { this._aliPlayer.dispose() } catch {}
         this._aliPlayer = null
       }
       this.playerReady = false
+      this.aliCurrentTime = 0
+      this.aliDuration = 0
+      this.isPlaying = false
+    },
+    // ⭐ Custom Aliplayer controls
+    _startAliTimePolling () {
+      this._stopAliTimePolling()
+      this._aliTimePoll = setInterval(() => {
+        if (!this._aliPlayer) return
+        try {
+          this.aliCurrentTime = this._aliPlayer.getCurrentTime() || 0
+          if (!this.aliDuration) this.aliDuration = this._aliPlayer.getDuration() || 0
+        } catch {}
+      }, 500)
+    },
+    _stopAliTimePolling () {
+      if (this._aliTimePoll) { clearInterval(this._aliTimePoll); this._aliTimePoll = null }
+    },
+    _showControlsSticky () {
+      this.aliControlsVisible = true
+      if (this._aliHideControlsTimer) { clearTimeout(this._aliHideControlsTimer); this._aliHideControlsTimer = null }
+    },
+    _scheduleHideControls () {
+      this.aliControlsVisible = true
+      if (this._aliHideControlsTimer) clearTimeout(this._aliHideControlsTimer)
+      this._aliHideControlsTimer = setTimeout(() => {
+        if (this.isPlaying) this.aliControlsVisible = false
+      }, 3000)
+    },
+    aliTogglePlay () {
+      if (!this._aliPlayer) return
+      try {
+        if (this.isPlaying) this._aliPlayer.pause()
+        else this._aliPlayer.play()
+      } catch {}
+    },
+    aliSeek (sec) {
+      if (!this._aliPlayer) return
+      try { this._aliPlayer.seek(sec) } catch {}
+      this.aliCurrentTime = sec
+    },
+    aliOnSeekbarInput (e) {
+      const val = parseFloat(e.target.value) || 0
+      this.aliSeek(val)
+      this._showControlsSticky()
+    },
+    aliSetSpeed (s) {
+      if (!this._aliPlayer) return
+      try { this._aliPlayer.setSpeed(s) } catch {}
+      this.aliSpeed = s
+      this.aliShowSpeedMenu = false
+    },
+    aliToggleMute () {
+      if (!this._aliPlayer) return
+      try {
+        if (this.aliMuted) { this._aliPlayer.unmute(); this.aliMuted = false }
+        else { this._aliPlayer.mute(); this.aliMuted = true }
+      } catch {}
+    },
+    aliSetVolume (v) {
+      if (!this._aliPlayer) return
+      try { this._aliPlayer.setVolume(v) } catch {}
+      this.aliVolume = v
+      if (v > 0 && this.aliMuted) this.aliMuted = false
+    },
+    aliOnVolumeInput (e) {
+      const v = parseFloat(e.target.value) || 0
+      this.aliSetVolume(v)
+    },
+    aliToggleFullscreen () {
+      const box = this.$el.querySelector('.w-player-box')
+      if (!box) return
+      const doc = document
+      if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+        (doc.exitFullscreen || doc.webkitExitFullscreen).call(doc)
+      } else {
+        (box.requestFullscreen || box.webkitRequestFullscreen).call(box)
+      }
+    },
+    aliFmtTime (sec) {
+      const s = Math.max(0, Math.floor(sec || 0))
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
+      const ss = s % 60
+      const pad = n => (n < 10 ? '0' + n : '' + n)
+      return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${pad(m)}:${pad(ss)}`
+    },
+    aliOnPlayerTap () {
+      // แตะบน player → toggle controls (mobile)
+      if (this.aliControlsVisible) {
+        if (this.isPlaying) this.aliControlsVisible = false
+      } else {
+        this.aliControlsVisible = true
+        this._scheduleHideControls()
+      }
     }
   },
   watch: {
@@ -3935,23 +4137,146 @@ kbd {
   height: 100%;
   background: #000;
 }
+
+/* ⭐ Custom Aliplayer Controls (เขียนเอง) */
+.ali-ctl-layer {
+  position: absolute; inset: 0;
+  pointer-events: auto;
+  z-index: 20;
+  transition: opacity .2s;
+  display: flex; flex-direction: column;
+  background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0,0,0,0.7) 100%);
+}
+.ali-ctl-layer.hidden {
+  opacity: 0; pointer-events: none;
+}
+.ali-ctl-big-play {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 68px; height: 68px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(6px);
+  border: none; color: #fff;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: transform .1s, background .15s;
+}
+.ali-ctl-big-play:hover { background: rgba(0, 0, 0, 0.75); transform: translate(-50%, -50%) scale(1.05); }
+.ali-ctl-big-play:active { transform: translate(-50%, -50%) scale(0.95); }
+
+.ali-ctl-bar {
+  margin-top: auto;
+  padding: 0 14px 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  color: #fff;
+}
+.ali-ctl-timeline { padding: 0 4px; }
+.ali-ctl-seek {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, #ef4444 0%, #ef4444 var(--pct, 0%), rgba(255,255,255,0.3) var(--pct, 0%), rgba(255,255,255,0.3) 100%);
+  outline: none;
+  cursor: pointer;
+}
+.ali-ctl-seek::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #ef4444; border: none; cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+.ali-ctl-seek::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #ef4444; border: none; cursor: pointer;
+}
+.ali-ctl-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.ali-ctl-btn {
+  background: transparent; border: none; color: #fff;
+  padding: 6px 8px; border-radius: 6px; cursor: pointer;
+  display: grid; place-items: center;
+  transition: background .12s;
+}
+.ali-ctl-btn:hover { background: rgba(255,255,255,0.15); }
+.ali-ctl-btn:active { transform: scale(0.95); }
+.ali-ctl-time {
+  font-size: 12px; font-family: 'SF Mono', ui-monospace, Consolas, monospace;
+  color: #fff; padding: 0 6px;
+  display: flex; align-items: center; gap: 4px;
+}
+.ali-ctl-time-sep { opacity: 0.5; }
+.ali-ctl-time-total { opacity: 0.75; }
+.ali-ctl-spacer { flex: 1; }
+
+.ali-ctl-volume {
+  display: flex; align-items: center; gap: 4px;
+}
+.ali-ctl-vol {
+  -webkit-appearance: none; appearance: none;
+  width: 70px; height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,0.3); outline: none; cursor: pointer;
+}
+.ali-ctl-vol::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #fff; border: none; cursor: pointer;
+}
+.ali-ctl-vol::-moz-range-thumb {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #fff; border: none; cursor: pointer;
+}
+
+.ali-ctl-speed-wrap { position: relative; }
+.ali-ctl-speed-btn {
+  min-width: 44px; font-weight: 700; font-size: 12.5px;
+  font-family: inherit;
+}
+.ali-ctl-speed-menu {
+  position: absolute; bottom: 100%; right: 0; margin-bottom: 6px;
+  background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(6px);
+  border-radius: 8px; padding: 4px;
+  min-width: 90px; display: flex; flex-direction: column;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+}
+.ali-ctl-speed-item {
+  background: transparent; border: none; color: #fff;
+  padding: 8px 12px; text-align: left;
+  font-size: 12.5px; font-family: inherit; cursor: pointer;
+  border-radius: 4px;
+}
+.ali-ctl-speed-item:hover { background: rgba(255,255,255,0.1); }
+.ali-ctl-speed-item.active { background: rgba(239, 68, 68, 0.8); font-weight: 700; }
+
+.ali-ctl-layer .hide-mobile {
+  display: none;
+}
+@media (min-width: 768px) {
+  .ali-ctl-layer .hide-mobile {
+    display: flex;
+  }
+}
+
 .ali-player-box :deep(.prism-player) {
   width: 100% !important;
   height: 100% !important;
 }
-/* ⭐ กัน error text ล้นออกนอก player — Aliplayer แสดง error state เป็น plain text */
+/* ⭐ ซ่อน Aliplayer error/notice UI ทั้งหมด (เขียน controls เอง) */
 .ali-player-box :deep(.prism-ErrorMessage),
 .ali-player-box :deep(.prism-notice),
-.ali-player-box :deep(.prism-error) {
-  max-width: 100% !important;
-  max-height: 100% !important;
-  padding: 12px !important;
-  overflow: auto !important;
-  font-size: 12px !important;
-  word-break: break-all !important;
-  box-sizing: border-box !important;
+.ali-player-box :deep(.prism-error),
+.ali-player-box :deep(.prism-info-display),
+.ali-player-box :deep(.prism-tips),
+.ali-player-box :deep(.prism-cover) {
+  display: none !important;
 }
-/* กัน text-node ตรงๆ ล้น */
+/* ซ่อน native controls ทั้งหมด (เขียนเอง) */
+.ali-player-box :deep(.prism-controlbar),
+.ali-player-box :deep(.prism-big-play-btn),
+.ali-player-box :deep(.prism-progress-bar),
+.ali-player-box :deep(.prism-setting-btn),
+.ali-player-box :deep(.prism-fullscreen-btn),
+.ali-player-box :deep(.prism-volume) {
+  display: none !important;
+}
 .ali-player-box {
   overflow: hidden !important;
 }
