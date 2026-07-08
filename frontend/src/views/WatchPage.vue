@@ -217,7 +217,7 @@
                   <span class="w-video-idx">วีดีโอที่ {{ videoIndex + 1 }} จาก {{ totalVideos }}</span>
                   <span v-if="video.drmMode && !isDemo" class="w-drm-badge" :class="'drm-' + video.drmMode">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
-                    {{ video.drmMode === 'widevine' ? 'Widevine' : 'Protection' }} · {{ video.libraryId ? video.libraryId.slice(-3) : '' }}
+                    {{ video.drmMode === 'widevine' ? 'GLOBAL WIDEVINE' : 'GLOBAL PROTECTION' }}
                   </span>
                   <span v-if="deviceInfo" class="w-device-badge">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v8.5A2.25 2.25 0 0115.75 15h-3.105a3.501 3.501 0 001.1 1.677A.75.75 0 0113.26 18H6.74a.75.75 0 01-.484-1.323A3.501 3.501 0 007.355 15H4.25A2.25 2.25 0 012 12.75v-8.5zm1.5 0a.75.75 0 01.75-.75h11.5a.75.75 0 01.75.75v7.5a.75.75 0 01-.75.75H4.25a.75.75 0 01-.75-.75v-7.5z" clip-rule="evenodd"/></svg>
