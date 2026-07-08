@@ -322,7 +322,7 @@ onUnmounted(() => {
           <span class="logo-icon">🎬</span>
           <span class="logo-text">MedNinja <em>China Test</em></span>
         </div>
-        <p class="tagline">ทดสอบเล่นวิดีโอผ่าน Alibaba CDN (HK Edge) + HTTP-DRM</p>
+        <p class="tagline">ทดสอบระบบเล่นวิดีโอสำหรับผู้ใช้งานในประเทศจีน</p>
       </header>
 
       <div class="info-grid">
@@ -345,7 +345,7 @@ onUnmounted(() => {
         <div class="info-card">
           <div class="info-label">Encryption</div>
           <div class="info-value">
-            <span class="badge badge-encrypt">Alibaba HTTP-DRM 🔒</span>
+            <span class="badge badge-encrypt">เข้ารหัสระดับสูง 🔒</span>
           </div>
         </div>
         <div class="info-card">
@@ -389,7 +389,7 @@ onUnmounted(() => {
           <strong>ติดต่อ</strong>: ส่ง screenshot + browser console log กลับมาที่ทีม MedNinja
         </p>
         <p class="footer-meta">
-          MedNinja © 2026 · China Test Page · Alibaba VOD + Aliplayer
+          MedNinja © 2026 · China Test Page
         </p>
       </footer>
     </div>

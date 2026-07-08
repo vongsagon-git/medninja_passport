@@ -12,7 +12,7 @@
           </div>
         </div>
         <div class="pp-header-right">
-          <span class="cn-badge" title="CN Mirror — Alibaba VOD">CN</span>
+          <span class="cn-badge" title="China Edition">CN</span>
           <span class="pp-country">@{{ user?.firstName || 'student' }}</span>
         </div>
       </div>

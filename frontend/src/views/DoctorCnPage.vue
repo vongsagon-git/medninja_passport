@@ -70,14 +70,14 @@ export default {
       const bump = (pct, text) => { this.progressPct = pct; this.statusText = text }
 
       // Step 1: Token
-      bump(10, 'ตรวจการเข้าสู่ระบบ...')
+      bump(10, 'ตรวจสิทธิ์การเข้าถึง...')
       await w(300)
       const token = localStorage.getItem('token')
       add('JWT token', !!token, token ? `${token.length} chars` : 'MISSING')
       if (!token) { this.sendAndFinish(); return }
 
       // Step 2: Geo (whoami)
-      bump(20, 'ตรวจตำแหน่งของคุณ...')
+      bump(20, 'ตรวจการเชื่อมต่อ...')
       try {
         const t = Date.now()
         const geo = await api.get('/china/whoami')
@@ -88,7 +88,7 @@ export default {
       }
 
       // Step 3: Alibaba VOD STS token
-      bump(35, 'ขอรหัสเข้าดูวิดีโอ...')
+      bump(35, 'ขอกุญแจการเข้ารหัส...')
       const testVideoId = 'c066ba8f7a7b71f1a472f6f7f45a0102'
       let stsOk = false
       try {
@@ -104,7 +104,7 @@ export default {
       }
 
       // Step 4: Alibaba VOD PlayInfo
-      bump(50, 'ตรวจข้อมูลวิดีโอ...')
+      bump(50, 'เตรียมวิดีโอความละเอียดสูง...')
       try {
         const t = Date.now()
         const info = await api.get(`/china/playinfo/${testVideoId}`)
@@ -119,7 +119,7 @@ export default {
       }
 
       // Step 5: Aliplayer SDK load
-      bump(65, 'ตรวจโปรแกรมเล่นวิดีโอ...')
+      bump(65, 'เปิดโปรแกรมเล่น...')
       try {
         const t = Date.now()
         if (!window.Aliplayer) {
@@ -140,7 +140,7 @@ export default {
       }
 
       // Step 6: Widevine EME support
-      bump(80, 'ตรวจระบบป้องกันการคัดลอก...')
+      bump(80, 'เปิดระบบป้องกันลิขสิทธิ์...')
       try {
         if (!navigator.requestMediaKeySystemAccess) {
           add('Widevine EME', false, 'browser ไม่รองรับ EME API')
@@ -166,7 +166,7 @@ export default {
       }
 
       // Step 7: China CDN reachability
-      bump(92, 'ตรวจการเชื่อมต่ออินเทอร์เน็ต...')
+      bump(92, 'ตรวจสัญญาณอินเทอร์เน็ต...')
       try {
         const t = Date.now()
         await fetch('https://cdn-cn.medninja.academy/favicon.ico', { mode: 'no-cors', cache: 'no-store' })
