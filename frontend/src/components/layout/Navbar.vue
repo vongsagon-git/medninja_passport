@@ -107,7 +107,6 @@
 <script>
 import { useAuthStore } from '../../stores/auth'
 import { useRouter } from 'vue-router'
-import { myHomeUrl } from '../../composables/useCountryGuard'
 
 export default {
   name: 'Navbar',
@@ -115,7 +114,8 @@ export default {
     return {
       menuOpen: false,
       isScrolled: false,
-      nlexModalOpen: false // kept for compat
+      nlexModalOpen: false, // kept for compat
+      myUrl: '/my' // ⭐ resolved async ใน mounted จาก /api/geo/whoami
     }
   },
   setup() {
@@ -123,13 +123,13 @@ export default {
     const router = useRouter()
     return { authStore, router }
   },
-  computed: {
-    myUrl() {
-      // ⭐ ถ้า login_country=CN → /my-cn, ไม่งั้น → /my
-      return myHomeUrl()
-    }
-  },
-  mounted() {
+  async mounted() {
+    // ⭐ Detect country จาก backend (ไม่ใช้ localStorage)
+    try {
+      const resp = await fetch('/api/geo/whoami').then(r => r.json())
+      this.myUrl = resp.country === 'CN' ? '/my-cn' : '/my'
+    } catch { this.myUrl = '/my' }
+
     this._scrollHandler = () => {
       this.isScrolled = window.scrollY > 20
     }

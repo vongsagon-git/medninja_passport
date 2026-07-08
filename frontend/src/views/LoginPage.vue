@@ -207,13 +207,12 @@ export default {
           password: this.form.password
         })
 
-        // ⭐ Detect country + save + route ตาม country
+        // ⭐ Detect country จาก backend (ไม่ใช้ localStorage)
         let userCountry = 'TH'
         try {
           const geoResp = await fetch('/api/geo/whoami').then(r => r.json())
           userCountry = geoResp.country || 'TH'
         } catch {}
-        localStorage.setItem('login_country', userCountry)
 
         if (this.authStore.user?.role === 'admin') {
           this.router.push('/admin')

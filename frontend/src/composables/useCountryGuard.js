@@ -1,38 +1,21 @@
 /**
- * useCountryGuard — ตรวจ country ทุกครั้งที่หน้าเปลี่ยน
+ * useCountryGuard — ตรวจ country ทุกครั้งที่หน้าเปลี่ยน (fetch จาก /api/geo/whoami)
  *
- * ถ้า user login ตอน TH แต่ต่อมา IP เปลี่ยนเป็น CN → logout ทันที
- * (หรือกลับกัน)
+ * IP=CN บน /my → auto redirect /my-cn (ไม่ logout)
+ * IP=TH บน /my-cn → auto redirect /my
+ * Admin bypass — เข้าได้ทุกหน้า
  *
- * ใช้ในหน้า /my และ /my-cn ทุกหน้า:
- *
- *   import { useCountryGuard } from '@/composables/useCountryGuard'
- *   useCountryGuard('TH')  // หน้านี้ควรเป็น TH
- *   useCountryGuard('CN')  // หน้านี้ควรเป็น CN
+ * ⚠️ ห้ามใช้ localStorage — ใช้ค่า country จริงจาก backend เสมอ
  */
 import { watch } from 'vue'
 import { useRouter } from 'vue-router'
 import useCountry from './useCountry'
 import { useAuthStore } from '../stores/auth'
 
-const LOGIN_COUNTRY_KEY = 'login_country'
-
 export function useCountryGuard (expectedCountry) {
   const router = useRouter()
   const authStore = useAuthStore()
   const { country, ready } = useCountry()
-
-  const forceLogout = (reason) => {
-    console.warn(`[CountryGuard] ${reason} — logout`)
-    const msg = expectedCountry === 'TH'
-      ? 'ตรวจพบ IP ไม่ตรงประเทศไทย — กรุณา login ใหม่'
-      : 'ตรวจพบ IP ไม่ตรงประเทศจีน — กรุณา login ใหม่'
-    localStorage.removeItem(LOGIN_COUNTRY_KEY)
-    authStore.logout().finally(() => {
-      alert(msg)
-      router.push('/')
-    })
-  }
 
   const check = () => {
     if (!ready.value) return
@@ -45,17 +28,26 @@ export function useCountryGuard (expectedCountry) {
       return
     }
 
-    // ⭐ STRICT: IP ปัจจุบันต้องตรง expected (ตาม route)
-    //   /my → guard('TH')  → IP ต้อง TH
-    //   /my-cn → guard('CN') → IP ต้อง CN
-    //   ถ้าคนพยายาม bypass URL (เช่นพิมพ์ /my-cn แต่ IP=TH) → logout ทันที
+    // ⭐ Auto-redirect ระหว่าง /my ↔ /my-cn ตาม IP จริงจาก backend (ไม่ใช้ localStorage)
     if (current !== expectedCountry) {
-      forceLogout(`Expected ${expectedCountry} but IP resolved to ${current}`)
+      if (current === 'CN' && expectedCountry === 'TH') {
+        console.warn('[CountryGuard] IP=CN แต่อยู่ /my → redirect /my-cn')
+        router.push('/my-cn')
+        return
+      }
+      if (current === 'TH' && expectedCountry === 'CN') {
+        console.warn('[CountryGuard] IP=TH แต่อยู่ /my-cn → redirect /my')
+        router.push('/my')
+        return
+      }
+      // country อื่นๆ (HK/SG/US...) — treat as global (TH bucket)
+      if (expectedCountry === 'CN') {
+        router.push('/my')
+        return
+      }
       return
     }
-
-    // ตรงเป๊ะ → save login_country ให้ Navbar ใช้
-    localStorage.setItem(LOGIN_COUNTRY_KEY, current)
+    // ตรงเป๊ะ → ไม่ต้องทำอะไร (ไม่ใช้ localStorage)
   }
 
   // Check ทันทีถ้า ready แล้ว
@@ -65,24 +57,18 @@ export function useCountryGuard (expectedCountry) {
   watch(country, check)
 }
 
-export function getLoginCountry () {
-  return localStorage.getItem(LOGIN_COUNTRY_KEY) || ''
-}
-
-export function setLoginCountry (c) {
-  if (c) localStorage.setItem(LOGIN_COUNTRY_KEY, c)
-}
-
-export function clearLoginCountry () {
-  localStorage.removeItem(LOGIN_COUNTRY_KEY)
-}
-
 /**
- * myHomeUrl() — return '/my-cn' หรือ '/my' ตาม login_country
- * ใช้แทน hardcoded '/my' ใน navigation links / redirects
+ * myHomeUrl() — fetch country จริงจาก backend → '/my-cn' หรือ '/my'
+ * ⚠️ Async — ต้อง await
  */
-export function myHomeUrl () {
-  return localStorage.getItem(LOGIN_COUNTRY_KEY) === 'CN' ? '/my-cn' : '/my'
+export async function myHomeUrl () {
+  try {
+    const res = await fetch('/api/geo/whoami', { credentials: 'include' })
+    const d = await res.json()
+    return d.country === 'CN' ? '/my-cn' : '/my'
+  } catch {
+    return '/my'
+  }
 }
 
 export default useCountryGuard

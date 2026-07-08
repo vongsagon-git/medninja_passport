@@ -48,7 +48,7 @@ export function startVersionCheck() {
           if (newVersionAvailable) {
             const p = window.location.pathname
             if (p.includes('/my/watch/') || p.includes('/my-cn/watch/') || p.includes('/demo/watch/')) {
-              const myHome = localStorage.getItem('login_country') === 'CN' ? '/my-cn' : '/my'
+              const myHome = window.location.pathname.startsWith('/my-cn') ? '/my-cn' : '/my'
               window.location.href = myHome
             }
           }

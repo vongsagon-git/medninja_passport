@@ -43,8 +43,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response.data,
   async (error) => {
-    // ⭐ Country-aware home URL
-    const myHome = localStorage.getItem('login_country') === 'CN' ? '/my-cn' : '/my'
+    // ⭐ Country-aware home URL — ดูจาก URL ปัจจุบัน (ไม่ใช้ localStorage)
+    const myHome = window.location.pathname.startsWith('/my-cn') ? '/my-cn' : '/my'
     // LINE ยังไม่เชื่อม → กลับไปหน้า my ให้เชื่อม
     if (error.response?.status === 403 && error.response?.data?.message === 'LINE_REQUIRED') {
       if (window.location.pathname !== myHome) {
