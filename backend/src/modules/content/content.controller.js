@@ -86,7 +86,7 @@ exports.getSection = async (req, res, next) => {
           pdfFile: (locked || !hasPdf) ? '' : v.pdfFile,
           pdfFileUrl: '',
           pdfFileName: (locked || !hasPdf) ? '' : (v.pdfFileName || v.pdfFile),
-          hasVideo: !!v.bunnyVideoId,
+          hasVideo: !!(v.bunnyVideoId || v.aliVideoId),
           hasBonus: !!(v.bonusBunnyVideoId || v.bonusTitle || v.bonusLabel || v.bonusPdfFile),
           hasBonusVideo,
           bonusLocked,
@@ -270,6 +270,9 @@ exports.getVideo = async (req, res, next) => {
     // ═══ เลือก video ID ตาม bonus flag ═══
     const targetVideoId = isBonus ? video.bonusBunnyVideoId : video.bunnyVideoId
     const targetDrmId = isBonus ? video.bonusBunnyDrmVideoId : video.bunnyDrmVideoId
+    // ⭐ CN: Ali video IDs
+    const targetAliId = isBonus ? video.bonusAliVideoId : video.aliVideoId
+    const targetAliDrmId = isBonus ? video.bonusAliDrmVideoId : video.aliDrmVideoId
     const targetTitle = isBonus ? (video.bonusTitle || video.title) : video.title
     const targetDuration = isBonus ? (video.bonusDuration || video.duration) : video.duration
 
@@ -281,17 +284,22 @@ exports.getVideo = async (req, res, next) => {
       ? getSignedEmbedUrl(targetDrmId)
       : getDemoEmbedUrl(targetVideoId)
 
+    // ⭐ CN skip Bunny verify — ใช้ Aliplayer ใน frontend อยู่แล้ว ไม่ต้อง Bunny
+    const isCN = !!(req.geo && req.geo.isChina)
+
     // ═══ Server-side verify: เช็คว่า embedUrl ใช้ได้ก่อนส่งให้ frontend ═══
-    let cdnStatus = 0
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const cdnResp = await fetch(embedUrl, {
-          headers: { 'Referer': 'https://medninja.academy/', 'Origin': 'https://medninja.academy' }
-        })
-        cdnStatus = cdnResp.status
-        if (cdnStatus === 200) break
-      } catch { cdnStatus = 0 }
-      if (attempt === 0 && cdnStatus !== 200) await new Promise(r => setTimeout(r, 1000)) // รอ 1 วิ แล้ว retry
+    let cdnStatus = isCN ? 200 : 0
+    if (!isCN) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const cdnResp = await fetch(embedUrl, {
+            headers: { 'Referer': 'https://medninja.academy/', 'Origin': 'https://medninja.academy' }
+          })
+          cdnStatus = cdnResp.status
+          if (cdnStatus === 200) break
+        } catch { cdnStatus = 0 }
+        if (attempt === 0 && cdnStatus !== 200) await new Promise(r => setTimeout(r, 1000))
+      }
     }
 
     if (cdnStatus !== 200) {
@@ -347,6 +355,11 @@ exports.getVideo = async (req, res, next) => {
         isDemoLibrary: !useDrm,
         drmMode: useDrm ? 'widevine' : 'protection',
         libraryId: useDrm ? '626874' : '628424',
+        // ⭐ CN: Ali video IDs (ให้ WatchCnPage เห็น)
+        aliVideoId: targetAliId || '',
+        aliDrmVideoId: targetAliDrmId || '',
+        bonusAliVideoId: !isBonus ? (video.bonusAliVideoId || '') : '',
+        bonusAliDrmVideoId: !isBonus ? (video.bonusAliDrmVideoId || '') : '',
         isBonus: !!isBonus,
         // ส่ง bonus info เฉพาะตอนดู VDO หลัก (ให้ frontend รู้ว่ามี bonus)
         hasBonusVideo: !isBonus && !!video.bonusBunnyVideoId,
