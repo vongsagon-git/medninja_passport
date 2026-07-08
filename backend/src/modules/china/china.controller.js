@@ -258,23 +258,89 @@ async function getTranscodeStatus(req, res) {
   }
 }
 
-// Get single video info (title, duration, status) — Admin verify
+// Get single video info (title, duration, status, encryption) — Admin verify
+// เรียก GetVideoInfo + GetPlayInfo → detect DRM vs NoDRM
 async function getVideoInfo(req, res) {
   const { videoId } = req.params
   if (!videoId) return res.status(400).json({ error: 'videoId required' })
 
   try {
+    // 1. GetVideoInfo — basic metadata
     const result = await client.request('GetVideoInfo', {
       VideoId: videoId
     }, { method: 'POST' })
 
     const v = result.Video || {}
-    // Alibaba VOD Status values: Uploading, UploadFail, UploadSucc, Transcoding, TranscodeFail, Blocked, Normal
     const status = v.Status || 'Unknown'
     const transcodeStatus =
       status === 'Uploading' || status === 'UploadFail' ? 'Uploading' :
       status === 'Transcoding' || status === 'TranscodeFail' ? 'Transcoding' :
       status === 'Normal' ? 'Normal' : status
+
+    // 2. GetPlayInfo — เช็ค encryption type (only if Normal)
+    let encryption = {
+      isEncrypted: false,
+      hasWidevine: false,
+      hasFairPlay: false,
+      hasAes128: false,
+      hasProprietary: false,
+      hasMp4: false,
+      formats: [],           // ['mp4', 'm3u8', 'mpd']
+      encryptTypes: [],      // unique EncryptType values
+      streamCount: 0,
+      variant: 'unknown'     // 'drm-widevine' | 'ali-proprietary' | 'aes-128' | 'nodrm-mp4' | 'unknown'
+    }
+
+    if (status === 'Normal') {
+      try {
+        const playInfo = await client.request('GetPlayInfo', {
+          VideoId: videoId,
+          Formats: 'mp4,m3u8,mpd',
+          StreamType: 'video',
+          ResultType: 'Multiple',
+          AuthTimeout: 3000
+        }, { method: 'POST' })
+
+        const streams = (playInfo.PlayInfoList && playInfo.PlayInfoList.PlayInfo) || []
+        encryption.streamCount = streams.length
+
+        const formats = new Set()
+        const encTypes = new Set()
+
+        for (const s of streams) {
+          if (s.Format) formats.add(String(s.Format).toLowerCase())
+          if (s.EncryptType) encTypes.add(String(s.EncryptType))
+          if (s.Encrypt) encryption.isEncrypted = true
+        }
+
+        encryption.formats = Array.from(formats)
+        encryption.encryptTypes = Array.from(encTypes)
+        encryption.hasMpd = formats.has('mpd')
+        encryption.hasM3u8 = formats.has('m3u8')
+        encryption.hasMp4 = formats.has('mp4')
+
+        // Detect variant
+        // - mpd + encrypted = Widevine DRM (b0dd template)
+        // - m3u8 + AliyunVoDEncryption = Alibaba Proprietary AES-128 (f0a1 template)
+        // - m3u8 + HLSEncryption = HLS AES-128 (basic encryption)
+        // - mp4 only + not encrypted = NoDRM (mp4 raw)
+        if (encryption.hasMpd && encryption.isEncrypted) {
+          encryption.variant = 'drm-widevine'
+          encryption.hasWidevine = true
+        } else if (encTypes.has('AliyunVoDEncryption')) {
+          encryption.variant = 'ali-proprietary'
+          encryption.hasProprietary = true
+        } else if (encTypes.has('HLSEncryption')) {
+          encryption.variant = 'aes-128'
+          encryption.hasAes128 = true
+        } else if (encryption.hasMp4 && !encryption.isEncrypted) {
+          encryption.variant = 'nodrm-mp4'
+        }
+      } catch (e) {
+        console.warn('[china.getVideoInfo] GetPlayInfo failed:', e.message)
+        // ไม่ใช่ error หลัก — video info ยังใช้ได้ แค่ไม่รู้ encryption
+      }
+    }
 
     return res.json({
       videoId: v.VideoId || videoId,
@@ -285,11 +351,12 @@ async function getVideoInfo(req, res) {
       createdTime: v.CreationTime || '',
       coverUrl: v.CoverURL || '',
       size: v.Size || 0,
+      // ⭐ Encryption info — ใช้ verify slot type
+      encryption,
       requestId: result.RequestId
     })
   } catch (err) {
     console.error('[china.getVideoInfo] error:', err.message, err.code)
-    // Alibaba returns InvalidVideo.NotFound when video does not exist
     if ((err.code || '').includes('NotFound') || (err.message || '').toLowerCase().includes('not found')) {
       return res.status(404).json({ error: 'VIDEO_NOT_FOUND', code: err.code || 'NotFound' })
     }

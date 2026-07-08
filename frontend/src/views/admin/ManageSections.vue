@@ -158,43 +158,45 @@
                               <span class="tree-video-num">{{ vid.flatIdx + 1 }}</span>
                               <input v-model="vid.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="vid.ref._locked" />
                               <button v-if="vid.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(vid.ref)" :disabled="vid.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ vid.ref._renaming ? '...' : '✏️' }}</button>
-                              <div style="min-width:180px;">
-                                <div style="display:flex;gap:3px;align-items:center;">
-                                  <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
-                                  <span v-if="vid.ref._verifying" class="verify-status verifying">...</span>
-                                  <span v-else-if="vid.ref._verified === true" class="verify-status ok">✓</span>
-                                  <span v-else-if="vid.ref._verified === false" class="verify-status fail">✗</span>
+                              <!-- ⭐ 4 video IDs — 2 rows: Bunny (บน) + Ali (ล่าง) -->
+                              <div class="video-ids-grid">
+                                <div class="vid-slot">
+                                  <div class="vid-input-wrap">
+                                    <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Bunny NoDRM UUID" :disabled="vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
+                                    <span v-if="vid.ref._verifying" class="verify-status verifying">...</span>
+                                    <span v-else-if="vid.ref._verified === true" class="verify-status ok">✓</span>
+                                    <span v-else-if="vid.ref._verified === false" class="verify-status fail">✗</span>
+                                  </div>
+                                  <div v-if="vid.ref._bunnyName" class="bunny-filename" :title="vid.ref._bunnyName">{{ vid.ref._bunnyName }}</div>
                                 </div>
-                                <div v-if="vid.ref._bunnyName" class="bunny-filename" :title="vid.ref._bunnyName">{{ vid.ref._bunnyName }}</div>
-                              </div>
-                              <div style="min-width:180px;">
-                                <div style="display:flex;gap:3px;align-items:center;">
-                                  <input v-model="vid.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Widevine UUID" :disabled="vid.ref._locked" @input="scheduleDrmVerify(vid.flatIdx)" />
-                                  <span v-if="vid.ref._drmVerifying" class="verify-status verifying">...</span>
-                                  <span v-else-if="vid.ref._drmVerified === true" class="verify-status ok">✓</span>
-                                  <span v-else-if="vid.ref._drmVerified === false" class="verify-status fail">✗</span>
+                                <div class="vid-slot">
+                                  <div class="vid-input-wrap">
+                                    <input v-model="vid.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Bunny DRM UUID" :disabled="vid.ref._locked" @input="scheduleDrmVerify(vid.flatIdx)" />
+                                    <span v-if="vid.ref._drmVerifying" class="verify-status verifying">...</span>
+                                    <span v-else-if="vid.ref._drmVerified === true" class="verify-status ok">✓</span>
+                                    <span v-else-if="vid.ref._drmVerified === false" class="verify-status fail">✗</span>
+                                  </div>
+                                  <div v-if="vid.ref._drmName" class="bunny-filename drm" :title="vid.ref._drmName">{{ vid.ref._drmName }}</div>
+                                  <span v-if="vid.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
                                 </div>
-                                <div v-if="vid.ref._drmName" class="bunny-filename drm" :title="vid.ref._drmName">{{ vid.ref._drmName }}</div>
-                                <span v-if="vid.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
-                              </div>
-                              <!-- ⭐ CN: Alibaba VOD video IDs -->
-                              <div style="min-width:170px;">
-                                <div style="display:flex;gap:3px;align-items:center;">
-                                  <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(vid.flatIdx)" />
-                                  <span v-if="vid.ref._aliVerifying" class="verify-status verifying">...</span>
-                                  <span v-else-if="vid.ref._aliVerified === true" class="verify-status ok">✓</span>
-                                  <span v-else-if="vid.ref._aliVerified === false" class="verify-status fail">✗</span>
+                                <div class="vid-slot">
+                                  <div class="vid-input-wrap">
+                                    <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(vid.flatIdx)" />
+                                    <span v-if="vid.ref._aliVerifying" class="verify-status verifying">...</span>
+                                    <span v-else-if="vid.ref._aliVerified === true" class="verify-status ok">✓</span>
+                                    <span v-else-if="vid.ref._aliVerified === false" class="verify-status fail">✗</span>
+                                  </div>
+                                  <div v-if="vid.ref._aliName" class="bunny-filename" :title="vid.ref._aliName">{{ vid.ref._aliName }}</div>
                                 </div>
-                                <div v-if="vid.ref._aliName" class="bunny-filename" :title="vid.ref._aliName">{{ vid.ref._aliName }}</div>
-                              </div>
-                              <div style="min-width:170px;">
-                                <div style="display:flex;gap:3px;align-items:center;">
-                                  <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(vid.flatIdx)" />
-                                  <span v-if="vid.ref._aliDrmVerifying" class="verify-status verifying">...</span>
-                                  <span v-else-if="vid.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
-                                  <span v-else-if="vid.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                                <div class="vid-slot">
+                                  <div class="vid-input-wrap">
+                                    <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(vid.flatIdx)" />
+                                    <span v-if="vid.ref._aliDrmVerifying" class="verify-status verifying">...</span>
+                                    <span v-else-if="vid.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
+                                    <span v-else-if="vid.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                                  </div>
+                                  <div v-if="vid.ref._aliDrmName" class="bunny-filename drm" :title="vid.ref._aliDrmName">{{ vid.ref._aliDrmName }}</div>
                                 </div>
-                                <div v-if="vid.ref._aliDrmName" class="bunny-filename drm" :title="vid.ref._aliDrmName">{{ vid.ref._aliDrmName }}</div>
                               </div>
                               <span v-if="vid.ref._locked" class="lock-badge" @click="unlockVideo(vid.flatIdx)">🔒</span>
                               <select v-model.number="vid.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (vid.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -256,43 +258,45 @@
                           <span class="tree-video-num">{{ child.flatIdx + 1 }}</span>
                           <input v-model="child.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="child.ref._locked" />
                           <button v-if="child.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(child.ref)" :disabled="child.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ child.ref._renaming ? '...' : '✏️' }}</button>
-                          <div style="min-width:180px;">
-                            <div style="display:flex;gap:3px;align-items:center;">
-                              <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
-                              <span v-if="child.ref._verifying" class="verify-status verifying">...</span>
-                              <span v-else-if="child.ref._verified === true" class="verify-status ok">✓</span>
-                              <span v-else-if="child.ref._verified === false" class="verify-status fail">✗</span>
+                          <!-- ⭐ 4 video IDs — 2 rows: Bunny (บน) + Ali (ล่าง) -->
+                          <div class="video-ids-grid">
+                            <div class="vid-slot">
+                              <div class="vid-input-wrap">
+                                <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Bunny NoDRM UUID" :disabled="child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
+                                <span v-if="child.ref._verifying" class="verify-status verifying">...</span>
+                                <span v-else-if="child.ref._verified === true" class="verify-status ok">✓</span>
+                                <span v-else-if="child.ref._verified === false" class="verify-status fail">✗</span>
+                              </div>
+                              <div v-if="child.ref._bunnyName" class="bunny-filename">{{ child.ref._bunnyName }}</div>
                             </div>
-                            <div v-if="child.ref._bunnyName" class="bunny-filename">{{ child.ref._bunnyName }}</div>
-                          </div>
-                          <div style="min-width:180px;">
-                            <div style="display:flex;gap:3px;align-items:center;">
-                              <input v-model="child.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Widevine UUID" :disabled="child.ref._locked" @input="scheduleDrmVerify(child.flatIdx)" />
-                              <span v-if="child.ref._drmVerifying" class="verify-status verifying">...</span>
-                              <span v-else-if="child.ref._drmVerified === true" class="verify-status ok">✓</span>
-                              <span v-else-if="child.ref._drmVerified === false" class="verify-status fail">✗</span>
+                            <div class="vid-slot">
+                              <div class="vid-input-wrap">
+                                <input v-model="child.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Bunny DRM UUID" :disabled="child.ref._locked" @input="scheduleDrmVerify(child.flatIdx)" />
+                                <span v-if="child.ref._drmVerifying" class="verify-status verifying">...</span>
+                                <span v-else-if="child.ref._drmVerified === true" class="verify-status ok">✓</span>
+                                <span v-else-if="child.ref._drmVerified === false" class="verify-status fail">✗</span>
+                              </div>
+                              <div v-if="child.ref._drmName" class="bunny-filename drm">{{ child.ref._drmName }}</div>
+                              <span v-if="child.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
                             </div>
-                            <div v-if="child.ref._drmName" class="bunny-filename drm">{{ child.ref._drmName }}</div>
-                            <span v-if="child.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
-                          </div>
-                          <!-- ⭐ CN: Alibaba VOD -->
-                          <div style="min-width:170px;">
-                            <div style="display:flex;gap:3px;align-items:center;">
-                              <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(child.flatIdx)" />
-                              <span v-if="child.ref._aliVerifying" class="verify-status verifying">...</span>
-                              <span v-else-if="child.ref._aliVerified === true" class="verify-status ok">✓</span>
-                              <span v-else-if="child.ref._aliVerified === false" class="verify-status fail">✗</span>
+                            <div class="vid-slot">
+                              <div class="vid-input-wrap">
+                                <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(child.flatIdx)" />
+                                <span v-if="child.ref._aliVerifying" class="verify-status verifying">...</span>
+                                <span v-else-if="child.ref._aliVerified === true" class="verify-status ok">✓</span>
+                                <span v-else-if="child.ref._aliVerified === false" class="verify-status fail">✗</span>
+                              </div>
+                              <div v-if="child.ref._aliName" class="bunny-filename" :title="child.ref._aliName">{{ child.ref._aliName }}</div>
                             </div>
-                            <div v-if="child.ref._aliName" class="bunny-filename" :title="child.ref._aliName">{{ child.ref._aliName }}</div>
-                          </div>
-                          <div style="min-width:170px;">
-                            <div style="display:flex;gap:3px;align-items:center;">
-                              <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(child.flatIdx)" />
-                              <span v-if="child.ref._aliDrmVerifying" class="verify-status verifying">...</span>
-                              <span v-else-if="child.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
-                              <span v-else-if="child.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                            <div class="vid-slot">
+                              <div class="vid-input-wrap">
+                                <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(child.flatIdx)" />
+                                <span v-if="child.ref._aliDrmVerifying" class="verify-status verifying">...</span>
+                                <span v-else-if="child.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
+                                <span v-else-if="child.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                              </div>
+                              <div v-if="child.ref._aliDrmName" class="bunny-filename drm" :title="child.ref._aliDrmName">{{ child.ref._aliDrmName }}</div>
                             </div>
-                            <div v-if="child.ref._aliDrmName" class="bunny-filename drm" :title="child.ref._aliDrmName">{{ child.ref._aliDrmName }}</div>
                           </div>
                           <span v-if="child.ref._locked" class="lock-badge" @click="unlockVideo(child.flatIdx)">🔒</span>
                           <select v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -356,43 +360,45 @@
                     <span class="tree-video-num">{{ node.flatIdx + 1 }}</span>
                     <input v-model="node.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="node.ref._locked" />
                     <button v-if="node.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(node.ref)" :disabled="node.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ node.ref._renaming ? '...' : '✏️' }}</button>
-                    <div style="min-width:180px;">
-                      <div style="display:flex;gap:3px;align-items:center;">
-                        <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Protection UUID" :disabled="node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
-                        <span v-if="node.ref._verifying" class="verify-status verifying">...</span>
-                        <span v-else-if="node.ref._verified === true" class="verify-status ok">✓</span>
-                        <span v-else-if="node.ref._verified === false" class="verify-status fail">✗</span>
+                    <!-- ⭐ 4 video IDs — 2 rows: Bunny (บน) + Ali (ล่าง) -->
+                    <div class="video-ids-grid">
+                      <div class="vid-slot">
+                        <div class="vid-input-wrap">
+                          <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="Bunny NoDRM UUID" :disabled="node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
+                          <span v-if="node.ref._verifying" class="verify-status verifying">...</span>
+                          <span v-else-if="node.ref._verified === true" class="verify-status ok">✓</span>
+                          <span v-else-if="node.ref._verified === false" class="verify-status fail">✗</span>
+                        </div>
+                        <div v-if="node.ref._bunnyName" class="bunny-filename">{{ node.ref._bunnyName }}</div>
                       </div>
-                      <div v-if="node.ref._bunnyName" class="bunny-filename">{{ node.ref._bunnyName }}</div>
-                    </div>
-                    <div style="min-width:180px;">
-                      <div style="display:flex;gap:3px;align-items:center;">
-                        <input v-model="node.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Widevine UUID" :disabled="node.ref._locked" @input="scheduleDrmVerify(node.flatIdx)" />
-                        <span v-if="node.ref._drmVerifying" class="verify-status verifying">...</span>
-                        <span v-else-if="node.ref._drmVerified === true" class="verify-status ok">✓</span>
-                        <span v-else-if="node.ref._drmVerified === false" class="verify-status fail">✗</span>
+                      <div class="vid-slot">
+                        <div class="vid-input-wrap">
+                          <input v-model="node.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="Bunny DRM UUID" :disabled="node.ref._locked" @input="scheduleDrmVerify(node.flatIdx)" />
+                          <span v-if="node.ref._drmVerifying" class="verify-status verifying">...</span>
+                          <span v-else-if="node.ref._drmVerified === true" class="verify-status ok">✓</span>
+                          <span v-else-if="node.ref._drmVerified === false" class="verify-status fail">✗</span>
+                        </div>
+                        <div v-if="node.ref._drmName" class="bunny-filename drm">{{ node.ref._drmName }}</div>
+                        <span v-if="node.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
                       </div>
-                      <div v-if="node.ref._drmName" class="bunny-filename drm">{{ node.ref._drmName }}</div>
-                      <span v-if="node.ref._durationMismatch" class="duration-warn">⚠ ความยาวไม่ตรง!</span>
-                    </div>
-                    <!-- ⭐ CN: Alibaba VOD -->
-                    <div style="min-width:170px;">
-                      <div style="display:flex;gap:3px;align-items:center;">
-                        <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(node.flatIdx)" />
-                        <span v-if="node.ref._aliVerifying" class="verify-status verifying">...</span>
-                        <span v-else-if="node.ref._aliVerified === true" class="verify-status ok">✓</span>
-                        <span v-else-if="node.ref._aliVerified === false" class="verify-status fail">✗</span>
+                      <div class="vid-slot">
+                        <div class="vid-input-wrap">
+                          <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="🇨🇳 Ali NoDRM VID" @input="scheduleAliVerify(node.flatIdx)" />
+                          <span v-if="node.ref._aliVerifying" class="verify-status verifying">...</span>
+                          <span v-else-if="node.ref._aliVerified === true" class="verify-status ok">✓</span>
+                          <span v-else-if="node.ref._aliVerified === false" class="verify-status fail">✗</span>
+                        </div>
+                        <div v-if="node.ref._aliName" class="bunny-filename" :title="node.ref._aliName">{{ node.ref._aliName }}</div>
                       </div>
-                      <div v-if="node.ref._aliName" class="bunny-filename" :title="node.ref._aliName">{{ node.ref._aliName }}</div>
-                    </div>
-                    <div style="min-width:170px;">
-                      <div style="display:flex;gap:3px;align-items:center;">
-                        <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(node.flatIdx)" />
-                        <span v-if="node.ref._aliDrmVerifying" class="verify-status verifying">...</span>
-                        <span v-else-if="node.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
-                        <span v-else-if="node.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                      <div class="vid-slot">
+                        <div class="vid-input-wrap">
+                          <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="🇨🇳 Ali DRM VID" @input="scheduleAliDrmVerify(node.flatIdx)" />
+                          <span v-if="node.ref._aliDrmVerifying" class="verify-status verifying">...</span>
+                          <span v-else-if="node.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
+                          <span v-else-if="node.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
+                        </div>
+                        <div v-if="node.ref._aliDrmName" class="bunny-filename drm" :title="node.ref._aliDrmName">{{ node.ref._aliDrmName }}</div>
                       </div>
-                      <div v-if="node.ref._aliDrmName" class="bunny-filename drm" :title="node.ref._aliDrmName">{{ node.ref._aliDrmName }}</div>
                     </div>
                     <span v-if="node.ref._locked" class="lock-badge" @click="unlockVideo(node.flatIdx)">🔒</span>
                     <select v-model.number="node.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (node.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -2240,6 +2246,31 @@ export default {
   white-space: nowrap;
 }
 .btn-assign-sub:hover { background: #e0f2fe; border-color: #0369a1; }
+
+/* ⭐ 4 video IDs in 2 rows grid — Bunny (บน) + Ali (ล่าง) */
+.video-ids-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 6px;
+  flex: 1;
+  min-width: 300px;
+  max-width: 420px;
+}
+.vid-slot {
+  min-width: 0;
+}
+.vid-input-wrap {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.vid-input-wrap .form-control {
+  min-width: 0;
+  flex: 1;
+}
+@media (max-width: 900px) {
+  .video-ids-grid { grid-template-columns: 1fr; max-width: none; }
+}
 
 .verify-status { font-size: 14px; font-weight: 800; width: 20px; text-align: center; flex-shrink: 0; }
 .verify-status.ok { color: #10b981; }
