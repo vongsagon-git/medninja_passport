@@ -199,7 +199,8 @@
               <!-- ⭐ Custom Aliplayer Controls Layer (seek bar + play + time + speed + volume + fullscreen) -->
               <div v-if="hasAliVideo && playerReady" class="ali-ctl-layer" :class="{ hidden: !aliControlsVisible }" @click.self="aliOnPlayerTap">
                 <!-- Big center PLAY only — pause ใช้ปุ่มเล็กที่ bottom bar (กัน block seek) -->
-                <button v-if="!isPlaying" class="ali-ctl-big-play" @click="aliTogglePlay" title="เล่น">
+                <!-- ⭐ ระหว่าง seek + 1.5 วิหลัง seek → ซ่อนปุ่มใหญ่ (กัน pause event แว๊บ) -->
+                <button v-if="!isPlaying && !aliSeeking && !aliJustSeeked" class="ali-ctl-big-play" @click="aliTogglePlay" title="เล่น">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
                 </button>
                 <!-- Bottom bar: seek + controls -->
@@ -710,6 +711,7 @@ export default {
       // ⭐ Custom Ali controls state
       aliCurrentTime: 0,
       aliSeeking: false,      // ⭐ user กำลัง drag slider — หยุด sync จาก timeupdate
+      aliJustSeeked: false,   // ⭐ 1.5 วิหลัง seek → ซ่อนปุ่ม big-play (กัน pause event แว๊บ)
       aliSeekValue: 0,        // ค่า slider ระหว่าง drag (independent จาก currentTime)
       aliDuration: 0,
       aliVolume: 1,
@@ -2654,6 +2656,12 @@ export default {
       this._lastAliSeek = now
       // ⭐ ถ้ากำลังเล่นอยู่ก่อน seek → resume play หลัง seek (Aliplayer default = pause หลัง seek)
       const wasPlaying = this.isPlaying
+      // ⭐ set flag ซ่อนปุ่ม big-play 1.5 วิ (กัน pause event แว๊บระหว่าง seek)
+      if (wasPlaying) {
+        this.aliJustSeeked = true
+        clearTimeout(this._aliJustSeekedTimer)
+        this._aliJustSeekedTimer = setTimeout(() => { this.aliJustSeeked = false }, 1500)
+      }
       try { this._aliPlayer.seek(sec) } catch {}
       this.aliCurrentTime = sec
       if (wasPlaying) {
@@ -2681,6 +2689,12 @@ export default {
       this.aliCurrentTime = val
       // ⭐ ถ้ากำลังเล่นอยู่ → resume play หลัง seek (Aliplayer default = pause)
       const wasPlaying = this.isPlaying
+      // ⭐ set flag ซ่อนปุ่ม big-play 1.5 วิ (กัน pause event แว๊บระหว่าง seek)
+      if (wasPlaying) {
+        this.aliJustSeeked = true
+        clearTimeout(this._aliJustSeekedTimer)
+        this._aliJustSeekedTimer = setTimeout(() => { this.aliJustSeeked = false }, 1500)
+      }
       if (this._aliPlayer) { try { this._aliPlayer.seek(val) } catch {} }
       if (wasPlaying) {
         setTimeout(() => { try { this._aliPlayer && this._aliPlayer.play() } catch {} }, 100)
