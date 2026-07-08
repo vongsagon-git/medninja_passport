@@ -512,7 +512,7 @@ router.post('/doctor-line', async (req, res) => {
           // Player + bucket + country
           trow('serve', `${playerLabel}${bucket ? ' [' + bucket + ']' : ''}`, THEME.amberBright, 'xs'),
           trow('region', countryLabel, THEME.amberBright, 'xs'),
-          trow('drm', servingCheck?.expected?.drm?.toUpperCase() || '-', THEME.amberBright, 'xs'),
+          trow('drm', (servingCheck?.expected?.drm === 'widevine' ? 'YES' : servingCheck?.expected?.drm === 'nodrm' ? 'NO' : '-'), THEME.amberBright, 'xs'),
           ...(routingReason ? [{
             type: 'text', text: `  # ${routingReason}`, size: 'xxs', color: THEME.amberDim, wrap: true
           }] : []),
