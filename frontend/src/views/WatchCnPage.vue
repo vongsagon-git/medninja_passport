@@ -908,16 +908,12 @@ export default {
   },
   mounted() {
     this._mountedAt = Date.now()
-    // ⭐ CN: Init Aliplayer (async, wait for video data)
+    // ⭐ CN: init Aliplayer ครั้งแรก — ถ้า video โหลดเสร็จก่อน mount
+    // ถ้ายังไม่มี video → รอ watcher aliVideoIdToPlay ให้ยิง init เอง (กัน double-init → 4022)
     this.$nextTick(() => {
-      const tryInit = () => {
-        if (this.video && this.hasAliVideo) {
-          this._initAliPlayer()
-        } else if (Date.now() - this._mountedAt < 10000) {
-          setTimeout(tryInit, 500)
-        }
+      if (this.video && this.hasAliVideo && !this._aliPlayer) {
+        this._initAliPlayer()
       }
-      tryInit()
     })
     // ═══ CN mirror: ไม่บังคับ LINE (จีนใช้ LINE ไม่ได้) ═══
     // (LINE popup logic disabled ทั้งหมด — showLineLinkPopup ค้างเป็น false)
@@ -2296,22 +2292,28 @@ export default {
         console.log('[Ali] No aliVideoId — skip player init')
         return
       }
+      // ⭐ กัน double-init — ถ้ากำลัง init อยู่ให้ skip (STS race → Widevine 4022)
+      if (this._aliInitInFlight) {
+        console.log('[Ali] init in flight — skip')
+        return
+      }
       const videoId = this.aliVideoIdToPlay
       console.log('[Ali] Initializing player with videoId:', videoId)
+      this._aliInitInFlight = true
 
       try {
         // 1. Load SDK
         const sdkOk = await this._loadAliplayerSDK()
         if (!sdkOk) throw new Error('Aliplayer SDK not loaded')
 
-        // 2. Fetch STS
-        const sts = await this._fetchAliStsToken()
-
-        // 3. Cleanup previous
+        // 2. Cleanup previous ก่อน fetch STS (กัน 2 STS ยิงซ้อน)
         if (this._aliPlayer) {
           try { this._aliPlayer.dispose() } catch {}
           this._aliPlayer = null
         }
+
+        // 3. Fetch STS (fresh, no race)
+        const sts = await this._fetchAliStsToken()
 
         // 4. Config
         const config = {
@@ -2328,7 +2330,10 @@ export default {
           rePlay: false,
           playsinline: true,
           preload: true,
-          controlBarVisibility: 'hover',
+          // ⭐ 'click' → mobile/desktop แตะ/คลิกเพื่อ show/hide controls
+          // ('hover' ทำงานแค่ desktop เมาส์เท่านั้น mobile จะไม่มีปุ่ม play)
+          controlBarVisibility: 'click',
+          showBigPlayButton: true, // ⭐ ปุ่ม play ใหญ่กลางจอ
           useH5Prism: true,
           license: {
             domain: 'passport.medninja.academy',
@@ -2367,6 +2372,8 @@ export default {
 
       } catch (err) {
         console.error('[Ali] Init failed:', err.message)
+      } finally {
+        this._aliInitInFlight = false
       }
     },
     _disposeAliPlayer () {
@@ -3931,6 +3938,22 @@ kbd {
 .ali-player-box :deep(.prism-player) {
   width: 100% !important;
   height: 100% !important;
+}
+/* ⭐ กัน error text ล้นออกนอก player — Aliplayer แสดง error state เป็น plain text */
+.ali-player-box :deep(.prism-ErrorMessage),
+.ali-player-box :deep(.prism-notice),
+.ali-player-box :deep(.prism-error) {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  padding: 12px !important;
+  overflow: auto !important;
+  font-size: 12px !important;
+  word-break: break-all !important;
+  box-sizing: border-box !important;
+}
+/* กัน text-node ตรงๆ ล้น */
+.ali-player-box {
+  overflow: hidden !important;
 }
 .player-placeholder.cn-no-video {
   background: linear-gradient(135deg, #f8fafc, #e2e8f0);
