@@ -198,10 +198,9 @@
               </div>
               <!-- ⭐ Custom Aliplayer Controls Layer (seek bar + play + time + speed + volume + fullscreen) -->
               <div v-if="hasAliVideo && playerReady" class="ali-ctl-layer" :class="{ hidden: !aliControlsVisible }" @click.self="aliOnPlayerTap">
-                <!-- Big center play/pause -->
-                <button class="ali-ctl-big-play" @click="aliTogglePlay" :title="isPlaying ? 'หยุด' : 'เล่น'">
-                  <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
-                  <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
+                <!-- Big center PLAY only — pause ใช้ปุ่มเล็กที่ bottom bar (กัน block seek) -->
+                <button v-if="!isPlaying" class="ali-ctl-big-play" @click="aliTogglePlay" title="เล่น">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
                 </button>
                 <!-- Bottom bar: seek + controls -->
                 <div class="ali-ctl-bar">
