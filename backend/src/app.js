@@ -197,8 +197,6 @@ app.get('/api/geo/whoami', geoMiddleware.whoamiEndpoint)
 
 // LINE Webhook — raw body สำหรับ verify signature (ต้องอยู่ก่อน express.json)
 app.use('/api/line/webhook', require('./modules/line/line.webhook.routes'))
-// Beam Webhook — raw body สำหรับ verify signature
-app.use('/api/beam/webhook', require('./modules/line/beam.webhook.routes'))
 
 app.use(express.json({ limit: '10mb' })) // เพิ่ม limit สำหรับ preregister submit (base64 image)
 

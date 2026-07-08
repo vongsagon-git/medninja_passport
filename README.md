@@ -77,11 +77,9 @@ npm run dev
    | `SMTP_*` | 🔗 เหมือน LMS | |
    | `BUNNY_*` (ทุกตัว) | 🔗 เหมือน LMS | video/PDF ก้อนเดียวกัน |
    | `LINE_*` | 🔗 เหมือน LMS | |
-   | `BEAM_*` | 🔗 เหมือน LMS | (ถ้าใช้ checkout) |
    | `NLEX_API_KEY` | 🔗 เหมือน LMS | |
    | `MODEL_ACCESS_KEY` | 🔗 เหมือน LMS | OCR |
    | `ELEVENLABS_API_KEY` | 🔗 เหมือน LMS | |
-   | `FB_*` | 🔗 เหมือน LMS | |
 
    **วิธีคัดลอก env จาก LMS ที่ DO เร็วๆ:**
    1. เปิด DO → Apps → LMS app → Settings → `.env`

@@ -288,35 +288,19 @@ router.post('/preview', (req, res) => {
   res.json({ flex: builder(fields || {}) })
 })
 
-// POST /api/admin/line/send-payment — ส่ง Flex ชำระเงินให้ 1 คน
+// POST /api/admin/line/send-payment — ส่ง Flex ชำระเงินให้ 1 คน (transfer เท่านั้น)
 router.post('/send-payment', async (req, res) => {
   try {
-    const { userId, courseName, amount, transfer, card, installment3, installment6 } = req.body
+    const { userId, courseName, amount, transfer } = req.body
     if (!userId || !courseName || !amount) {
       return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบ' })
     }
-    const needBeam = card || installment3 || installment6
 
     let payUrl = null
     let refId = null
-    if (needBeam) {
-      const { createPaymentLink } = require('./beam.service')
-      refId = `MN-${Date.now()}`
-      const installMonths = installment3 ? 3 : installment6 ? 6 : 0
-      const beamResult = await createPaymentLink({
-        courseName,
-        amount: Number(amount),
-        referenceId: refId,
-        redirectUrl: 'https://medninja.academy',
-        enableCard: !!card,
-        installmentMonths: installMonths || undefined
-      })
-      payUrl = beamResult.url
-      if (!payUrl) throw new Error('Beam ไม่ส่ง payment URL กลับมา')
-    }
 
-    const hasInstallment = installment3 || installment6
-    const months = installment3 ? 3 : 6
+    const hasInstallment = false
+    const months = 0
     const bodyContents = [
       { type: 'text', text: courseName, size: 'lg', weight: 'bold', color: '#0f172a', wrap: true },
       { type: 'separator', color: '#f1f5f9', margin: 'lg' },
@@ -389,8 +373,8 @@ router.post('/send-payment', async (req, res) => {
     }
 
     await pushMessage(userId, [flexMsg])
-    console.log(`[Admin LINE] Payment sent: ${courseName} ${amount} THB, transfer:${transfer} card:${card} inst3:${installment3} inst6:${installment6}, ref: ${refId}`)
-    res.json({ ok: 1, refId })
+    console.log(`[Admin LINE] Payment sent: ${courseName} ${amount} THB, transfer:${transfer}`)
+    res.json({ ok: 1 })
   } catch (err) {
     console.error('[Admin LINE] send-payment error:', err)
     res.status(500).json({ message: 'ส่งล้มเหลว: ' + err.message })
