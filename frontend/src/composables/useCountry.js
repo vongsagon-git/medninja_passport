@@ -45,11 +45,14 @@ async function fetchWhoami () {
       return d
     })
     .catch(err => {
-      // ⚠️ อย่า set _ready = true เพราะจะทำให้ banner แสดง 'unknown'
-      // ปล่อยให้ ready = false → banner ซ่อนสนิท (ดีกว่าโชว์ค่าเปล่า)
+      // ⭐ API ล้ม → fallback country=TH + set ready=true + set error
+      // Banner จะแสดง error mode "MedNinja Technology" สีแดง แทน
+      // Guard treat as TH → GLOBAL bucket
       _error.value = err.message || 'geo fetch failed'
-      _country.value = ''
-      return null
+      _country.value = 'TH'
+      _countryName.value = 'Thailand'
+      _ready.value = true
+      return { country: 'TH', countryName: 'Thailand', fallback: true }
     })
     .finally(() => {
       _loading.value = false

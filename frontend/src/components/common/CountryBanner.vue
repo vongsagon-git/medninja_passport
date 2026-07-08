@@ -13,7 +13,27 @@
       role="status"
       aria-live="polite"
     >
-      <div class="banner-inner">
+      <!-- ⭐ Error mode: API /geo/whoami ล้ม → MedNinja Technology สีแดง -->
+      <div v-if="isError" class="banner-inner banner-error">
+        <span class="dot dot-error"></span>
+        <span class="brand-title">⚠️ MedNinja Technology</span>
+        <span class="sep">·</span>
+        <span class="brand-sub">การเชื่อมต่อขัดข้อง (fallback: TH)</span>
+        <button
+          v-if="isLoggedIn"
+          class="logout-btn"
+          @click="handleLogout"
+          title="ออกจากระบบ"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="11" height="11">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          <span class="logout-label">ออก</span>
+        </button>
+      </div>
+
+      <!-- Normal mode -->
+      <div v-else class="banner-inner">
         <!-- Left: Country -->
         <span class="dot" :class="'dot-' + tone"></span>
         <span class="flag">{{ loading ? '🌐' : flag }}</span>
@@ -129,7 +149,11 @@ const shortIp = computed(() => {
   return v
 })
 
+// ⭐ Error mode: API ล้ม (มี error) — banner สีแดง MedNinja Technology
+const isError = computed(() => !!error.value)
+
 const tone = computed(() => {
+  if (isError.value) return 'tone-error'
   if (isChina.value) return 'tone-cn'
   if (isThai.value) return 'tone-th'
   if (loading.value || !country.value) return 'tone-loading'
@@ -164,6 +188,28 @@ const tone = computed(() => {
 .tone-th      { background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
 .tone-other   { background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%); }
 .tone-loading { background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+/* ⭐ Error mode: API /geo/whoami ล้ม */
+.tone-error   { background: linear-gradient(90deg, #7f1d1d 0%, #dc2626 50%, #7f1d1d 100%); color: #fff; }
+
+.banner-error {
+  gap: 8px;
+}
+.brand-title {
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  font-size: 12px;
+  color: #fff;
+}
+.brand-sub {
+  font-weight: 500;
+  font-size: 11px;
+  opacity: 0.9;
+}
+.dot-error {
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.8);
+  animation: pulse-dot 1s ease-in-out infinite;
+}
 
 .banner-inner {
   max-width: 1400px;

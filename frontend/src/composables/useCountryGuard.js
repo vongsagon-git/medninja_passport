@@ -21,7 +21,6 @@ import { useAuthStore } from '../stores/auth'
  */
 export function useCountryGuard (expectedBucket) {
   const router = useRouter()
-  const authStore = useAuthStore()
   const { country, ready, refresh } = useCountry()
 
   // Backward compat: 'TH' = 'GLOBAL'
@@ -31,14 +30,9 @@ export function useCountryGuard (expectedBucket) {
   const bucketOf = (countryCode) => (countryCode === 'CN' ? 'CN' : 'GLOBAL')
 
   const redirectByCountry = (current) => {
-    // Admin bypass — admin เข้าได้ทุกหน้า
-    if (authStore.user?.role === 'admin') {
-      console.log('[CountryGuard] Admin bypass')
-      return
-    }
     const currentBucket = bucketOf(current)
     if (currentBucket === target) return
-    // ไปหน้าคู่กัน (ไม่ logout)
+    // ไปหน้าคู่กัน (ไม่ logout) — admin ก็ต้องตาม IP เหมือน student
     if (currentBucket === 'CN' && target === 'GLOBAL') {
       console.warn(`[CountryGuard] IP=${current} → redirect /my-cn`)
       router.push('/my-cn')
