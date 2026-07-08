@@ -1372,8 +1372,11 @@ export default {
         const info = await api.get(`/admin/ali/video/${vid}`)
         const variant = info.encryption?.variant || 'unknown'
         video._aliVariant = variant
-        video._aliName = info.title || ''
-        video._aliDuration = Math.round(info.duration || 0)
+        const dur = Math.round(info.duration || 0)
+        video._aliDuration = dur
+        // Format duration MM:SS + append to title
+        const durStr = dur > 0 ? `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}` : ''
+        video._aliName = (info.title || '') + (durStr ? ` (${durStr})` : '')
         // ⭐ Slot check: Ali NoDRM slot ต้องเป็น ali-proprietary (f0a1 template) เท่านั้น
         if (variant === 'drm-widevine') {
           video._aliVerified = false
@@ -1428,8 +1431,11 @@ export default {
         const info = await api.get(`/admin/ali/video/${vid}`)
         const variant = info.encryption?.variant || 'unknown'
         video._aliDrmVariant = variant
-        video._aliDrmName = info.title || ''
-        video._aliDrmDuration = Math.round(info.duration || 0)
+        const dur = Math.round(info.duration || 0)
+        video._aliDrmDuration = dur
+        // Format duration MM:SS + append to title
+        const durStr = dur > 0 ? `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}` : ''
+        video._aliDrmName = (info.title || '') + (durStr ? ` (${durStr})` : '')
         // ⭐ Slot check: Ali DRM slot ต้องเป็น drm-widevine เท่านั้น
         if (variant !== 'drm-widevine') {
           video._aliDrmVerified = false
