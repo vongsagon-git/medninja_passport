@@ -1042,11 +1042,23 @@ export default {
       } catch { /* ignore */ }
     },
     async _loadWmConfig() {
-      try {
-        const data = await api.get('/admin/watermark')
-        this.wmConfig = data.config
-        this.isDesktopModeInMobile = !this.isMobile && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
-      } catch { /* ใช้ค่า default */ }
+      // ⭐ Hardcode ค่าจริงจาก DB (snapshot 2026-04-09) — ไม่ fetch แล้ว
+      this.wmConfig = {
+        mobilePortrait:      { style: 'center', fontSize: 19 },
+        mobileLandscape:     { style: 'grid',   fontSize: 19 },
+        mobilePortraitFull:  { style: 'center', fontSize: 20 },
+        mobileLandscapeFull: { style: 'grid',   fontSize: 20 },
+        desktopPortrait:      { style: 'grid', fontSize: 27 },
+        desktopLandscape:     { style: 'grid', fontSize: 27 },
+        desktopPortraitFull:  { style: 'grid', fontSize: 27 },
+        desktopLandscapeFull: { style: 'grid', fontSize: 27 },
+        desktopBreakpoint: 800,
+        centerBaseWidth: 384,
+        gridBaseWidth: 1280,
+        desktopModeScreenWidth: 1024,
+        desktopInMobile: { style: 'grid', fontSize: 60 }
+      }
+      this.isDesktopModeInMobile = !this.isMobile && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
     },
     _loadPlayerJs() {
       if (window.playerjs) { this._initPlayer(); return }

@@ -331,11 +331,6 @@
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/></svg>
                   ตรวจสอบระบบ
                 </button>
-                <!-- ⭐ CN: ตรวจสอบระบบ Aliplayer (4 flows + log หลังบ้าน) -->
-                <button v-if="!isDemo && hasAliVideo" class="w-diag-btn" @click="showAliTestModal = true" title="ทดสอบ Aliplayer">
-                  <span>🎬</span>
-                  ทดสอบ Aliplayer
-                </button>
                 <button v-if="!isDemo && activationStore.hasAnyMiniApp" class="w-mini-btn" @click="showMiniAppsModal = true" title="Mini Apps">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM13 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2zM13 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z"/></svg>
                   Mini Apps
@@ -685,12 +680,6 @@
     </div>
 
     <!-- ⭐ CN: Aliplayer Test Modal (4 flows + log หลังบ้าน) -->
-    <AliTestModal
-      :show="showAliTestModal"
-      :video-id="aliVideoIdToPlay"
-      :variant="video && video.aliDrmVideoId === aliVideoIdToPlay ? 'drm' : 'noDrm'"
-      @close="showAliTestModal = false"
-    />
   </div>
 </template>
 
@@ -705,7 +694,6 @@ import { isIOS as detectIOS, isMacSafari as detectMacSafari, getOS as detectOS, 
 import { getDeviceContext, sendLog, watchDevTools, watchRecorderExtensions, probeRecorderExtensions } from '../services/clientLogger'
 import { getVersion as _getAppVersion } from '../services/versionCheck'
 import { useCountryGuard } from '../composables/useCountryGuard'
-import AliTestModal from '../components/common/AliTestModal.vue'
 
 const WATCHED_KEY = '__medninja_watched__'
 
@@ -718,7 +706,6 @@ function saveWatchedMap(map) {
 
 export default {
   name: 'WatchPage',
-  components: { AliTestModal },
   setup() {
     const activationStore = useActivationStore()
     const authStore = useAuthStore()
@@ -781,7 +768,6 @@ export default {
       showMiniAppsModal: false,
       // ── Fix modal ──
       showFixModal: false,
-      showAliTestModal: false, // ⭐ CN: ตรวจสอบระบบ Aliplayer (4 flows)
       // ── Diag modal ──
       showDiagModal: false,
       diagSteps: [],
@@ -1470,8 +1456,8 @@ export default {
       } catch { /* ignore */ }
     },
     async _loadWmConfig() {
-      // ค่าจาก DB production (snapshot) — ใช้เป็น fallback เผื่อ API ไม่ตอบ (demo ไม่มี token)
-      const FALLBACK_CONFIG = {
+      // ⭐ Hardcode ค่าจริงจาก DB (snapshot 2026-04-09) — ไม่ fetch แล้ว
+      this.wmConfig = {
         mobilePortrait:      { style: 'center', fontSize: 19 },
         mobileLandscape:     { style: 'grid',   fontSize: 19 },
         mobilePortraitFull:  { style: 'center', fontSize: 20 },
@@ -1480,16 +1466,24 @@ export default {
         desktopLandscape:     { style: 'grid', fontSize: 27 },
         desktopPortraitFull:  { style: 'grid', fontSize: 27 },
         desktopLandscapeFull: { style: 'grid', fontSize: 27 },
-        desktopBreakpoint: 900,
+        desktopBreakpoint: 800,
         centerBaseWidth: 384,
-        gridBaseWidth: 918
+        gridBaseWidth: 1280,
+        desktopModeScreenWidth: 1024,
+        desktopInMobile: { style: 'grid', fontSize: 60 },
+        // Demo modes
+        demoMobilePortrait:      { style: 'center', fontSize: 40 },
+        demoMobileLandscape:     { style: 'center', fontSize: 60 },
+        demoMobilePortraitFull:  { style: 'center', fontSize: 40 },
+        demoMobileLandscapeFull: { style: 'center', fontSize: 60 },
+        demoDesktopPortrait:      { style: 'grid', fontSize: 37 },
+        demoDesktopLandscape:     { style: 'grid', fontSize: 37 },
+        demoDesktopPortraitFull:  { style: 'grid', fontSize: 47 },
+        demoDesktopLandscapeFull: { style: 'grid', fontSize: 47 },
+        demoDesktopBreakpoint: 800,
+        demoDesktopInMobile: { style: 'grid', fontSize: 60 }
       }
-      this.wmConfig = FALLBACK_CONFIG
       this.isDesktopModeInMobile = !this.isMobile && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
-      try {
-        const data = await api.get('/admin/watermark')
-        if (data?.config) this.wmConfig = data.config
-      } catch { /* ใช้ fallback */ }
     },
     async loadVideo() {
       // ── Probe recorder extension ก่อนโหลด video (ไม่ใช้กับ demo) ──

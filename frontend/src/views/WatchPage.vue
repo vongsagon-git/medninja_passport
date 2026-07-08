@@ -1312,8 +1312,8 @@ export default {
       } catch { /* ignore */ }
     },
     async _loadWmConfig() {
-      // ค่าจาก DB production (snapshot) — ใช้เป็น fallback เผื่อ API ไม่ตอบ (demo ไม่มี token)
-      const FALLBACK_CONFIG = {
+      // ⭐ Hardcode ค่าจริงจาก DB (snapshot 2026-04-09) — ไม่ fetch แล้ว
+      this.wmConfig = {
         mobilePortrait:      { style: 'center', fontSize: 19 },
         mobileLandscape:     { style: 'grid',   fontSize: 19 },
         mobilePortraitFull:  { style: 'center', fontSize: 20 },
@@ -1322,16 +1322,24 @@ export default {
         desktopLandscape:     { style: 'grid', fontSize: 27 },
         desktopPortraitFull:  { style: 'grid', fontSize: 27 },
         desktopLandscapeFull: { style: 'grid', fontSize: 27 },
-        desktopBreakpoint: 900,
+        desktopBreakpoint: 800,
         centerBaseWidth: 384,
-        gridBaseWidth: 918
+        gridBaseWidth: 1280,
+        desktopModeScreenWidth: 1024,
+        desktopInMobile: { style: 'grid', fontSize: 60 },
+        // Demo modes
+        demoMobilePortrait:      { style: 'center', fontSize: 40 },
+        demoMobileLandscape:     { style: 'center', fontSize: 60 },
+        demoMobilePortraitFull:  { style: 'center', fontSize: 40 },
+        demoMobileLandscapeFull: { style: 'center', fontSize: 60 },
+        demoDesktopPortrait:      { style: 'grid', fontSize: 37 },
+        demoDesktopLandscape:     { style: 'grid', fontSize: 37 },
+        demoDesktopPortraitFull:  { style: 'grid', fontSize: 47 },
+        demoDesktopLandscapeFull: { style: 'grid', fontSize: 47 },
+        demoDesktopBreakpoint: 800,
+        demoDesktopInMobile: { style: 'grid', fontSize: 60 }
       }
-      this.wmConfig = FALLBACK_CONFIG
       this.isDesktopModeInMobile = !this.isMobile && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
-      try {
-        const data = await api.get('/admin/watermark')
-        if (data?.config) this.wmConfig = data.config
-      } catch { /* ใช้ fallback */ }
     },
     async loadVideo() {
       // ── Probe recorder extension ก่อนโหลด video (ไม่ใช้กับ demo) ──
