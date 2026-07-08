@@ -1967,7 +1967,11 @@ export default {
             clientReferer: document.referrer || window.location.href,
             clientHost: window.location.host,
             clientOS: _dOS(ua),
-            clientBrowser: _dBR(ua)
+            clientBrowser: _dBR(ua),
+            // ⭐ Global watch = Bunny ทุกครั้ง
+            player: 'bunny',
+            country: 'GLOBAL',
+            bucket: 'bunny-global'
           })
         }).catch(() => {})
       } catch { /* silent */ }

@@ -2111,12 +2111,16 @@ export default {
             videoTitle: this.video?.title || '',
             sectionName: this.section?.name || '',
             sectionCode: this.section?.code || '',
-            page: 'WatchPage (auto)',
+            page: 'WatchCnPage (auto)',
             url: window.location.pathname,
             clientReferer: document.referrer || window.location.href,
             clientHost: window.location.host,
             clientOS: _dOS(ua),
-            clientBrowser: _dBR(ua)
+            clientBrowser: _dBR(ua),
+            // ⭐ CN watch = Ali ทุกครั้ง (ไม่งั้น Flex บอก BUNNY ผิด)
+            player: 'ali',
+            country: 'CN',
+            bucket: 'ali-sg'
           })
         }).catch(() => {})
       } catch { /* silent */ }
@@ -2317,12 +2321,16 @@ export default {
           videoTitle: this.video?.title || '',
           sectionName: this.section?.name || '',
           sectionCode: this.section?.code || '',
-          page: 'WatchPage',
+          page: 'WatchCnPage',
           url: window.location.pathname,
           clientReferer: document.referrer || window.location.href,
           clientHost: window.location.host,
           clientOS: detectOS(),
-          clientBrowser: detectBrowser()
+          clientBrowser: detectBrowser(),
+          // ⭐ CN watch = Ali ทุกครั้ง
+          player: 'ali',
+          country: 'CN',
+          bucket: 'ali-sg'
         })
       }).catch(() => {})
 

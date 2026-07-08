@@ -85,7 +85,7 @@ export default {
       }
 
       // ═══ Step 1-2: Frontend checks ═══
-      this.statusText = 'ตรวจ token...'
+      this.statusText = 'ตรวจการเข้าสู่ระบบ...'
       this.currentStep = 1
       await w(500)
 
@@ -94,7 +94,7 @@ export default {
       if (!token) { this.sendAndFinish(); return }
 
       // ═══ Step 3-8: Backend doctor ═══
-      this.statusText = 'ตรวจ server + CDN...'
+      this.statusText = 'ตรวจการเชื่อมต่อวิดีโอ...'
       this.currentStep = 2
       await w(500)
 
@@ -118,7 +118,7 @@ export default {
       }
 
       this.currentStep = 6
-      this.statusText = 'ตรวจ CDN จาก browser...'
+      this.statusText = 'ตรวจการโหลดจากเบราว์เซอร์...'
       await w(500)
 
       // ═══ Client-side checks ═══
@@ -160,7 +160,7 @@ export default {
       add('C.3', 'Referrer-Policy', !rpBad, rp || 'default', { referrerPolicy: rp })
 
       this.currentStep = 9
-      this.statusText = 'ตรวจ iframe player...'
+      this.statusText = 'ตรวจโปรแกรมเล่นวิดีโอ...'
       await w(500)
 
       // ═══ Step 9: Iframe player test ═══
