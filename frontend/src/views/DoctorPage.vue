@@ -320,13 +320,15 @@ export default {
           } catch { /* geo fail — country = '' */ }
         }
 
-        // ⭐ Serving verification (Bunny path)
+        // ⭐ Serving verification — เลือก actual ตาม country (CN=Ali, อื่นๆ=Bunny)
         const { getExpectedServing, verifyServing } = await import('../utils/servingRules')
         expected = getExpectedServing(country, deviceType, clientBrowser)
+        const isCN = country === 'CN'
+        const isNoDrmDevice = deviceType === 'iPhone' || deviceType === 'iPad' || (deviceType === 'Mac' && clientBrowser === 'Safari')
         const actual = {
-          player: 'bunny',
-          drm: (deviceType === 'iPhone' || deviceType === 'iPad' || (deviceType === 'Mac' && clientBrowser === 'Safari')) ? 'nodrm' : 'widevine',
-          bucket: 'bunny-global'
+          player: isCN ? 'ali' : 'bunny',
+          drm: isNoDrmDevice ? 'nodrm' : 'widevine',
+          bucket: isCN ? 'ali-sg' : 'bunny-global'
         }
         servingCheck = { ...verifyServing(expected, actual), expected, actual }
       } catch { deviceType = clientOS || 'Unknown' }
@@ -343,10 +345,10 @@ export default {
             userEmail: this.userEmail,
             failCount: this.failCount,
             resultId: this._resultId || '',
-            player: 'bunny',                   // ⭐ Bunny CDN
-            deviceType,                        // ⭐ iPad detection
-            country,                           // ⭐ CN ถ้ามาจาก /my-cn/, ไม่งั้น whoami
-            bucket: 'bunny-global',            // ⭐ Bunny CDN Global
+            player: country === 'CN' ? 'ali' : 'bunny',       // ⭐ CN=Ali, อื่นๆ=Bunny
+            deviceType,                                         // ⭐ iPad detection
+            country,                                            // ⭐ CN ถ้ามาจาก /my-cn/ หรือ whoami
+            bucket: country === 'CN' ? 'ali-sg' : 'bunny-global',
             routingReason: expected?.reason || '',   // ⭐ จากตารางกฎ
             servingCheck,                      // ⭐ expected vs actual
             videoTitle: this.videoTitle || 'Demo',
