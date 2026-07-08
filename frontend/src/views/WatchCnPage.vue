@@ -2538,6 +2538,10 @@ export default {
     },
     aliSeek (sec) {
       if (!this._aliPlayer) return
+      // Throttle seek 500ms — DRM/Widevine session ทน seek รัวๆ ไม่ได้
+      const now = Date.now()
+      if (this._lastAliSeek && now - this._lastAliSeek < 500) return
+      this._lastAliSeek = now
       try { this._aliPlayer.seek(sec) } catch {}
       this.aliCurrentTime = sec
     },
@@ -2548,15 +2552,11 @@ export default {
       this._showControlsSticky()
     },
     aliSeekMove (e) {
-      // ระหว่าง drag — update seekValue แต่ยังไม่ commit
+      // ระหว่าง drag — update seekValue เท่านั้น (ไม่ยิง seek)
+      // Reason: DRM video (Widevine) ต้อง fetch license + decrypt ใหม่ทุก seek
+      //         ถ้ายิงระหว่าง drag = DRM session ล่ม → player ค้าง
       const val = parseFloat(e.target.value) || 0
       this.aliSeekValue = val
-      // Throttle seek: 200ms หนึ่งครั้ง (preview effect — เห็นภาพเปลี่ยน)
-      const now = Date.now()
-      if (!this._lastPreviewSeek || now - this._lastPreviewSeek > 200) {
-        this._lastPreviewSeek = now
-        if (this._aliPlayer) { try { this._aliPlayer.seek(val) } catch {} }
-      }
     },
     aliSeekEnd () {
       if (!this.aliSeeking) return
