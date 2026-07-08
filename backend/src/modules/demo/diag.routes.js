@@ -364,7 +364,9 @@ router.post('/doctor-line', async (req, res) => {
     deviceType = '',          // 'iPhone' | 'iPad' | 'Android' | 'Mac' | 'Windows' | 'Linux'
     bucket = '',              // ⭐ CDN bucket ที่ serve จริง (Ali region / Bunny library ID)
     videoId = '',             // Alibaba videoId or Bunny GUID
-    routingReason = ''        // ⭐ เหตุผลที่ route ไป bucket นี้ ("country=CN" / "iOS→NoDRM" / etc)
+    routingReason = '',       // ⭐ เหตุผลที่ route ไป bucket นี้ ("country=CN" / "iOS→NoDRM" / etc)
+    // ⭐ Serving verification (expected vs actual จากตารางกฎ)
+    servingCheck = null       // { match: bool, expected: {player,drm,bucket}, actual: {player,drm,bucket}, diffs: [] }
   } = req.body
   // IP จาก request headers (server-side)
   const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '?'
