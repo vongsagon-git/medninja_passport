@@ -2652,8 +2652,13 @@ export default {
       const now = Date.now()
       if (this._lastAliSeek && now - this._lastAliSeek < 500) return
       this._lastAliSeek = now
+      // ⭐ ถ้ากำลังเล่นอยู่ก่อน seek → resume play หลัง seek (Aliplayer default = pause หลัง seek)
+      const wasPlaying = this.isPlaying
       try { this._aliPlayer.seek(sec) } catch {}
       this.aliCurrentTime = sec
+      if (wasPlaying) {
+        setTimeout(() => { try { this._aliPlayer && this._aliPlayer.play() } catch {} }, 100)
+      }
     },
     // ⭐ Smooth seek: drag update seekValue เท่านั้น (ไม่ยิง seek ทุก frame)
     aliSeekStart () {
@@ -2674,7 +2679,12 @@ export default {
       const val = this.aliSeekValue
       this.aliSeeking = false
       this.aliCurrentTime = val
+      // ⭐ ถ้ากำลังเล่นอยู่ → resume play หลัง seek (Aliplayer default = pause)
+      const wasPlaying = this.isPlaying
       if (this._aliPlayer) { try { this._aliPlayer.seek(val) } catch {} }
+      if (wasPlaying) {
+        setTimeout(() => { try { this._aliPlayer && this._aliPlayer.play() } catch {} }, 100)
+      }
       this._showControlsSticky()
     },
     // Backward compat (บาง call site อาจเรียก)
