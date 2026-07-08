@@ -365,12 +365,15 @@ router.post('/doctor-line', async (req, res) => {
     bucket = '',              // ⭐ CDN bucket ที่ serve จริง (Ali region / Bunny library ID)
     videoId = '',             // Alibaba videoId or Bunny GUID
     routingReason = '',       // ⭐ เหตุผลที่ route ไป bucket นี้ ("country=CN" / "iOS→NoDRM" / etc)
+    country = '',             // ⭐ จาก frontend (path-based: /my-cn/ = CN)
     // ⭐ Serving verification (expected vs actual จากตารางกฎ)
     servingCheck = null       // { match: bool, expected: {player,drm,bucket}, actual: {player,drm,bucket}, diffs: [] }
   } = req.body
   // IP จาก request headers (server-side)
   const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '?'
-  const clientCountry = req.headers['cf-ipcountry'] || ''  // Cloudflare
+  // ⭐ Country: body.country (frontend path-based) > CF header > watchUrl /my-cn/ check
+  let clientCountry = country || req.headers['cf-ipcountry'] || ''
+  if (!clientCountry && /\/my-cn\//.test(watchUrl || '')) clientCountry = 'CN'
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
   if (!token) return res.json({ ok: false, reason: 'no LINE token' })
 

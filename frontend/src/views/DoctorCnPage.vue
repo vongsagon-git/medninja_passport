@@ -203,9 +203,10 @@ export default {
       else if (/Linux|X11/.test(ua)) deviceType = 'Linux'
       else deviceType = 'Unknown'
 
-      // ⭐ Country detection (จาก geo whoami — ที่ Doctor เพิ่งเช็คไป)
+      // ⭐ Country detection — /doctor-cn = CN แน่นอน (route มาจาก /my-cn/)
+      // fallback: geo whoami step
       const geoLine = this.lines.find(l => l.title === 'Geo whoami')
-      const country = geoLine?.raw?.country || ''
+      const country = 'CN'  // /doctor-cn = CN 100% (useCountryGuard redirect มาแล้ว)
 
       // ⭐ Expected serving ตามตารางกฎ
       const expected = getExpectedServing(country, deviceType, browser)
@@ -273,6 +274,7 @@ export default {
             failCount: this.failCount,
             player: 'ali',                     // ⭐ tag ให้ backend เลือก card ถูก
             deviceType,                        // ⭐ 4-layer detection (iPad iOS 13+ ตรวจถูก)
+            country,                           // ⭐ CN (/doctor-cn = CN แน่นอน)
             bucket: 'ali-sg',                  // ⭐ Alibaba Singapore VOD
             routingReason: expected.reason,    // ⭐ จากตารางกฎ (ตรงเป๊ะ)
             servingCheck,                      // ⭐ expected vs actual — บอกว่าตรงกฎไหม

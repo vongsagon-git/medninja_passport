@@ -1907,7 +1907,11 @@ export default {
           duration: Math.round(realD),
           isPlaying: realIsPlaying,
           drmMode: this.video?.drmMode || '',
-          appVersion: _getAppVersion()
+          appVersion: _getAppVersion(),
+          source: 'passport',
+          bucket: 'CN',
+          player: 'aliplayer',
+          variant: this._resolveAliVariant()
         })
       }, 3000)
 

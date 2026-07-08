@@ -293,6 +293,7 @@ export default {
       let deviceType = ''
       let expected = null
       let servingCheck = null
+      let country = ''
       try {
         const { isIPhone, isIPad, isAndroid, isMacSafari } = await import('../utils/deviceDetect')
         if (isIPhone(ua)) deviceType = 'iPhone'
@@ -304,13 +305,24 @@ export default {
         else if (/Linux|X11/.test(ua)) deviceType = 'Linux'
         else deviceType = 'Unknown'
 
+        // ⭐ Country detection — ถ้ามาจาก /my-cn/watch/ = CN แน่นอน (useCountryGuard redirect แล้ว)
+        const ref = document.referrer || ''
+        if (/\/my-cn\//.test(ref) || /\/my-cn\//.test(window.location.pathname)) {
+          country = 'CN'
+        } else {
+          // ไม่ใช่ CN path — ลอง whoami เป็น fallback
+          try {
+            const geoRes = await fetch('/api/china/whoami', {
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }
+            })
+            const geo = await geoRes.json()
+            country = (geo?.country && geo.country !== 'unknown') ? geo.country : ''
+          } catch { /* geo fail — country = '' */ }
+        }
+
         // ⭐ Serving verification (Bunny path)
         const { getExpectedServing, verifyServing } = await import('../utils/servingRules')
-        // Country = จาก Cloudflare header (backend เพิ่ม cf-ipcountry) → ใน journey จะมี
-        // ถ้าไม่มี fallback = ''  (backend จะเติมให้จาก req.headers)
-        expected = getExpectedServing('', deviceType, clientBrowser)
-        // Bunny actual = สรุปจาก drmMode ที่ video ใช้จริง (Widevine ถ้ามี, No-DRM ถ้าไม่มี)
-        // Doctor demo video ใช้ drmMode = protection (widevine) — เทียบกับ expected
+        expected = getExpectedServing(country, deviceType, clientBrowser)
         const actual = {
           player: 'bunny',
           drm: (deviceType === 'iPhone' || deviceType === 'iPad' || (deviceType === 'Mac' && clientBrowser === 'Safari')) ? 'nodrm' : 'widevine',
@@ -333,6 +345,7 @@ export default {
             resultId: this._resultId || '',
             player: 'bunny',                   // ⭐ Bunny CDN
             deviceType,                        // ⭐ iPad detection
+            country,                           // ⭐ CN ถ้ามาจาก /my-cn/, ไม่งั้น whoami
             bucket: 'bunny-global',            // ⭐ Bunny CDN Global
             routingReason: expected?.reason || '',   // ⭐ จากตารางกฎ
             servingCheck,                      // ⭐ expected vs actual
