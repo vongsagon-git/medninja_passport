@@ -2201,10 +2201,15 @@ export default {
 .watch-page {
   background: #1c1d1f;
   color: #fff;
-  height: 100vh;
-  height: 100dvh;
+  /* ⭐ หัก banner height ออก — ไม่ให้ล้นออกด้านล่าง (detail bar หาย) */
+  height: calc(100vh - var(--country-banner-h, 28px));
+  height: calc(100dvh - var(--country-banner-h, 28px));
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* ⭐ วาง watch page ต่อจาก banner ทุกครั้ง */
+  top: var(--country-banner-h, 28px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
