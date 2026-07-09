@@ -126,19 +126,6 @@
           <h2>LMS CONTROL</h2>
         </div>
         <div class="admin-nav-grid">
-          <router-link to="/admin/courses" class="admin-nav-card">
-            <div class="nav-icon nav-icon-purple">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>จัดการหน้าขาย</h3>
-              <p>ราคา + ผู้สอน + คอร์สย่อย (Sales)</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
-
           <router-link to="/admin/packages" class="admin-nav-card">
             <div class="nav-icon nav-icon-blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
@@ -245,65 +232,6 @@
         </div>
       </div>
 
-      <!-- ═══ ADMIN MINI APP ═══ -->
-      <div class="admin-section">
-        <h2 class="admin-section-title">ADMIN MINI APP</h2>
-        <div class="admin-nav-grid">
-          <a href="https://comm.medninja.academy" target="_blank" class="admin-nav-card">
-            <div class="nav-icon" style="background:rgba(6,199,85,0.1);color:#06c755">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 2C6.48 2 2 5.93 2 10.71c0 2.81 1.49 5.28 3.78 6.9-.13.47-.84 2.88-.87 3.09 0 0-.02.12.05.17.07.04.15.02.15.02.2-.03 2.37-1.56 3.36-2.18.78.15 1.6.24 2.53.24 5.52 0 10-3.93 10-8.76C22 5.93 17.52 2 12 2z"/></svg>
-            </div>
-            <div class="nav-content">
-              <h3>NINJA COMM</h3>
-              <p>LINE CRM — Funnel + Flex + AI</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </a>
-
-          <a href="https://wm.medninja.academy/monitor" target="_blank" class="admin-nav-card">
-            <div class="nav-icon" style="background:rgba(239,68,68,0.1);color:#ef4444">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            </div>
-            <div class="nav-content">
-              <h3>PDF WATERMARK</h3>
-              <p>Watermark Service — ลายน้ำ PDF</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </a>
-
-          <a href="https://ws.medninja.academy/warroom/" target="_blank" class="admin-nav-card">
-            <div class="nav-icon" style="background:rgba(168,85,247,.1);color:#a855f7">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>WARROOM + MONITORING</h3>
-              <p>Realtime monitor + ผู้ชม + ความผิดปกติ + Logs</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </a>
-        </div>
-      </div>
-
-      <!-- ═══ INFRA APP ═══ -->
-      <div class="admin-section">
-        <h2 class="admin-section-title">INFRA APP</h2>
-        <div class="admin-nav-grid">
-          <a href="https://infra.medninja.academy" target="_blank" class="admin-nav-card">
-            <div class="nav-icon" style="background:rgba(139,92,246,.1);color:#8b5cf6">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>NINJA INFRA</h3>
-              <p>Monitor & Control DigitalOcean Infrastructure</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </a>
-        </div>
-      </div>
     </div>
   </div>
 </template>

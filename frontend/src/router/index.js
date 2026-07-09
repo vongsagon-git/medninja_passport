@@ -31,7 +31,6 @@ const MeqCase = () => import('../views/MeqCase.vue')
 const AdminDashboard = () => import('../views/admin/AdminDashboard.vue')
 const ManageSections = () => import('../views/admin/ManageSections.vue')
 const ManagePackages = () => import('../views/admin/ManagePackages.vue')
-const ManageCourses = () => import('../views/admin/ManageCourses.vue')
 const ManageActivations = () => import('../views/admin/ManageActivations.vue')
 const ManagePassport = () => import('../views/admin/ManagePassport.vue')
 const ActiveViewers = () => import('../views/admin/ActiveViewers.vue')
@@ -180,12 +179,6 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   // /admin/knowledge-hub — ลบ (D4 KnowledgeHub prototype)
-  {
-    path: '/admin/courses',
-    name: 'ManageCourses',
-    component: ManageCourses,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
   {
     path: '/admin/sections',
     name: 'ManageSections',

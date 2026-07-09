@@ -11,7 +11,6 @@ const auth = require('./shared/middleware/auth')
 
 // ─── Modular Monolith Routes ───
 const authRoutes = require('./modules/auth/auth.routes')
-const catalogRoutes = require('./modules/catalog/catalog.routes')
 const userRoutes = require('./modules/user/user.routes')
 const demoRoutes = require('./modules/demo/demo.routes')
 const contentRoutes = require('./modules/content/content.routes')
@@ -202,7 +201,6 @@ app.use(express.json({ limit: '10mb' })) // เพิ่ม limit สำหร�
 
 // ─── API Routes (Modular Monolith) ───
 app.use('/api/auth', authRoutes)
-app.use('/api/courses', catalogRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/demo', demoRoutes)
 app.use('/api/diag', require('./modules/demo/diag.routes'))
