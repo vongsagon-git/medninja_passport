@@ -7,7 +7,6 @@ const Activation = require('../activation/Activation.model')
 const { getSignedEmbedUrl, getDemoEmbedUrl, bunnyConfig } = require('../../shared/config/bunny')
 const { getClient } = require('../../shared/config/valkey')
 const ViewerAnomaly = require('./ViewerAnomaly.model')
-const WatermarkConfig = require('./WatermarkConfig.model')
 const ClientLog = require('./ClientLog.model')
 const crypto = require('crypto')
 
@@ -792,58 +791,6 @@ exports.assignAdminVisa = async (req, res, next) => {
 // ═══════════════════════════════════════════════════
 // WATERMARK CONFIG
 // ═══════════════════════════════════════════════════
-
-exports.getWatermarkConfig = async (req, res, next) => {
-  try {
-    let config = await WatermarkConfig.findOne({ key: 'default' }).lean()
-    if (!config) {
-      config = await WatermarkConfig.create({ key: 'default' })
-      config = config.toObject()
-    }
-    delete config._id
-    delete config.__v
-    delete config.key
-    res.json({ config })
-  } catch (error) {
-    next(error)
-  }
-}
-
-exports.updateWatermarkConfig = async (req, res, next) => {
-  try {
-    const modes = [
-      'mobilePortrait', 'mobileLandscape', 'mobilePortraitFull', 'mobileLandscapeFull',
-      'desktopPortrait', 'desktopLandscape', 'desktopPortraitFull', 'desktopLandscapeFull',
-      'demoMobilePortrait', 'demoMobileLandscape', 'demoMobilePortraitFull', 'demoMobileLandscapeFull',
-      'demoDesktopPortrait', 'demoDesktopLandscape', 'demoDesktopPortraitFull', 'demoDesktopLandscapeFull',
-      'desktopInMobile', 'demoDesktopInMobile'
-    ]
-    const updates = {}
-    for (const mode of modes) {
-      if (req.body[mode]) {
-        const { style, fontSize } = req.body[mode]
-        if (style && ['grid', 'center'].includes(style)) updates[`${mode}.style`] = style
-        if (fontSize && fontSize >= 8 && fontSize <= 60) updates[`${mode}.fontSize`] = fontSize
-      }
-    }
-    // Breakpoints
-    const bpFields = ['desktopBreakpoint', 'demoDesktopBreakpoint', 'desktopModeScreenWidth', 'centerBaseWidth', 'gridBaseWidth']
-    for (const f of bpFields) {
-      if (req.body[f] >= 400 && req.body[f] <= 2000) updates[f] = req.body[f]
-    }
-    const config = await WatermarkConfig.findOneAndUpdate(
-      { key: 'default' },
-      { $set: updates },
-      { new: true, upsert: true }
-    ).lean()
-    delete config._id
-    delete config.__v
-    delete config.key
-    res.json({ config })
-  } catch (error) {
-    next(error)
-  }
-}
 
 // ═══════════════════════════════════════════════════
 // ACTIVE VIEWERS + ANOMALY LOG

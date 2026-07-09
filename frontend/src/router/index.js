@@ -33,18 +33,14 @@ const ManageSections = () => import('../views/admin/ManageSections.vue')
 const ManagePackages = () => import('../views/admin/ManagePackages.vue')
 const ManageCourses = () => import('../views/admin/ManageCourses.vue')
 const ManageActivations = () => import('../views/admin/ManageActivations.vue')
-const VideoHealthCheck = () => import('../views/admin/VideoHealthCheck.vue')
 const ManagePassport = () => import('../views/admin/ManagePassport.vue')
-const ManageWatermark = () => import('../views/admin/ManageWatermark.vue')
 const ActiveViewers = () => import('../views/admin/ActiveViewers.vue')
 const ValkeyDebug = () => import('../views/admin/ValkeyDebug.vue')
 const ManageDemoWeb = () => import('../views/admin/ManageDemoWeb.vue')
-const VisitorAnalytics = () => import('../views/admin/VisitorAnalytics.vue')
 const PdfDownloadCenter = () => import('../views/admin/PdfDownloadCenter.vue')
 const VideoPdfMap = () => import('../views/admin/VideoPdfMap.vue')
 const PdfLibrary = () => import('../views/admin/PdfLibrary.vue')
 const DbViewer = () => import('../views/admin/DbViewer.vue')
-const ActivityLog = () => import('../views/admin/ActivityLog.vue')
 // Knowledge Hub — prototype รวม P'Nut + Siriraj DDx (admin-only, internal)
 const ManageSelfChecks = () => import('../views/admin/ManageSelfChecks.vue')
 const SelfCheckAnalytics = () => import('../views/admin/SelfCheckAnalytics.vue')
@@ -225,12 +221,6 @@ const routes = [
     redirect: '/admin/passport'
   },
   {
-    path: '/admin/health',
-    name: 'VideoHealthCheck',
-    component: VideoHealthCheck,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
     path: '/db-viewer',
     name: 'DbViewer',
     component: DbViewer,
@@ -253,28 +243,10 @@ const routes = [
     redirect: '/admin'
   },
   {
-    path: '/admin/watermark',
-    name: 'ManageWatermark',
-    component: ManageWatermark,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
     path: '/diag',
     name: 'Diag',
     component: () => import('../views/DoctorPage.vue'),
     meta: { requiresAuth: true, immersive: true }
-  },
-  {
-    path: '/device',
-    name: 'Device',
-    component: () => import('../views/DevicePage.vue'),
-    meta: { immersive: true }
-  },
-  {
-    path: '/admin/devices',
-    name: 'ManageDevices',
-    component: () => import('../views/admin/ManageDevices.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/linelink',
@@ -292,12 +264,6 @@ const routes = [
     path: '/admin/demo-web',
     name: 'ManageDemoWeb',
     component: ManageDemoWeb,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/visitor-analytics',
-    name: 'VisitorAnalytics',
-    component: VisitorAnalytics,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
@@ -322,12 +288,6 @@ const routes = [
     path: '/admin/pdf-library',
     name: 'PdfLibrary',
     component: PdfLibrary,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/activity-log',
-    name: 'ActivityLog',
-    component: ActivityLog,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   // /virtual-patient (A6) — ลบออกจาก passport (marketing landing)
@@ -410,9 +370,6 @@ const router = createRouter({
     return { top: 0 }
   }
 })
-
-// หน้าที่ต้องการ track visitor (เงียบๆ ไม่มี UI)
-const TRACKED_PAGES = new Set(['/', '/demo/watch/0', '/demo/watch/1'])
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
@@ -506,24 +463,8 @@ router.beforeResolve(async (to, from, next) => {
   next()
 })
 
-// track visitor หลัง navigation สำเร็จ (fire-and-forget)
-router.afterEach((to) => {
+router.afterEach(() => {
   checkPendingReload()
-  if (TRACKED_PAGES.has(to.path)) {
-    const params = new URLSearchParams(window.location.search)
-    fetch('/api/visitor/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        page: to.path,
-        referrer: document.referrer || '',
-        screenSize: `${window.screen.width}x${window.screen.height}`,
-        utmSource: params.get('utm_source') || '',
-        utmMedium: params.get('utm_medium') || '',
-        utmCampaign: params.get('utm_campaign') || ''
-      })
-    }).catch(() => {})
-  }
 })
 
 export default router

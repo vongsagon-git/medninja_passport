@@ -208,9 +208,6 @@ app.use('/api/demo', demoRoutes)
 app.use('/api/diag', require('./modules/demo/diag.routes'))
 app.use('/api/partner', require('./modules/partner/partner.routes'))
 
-// Visitor tracking (public — fire-and-forget)
-app.use('/api/visitor', require('./modules/visitor/visitor.routes'))
-
 // China test: Alibaba VOD PlayAuth (MVP — public, จะเพิ่ม auth ตอน Phase 2)
 app.use('/api/china', require('./modules/china/china.routes'))
 
@@ -240,17 +237,12 @@ app.use('/api/my', auth, profileGuard, requireLine, require('./modules/meq/meq.r
 // NLEX → ย้ายไป miniapp (nlex.medninja.academy) แล้ว
 // sendBeacon endpoint — ไม่ผ่าน auth (อ่าน JWT จาก body เอง)
 app.post('/api/beacon/heartbeat-clear', require('./modules/content/content.controller').beaconClearHeartbeat)
-// Watermark config — public (WatchPage demo ต้องดึงได้ไม่ต้อง login)
-app.get('/api/admin/watermark', require('./modules/content/content.admin.controller').getWatermarkConfig)
 app.use('/api/admin', contentAdminRoutes)
 app.use('/api/admin/self-checks', require('./modules/selfcheck/selfcheck.admin.routes'))
 app.use('/api/admin/activations', activationAdminRoutes)
 app.use('/api/admin/passport', preregisterAdminRoutes)
-// Visitor analytics (admin only) — reuse visitor routes with auth guard
-app.use('/api/admin/visitors', auth, require('./shared/middleware/admin'), require('./modules/visitor/visitor.routes'))
 app.use('/api/admin/line', auth, require('./shared/middleware/admin'), require('./modules/line/line.admin.routes'))
 app.use('/api/admin/spy', require('./modules/spy/spy.routes'))
-app.use('/api/admin/devices', require('./modules/auth/device.admin.routes'))
 app.use('/api/admin/approaches', require('./modules/approach/approach.admin.routes'))
 app.use('/api/admin/meq', require('./modules/meq/meq.admin.routes'))
 // Alibaba VOD admin utils (verify + rename)
@@ -261,7 +253,6 @@ app.use('/api/arena', (req, res) => res.redirect(301, 'https://ddx.medninja.acad
 app.use('/api/ddx', (req, res) => res.redirect(301, 'https://ddx.medninja.academy/api/ddx' + req.url))
 app.use('/api/admin/flashcard', (req, res) => res.redirect(301, 'https://ddx.medninja.academy/api/admin/flashcard' + req.url))
 app.use('/api/admin/arena', (req, res) => res.redirect(301, 'https://ddx.medninja.academy/api/admin/arena' + req.url))
-app.use('/api/admin/activity', require('./modules/activity/activity.admin.routes'))
 app.use('/api/admin/db', require('./modules/admin/dbviewer.routes'))
 
 // Health check — เช็คทั้ง passport + lms connections

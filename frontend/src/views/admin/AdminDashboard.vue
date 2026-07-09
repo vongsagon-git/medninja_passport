@@ -76,18 +76,6 @@
           </div>
         </div>
 
-        <router-link to="/admin/visitor-analytics" class="stat-card stat-card-link">
-          <div class="stat-icon stat-icon-cyan">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
-            </svg>
-          </div>
-          <div class="stat-body">
-            <span class="stat-number">{{ stats.visitorsToday.toLocaleString() }}</span>
-            <span class="stat-label">ผู้เข้าชมวันนี้</span>
-          </div>
-        </router-link>
-
       </div>
       </div>
 
@@ -257,94 +245,6 @@
         </div>
       </div>
 
-      <!-- ═══ COMMUNICATION CONTROL ═══ -->
-      <div class="nav-section">
-        <div class="nav-section-header">
-          <div class="nav-section-icon comm-section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
-          </div>
-          <h2>COMMUNICATION CONTROL</h2>
-        </div>
-        <div class="admin-nav-grid">
-          <router-link to="/admin/visitor-analytics" class="admin-nav-card">
-            <div class="nav-icon nav-icon-cyan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>Visitor Analytics</h3>
-              <p>สถิติผู้เข้าชมเว็บไซต์ ตามวัน / OS / Browser</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
-        </div>
-      </div>
-
-      <!-- ═══ SYSTEM SECURITY CONTROL ═══ -->
-      <div class="nav-section">
-        <div class="nav-section-header">
-          <div class="nav-section-icon security-section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
-          </div>
-          <h2>SYSTEM SECURITY CONTROL</h2>
-        </div>
-        <div class="admin-nav-grid">
-          <router-link to="/admin/health" class="admin-nav-card">
-            <div class="nav-icon nav-icon-red">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>Video Health Check</h3>
-              <p>ตรวจสอบวีดีโอ + ลายน้ำ + Security</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
-
-          <router-link to="/admin/watermark" class="admin-nav-card">
-            <div class="nav-icon nav-icon-purple">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>ตั้งค่าลายน้ำ</h3>
-              <p>ปรับรูปแบบ + ขนาด แยกตาม device</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
-
-          <router-link to="/admin/activity-log" class="admin-nav-card">
-            <div class="nav-icon nav-icon-cyan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>Activity Log</h3>
-              <p>ประวัติการใช้งานนักเรียน — หลักฐานป้องกัน Refund</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
-
-          <router-link to="/admin/devices" class="admin-nav-card">
-            <div class="nav-icon nav-icon-purple">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z"/>
-              </svg>
-            </div>
-            <div class="nav-content">
-              <h3>Device Fingerprint</h3>
-              <p>ตรวจ device ที่ใช้ — จับ account sharing</p>
-            </div>
-            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </router-link>
-
-        </div>
-      </div>
-
       <!-- ═══ ADMIN MINI APP ═══ -->
       <div class="admin-section">
         <h2 class="admin-section-title">ADMIN MINI APP</h2>
@@ -419,8 +319,7 @@ export default {
       statsError: '',
       stats: {
         packages: 0,
-        activations: 0,
-        visitorsToday: 0
+        activations: 0
       },
       userBreakdown: { admin: 0, staff: 0, student: 0, demo: 0 }
     }
@@ -449,11 +348,10 @@ export default {
       this.loading = true
       this.statsError = ''
       try {
-        const [passportRes, packagesRes, activationsRes, visitorsRes] = await Promise.allSettled([
+        const [passportRes, packagesRes, activationsRes] = await Promise.allSettled([
           api.get('/admin/passport'),
           api.get('/admin/packages'),
-          api.get('/admin/activations'),
-          api.get('/admin/visitors/stats?days=1')
+          api.get('/admin/activations')
         ])
         if (passportRes.status === 'fulfilled') {
           const regs = passportRes.value.registrations || []
@@ -468,7 +366,6 @@ export default {
         }
         this.stats.packages = packagesRes.status === 'fulfilled' ? (packagesRes.value.packages?.length || 0) : 0
         this.stats.activations = activationsRes.status === 'fulfilled' ? (activationsRes.value.activations?.length || 0) : 0
-        this.stats.visitorsToday = visitorsRes.status === 'fulfilled' ? (visitorsRes.value.totalVisits || 0) : 0
       } catch (err) {
         console.error('fetchStats error:', err)
         this.statsError = err.response?.data?.message || 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่'

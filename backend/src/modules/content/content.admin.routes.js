@@ -7,7 +7,6 @@ const {
   getAllPackages, getPackage, createPackage, updatePackage, deletePackage,
   getBunnyVideoInfo, getBunnyVideoEmbed, getBunnyVideoNames, renameBunnyVideo,
   getDemoSection, upsertDemoSection, getDemoBunnyVideoInfo, getDemoConfig, setupDemoPackage, assignAdminVisa,
-  getWatermarkConfig, updateWatermarkConfig,
   getActiveViewers, getAnomalyLog, resolveAnomaly,
   kickViewer, kickAllViewers,
   getClientLogs, resolveClientLog,
@@ -83,10 +82,6 @@ router.get('/demo/bunny/video/:videoId', auth, admin, getDemoBunnyVideoInfo)
 router.get('/demo/config', auth, admin, getDemoConfig)
 router.post('/demo/setup-package', auth, admin, setupDemoPackage)
 router.post('/demo/assign-visa', auth, admin, assignAdminVisa)
-
-// Admin: Watermark Config
-router.get('/watermark', getWatermarkConfig)  // public — WatchPage ต้องดึงได้ไม่ต้อง login
-router.put('/watermark', auth, admin, updateWatermarkConfig)
 
 // Admin: Valkey Debug (read-only)
 router.get('/valkey-debug', auth, admin, async (req, res) => {
