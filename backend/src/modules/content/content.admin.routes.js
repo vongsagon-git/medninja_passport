@@ -12,8 +12,7 @@ const {
   getClientLogs, resolveClientLog,
   liveDebugTimeline, liveDebugNow, liveDebugErrors,
   getAnomalyReport,
-  refreshDurations,
-  getDemoWebConfig, updateDemoWebConfig, syncDemoWebDurations
+  refreshDurations
 } = require('./content.admin.controller')
 
 // Admin: CRUD Sections
@@ -131,11 +130,6 @@ router.get('/live-debug/now', auth, admin, liveDebugNow)            // ?liveId= 
 router.get('/live-debug/errors', auth, admin, liveDebugErrors)      // ?hours=1
 router.get('/anomaly-report', auth, admin, getAnomalyReport)
 router.post('/refresh-durations', auth, admin, refreshDurations)
-
-// Admin: Demo Web Video Config
-router.get('/demo-web', auth, admin, getDemoWebConfig)
-router.put('/demo-web', auth, admin, updateDemoWebConfig)
-router.post('/demo-web/sync-durations', auth, admin, syncDemoWebDurations)
 
 // ═══ Video-PDF Map — แสดง video ทั้งหมดจาก Bunny + PDF status ═══
 router.get('/video-pdf-map', auth, admin, async (req, res) => {

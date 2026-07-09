@@ -35,7 +35,6 @@ const ManageActivations = () => import('../views/admin/ManageActivations.vue')
 const ManagePassport = () => import('../views/admin/ManagePassport.vue')
 const ActiveViewers = () => import('../views/admin/ActiveViewers.vue')
 const ValkeyDebug = () => import('../views/admin/ValkeyDebug.vue')
-const ManageDemoWeb = () => import('../views/admin/ManageDemoWeb.vue')
 const PdfDownloadCenter = () => import('../views/admin/PdfDownloadCenter.vue')
 const VideoPdfMap = () => import('../views/admin/VideoPdfMap.vue')
 const PdfLibrary = () => import('../views/admin/PdfLibrary.vue')
@@ -254,21 +253,9 @@ const routes = [
     meta: { immersive: true }
   },
   {
-    path: '/admin/demo-web',
-    name: 'ManageDemoWeb',
-    component: ManageDemoWeb,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
     path: '/admin/pdf-center',
     name: 'PdfDownloadCenter',
     component: PdfDownloadCenter,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/qa',
-    name: 'ManageQA',
-    component: () => import('../views/admin/ManageQA.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
