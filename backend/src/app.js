@@ -197,6 +197,10 @@ app.get('/api/geo/whoami', geoMiddleware.whoamiEndpoint)
 // Public all-sources — query CF + ipinfo + geoip-lite แยก (debug page /geo)
 app.get('/api/geo/all-sources', geoMiddleware.allSourcesEndpoint)
 
+// Public domain status — เช็ค 3 layer defense ของ Domain lock (debug page /domain)
+const { domainStatusEndpoint } = require('./shared/middleware/domainCheck')
+app.get('/api/domain/status', domainStatusEndpoint)
+
 // LINE Webhook — raw body สำหรับ verify signature (ต้องอยู่ก่อน express.json)
 app.use('/api/line/webhook', require('./modules/line/line.webhook.routes'))
 

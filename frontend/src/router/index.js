@@ -318,6 +318,13 @@ const routes = [
     meta: { immersive: true }
   },
   {
+    // ⭐ Domain debug page — 3 layer defense (CORS + Referer + CSP)
+    path: '/domain',
+    name: 'Domain',
+    component: () => import('../views/DomainPage.vue'),
+    meta: { immersive: true }
+  },
+  {
     path: '/screen-check',
     name: 'ScreenCheck',
     component: () => import('../views/ScreenCheck.vue'),
