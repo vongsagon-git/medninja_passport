@@ -11,27 +11,28 @@ router.get('/playauth/:videoId', getPlayAuth)
 // GET /api/china/sts/:videoId — สำหรับ Widevine/FairPlay DRM video
 router.get('/sts/:videoId', getStsToken)
 
-// GET /api/china/whoami — server-side IP + country detection (fallback ถ้า ipapi.co block)
+// GET /api/china/whoami — server-side IP + country detection
+// ใช้ req.geo จาก geoMiddleware (ipinfo → geoip-lite)
+// Note: Cloudflare header ถูกตัดออก 2026-07-10 เพราะ DO ไม่ inject ให้เรา
 router.get('/whoami', (req, res) => {
-  const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
-  const country = req.headers['cf-ipcountry'] || 'unknown'  // Cloudflare header
-  const ray = req.headers['cf-ray'] || ''
-  const ua = req.headers['user-agent'] || ''
   res.json({
-    ip,
-    country,
-    countryName: country,
-    cfRay: ray,
-    userAgent: ua,
-    detectedBy: 'cloudflare-header'
+    ip: req.geo?.ip || null,
+    country: req.geo?.country || 'unknown',
+    countryName: req.geo?.countryName || null,
+    isChina: req.geo?.isChina || false,
+    isThai: req.geo?.isThai || false,
+    asn: req.geo?.asn || null,
+    isp: req.geo?.isp || null,
+    userAgent: req.headers['user-agent'] || '',
+    detectedBy: req.geo?.detectedBy || 'unknown'
   })
 })
 
 // POST /api/china/log/test-result — บันทึกผล DRM test (device + browser + step results)
 router.post('/log/test-result', (req, res) => {
   const body = req.body || {}
-  const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
-  const country = req.headers['cf-ipcountry'] || 'unknown'
+  const ip = req.geo?.ip || (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
+  const country = req.geo?.country || 'unknown'
   pushTestResult({
     sessionId: String(body.sessionId || 'unknown').substring(0, 32),
     buildVer: String(body.buildVer || '').substring(0, 40),

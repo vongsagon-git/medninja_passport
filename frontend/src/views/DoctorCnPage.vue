@@ -34,11 +34,16 @@
 
 <script>
 import { useAuthStore } from '../stores/auth'
+import { useCountryGuard } from '../composables/useCountryGuard'
 import api from '../services/api'
 
 export default {
   name: 'DoctorCnPage',
-  setup() { return { authStore: useAuthStore() } },
+  setup() {
+    // ⭐ CN guard — redirect /doctor ถ้า IP เปลี่ยนออกจาก CN
+    useCountryGuard('CN')
+    return { authStore: useAuthStore() }
+  },
   data() {
     return {
       lines: [],
