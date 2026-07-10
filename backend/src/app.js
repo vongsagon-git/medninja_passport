@@ -194,6 +194,9 @@ app.use(geoMiddleware)
 // Public whoami — ให้ frontend เช็ค country ตัวเอง (ไม่ต้อง login)
 app.get('/api/geo/whoami', geoMiddleware.whoamiEndpoint)
 
+// Public all-sources — query CF + ipinfo + geoip-lite แยก (debug page /geo)
+app.get('/api/geo/all-sources', geoMiddleware.allSourcesEndpoint)
+
 // LINE Webhook — raw body สำหรับ verify signature (ต้องอยู่ก่อน express.json)
 app.use('/api/line/webhook', require('./modules/line/line.webhook.routes'))
 

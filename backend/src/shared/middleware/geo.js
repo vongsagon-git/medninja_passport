@@ -219,5 +219,145 @@ function whoamiEndpoint (req, res) {
   })
 }
 
+// ─── Endpoint: GET /api/geo/all-sources ───
+// Query ทั้ง 3 source แบบ parallel — แสดงผลคู่กัน (ไม่ผ่าน priority chain)
+async function allSourcesEndpoint (req, res) {
+  const ip = extractIp(req)
+  const cfCountry = req.headers['cf-ipcountry'] || null
+
+  // Source 1: Cloudflare header (sync — อ่านจาก header ตรงๆ)
+  const cfResult = cfCountry
+    ? {
+        source: 'cloudflare',
+        country: cfCountry.toUpperCase(),
+        available: cfCountry !== 'XX' && cfCountry !== 'T1',
+        raw: cfCountry,
+        latencyMs: 0,
+        cost: 'free',
+        notes: cfCountry === 'XX' ? 'Unknown country'
+             : cfCountry === 'T1' ? 'Tor exit node'
+             : 'OK'
+      }
+    : {
+        source: 'cloudflare',
+        country: null,
+        available: false,
+        raw: null,
+        latencyMs: 0,
+        cost: 'free',
+        notes: 'No CF header (CF proxy off or direct hit)'
+      }
+
+  // Source 2: ipinfo.io (async — call external API)
+  const ipinfoStart = Date.now()
+  let ipinfoResult = null
+  try {
+    if (!IPINFO_TOKEN) {
+      ipinfoResult = {
+        source: 'ipinfo',
+        country: null,
+        available: false,
+        latencyMs: 0,
+        cost: 'paid-after-50k',
+        notes: 'No IPINFO_TOKEN configured'
+      }
+    } else {
+      const data = await ipinfoLookup(ip)
+      const latency = Date.now() - ipinfoStart
+      if (data) {
+        ipinfoResult = {
+          source: 'ipinfo',
+          country: data.country,
+          countryName: data.countryName,
+          asn: data.asn,
+          isp: data.isp,
+          continent: data.continent,
+          available: true,
+          latencyMs: latency,
+          cost: 'paid-after-50k',
+          notes: 'OK'
+        }
+      } else {
+        ipinfoResult = {
+          source: 'ipinfo',
+          country: null,
+          available: false,
+          latencyMs: latency,
+          cost: 'paid-after-50k',
+          notes: 'API failed / timeout / invalid response'
+        }
+      }
+    }
+  } catch (e) {
+    ipinfoResult = {
+      source: 'ipinfo',
+      country: null,
+      available: false,
+      latencyMs: Date.now() - ipinfoStart,
+      cost: 'paid-after-50k',
+      notes: 'Error: ' + e.message
+    }
+  }
+
+  // Source 3: geoip-lite (offline)
+  const geoipStart = Date.now()
+  const geoipData = geoipLookup(ip)
+  const geoipResult = geoipData
+    ? {
+        source: 'geoip-lite',
+        country: geoipData.country,
+        region: geoipData.region,
+        city: geoipData.city,
+        available: true,
+        latencyMs: Date.now() - geoipStart,
+        cost: 'free-offline',
+        notes: 'OK (accuracy ~85-90%)'
+      }
+    : {
+        source: 'geoip-lite',
+        country: null,
+        available: false,
+        latencyMs: Date.now() - geoipStart,
+        cost: 'free-offline',
+        notes: 'IP not in offline DB'
+      }
+
+  // Consensus + Winner
+  const availableCountries = [cfResult, ipinfoResult, geoipResult]
+    .filter(r => r.available && r.country)
+    .map(r => r.country)
+  const consensus = availableCountries.length > 0
+    ? availableCountries.every(c => c === availableCountries[0])
+      ? 'agree'
+      : 'disagree'
+    : 'no-data'
+
+  const winner = req.geo?.detectedBy || 'none'
+
+  res.json({
+    ip,
+    sources: {
+      cloudflare: cfResult,
+      ipinfo: ipinfoResult,
+      geoipLite: geoipResult
+    },
+    consensus,
+    winner,
+    winnerCountry: req.geo?.country || null,
+    debug: {
+      reqIp: req.ip,
+      cfConnectingIp: req.headers['cf-connecting-ip'] || null,
+      cfIpCountry: cfCountry,
+      cfRay: req.headers['cf-ray'] || null,
+      xForwardedFor: req.headers['x-forwarded-for'] || null,
+      upstreamIsCloudflare: isFromCloudflare(req.ip || req.socket?.remoteAddress || ''),
+      cacheSize: geoCache.size,
+      hasIpinfoToken: !!IPINFO_TOKEN,
+      userAgent: req.headers['user-agent'] || null
+    }
+  })
+}
+
 module.exports = geoMiddleware
 module.exports.whoamiEndpoint = whoamiEndpoint
+module.exports.allSourcesEndpoint = allSourcesEndpoint

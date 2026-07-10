@@ -311,6 +311,13 @@ const routes = [
     meta: { requiresAuth: true, immersive: true }
   },
   {
+    // ⭐ Geo debug page — query CF + ipinfo + geoip-lite แสดงคู่กัน
+    path: '/geo',
+    name: 'Geo',
+    component: () => import('../views/GeoPage.vue'),
+    meta: { immersive: true }
+  },
+  {
     path: '/screen-check',
     name: 'ScreenCheck',
     component: () => import('../views/ScreenCheck.vue'),
