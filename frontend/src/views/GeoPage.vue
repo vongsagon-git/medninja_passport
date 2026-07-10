@@ -26,10 +26,24 @@
         <div class="summary-row">
           <span class="summary-label">Consensus</span>
           <span class="summary-value">
-            <span v-if="data.consensus === 'agree'" class="badge badge-ok">✅ ทุกแหล่งเห็นตรง</span>
-            <span v-else-if="data.consensus === 'disagree'" class="badge badge-warn">⚠️ ไม่ตรงกัน</span>
-            <span v-else class="badge badge-none">— ไม่มีข้อมูล</span>
+            <span v-if="data.consensus === 'agree'" class="badge badge-ok">
+              ✅ ทั้ง 3 แหล่งเห็นตรง (TH ทั้งหมด)
+            </span>
+            <span v-else-if="data.consensus === 'partial-agree'" class="badge badge-partial">
+              ⚠️ เห็นตรงเฉพาะแหล่งที่มีข้อมูล
+              ({{ data.consensusDetail.availableSources }}/{{ data.consensusDetail.totalSources }} แหล่ง)
+            </span>
+            <span v-else-if="data.consensus === 'disagree'" class="badge badge-warn">
+              ❌ ไม่ตรงกัน
+            </span>
+            <span v-else class="badge badge-none">— ไม่มีข้อมูลเลย</span>
           </span>
+        </div>
+        <div v-if="data.consensus === 'partial-agree'" class="consensus-note">
+          <strong>💡 หมายเหตุ:</strong>
+          {{ data.consensusDetail.unavailableSources }} แหล่งไม่มีข้อมูล
+          (เช่น Cloudflare proxy ปิด หรือ IP ไม่อยู่ใน DB)
+          → ใช้แหล่งอื่นแทนได้ตามปกติ
         </div>
       </div>
 
@@ -313,8 +327,19 @@ export default {
   font-weight: 600;
 }
 .badge-ok { background: #dcfce7; color: #166534; }
-.badge-warn { background: #fef3c7; color: #92400e; }
+.badge-partial { background: #dbeafe; color: #1e40af; }
+.badge-warn { background: #fee2e2; color: #991b1b; }
 .badge-none { background: #f1f5f9; color: #64748b; }
+.consensus-note {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border-left: 3px solid #3b82f6;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1e40af;
+  line-height: 1.6;
+}
 .winner-cloudflare { color: #0ea5e9; }
 .winner-ipinfo { color: #8b5cf6; }
 .winner-geoip-lite { color: #64748b; }

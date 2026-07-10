@@ -322,15 +322,30 @@ async function allSourcesEndpoint (req, res) {
         notes: 'IP not in offline DB'
       }
 
-  // Consensus + Winner
-  const availableCountries = [cfResult, ipinfoResult, geoipResult]
-    .filter(r => r.available && r.country)
-    .map(r => r.country)
-  const consensus = availableCountries.length > 0
-    ? availableCountries.every(c => c === availableCountries[0])
-      ? 'agree'
-      : 'disagree'
-    : 'no-data'
+  // Consensus + Winner (4 states — แยก available vs agreement ให้ชัด)
+  const allSources = [cfResult, ipinfoResult, geoipResult]
+  const availableSources = allSources.filter(r => r.available && r.country)
+  const availableCountries = availableSources.map(r => r.country)
+  const allAgree = availableCountries.length > 0
+    && availableCountries.every(c => c === availableCountries[0])
+
+  let consensus
+  if (availableCountries.length === 0) {
+    consensus = 'no-data'
+  } else if (availableCountries.length === allSources.length && allAgree) {
+    consensus = 'agree'            // ทั้ง 3 available + เห็นตรงกัน
+  } else if (allAgree) {
+    consensus = 'partial-agree'    // บางตัว unavailable แต่ที่มีเห็นตรง
+  } else {
+    consensus = 'disagree'         // เห็นไม่ตรง
+  }
+
+  const consensusDetail = {
+    totalSources: allSources.length,
+    availableSources: availableSources.length,
+    unavailableSources: allSources.length - availableSources.length,
+    countries: availableCountries
+  }
 
   const winner = req.geo?.detectedBy || 'none'
 
@@ -342,6 +357,7 @@ async function allSourcesEndpoint (req, res) {
       geoipLite: geoipResult
     },
     consensus,
+    consensusDetail,
     winner,
     winnerCountry: req.geo?.country || null,
     debug: {
