@@ -2463,6 +2463,10 @@ export default {
           showBigPlayButton: false,
           skinLayout: false,
           useH5Prism: true,
+          // ⭐ Anti-piracy: ปิด AirPlay + Chromecast (mirror ยังได้ + watermark ติดไป)
+          //   AirPlay ส่ง stream HD ต้นฉบับ → HDMI capture card = quality สูงสุด → ต้องปิด
+          disableAirplay: true,
+          disableChromecast: true,
           license: {
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
@@ -2481,6 +2485,17 @@ export default {
           console.log('[Ali] Player ready')
           this.playerReady = true
           try { this.aliDuration = this._aliPlayer.getDuration() || 0 } catch {}
+          // ⭐ Anti-piracy: set video element attribute หลัง Aliplayer inject <video> เข้ามาแล้ว
+          //   ป้องกัน AirPlay ระดับ WebKit / HTML5 spec (ครอบ SDK config อีกชั้น)
+          try {
+            const container = document.getElementById('J_prismPlayer')
+            const videoEl = container ? container.querySelector('video') : null
+            if (videoEl) {
+              videoEl.setAttribute('x-webkit-airplay', 'deny')
+              videoEl.setAttribute('disableRemotePlayback', '')
+              videoEl.disableRemotePlayback = true
+            }
+          } catch {}
           this._startAliTimePolling()
         })
         this._aliPlayer.on('canplay', () => {

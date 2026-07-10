@@ -163,6 +163,7 @@
                 allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture 'none'"
                 disableremoteplayback
                 disablepictureinpicture
+                x-webkit-airplay="deny"
               ></iframe>
               <!-- Loading overlay — บังจน player ready (pointer-events:none ให้กด play ได้) -->
               <div v-if="video.embedUrl && !replaced && !recorderBlocked && !playerReady" class="player-loading-overlay">

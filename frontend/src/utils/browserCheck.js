@@ -1,5 +1,5 @@
 // Browser & Device detection — ตามกฎ docs/RULES.md
-// iPhone/iPad → No-DRM, Safari หรือ Chrome เท่านั้น
+// iPhone/iPad → No-DRM, Chrome iOS (CriOS/) เท่านั้น
 // Android → Widevine DRM, Chrome เท่านั้น
 // Desktop → Widevine DRM, Chrome เท่านั้น
 // Exception path → ดู isExceptionPath() ใน views
@@ -57,17 +57,18 @@ export function checkBrowserSupport() {
     }
   }
 
-  // ═══ 3. iPhone / iPad — Safari หรือ Chrome เท่านั้น (กัน app ดูด HLS) ═══
+  // ═══ 3. iPhone / iPad — Chrome iOS (CriOS/) เท่านั้น (กัน Safari-based downloader) ═══
+  //   เดิม allow Safari → เปลี่ยนเพื่อกันแอพดูดใน iOS ที่ใช้ Safari view (Documents / Aloha / Downloader for iOS)
+  //   iPad detect ใช้ 4-layer จาก deviceDetect.isIPad() (platform + userAgentData + touch + Mac UA fallback)
   if (isIOS) {
-    const isIOSSafari = /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|mercury/i.test(ua)
     const isIOSChrome = /CriOS\//.test(ua)
-    if (isIOSSafari || isIOSChrome) {
+    if (isIOSChrome) {
       return { supported: true, isMobile: true }
     }
     return {
       supported: false, isMobile: true,
-      message: 'iPhone/iPad รองรับเฉพาะ Safari หรือ Chrome',
-      detail: 'กรุณาเปิดลิงก์นี้ใน Safari หรือ Chrome เพื่อดูวีดีโอ'
+      message: 'iPhone/iPad รองรับเฉพาะ Google Chrome',
+      detail: 'กรุณาเปิดลิงก์นี้ใน Google Chrome (โหลดจาก App Store) เพื่อดูวีดีโอ'
     }
   }
 

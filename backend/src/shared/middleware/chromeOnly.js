@@ -1,7 +1,7 @@
 // Browser Guard middleware
 // ═══════════════════════════════════════════════════════════
 // กฎ (ดู docs/RULES.md):
-//   iPhone/iPad    → No-DRM, Safari หรือ Chrome เท่านั้น
+//   iPhone/iPad    → No-DRM, Chrome iOS (CriOS/) เท่านั้น
 //   Android        → DRM Widevine, Chrome เท่านั้น
 //   Win/Mac/Linux  → DRM Widevine, Chrome เท่านั้น
 // ═══════════════════════════════════════════════════════════
@@ -30,12 +30,13 @@ function checkBrowser(req) {
     return { ok: false, reason: 'in-app browser ไม่รองรับ — กรุณาเปิดใน Safari หรือ Chrome' }
   }
 
-  // ── 2. iPhone / iPad — Safari หรือ Chrome เท่านั้น ──
+  // ── 2. iPhone / iPad — Chrome iOS (CriOS/) เท่านั้น ──
+  //   Block Safari mobile + iPad Safari (เดิม allow — เปลี่ยนเพื่อกัน downloader browser
+  //   เช่น Documents by Readdle ที่ pipeline ผ่าน Safari-based views)
   if (isIOS(req)) {
-    const isIOSSafari = /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|mercury/i.test(ua)
     const isIOSChrome = /CriOS\//.test(ua)
-    if (isIOSSafari || isIOSChrome) return { ok: true }
-    return { ok: false, reason: 'iPhone/iPad รองรับเฉพาะ Safari หรือ Chrome' }
+    if (isIOSChrome) return { ok: true }
+    return { ok: false, reason: 'iPhone/iPad รองรับเฉพาะ Google Chrome (โหลดจาก App Store)' }
   }
 
   // ── 3. Android — Chrome เท่านั้น ──
