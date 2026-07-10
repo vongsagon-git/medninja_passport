@@ -14,6 +14,10 @@ const {
   getAnomalyReport,
   refreshDurations
 } = require('./content.admin.controller')
+// Alibaba sync (Bunny → Ali + Local → Ali)
+const {
+  syncFromBunny, getLocalUploadAuth, saveAliIds, checkStatus
+} = require('../china/ali-sync.controller')
 
 // Admin: CRUD Sections
 router.get('/sections', auth, admin, getAllSections)
@@ -73,6 +77,16 @@ router.get('/bunny/video-names', auth, admin, getBunnyVideoNames)
 router.put('/bunny/video/:videoId/rename', auth, admin, renameBunnyVideo)
 router.get('/bunny/video/:videoId', auth, admin, getBunnyVideoInfo)
 router.get('/bunny/video/:videoId/embed', auth, admin, getBunnyVideoEmbed)
+
+// Admin: Alibaba Sync (Bunny → Ali + Local → Ali)
+// Path A: Bunny → Ali (server-to-server URL fetch, 2 mediaIds per video)
+router.post('/ali-sync/from-bunny', auth, admin, syncFromBunny)
+// Path B: Local file → Ali (get 2 upload auths, then frontend Ali SDK upload)
+router.post('/ali-sync/local-auth', auth, admin, getLocalUploadAuth)
+// After Path B upload succeeds, save 2 mediaIds to Section
+router.post('/ali-sync/save-ids', auth, admin, saveAliIds)
+// Poll encoding status (both paths)
+router.get('/ali-sync/status', auth, admin, checkStatus)
 
 // Admin: Demo / Trial
 router.get('/demo/section', auth, admin, getDemoSection)

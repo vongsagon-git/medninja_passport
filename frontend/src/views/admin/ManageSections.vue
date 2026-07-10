@@ -202,6 +202,39 @@
                                     </div>
                                     <div v-if="vid.ref._aliDrmName" class="bunny-filename drm" :title="vid.ref._aliDrmName">{{ vid.ref._aliDrmName }}</div>
                                   </div>
+                                  <!-- ⭐ Sync Actions — แสดงเมื่อ CHINA ว่าง แต่มี Bunny แล้ว -->
+                                  <div class="ali-sync-actions" v-if="!vid.ref.aliVideoId && !vid.ref.aliDrmVideoId">
+                                    <button
+                                      type="button"
+                                      class="btn btn-sm btn-sync-bunny"
+                                      :disabled="!vid.ref.bunnyVideoId || vid.ref._aliSyncing"
+                                      :title="vid.ref.bunnyVideoId ? 'ดึงจาก Bunny → Ali (2 mediaIds: NoDRM + Widevine)' : 'ต้องมี Bunny video ก่อน'"
+                                      @click="syncFromBunny(vid.flatIdx)"
+                                    >
+                                      <span v-if="!vid.ref._aliSyncing">🔄 Pull from Bunny</span>
+                                      <span v-else>⏳ {{ vid.ref._aliSyncStatus || 'Syncing' }}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      class="btn btn-sm btn-upload-local"
+                                      :disabled="vid.ref._aliSyncing"
+                                      title="Upload local file → Ali (2 mediaIds)"
+                                      @click="triggerLocalUpload(vid.flatIdx)"
+                                    >
+                                      📁 Local Upload
+                                    </button>
+                                    <input
+                                      type="file"
+                                      :ref="'aliFileInput_' + vid.flatIdx"
+                                      accept="video/*"
+                                      style="display:none"
+                                      @change="handleLocalUpload($event, vid.flatIdx)"
+                                    />
+                                  </div>
+                                  <div v-else-if="vid.ref._aliSyncing" class="ali-sync-progress">
+                                    ⏳ {{ vid.ref._aliSyncStatus || 'Uploading' }}
+                                    <span v-if="vid.ref._aliSyncProgress">({{ vid.ref._aliSyncProgress }}%)</span>
+                                  </div>
                                 </div>
                               </div>
                               <span v-if="vid.ref._locked" class="lock-badge" @click="unlockVideo(vid.flatIdx)">🔒</span>
@@ -1382,6 +1415,146 @@ export default {
       } finally {
         video._drmVerifying = false
         this.checkAllDurationsMatch(video)
+      }
+    },
+    // ═══ Ali Sync (Bunny → Ali + Local → Ali) ═══
+    async syncFromBunny(idx) {
+      const video = this.form.videos[idx]
+      if (!video.bunnyVideoId) {
+        alert('ต้องมี Bunny video (NoDRM) ก่อน')
+        return
+      }
+      if (!confirm(`ดึงวิดีโอจาก Bunny → Ali (2 mediaIds: NoDRM + Widevine)?\n\nBunny: ${video.bunnyVideoId}\nTitle: ${video.title}`)) return
+      video._aliSyncing = true
+      video._aliSyncStatus = 'Requesting'
+      try {
+        const res = await api.post('/admin/ali-sync/from-bunny', {
+          sectionId: this.form._id,
+          videoIndex: idx
+        })
+        video.aliVideoId = res.aliVideoId
+        video.aliDrmVideoId = res.aliDrmVideoId
+        video._aliSyncStatus = 'Uploading'
+        this.pollAliSyncStatus(idx)
+      } catch (err) {
+        video._aliSyncing = false
+        alert('Sync failed: ' + (err.response?.data?.error || err.message))
+      }
+    },
+    triggerLocalUpload(idx) {
+      const inputRef = this.$refs['aliFileInput_' + idx]
+      const input = Array.isArray(inputRef) ? inputRef[0] : inputRef
+      if (input) input.click()
+    },
+    async handleLocalUpload(event, idx) {
+      const file = event.target.files[0]
+      if (!file) return
+      const video = this.form.videos[idx]
+      if (!confirm(`Upload "${file.name}" → Ali (2 mediaIds)?\n\nFile size: ${(file.size / 1024 / 1024).toFixed(1)}MB`)) return
+      video._aliSyncing = true
+      video._aliSyncStatus = 'Requesting auth'
+      try {
+        // Step 1: get 2 upload auths
+        const authRes = await api.post('/admin/ali-sync/local-auth', {
+          title: video.title || file.name
+        })
+        video._aliSyncStatus = 'Loading Ali SDK'
+        // Step 2: load Aliyun Upload SDK
+        await this.loadAliUploadSdk()
+        video._aliSyncStatus = 'Uploading NoDRM'
+        // Step 3: upload NoDRM version
+        await this.aliUploadFile(file, authRes.noDrm, (progress) => {
+          video._aliSyncProgress = Math.round(progress * 100)
+        })
+        video._aliSyncStatus = 'Uploading Widevine'
+        video._aliSyncProgress = 0
+        // Step 4: upload Widevine version (same file, second upload)
+        await this.aliUploadFile(file, authRes.drm, (progress) => {
+          video._aliSyncProgress = Math.round(progress * 100)
+        })
+        // Step 5: save both mediaIds
+        video._aliSyncStatus = 'Saving'
+        await api.post('/admin/ali-sync/save-ids', {
+          sectionId: this.form._id,
+          videoIndex: idx,
+          aliVideoId: authRes.noDrm.videoId,
+          aliDrmVideoId: authRes.drm.videoId
+        })
+        video.aliVideoId = authRes.noDrm.videoId
+        video.aliDrmVideoId = authRes.drm.videoId
+        this.pollAliSyncStatus(idx)
+      } catch (err) {
+        video._aliSyncing = false
+        alert('Upload failed: ' + err.message)
+      } finally {
+        event.target.value = ''  // reset input
+      }
+    },
+    loadAliUploadSdk() {
+      if (window.AliyunUpload) return Promise.resolve()
+      return new Promise((resolve, reject) => {
+        const s1 = document.createElement('script')
+        s1.src = 'https://g.alicdn.com/de/aliplayer/2.35.4/aliyun-upload-sdk-1.5.5.min.js'
+        s1.onload = resolve
+        s1.onerror = () => reject(new Error('Failed to load Ali Upload SDK'))
+        document.head.appendChild(s1)
+      })
+    },
+    aliUploadFile(file, authInfo, onProgress) {
+      return new Promise((resolve, reject) => {
+        const uploader = new window.AliyunUpload.Vod({
+          userId: 'anonymous',
+          region: 'ap-southeast-1',
+          partSize: 1024 * 1024,
+          parallel: 3,
+          retryCount: 3,
+          retryDuration: 2,
+          onUploadstarted: (info) => {
+            uploader.setUploadAuthAndAddress(info, authInfo.uploadAuth, authInfo.uploadAddress, authInfo.videoId)
+          },
+          onUploadProgress: (uploadInfo, totalSize, progress) => {
+            if (onProgress) onProgress(progress)
+          },
+          onUploadSucceed: () => resolve(),
+          onUploadFailed: (uploadInfo, code, msg) => reject(new Error(`Ali upload fail: ${code} ${msg}`)),
+          onUploadTokenExpired: () => reject(new Error('Ali upload token expired'))
+        })
+        uploader.addFile(file, null, null, null, null)
+        uploader.startUpload()
+      })
+    },
+    async pollAliSyncStatus(idx) {
+      const video = this.form.videos[idx]
+      const ids = [video.aliVideoId, video.aliDrmVideoId].filter(Boolean).join(',')
+      if (!ids) {
+        video._aliSyncing = false
+        return
+      }
+      try {
+        const res = await api.get('/admin/ali-sync/status', { params: { ids } })
+        const noDrm = res.results.find(r => r.videoId === video.aliVideoId)
+        const drm = res.results.find(r => r.videoId === video.aliDrmVideoId)
+        const noDrmStatus = noDrm?.status || 'Unknown'
+        const drmStatus = drm?.status || 'Unknown'
+        video._aliSyncStatus = `NoDRM: ${noDrmStatus} · WV: ${drmStatus}`
+        if (res.anyFail) {
+          video._aliSyncing = false
+          alert('Encoding failed. Check Alibaba Console for details.')
+          return
+        }
+        if (res.allReady) {
+          video._aliSyncing = false
+          video._aliSyncStatus = ''
+          video._aliVerified = true
+          video._aliDrmVerified = true
+          alert('✅ Sync complete! Both mediaIds ready.')
+          return
+        }
+        // Poll again in 20s
+        setTimeout(() => this.pollAliSyncStatus(idx), 20000)
+      } catch (err) {
+        video._aliSyncing = false
+        video._aliSyncStatus = 'Error: ' + err.message
       }
     },
     // ═══ Ali NoDRM verify ═══
@@ -2642,6 +2815,65 @@ export default {
 .ali-input:focus {
   border-color: #7f1d1d !important;
   outline: 2px solid rgba(220, 38, 38, 0.2);
+}
+
+/* ═══ Ali Sync Buttons ═══ */
+.ali-sync-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: 8px;
+  align-items: center;
+}
+.btn-sync-bunny {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(124, 58, 237, 0.3);
+  transition: all 0.2s;
+}
+.btn-sync-bunny:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(124, 58, 237, 0.4);
+}
+.btn-sync-bunny:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-upload-local {
+  background: linear-gradient(135deg, #0891b2, #06b6d4);
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(8, 145, 178, 0.3);
+  transition: all 0.2s;
+}
+.btn-upload-local:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(8, 145, 178, 0.4);
+}
+.btn-upload-local:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ali-sync-progress {
+  color: #a855f7;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+  padding: 4px 8px;
+  background: rgba(168, 85, 247, 0.1);
+  border-radius: 6px;
 }
 
 </style>
