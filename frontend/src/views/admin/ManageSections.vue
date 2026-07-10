@@ -347,6 +347,19 @@
                                 </div>
                                 <div v-if="child.ref._aliDrmName" class="bunny-filename drm" :title="child.ref._aliDrmName">{{ child.ref._aliDrmName }}</div>
                               </div>
+                              <!-- ⭐ Sync Actions -->
+                              <div class="ali-sync-actions" v-if="!child.ref.aliVideoId && !child.ref.aliDrmVideoId">
+                                <button type="button" class="btn btn-sm btn-sync-bunny" :disabled="!child.ref.bunnyVideoId || child.ref._aliSyncing" :title="child.ref.bunnyVideoId ? 'ดึงจาก Bunny → Ali' : 'ต้องมี Bunny ก่อน'" @click="syncFromBunny(child.flatIdx)">
+                                  <span v-if="!child.ref._aliSyncing">🔄 Pull from Bunny</span>
+                                  <span v-else>⏳ {{ child.ref._aliSyncStatus || 'Syncing' }}</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-upload-local" :disabled="child.ref._aliSyncing" title="Upload local → Ali" @click="triggerLocalUpload(child.flatIdx)">📁 Local Upload</button>
+                                <input type="file" :ref="'aliFileInput_' + child.flatIdx" accept="video/*" style="display:none" @change="handleLocalUpload($event, child.flatIdx)" />
+                              </div>
+                              <div v-else-if="child.ref._aliSyncing" class="ali-sync-progress">
+                                ⏳ {{ child.ref._aliSyncStatus || 'Uploading' }}
+                                <span v-if="child.ref._aliSyncProgress">({{ child.ref._aliSyncProgress }}%)</span>
+                              </div>
                             </div>
                           </div>
                           <span v-if="child.ref._locked" class="lock-badge" @click="unlockVideo(child.flatIdx)">🔒</span>
@@ -1419,6 +1432,10 @@ export default {
     },
     // ═══ Ali Sync (Bunny → Ali + Local → Ali) ═══
     async syncFromBunny(idx) {
+      if (!this.editingId) {
+        alert('กรุณา "บันทึก" section ก่อน แล้วค่อยกด Pull from Bunny')
+        return
+      }
       const video = this.form.videos[idx]
       if (!video.bunnyVideoId) {
         alert('ต้องมี Bunny video (NoDRM) ก่อน')
@@ -1429,7 +1446,7 @@ export default {
       video._aliSyncStatus = 'Requesting'
       try {
         const res = await api.post('/admin/ali-sync/from-bunny', {
-          sectionId: this.form._id,
+          sectionId: this.editingId,
           videoIndex: idx
         })
         video.aliVideoId = res.aliVideoId
@@ -1492,13 +1509,37 @@ export default {
     },
     loadAliUploadSdk() {
       if (window.AliyunUpload) return Promise.resolve()
-      return new Promise((resolve, reject) => {
-        const s1 = document.createElement('script')
-        s1.src = 'https://g.alicdn.com/de/aliplayer/2.35.4/aliyun-upload-sdk-1.5.5.min.js'
-        s1.onload = resolve
-        s1.onerror = () => reject(new Error('Failed to load Ali Upload SDK'))
-        document.head.appendChild(s1)
+      const loadScript = (src) => new Promise((resolve, reject) => {
+        const s = document.createElement('script')
+        s.src = src
+        s.onload = () => resolve(src)
+        s.onerror = () => reject(new Error('load fail: ' + src))
+        document.head.appendChild(s)
       })
+      // Upload SDK ต้องพ่วง 3 dependencies: es6-promise + aliyun-oss-sdk + aliyun-upload-sdk
+      // ต้องโหลดตามลำดับ (dependencies ก่อน)
+      const urls = [
+        'https://g.alicdn.com/aliyun-vod/upload-sdk/1.5.5/lib/es6-promise.min.js',
+        'https://g.alicdn.com/aliyun-vod/upload-sdk/1.5.5/lib/aliyun-oss-sdk-6.17.1.min.js',
+        'https://g.alicdn.com/aliyun-vod/upload-sdk/1.5.5/aliyun-upload-sdk-1.5.5.min.js'
+      ]
+      // Fallback URLs ถ้า path แรกไม่ work
+      const fallbacks = [
+        'https://g.alicdn.com/de/aliplayer/2.15.4/es6-promise.min.js',
+        'https://g.alicdn.com/de/aliplayer/2.15.4/aliyun-oss-sdk-6.17.1.min.js',
+        'https://g.alicdn.com/de/aliplayer/2.15.4/aliyun-upload-sdk-1.5.5.min.js'
+      ]
+      return (async () => {
+        for (let i = 0; i < urls.length; i++) {
+          try {
+            await loadScript(urls[i])
+          } catch (e) {
+            console.warn('[AliSDK] primary fail, try fallback:', fallbacks[i])
+            await loadScript(fallbacks[i])
+          }
+        }
+        if (!window.AliyunUpload) throw new Error('Ali Upload SDK loaded but window.AliyunUpload not found')
+      })()
     },
     aliUploadFile(file, authInfo, onProgress) {
       return new Promise((resolve, reject) => {
