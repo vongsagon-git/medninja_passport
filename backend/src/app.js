@@ -201,6 +201,11 @@ app.get('/api/geo/all-sources', geoMiddleware.allSourcesEndpoint)
 const { domainStatusEndpoint } = require('./shared/middleware/domainCheck')
 app.get('/api/domain/status', domainStatusEndpoint)
 
+// Public JWT status — decode + validate JWT (debug page /jwt)
+// รับ token จาก Authorization header (Bearer) แล้วแสดงว่า backend รู้อะไรจาก token
+const { jwtStatusEndpoint } = require('./shared/middleware/jwtStatus')
+app.get('/api/jwt/status', jwtStatusEndpoint)
+
 // LINE Webhook — raw body สำหรับ verify signature (ต้องอยู่ก่อน express.json)
 app.use('/api/line/webhook', require('./modules/line/line.webhook.routes'))
 

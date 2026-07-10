@@ -325,6 +325,13 @@ const routes = [
     meta: { immersive: true }
   },
   {
+    // ⭐ JWT debug page — decode + validate + show backend knowledge
+    path: '/jwt',
+    name: 'Jwt',
+    component: () => import('../views/JwtPage.vue'),
+    meta: { immersive: true }
+  },
+  {
     path: '/screen-check',
     name: 'ScreenCheck',
     component: () => import('../views/ScreenCheck.vue'),
