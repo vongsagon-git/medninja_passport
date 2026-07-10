@@ -2821,8 +2821,12 @@ export default {
 .ali-sync-actions {
   display: flex;
   gap: 6px;
-  margin-left: 8px;
   align-items: center;
+  grid-column: 1 / -1;   /* span all columns */
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed #fca5a5;
+  justify-content: flex-end;
 }
 .btn-sync-bunny {
   background: linear-gradient(135deg, #7c3aed, #a855f7);
