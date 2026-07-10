@@ -390,11 +390,35 @@
     detectDevice();
 
     // ═══════════════════════════════════════════════════════════
+    // ⭐ Auth helper — Bearer token จาก localStorage
+    // ต้อง login ที่ passport.medninja.academy ก่อน แล้วมาหน้านี้
+    // ═══════════════════════════════════════════════════════════
+    function authHeaders() {
+      const token = localStorage.getItem('token');
+      return token ? { 'Authorization': 'Bearer ' + token } : {};
+    }
+    function fetchAuth(url, opts) {
+      opts = opts || {};
+      opts.headers = Object.assign({}, opts.headers || {}, authHeaders());
+      opts.credentials = 'include';
+      return fetch(url, opts);
+    }
+
+    // แสดง auth status ในหน้า
+    (function showAuthStatus() {
+      const t = localStorage.getItem('token');
+      const info = document.getElementById('devInfo');
+      if (info && !t) {
+        info.textContent += ' · ⚠️ NO JWT (login ก่อน)';
+      }
+    })();
+
+    // ═══════════════════════════════════════════════════════════
     // IP Detection (Cloudflare)
     // ═══════════════════════════════════════════════════════════
     (async () => {
       try {
-        const res = await fetch('/api/china/whoami');
+        const res = await fetchAuth('/api/china/whoami');
         const data = await res.json();
         const flag = { CN: '🇨🇳', TH: '🇹🇭', HK: '🇭🇰', SG: '🇸🇬', US: '🇺🇸' }[data.country] || '🌐';
         document.getElementById('ipAddr').textContent = data.ip || '-';
@@ -417,9 +441,10 @@
       }
       setFlow('sts', 'running', 'กำลังเรียก /api/china/sts/' + videoId.substring(0, 8) + '...');
       log('🔑 [Flow 1] Test STS: ' + videoId, 'info');
+      if (!localStorage.getItem('token')) log('⚠️ ไม่มี JWT — login ที่ passport ก่อน', 'err');
       const t0 = Date.now();
       try {
-        const res = await fetch('/api/china/sts/' + videoId);
+        const res = await fetchAuth('/api/china/sts/' + videoId);
         const ms = Date.now() - t0;
         const data = await res.json();
 
@@ -467,7 +492,7 @@
       log('📄 [Flow 2] Test Manifest: ' + videoId, 'info');
       const t0 = Date.now();
       try {
-        const res = await fetch('/api/china/playinfo/' + videoId);
+        const res = await fetchAuth('/api/china/playinfo/' + videoId);
         const ms = Date.now() - t0;
         const data = await res.json();
 
@@ -705,7 +730,7 @@
     async function listVideos() {
       log('📋 กำลังโหลดรายการ video...', 'info');
       try {
-        const res = await fetch('/api/china/videos');
+        const res = await fetchAuth('/api/china/videos');
         const data = await res.json();
         log('✅ พบ ' + data.count + ' videos', 'success');
         const picks = document.getElementById('quickPicks');
