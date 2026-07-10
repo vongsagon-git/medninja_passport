@@ -2,14 +2,23 @@ const express = require('express')
 const router = express.Router()
 const { getPlayAuth, getStsToken, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus } = require('./china.controller')
 const { pushLog, getLogs, clearLogs, pushTestResult, getTestResults } = require('./china.logs')
+const auth = require('../../shared/middleware/auth')
+const chromeOnly = require('../../shared/middleware/chromeOnly')
+const originCheck = require('../../shared/middleware/originCheck')
 
 router.use(express.json({ limit: '512kb' }))
 
+// ═══════════════════════════════════════════════════════════
+// Sensitive endpoints (Ali STS + PlayAuth + PlayInfo)
+// Guard chain: originCheck + chromeOnly + auth
+// เพื่อให้ Ali ปลอดภัยเท่า Bunny (Bunny handles ทุกอย่าง built-in)
+// ═══════════════════════════════════════════════════════════
+
 // GET /api/china/playauth/:videoId — สำหรับ video ไม่มี DRM
-router.get('/playauth/:videoId', getPlayAuth)
+router.get('/playauth/:videoId', originCheck, chromeOnly, auth, getPlayAuth)
 
 // GET /api/china/sts/:videoId — สำหรับ Widevine/FairPlay DRM video
-router.get('/sts/:videoId', getStsToken)
+router.get('/sts/:videoId', originCheck, chromeOnly, auth, getStsToken)
 
 // GET /api/china/whoami — server-side IP + country detection
 // ใช้ req.geo จาก geoMiddleware (ipinfo → geoip-lite)
@@ -75,7 +84,7 @@ router.get('/log/test-results', (req, res) => {
 router.get('/videos', listVideos)
 
 // GET /api/china/playinfo/:videoId — get play URL + encryption status
-router.get('/playinfo/:videoId', getPlayInfo)
+router.get('/playinfo/:videoId', originCheck, chromeOnly, auth, getPlayInfo)
 
 // GET /api/china/templates — list transcoding template groups
 router.get('/templates', listTemplateGroups)
