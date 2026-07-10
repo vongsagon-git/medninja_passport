@@ -3,10 +3,13 @@
  *
  * Detect ประเทศจาก IP address
  * Priority:
- *   1. Cloudflare header (cf-ipcountry) — ถ้ามี (ฟรี, เร็วสุด)
- *   2. ipinfo.io /lite endpoint — ฟรีไม่นับ quota (ต้องตั้ง IPINFO_TOKEN)
- *   3. geoip-lite (offline DB) — fallback
- *   4. 'unknown' — สุดท้าย
+ *   1. ipinfo.io /lite endpoint — ฟรีไม่นับ quota (ต้องตั้ง IPINFO_TOKEN)
+ *   2. geoip-lite (offline DB) — fallback
+ *   3. 'unknown' — สุดท้าย
+ *
+ * Note: เดิมมี Cloudflare header (cf-ipcountry) เป็น priority 1
+ * แต่ passport ใช้ DO App Platform ที่ CF ของ DO เอง — ไม่ inject header ให้เรา
+ * ตัดออก 2026-07-10 (verified curl test)
  *
  * Attach req.geo = {
  *   country: 'TH' | 'CN' | 'US' | 'unknown',
@@ -46,49 +49,19 @@ function cacheSet (ip, data) {
   geoCache.set(ip, { data, ts: Date.now() })
 }
 
-// ─── Cloudflare IPv4 ranges (เช็คว่า upstream เป็น CF จริง) ───
-const CF_IPV4_PREFIXES = [
-  '103.21.244.', '103.22.200.', '103.31.4.',
-  '104.16.', '104.17.', '104.18.', '104.19.', '104.20.', '104.21.', '104.22.', '104.23.',
-  '104.24.', '104.25.', '104.26.', '104.27.', '104.28.',
-  '108.162.',
-  '131.0.72.',
-  '141.101.',
-  '162.158.',
-  '172.64.', '172.65.', '172.66.', '172.67.', '172.68.', '172.69.', '172.70.', '172.71.',
-  '173.245.',
-  '188.114.',
-  '190.93.',
-  '197.234.',
-  '198.41.'
-]
-function isFromCloudflare (ip) {
-  if (!ip) return false
-  return CF_IPV4_PREFIXES.some(prefix => ip.startsWith(prefix))
-}
-
 function extractIp (req) {
-  const upstreamIp = req.ip || req.socket?.remoteAddress || ''
-
-  // 1. cf-connecting-ip (มาจาก Cloudflare — trust ที่สุด ถ้ามี)
-  const cfIp = req.headers['cf-connecting-ip']
-  if (cfIp) return String(cfIp).trim()
-
-  // 2. ถ้า upstream = Cloudflare แต่ไม่มี cf-connecting-ip
-  //    → อ่าน x-forwarded-for แล้วเอา LEFTMOST (IP client จริง)
-  //    Format: "<client-ip>, <cloudflare-ip>"
-  if (isFromCloudflare(upstreamIp)) {
-    const xff = req.headers['x-forwarded-for']
-    if (xff) {
-      const first = String(xff).split(',')[0].trim()
-      if (first) return first
-    }
+  // 1. x-forwarded-for LEFTMOST — IP client จริงที่ผ่าน DO edge
+  //    Format: "<client-ip>, <do-edge-ip>"
+  const xff = req.headers['x-forwarded-for']
+  if (xff) {
+    const first = String(xff).split(',')[0].trim()
+    if (first) return first
   }
 
-  // 3. req.ip (Express + trust proxy: 1) — direct hit DO (ไม่ผ่าน CF)
+  // 2. req.ip (Express + trust proxy: 1)
   if (req.ip) return req.ip
 
-  // 4. Fallback socket
+  // 3. Fallback socket
   return req.socket?.remoteAddress || ''
 }
 
@@ -141,22 +114,13 @@ function geoipLookup (ip) {
 
 // ─── Main detection (async — เพราะเรียก ipinfo) ───
 async function detectCountry (req, ip) {
-  // Priority 1: Cloudflare header (ถ้ามี — เร็วสุด)
-  const cfCountry = req.headers['cf-ipcountry']
-  if (cfCountry && cfCountry !== 'XX' && cfCountry !== 'T1') {
-    return {
-      country: cfCountry.toUpperCase(),
-      detectedBy: 'cloudflare'
-    }
-  }
-
   if (!ip) return { country: 'unknown', detectedBy: 'no-ip' }
 
-  // Priority 2: ipinfo /lite (แม่นสุด, ฟรีไม่นับ quota)
+  // Priority 1: ipinfo /lite (แม่นสุด, ฟรีไม่นับ quota)
   const ipinfo = await ipinfoLookup(ip)
   if (ipinfo) return ipinfo
 
-  // Priority 3: geoip-lite offline fallback
+  // Priority 2: geoip-lite offline fallback
   const glite = geoipLookup(ip)
   if (glite) return glite
 
@@ -208,11 +172,7 @@ function whoamiEndpoint (req, res) {
     detectedBy: req.geo.detectedBy,
     debug: {
       reqIp: req.ip,
-      cfConnectingIp: req.headers['cf-connecting-ip'] || null,
-      cfIpCountry: req.headers['cf-ipcountry'] || null,
-      cfRay: req.headers['cf-ray'] || null,
       xForwardedFor: req.headers['x-forwarded-for'] || null,
-      upstreamIsCloudflare: isFromCloudflare(req.ip || req.socket?.remoteAddress || ''),
       cacheSize: geoCache.size,
       hasIpinfoToken: !!IPINFO_TOKEN
     }
@@ -220,35 +180,12 @@ function whoamiEndpoint (req, res) {
 }
 
 // ─── Endpoint: GET /api/geo/all-sources ───
-// Query ทั้ง 3 source แบบ parallel — แสดงผลคู่กัน (ไม่ผ่าน priority chain)
+// Query 2 sources แบบ parallel — แสดงผลคู่กัน (ไม่ผ่าน priority chain)
+// Note: Cloudflare ถูกตัดออก 2026-07-10 เพราะ DO ใช้ CF ของตัวเอง ไม่ inject header ให้เรา
 async function allSourcesEndpoint (req, res) {
   const ip = extractIp(req)
-  const cfCountry = req.headers['cf-ipcountry'] || null
 
-  // Source 1: Cloudflare header (sync — อ่านจาก header ตรงๆ)
-  const cfResult = cfCountry
-    ? {
-        source: 'cloudflare',
-        country: cfCountry.toUpperCase(),
-        available: cfCountry !== 'XX' && cfCountry !== 'T1',
-        raw: cfCountry,
-        latencyMs: 0,
-        cost: 'free',
-        notes: cfCountry === 'XX' ? 'Unknown country'
-             : cfCountry === 'T1' ? 'Tor exit node'
-             : 'OK'
-      }
-    : {
-        source: 'cloudflare',
-        country: null,
-        available: false,
-        raw: null,
-        latencyMs: 0,
-        cost: 'free',
-        notes: 'No CF header (CF proxy off or direct hit)'
-      }
-
-  // Source 2: ipinfo.io (async — call external API)
+  // Source 1: ipinfo.io (async — call external API)
   const ipinfoStart = Date.now()
   let ipinfoResult = null
   try {
@@ -323,7 +260,7 @@ async function allSourcesEndpoint (req, res) {
       }
 
   // Consensus + Winner (4 states — แยก available vs agreement ให้ชัด)
-  const allSources = [cfResult, ipinfoResult, geoipResult]
+  const allSources = [ipinfoResult, geoipResult]
   const availableSources = allSources.filter(r => r.available && r.country)
   const availableCountries = availableSources.map(r => r.country)
   const allAgree = availableCountries.length > 0
@@ -333,7 +270,7 @@ async function allSourcesEndpoint (req, res) {
   if (availableCountries.length === 0) {
     consensus = 'no-data'
   } else if (availableCountries.length === allSources.length && allAgree) {
-    consensus = 'agree'            // ทั้ง 3 available + เห็นตรงกัน
+    consensus = 'agree'            // ทั้ง 2 available + เห็นตรงกัน
   } else if (allAgree) {
     consensus = 'partial-agree'    // บางตัว unavailable แต่ที่มีเห็นตรง
   } else {
@@ -352,7 +289,6 @@ async function allSourcesEndpoint (req, res) {
   res.json({
     ip,
     sources: {
-      cloudflare: cfResult,
       ipinfo: ipinfoResult,
       geoipLite: geoipResult
     },
@@ -362,11 +298,7 @@ async function allSourcesEndpoint (req, res) {
     winnerCountry: req.geo?.country || null,
     debug: {
       reqIp: req.ip,
-      cfConnectingIp: req.headers['cf-connecting-ip'] || null,
-      cfIpCountry: cfCountry,
-      cfRay: req.headers['cf-ray'] || null,
       xForwardedFor: req.headers['x-forwarded-for'] || null,
-      upstreamIsCloudflare: isFromCloudflare(req.ip || req.socket?.remoteAddress || ''),
       cacheSize: geoCache.size,
       hasIpinfoToken: !!IPINFO_TOKEN,
       userAgent: req.headers['user-agent'] || null

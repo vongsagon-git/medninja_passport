@@ -27,7 +27,7 @@
           <span class="summary-label">Consensus</span>
           <span class="summary-value">
             <span v-if="data.consensus === 'agree'" class="badge badge-ok">
-              ✅ ทั้ง 3 แหล่งเห็นตรง (TH ทั้งหมด)
+              ✅ ทั้ง 2 แหล่งเห็นตรง
             </span>
             <span v-else-if="data.consensus === 'partial-agree'" class="badge badge-partial">
               ⚠️ เห็นตรงเฉพาะแหล่งที่มีข้อมูล
@@ -42,58 +42,21 @@
         <div v-if="data.consensus === 'partial-agree'" class="consensus-note">
           <strong>💡 หมายเหตุ:</strong>
           {{ data.consensusDetail.unavailableSources }} แหล่งไม่มีข้อมูล
-          (เช่น Cloudflare proxy ปิด หรือ IP ไม่อยู่ใน DB)
+          (IP ไม่อยู่ใน offline DB หรือ ipinfo API fail)
           → ใช้แหล่งอื่นแทนได้ตามปกติ
         </div>
       </div>
 
-      <!-- 3 Sources Grid -->
+      <!-- 2 Sources Grid -->
       <div v-if="data" class="sources-grid">
-        <!-- Source 1: Cloudflare -->
-        <div class="source-card" :class="'source-' + statusOf(data.sources.cloudflare)">
-          <div class="source-header">
-            <div class="source-title">
-              <span class="source-icon">☁️</span>
-              <span>Cloudflare</span>
-            </div>
-            <span class="source-priority">Priority 1</span>
-          </div>
-          <div class="source-body">
-            <div class="source-row">
-              <span class="row-label">Available</span>
-              <span class="row-value">{{ data.sources.cloudflare.available ? '✅ Yes' : '❌ No' }}</span>
-            </div>
-            <div class="source-row">
-              <span class="row-label">Country</span>
-              <span class="row-value big">
-                {{ flag(data.sources.cloudflare.country) }}
-                <strong>{{ data.sources.cloudflare.country || '—' }}</strong>
-              </span>
-            </div>
-            <div class="source-row">
-              <span class="row-label">Raw Header</span>
-              <span class="row-value mono">{{ data.sources.cloudflare.raw || 'null' }}</span>
-            </div>
-            <div class="source-row">
-              <span class="row-label">Latency</span>
-              <span class="row-value">{{ data.sources.cloudflare.latencyMs }}ms</span>
-            </div>
-            <div class="source-row">
-              <span class="row-label">Cost</span>
-              <span class="row-value">{{ data.sources.cloudflare.cost }}</span>
-            </div>
-            <div class="source-notes">{{ data.sources.cloudflare.notes }}</div>
-          </div>
-        </div>
-
-        <!-- Source 2: ipinfo -->
+        <!-- Source 1: ipinfo -->
         <div class="source-card" :class="'source-' + statusOf(data.sources.ipinfo)">
           <div class="source-header">
             <div class="source-title">
               <span class="source-icon">🌐</span>
               <span>ipinfo.io</span>
             </div>
-            <span class="source-priority">Priority 2</span>
+            <span class="source-priority">Priority 1</span>
           </div>
           <div class="source-body">
             <div class="source-row">
@@ -135,14 +98,14 @@
           </div>
         </div>
 
-        <!-- Source 3: geoip-lite -->
+        <!-- Source 2: geoip-lite -->
         <div class="source-card" :class="'source-' + statusOf(data.sources.geoipLite)">
           <div class="source-header">
             <div class="source-title">
               <span class="source-icon">💾</span>
               <span>geoip-lite</span>
             </div>
-            <span class="source-priority">Priority 3</span>
+            <span class="source-priority">Priority 2</span>
           </div>
           <div class="source-body">
             <div class="source-row">
@@ -340,7 +303,6 @@ export default {
   color: #1e40af;
   line-height: 1.6;
 }
-.winner-cloudflare { color: #0ea5e9; }
 .winner-ipinfo { color: #8b5cf6; }
 .winner-geoip-lite { color: #64748b; }
 
