@@ -1007,23 +1007,49 @@ export default {
       this.$forceUpdate()
       this.closeLoadContentModal()
       // ⭐ Auto-save เข้า DB ทันที (มิฉะนั้น refresh หน้าแล้ว link จะหาย)
-      // Edit mode: this.form.videos = source, ใช้ editingId
-      // Direct tree mode: section ถูก mutate ตรง ๆ, ต้อง lookup จาก video ref
+      // Tree view = อยู่ใน edit mode เสมอ (v-if="showForm") → save via editingId
       try {
-        if (this.editingId && this.form.videos.includes(video)) {
-          // Edit mode — save form.videos ทั้งชุด
-          await api.put(`/admin/sections/${this.editingId}`, { videos: this.form.videos })
+        if (this.editingId) {
+          await api.put(`/admin/sections/${this.editingId}`, {
+            videos: this.form.videos.map(v => this._sanitizeVideo(v))
+          })
           this.successMsg = `🔗 ผูก Library: ${content.title}`
-        } else {
-          // Direct tree mode — หา section ที่ contains video นี้
-          const parentSec = this.sections.find(s => (s.videos || []).includes(video))
-          if (parentSec) {
-            await api.put(`/admin/sections/${parentSec._id}`, { videos: parentSec.videos })
-            this.successMsg = `🔗 ผูก Library: ${content.title}`
-          }
         }
       } catch (err) {
         this.errorMsg = 'บันทึก link ไม่สำเร็จ — refresh หน้าแล้วอาจหาย'
+      }
+    },
+    // ⭐ Whitelist fields ที่ schema รู้จัก — ตัด _underscore fields (verified, locked, ฯลฯ) ออก
+    // ใช้ที่เดียวกับ handleSubmit payload → maintain ที่เดียว
+    _sanitizeVideo(v) {
+      return {
+        contentId: v.contentId || null,
+        title: (v.title || '').trim(),
+        topic: (v.topic || '').trim(),
+        subtopic: (v.subtopic || '').trim(),
+        topicId: v.topicId || '',
+        subtopicId: v.subtopicId || '',
+        bunnyVideoId: (v.bunnyVideoId || '').trim(),
+        bunnyDrmVideoId: (v.bunnyDrmVideoId || '').trim(),
+        aliVideoId: (v.aliVideoId || '').trim(),
+        aliDrmVideoId: (v.aliDrmVideoId || '').trim(),
+        bunnyLibraryId: v.bunnyLibraryId || '628424',
+        duration: v.duration || '',
+        order: v.order || 0,
+        requiredTier: [1, 2, 3, 4, 5, 6].includes(v.requiredTier) ? v.requiredTier : 6,
+        pdfFile: v.pdfFile || '',
+        pdfFileName: v.pdfFileName || '',
+        pdfFileUrl: v.pdfFileUrl || '',
+        pdfEnabled: v.pdfEnabled !== false,
+        bonusLabel: (v.bonusLabel || '').trim(),
+        bonusTitle: (v.bonusTitle || '').trim(),
+        bonusBunnyVideoId: (v.bonusBunnyVideoId || '').trim(),
+        bonusBunnyDrmVideoId: (v.bonusBunnyDrmVideoId || '').trim(),
+        bonusAliVideoId: (v.bonusAliVideoId || '').trim(),
+        bonusAliDrmVideoId: (v.bonusAliDrmVideoId || '').trim(),
+        bonusDuration: v.bonusDuration || '',
+        bonusPdfFile: (v.bonusPdfFile || '').trim(),
+        bonusPdfFileName: (v.bonusPdfFileName || '').trim()
       }
     },
     unlinkContent(video) {
@@ -2217,27 +2243,7 @@ export default {
           name: this.form.name.trim(),
           description: (this.form.description || '').trim(),
           order: this.form.order,
-          videos: validVideos.map((v, i) => ({
-            title: (v.title || '').trim(),
-            topic: (v.topic || '').trim(),
-            subtopic: (v.subtopic || '').trim(),
-            bunnyVideoId: (v.bunnyVideoId || '').trim(),
-            bunnyDrmVideoId: (v.bunnyDrmVideoId || '').trim(),
-            aliVideoId: (v.aliVideoId || '').trim(),
-            aliDrmVideoId: (v.aliDrmVideoId || '').trim(),
-            bunnyLibraryId: v.bunnyLibraryId || '628424',
-            duration: v.duration || '',
-            order: i,
-            requiredTier: [1, 2, 3, 4, 5, 6].includes(v.requiredTier) ? v.requiredTier : 6,
-            // VDO พิเศษ
-            bonusLabel: (v.bonusLabel || '').trim(),
-            bonusTitle: (v.bonusTitle || '').trim(),
-            bonusBunnyVideoId: (v.bonusBunnyVideoId || '').trim(),
-            bonusBunnyDrmVideoId: (v.bonusBunnyDrmVideoId || '').trim(),
-            bonusDuration: v.bonusDuration || '',
-            bonusPdfFile: (v.bonusPdfFile || '').trim(),
-            bonusPdfFileName: (v.bonusPdfFileName || '').trim()
-          }))
+          videos: validVideos.map((v, i) => ({ ...this._sanitizeVideo(v), order: i }))
         }
         const isEdit = !!this.editingId
         if (isEdit) {
