@@ -17,6 +17,18 @@ router.use(express.json({ limit: '512kb' }))
 // GET /api/china/playauth/:videoId — สำหรับ video ไม่มี DRM
 router.get('/playauth/:videoId', originCheck, chromeOnly, auth, getPlayAuth)
 
+// ⭐ Landing page playauth — public (no auth, no chrome guard) สำหรับหน้าขาย /china
+// Whitelist เฉพาะ video ID ที่ตั้งไว้ (แสดง demo เท่านั้น)
+const LANDING_ALLOWED_VIDEOS = new Set([
+  'f0a10c4f79dc71f1a46bf6f7f45a0102' // Alibaba Encrypt demo video (Singapore bucket)
+])
+router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
+  if (!LANDING_ALLOWED_VIDEOS.has(req.params.videoId)) {
+    return res.status(403).json({ code: 'VIDEO_NOT_WHITELISTED', message: 'Video ID นี้ไม่อยู่ในรายการ landing demo' })
+  }
+  next()
+}, getPlayAuth)
+
 // GET /api/china/sts/:videoId — สำหรับ Widevine/FairPlay DRM video
 router.get('/sts/:videoId', originCheck, chromeOnly, auth, getStsToken)
 

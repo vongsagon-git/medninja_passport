@@ -3,7 +3,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 // ⭐ Video สำหรับ landing page ขาย (Alibaba Encrypt — เล่นได้ทั้งไทย + จีน)
 const VIDEO_ID = 'f0a10c4f79dc71f1a46bf6f7f45a0102'
-const PLAYAUTH_ENDPOINT = `/api/china/playauth/${VIDEO_ID}`
+// ⭐ Landing endpoint = public (no auth, no chrome guard) — สำหรับหน้าขาย
+const PLAYAUTH_ENDPOINT = `/api/china/landing-playauth/${VIDEO_ID}`
 
 const playerReady = ref(false)
 const modalOpen = ref(false)
@@ -131,6 +132,8 @@ function contactLine() {
 
 onMounted(() => {
   document.title = 'MedNinja LMS — ดูได้ทั่วโลก แม้ในประเทศจีน (ไม่ต้อง VPN)'
+  // Preload SDK ทันที เพื่อลด delay ตอนกดเปิด modal
+  loadScriptWithFallback(ALIPLAYER_VERSIONS).catch(() => {})
 })
 
 onUnmounted(() => {
@@ -200,7 +203,7 @@ onUnmounted(() => {
 
           <div class="hero-cta">
             <button class="btn-primary" @click="scrollToVideo">
-              <span>▶</span> ดูวิดีโอทดสอบระบบ
+              <span>▶</span> ดูโฆษณาทดสอบระบบ
             </button>
             <button class="btn-secondary" @click="contactLine">
               💬 สอบถามผ่าน LINE
@@ -218,10 +221,10 @@ onUnmounted(() => {
     <section class="video-preview">
       <div class="section-head">
         <div class="section-tag">พิสูจน์ด้วยตัวเอง</div>
-        <h2 class="section-title">กดเล่นวิดีโอนี้เพื่อทดสอบ</h2>
+        <h2 class="section-title">กดดูโฆษณาสั้น ๆ นี้</h2>
         <p class="section-sub">
           ถ้าคุณอยู่ในประเทศจีน ไม่ต้องเปิด VPN
-          — วิดีโอนี้จะเล่นได้ทันที
+          — โฆษณานี้จะเล่นได้ทันที
         </p>
       </div>
 
@@ -232,7 +235,7 @@ onUnmounted(() => {
             <span class="play-icon">▶</span>
           </div>
           <div class="thumb-label">
-            <div class="thumb-title">MedNinja LMS Demo</div>
+            <div class="thumb-title">โฆษณา MedNinja LMS</div>
             <div class="thumb-meta">🔒 Alibaba Encrypt · เล่นได้ในจีน</div>
           </div>
         </div>
