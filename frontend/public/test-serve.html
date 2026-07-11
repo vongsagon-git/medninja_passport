@@ -473,34 +473,12 @@
         await waitAli()
         log('Aliplayer SDK พร้อม', 'success')
 
-        // ⭐ Step 1: fetch PlayInfo → เลือก stream URL ตาม device (backend proxy)
-        log(`Fetch PlayInfo (proxy): ${PLAYINFO_ENDPOINT}`, 'info')
-        const piBust = Date.now() + '-' + Math.random().toString(36).substring(2, 8)
-        const piRes = await fetch(`${PLAYINFO_ENDPOINT}?_=${piBust}`, { cache: 'no-store' })
-        if (!piRes.ok) throw new Error(`PlayInfo fail ${piRes.status}: ${(await piRes.text()).substring(0, 200)}`)
-        const playInfo = await piRes.json()
-        log(`PlayInfo streams: ${playInfo.streams.length}`, 'success')
-        playInfo.streams.forEach((s, i) => log(`  [${i}] ${s.format}/${s.definition} enc=${s.encryptType} bitrate=${s.bitrate}`, 'info'))
-
-        // ⭐ Step 2: เลือก stream ที่เหมาะกับ device
-        // iOS = AliyunVoDEncryption (Ali Prop m3u8)
-        // Other = Widevine-FairPlay (Widevine m3u8/mpd)
-        let chosen
-        if (iosDetected) {
-          chosen = playInfo.streams.find(s => s.encryptType === 'AliyunVoDEncryption')
-        } else {
-          chosen = playInfo.streams.find(s => s.encryptType === 'Widevine-FairPlay')
-                || playInfo.streams.find(s => s.encryptType === 'AliyunVoDEncryption')
-        }
-        if (!chosen) throw new Error(`ไม่พบ stream ที่เหมาะกับ device (iOS=${iosDetected})`)
-        log(`✅ Chosen: ${chosen.format}/${chosen.definition} enc=${chosen.encryptType}`, 'success')
-        log(`   URL: ${chosen.playUrl.substring(0, 100)}...`, 'info')
-
-        // ⭐ Step 3: Config Aliplayer ด้วย SOURCE URL (Ali Prop = signed URL ใน URL เอง ไม่ต้อง STS)
-        //   หมายเหตุ: source mode + STS = error 4400 (Aliplayer confused config)
-        const config = {
+        // ⭐ Idea B/C จาก Alibaba docs research:
+        //   iOS   → vid + PlayAuth + playConfig.EncryptType='AliyunVoDEncryption' (บังคับ Aliplayer เห็นแค่ Ali Prop stream, ซ่อน Widevine)
+        //   Other → vid + STS + encryptType 1 (permissive — Aliplayer เลือกเอง)
+        const baseConfig = {
           id: 'player',
-          source: chosen.playUrl,      // ← URL ตรง (มี signed auth_key ในตัวเอง)
+          vid: VIDEO_ID,
           width: '100%',
           height: '100%',
           autoplay: false,
@@ -515,18 +493,40 @@
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           }
         }
-        // Widevine DRM (other device) ต้อง STS สำหรับขอ license
-        if (!iosDetected) {
-          const serve = await fetchServe()
-          config.accessKeyId = serve.accessKeyId
-          config.accessKeySecret = serve.accessKeySecret
-          config.securityToken = serve.securityToken
-          config.region = serve.region
-          config.encryptType = 3
-          log(`Config: source URL + STS (Widevine DRM other)`, 'info')
+
+        let config
+        if (iosDetected) {
+          // ─── iOS: PlayAuth + playConfig.EncryptType filter ───
+          log('Fetch PlayAuth (iOS mode)...', 'info')
+          const paBust = Date.now() + '-' + Math.random().toString(36).substring(2, 8)
+          const paRes = await fetch(`/api/china/test-playauth/${VIDEO_ID}?_=${paBust}`, { cache: 'no-store' })
+          if (!paRes.ok) throw new Error(`PlayAuth fail ${paRes.status}: ${(await paRes.text()).substring(0, 200)}`)
+          const paData = await paRes.json()
+          if (!paData.playAuth) throw new Error('ไม่ได้ playAuth')
+          log(`PlayAuth ได้แล้ว (length=${paData.playAuth.length})`, 'success')
+
+          config = {
+            ...baseConfig,
+            playauth: paData.playAuth,
+            encryptType: 1,
+            // ⭐ บังคับ Aliplayer เห็นแค่ Ali Prop stream (ซ่อน Widevine)
+            playConfig: {
+              EncryptType: 'AliyunVoDEncryption'
+            }
+          }
+          log(`Config: iOS PlayAuth + playConfig filter AliyunVoDEncryption`, 'info')
         } else {
-          // iOS = Ali Prop = signed URL อย่างเดียวพอ ไม่ต้อง STS ไม่ใส่ encryptType
-          log(`Config: source URL only (Ali Prop iOS)`, 'info')
+          // ─── Other: STS + encryptType 1 (permissive) ───
+          const serve = await fetchServe()
+          config = {
+            ...baseConfig,
+            accessKeyId: serve.accessKeyId,
+            accessKeySecret: serve.accessKeySecret,
+            securityToken: serve.securityToken,
+            region: serve.region,
+            encryptType: 1
+          }
+          log(`Config: Other STS + encryptType 1 (permissive Widevine)`, 'info')
         }
 
         log('สร้าง Aliplayer instance...', 'info')
