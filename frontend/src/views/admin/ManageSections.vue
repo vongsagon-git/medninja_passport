@@ -187,23 +187,15 @@
                                   <span class="platform-label">🇨🇳 CHINA</span>
                                   <div class="vid-slot">
                                     <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleAliVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleAliVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._aliVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._aliVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._aliVerified === false" class="verify-status fail">✗</span>
                                     </div>
                                     <div v-if="vid.ref._aliName" class="bunny-filename" :title="vid.ref._aliName">{{ vid.ref._aliName }}</div>
+                                    <div v-if="vid.ref._aliVerifyReason" class="ali-verify-reason" :title="vid.ref._aliVerifyReason">{{ vid.ref._aliVerifyReason }}</div>
                                   </div>
-                                  <div class="vid-slot">
-                                    <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleAliDrmVerify(vid.flatIdx)" />
-                                      <span v-if="vid.ref._aliDrmVerifying" class="verify-status verifying">...</span>
-                                      <span v-else-if="vid.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
-                                      <span v-else-if="vid.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
-                                    </div>
-                                    <div v-if="vid.ref._aliDrmName" class="bunny-filename drm" :title="vid.ref._aliDrmName">{{ vid.ref._aliDrmName }}</div>
-                                  </div>
-                                  <!-- ⭐ Save to Library — แสดงเมื่อครบ 4 fields -->
+                                  <!-- ⭐ Save to Library — แสดงเมื่อครบ fields -->
                                   <div v-if="isFourFieldsComplete(vid.ref)" class="save-to-lib-row">
                                     <button type="button" class="btn-save-to-lib" @click="openSaveContentModal(vid.ref)" title="บันทึกเข้า Library เพื่อ reuse ในอนาคต">
                                       💾 บันทึกเข้า Content Library
@@ -307,21 +299,13 @@
                               <span class="platform-label">🇨🇳 CHINA</span>
                               <div class="vid-slot">
                                 <div class="vid-input-wrap">
-                                  <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleAliVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleAliVerify(child.flatIdx)" />
                                   <span v-if="child.ref._aliVerifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._aliVerified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._aliVerified === false" class="verify-status fail">✗</span>
                                 </div>
                                 <div v-if="child.ref._aliName" class="bunny-filename" :title="child.ref._aliName">{{ child.ref._aliName }}</div>
-                              </div>
-                              <div class="vid-slot">
-                                <div class="vid-input-wrap">
-                                  <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleAliDrmVerify(child.flatIdx)" />
-                                  <span v-if="child.ref._aliDrmVerifying" class="verify-status verifying">...</span>
-                                  <span v-else-if="child.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
-                                  <span v-else-if="child.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
-                                </div>
-                                <div v-if="child.ref._aliDrmName" class="bunny-filename drm" :title="child.ref._aliDrmName">{{ child.ref._aliDrmName }}</div>
+                                <div v-if="child.ref._aliVerifyReason" class="ali-verify-reason" :title="child.ref._aliVerifyReason">{{ child.ref._aliVerifyReason }}</div>
                               </div>
                             </div>
                             <div v-if="isFourFieldsComplete(child.ref)" class="save-to-lib-row">
@@ -426,21 +410,13 @@
                         <span class="platform-label">🇨🇳 CHINA</span>
                         <div class="vid-slot">
                           <div class="vid-input-wrap">
-                            <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleAliVerify(node.flatIdx)" />
+                            <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleAliVerify(node.flatIdx)" />
                             <span v-if="node.ref._aliVerifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._aliVerified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._aliVerified === false" class="verify-status fail">✗</span>
                           </div>
                           <div v-if="node.ref._aliName" class="bunny-filename" :title="node.ref._aliName">{{ node.ref._aliName }}</div>
-                        </div>
-                        <div class="vid-slot">
-                          <div class="vid-input-wrap">
-                            <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleAliDrmVerify(node.flatIdx)" />
-                            <span v-if="node.ref._aliDrmVerifying" class="verify-status verifying">...</span>
-                            <span v-else-if="node.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
-                            <span v-else-if="node.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
-                          </div>
-                          <div v-if="node.ref._aliDrmName" class="bunny-filename drm" :title="node.ref._aliDrmName">{{ node.ref._aliDrmName }}</div>
+                          <div v-if="node.ref._aliVerifyReason" class="ali-verify-reason" :title="node.ref._aliVerifyReason">{{ node.ref._aliVerifyReason }}</div>
                         </div>
                       </div>
                       <div v-if="isFourFieldsComplete(node.ref)" class="save-to-lib-row">
@@ -717,8 +693,7 @@
             <div class="preview-title">4 videoIds ที่จะบันทึก:</div>
             <div class="preview-row"><span>🌐 Bunny NoDRM</span><code>{{ saveContentModal.bunnyVideoId }}</code></div>
             <div class="preview-row"><span>🌐 Bunny Widevine</span><code>{{ saveContentModal.bunnyDrmVideoId }}</code></div>
-            <div class="preview-row"><span>🇨🇳 Ali NoDRM</span><code>{{ saveContentModal.aliVideoId }}</code></div>
-            <div class="preview-row"><span>🇨🇳 Ali Widevine</span><code>{{ saveContentModal.aliDrmVideoId }}</code></div>
+            <div class="preview-row"><span>🇨🇳 Ali (dual encryption)</span><code>{{ saveContentModal.aliVideoId }}</code></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -815,7 +790,7 @@ export default {
         tagLv2: '',
         tagLv3: '',
         notes: '',
-        bunnyVideoId: '', bunnyDrmVideoId: '', aliVideoId: '', aliDrmVideoId: '',
+        bunnyVideoId: '', bunnyDrmVideoId: '', aliVideoId: '',
         _videoRef: null
       },
       libTags: { tagLv1: [], tagLv2: [], tagLv3: [] },
@@ -915,7 +890,7 @@ export default {
     //    ถ้ามี contentId แล้ว = มาจาก Library อยู่แล้ว → ไม่ต้องบันทึกซ้ำ
     isFourFieldsComplete(video) {
       if (video.contentId) return false
-      return !!(video.bunnyVideoId && video.bunnyDrmVideoId && video.aliVideoId && video.aliDrmVideoId)
+      return !!(video.bunnyVideoId && video.bunnyDrmVideoId && video.aliVideoId)
     },
     async openSaveContentModal(video) {
       // Fetch existing tags for autocomplete
@@ -934,7 +909,6 @@ export default {
         bunnyVideoId: video.bunnyVideoId,
         bunnyDrmVideoId: video.bunnyDrmVideoId,
         aliVideoId: video.aliVideoId,
-        aliDrmVideoId: video.aliDrmVideoId,
         _videoRef: video
       }
     },
@@ -985,7 +959,7 @@ export default {
     async selectLibContent(content) {
       const video = this.loadContentModal._videoRef
       if (!video) return
-      const hasExisting = video.bunnyVideoId || video.bunnyDrmVideoId || video.aliVideoId || video.aliDrmVideoId || video.contentId
+      const hasExisting = video.bunnyVideoId || video.bunnyDrmVideoId || video.aliVideoId || video.contentId
       if (hasExisting) {
         const proceed = confirm(`⚠️ VDO นี้มีข้อมูลอยู่แล้ว\n\nต้องการเปลี่ยนเป็น "${content.title}"?`)
         if (!proceed) return
@@ -997,13 +971,11 @@ export default {
       video.bunnyVideoId = content.bunnyVideoId
       video.bunnyDrmVideoId = content.bunnyDrmVideoId
       video.aliVideoId = content.aliVideoId
-      video.aliDrmVideoId = content.aliDrmVideoId
       if (content.duration) video.duration = content.duration
       video._linkedContentTitle = content.title
       video._verified = true
       video._drmVerified = true
       video._aliVerified = true
-      video._aliDrmVerified = true
       this.$forceUpdate()
       this.closeLoadContentModal()
       // ⭐ Auto-save เข้า DB ทันที (มิฉะนั้น refresh หน้าแล้ว link จะหาย)
@@ -1032,7 +1004,6 @@ export default {
         bunnyVideoId: (v.bunnyVideoId || '').trim(),
         bunnyDrmVideoId: (v.bunnyDrmVideoId || '').trim(),
         aliVideoId: (v.aliVideoId || '').trim(),
-        aliDrmVideoId: (v.aliDrmVideoId || '').trim(),
         bunnyLibraryId: v.bunnyLibraryId || '628424',
         duration: v.duration || '',
         order: v.order || 0,
@@ -1046,7 +1017,6 @@ export default {
         bonusBunnyVideoId: (v.bonusBunnyVideoId || '').trim(),
         bonusBunnyDrmVideoId: (v.bonusBunnyDrmVideoId || '').trim(),
         bonusAliVideoId: (v.bonusAliVideoId || '').trim(),
-        bonusAliDrmVideoId: (v.bonusAliDrmVideoId || '').trim(),
         bonusDuration: v.bonusDuration || '',
         bonusPdfFile: (v.bonusPdfFile || '').trim(),
         bonusPdfFileName: (v.bonusPdfFileName || '').trim()
@@ -1073,7 +1043,6 @@ export default {
           bunnyVideoId: m.bunnyVideoId,
           bunnyDrmVideoId: m.bunnyDrmVideoId,
           aliVideoId: m.aliVideoId,
-          aliDrmVideoId: m.aliDrmVideoId,
           duration: m._videoRef?.duration || '',
           notes: m.notes.trim()
         })
@@ -1173,7 +1142,6 @@ export default {
         bunnyVideoId: '',
         bunnyDrmVideoId: '',
         aliVideoId: '',
-        aliDrmVideoId: '',
         bunnyLibraryId: '628424',
         duration: '--:--',
         order: 0,
@@ -1191,10 +1159,7 @@ export default {
         _aliVerifying: false,
         _aliName: '',
         _aliDuration: 0,
-        _aliDrmVerified: null,
-        _aliDrmVerifying: false,
-        _aliDrmName: '',
-        _aliDrmDuration: 0,
+        _aliVerifyReason: '',
         _renaming: false,
         _durationMismatch: false,
         _locked: false,
@@ -1271,7 +1236,6 @@ export default {
         bunnyVideoId: '',
         bunnyDrmVideoId: '',
         aliVideoId: '',
-        aliDrmVideoId: '',
         bunnyLibraryId: '628424',
         duration: '--:--',
         order: this.form.videos.length + 1,
@@ -1286,10 +1250,7 @@ export default {
         _aliVerifying: false,
         _aliName: '',
         _aliDuration: 0,
-        _aliDrmVerified: null,
-        _aliDrmVerifying: false,
-        _aliDrmName: '',
-        _aliDrmDuration: 0,
+        _aliVerifyReason: '',
         _locked: false
       })
     },
@@ -1729,101 +1690,40 @@ export default {
         video._aliVerified = null
         video._aliName = ''
         video._aliDuration = 0
-        video._aliVariant = ''
-        video._aliSlotError = ''
+        video._aliVerifyReason = ''
         this.checkAllDurationsMatch(video)
-        return
-      }
-      // ⭐ ต้องไม่ซ้ำกับ DRM slot
-      if (vid === (video.aliDrmVideoId || '').trim()) {
-        video._aliVerified = false
-        video._aliSlotError = 'DUPLICATE'
-        video._aliName = 'ห้ามซ้ำกับ Ali DRM VID'
         return
       }
       video._aliVerifying = true
       video._aliVerified = null
-      video._aliSlotError = ''
+      video._aliVerifyReason = ''
       try {
-        const info = await api.get(`/admin/ali/video/${vid}`)
-        const variant = info.encryption?.variant || 'unknown'
-        video._aliVariant = variant
-        const dur = Math.round(info.duration || 0)
-        video._aliDuration = dur
-        // Format duration MM:SS + append to title
-        const durStr = dur > 0 ? `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}` : ''
-        video._aliName = (info.title || '') + (durStr ? ` (${durStr})` : '')
-        // ⭐ Slot check: Ali NoDRM slot ต้องเป็น ali-proprietary (f0a1 template) เท่านั้น
-        if (variant === 'drm-widevine') {
-          video._aliVerified = false
-          video._aliSlotError = 'WRONG_SLOT'
-          video._aliName = '⚠️ นี่คือ Widevine DRM — ควรใส่ในช่อง Ali DRM'
-        } else if (variant !== 'ali-proprietary') {
-          video._aliVerified = false
-          video._aliSlotError = 'WRONG_TEMPLATE'
-          video._aliName = `⚠️ ต้องใช้ Alibaba Proprietary template (f0a1) เท่านั้น — พบ: ${variant}`
-        } else {
+        // ⭐ New dual-encryption verify endpoint
+        // Returns: { valid, hasAliProp, hasWidevine, streamCount, reason }
+        const data = await api.get(`/admin/ali/verify-dual/${vid}`)
+        if (data.valid) {
           video._aliVerified = true
+          video._aliVerifyReason = ''
+          const parts = []
+          if (data.hasAliProp) parts.push('AliProp')
+          if (data.hasWidevine) parts.push('Widevine')
+          const suffix = parts.length ? ` [${parts.join('+')}]` : ''
+          video._aliName = (data.title || vid) + suffix
+          if (data.duration != null) {
+            const dur = Math.round(data.duration || 0)
+            video._aliDuration = dur
+          }
+        } else {
+          video._aliVerified = false
+          video._aliVerifyReason = data.reason || 'ไม่ผ่านการตรวจสอบ'
+          video._aliName = data.title || ''
+          if (data.duration != null) video._aliDuration = Math.round(data.duration || 0)
         }
-      } catch {
+      } catch (err) {
         video._aliVerified = false
+        video._aliVerifyReason = err.response?.data?.reason || err.response?.data?.error || 'verify failed'
       } finally {
         video._aliVerifying = false
-        this.checkAllDurationsMatch(video)
-      }
-    },
-    // ═══ Ali DRM verify ═══
-    scheduleAliDrmVerify(idx) {
-      const video = this.form.videos[idx]
-      video._aliDrmVerified = null
-      clearTimeout(video._aliDrmVerifyTimer)
-      video._aliDrmVerifyTimer = setTimeout(() => {
-        this.$nextTick(() => this.verifyAliDrmVideo(idx))
-      }, 500)
-    },
-    async verifyAliDrmVideo(idx) {
-      const video = this.form.videos[idx]
-      const vid = (video.aliDrmVideoId || '').trim()
-      if (!vid) {
-        video._aliDrmVerified = null
-        video._aliDrmName = ''
-        video._aliDrmDuration = 0
-        video._aliDrmVariant = ''
-        video._aliDrmSlotError = ''
-        this.checkAllDurationsMatch(video)
-        return
-      }
-      // ⭐ ต้องไม่ซ้ำกับ NoDRM slot
-      if (vid === (video.aliVideoId || '').trim()) {
-        video._aliDrmVerified = false
-        video._aliDrmSlotError = 'DUPLICATE'
-        video._aliDrmName = 'ห้ามซ้ำกับ Ali NoDRM VID'
-        return
-      }
-      video._aliDrmVerifying = true
-      video._aliDrmVerified = null
-      video._aliDrmSlotError = ''
-      try {
-        const info = await api.get(`/admin/ali/video/${vid}`)
-        const variant = info.encryption?.variant || 'unknown'
-        video._aliDrmVariant = variant
-        const dur = Math.round(info.duration || 0)
-        video._aliDrmDuration = dur
-        // Format duration MM:SS + append to title
-        const durStr = dur > 0 ? `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}` : ''
-        video._aliDrmName = (info.title || '') + (durStr ? ` (${durStr})` : '')
-        // ⭐ Slot check: Ali DRM slot ต้องเป็น drm-widevine เท่านั้น
-        if (variant !== 'drm-widevine') {
-          video._aliDrmVerified = false
-          video._aliDrmSlotError = 'WRONG_SLOT'
-          video._aliDrmName = `⚠️ นี่ไม่ใช่ Widevine DRM (พบ ${variant}) — ควรใส่ในช่อง Ali NoDRM`
-        } else {
-          video._aliDrmVerified = true
-        }
-      } catch {
-        video._aliDrmVerified = false
-      } finally {
-        video._aliDrmVerifying = false
         this.checkAllDurationsMatch(video)
       }
     },
@@ -1833,16 +1733,14 @@ export default {
       const bd = video._bunnyDuration || 0
       const bdrm = video._drmDurationSec || 0
       const ad = video._aliDuration || 0
-      const adrm = video._aliDrmDuration || 0
 
       // เก็บเฉพาะที่มี duration >0
-      const durs = [bd, bdrm, ad, adrm].filter(d => d > 0)
+      const durs = [bd, bdrm, ad].filter(d => d > 0)
 
       // ต้องมีอย่างน้อย 2 ตัวถึงจะเทียบได้
       if (durs.length < 2) {
         video._durationMismatch = false
         video._aliDurationMismatch = false
-        video._aliDrmDurationMismatch = false
         return
       }
 
@@ -1853,47 +1751,17 @@ export default {
       // Global mismatch flag (สำหรับ warning banner)
       video._durationMismatch = overall
 
-      // ⭐ Per-slot check: ตัวไหน off เกิน ±3 วิ จาก min → ✗ ที่ slot นั้น
-      // ใช้ min เป็นฐาน (ถือว่าตัวที่สั้นสุดเป็นจริง — หรือใช้ median ก็ได้)
-      // เอาจริง ๆ ให้เช็คว่า Ali แต่ละตัวเทียบกับ Bunny ที่มี
+      // ⭐ Per-slot check: เช็คว่า Ali เทียบกับ Bunny (tolerance ±3 วิ)
       const bunnyDurs = [bd, bdrm].filter(d => d > 0)
       const bunnyMax = bunnyDurs.length ? Math.max(...bunnyDurs) : 0
       const bunnyMin = bunnyDurs.length ? Math.min(...bunnyDurs) : 0
 
       // ถ้ามี Bunny reference → เช็ค Ali เทียบกับ Bunny
-      if (bunnyDurs.length > 0) {
-        // Ali NoDRM: ต่างจาก Bunny range เกิน ±3 วิ = mismatch
-        if (ad > 0) {
-          const outsideBunny = ad < (bunnyMin - 3) || ad > (bunnyMax + 3)
-          video._aliDurationMismatch = outsideBunny
-          if (outsideBunny) {
-            video._aliVerified = false
-            video._aliSlotError = 'DURATION_MISMATCH'
-          } else if (video._aliSlotError === 'DURATION_MISMATCH') {
-            // clear error ถ้าเคย error เรื่องนี้แต่ตอนนี้ pass
-            video._aliSlotError = ''
-            if (video._aliVariant === 'ali-proprietary') video._aliVerified = true
-          }
-        } else {
-          video._aliDurationMismatch = false
-        }
-        // Ali DRM: เหมือนกัน
-        if (adrm > 0) {
-          const outsideBunny = adrm < (bunnyMin - 3) || adrm > (bunnyMax + 3)
-          video._aliDrmDurationMismatch = outsideBunny
-          if (outsideBunny) {
-            video._aliDrmVerified = false
-            video._aliDrmSlotError = 'DURATION_MISMATCH'
-          } else if (video._aliDrmSlotError === 'DURATION_MISMATCH') {
-            video._aliDrmSlotError = ''
-            if (video._aliDrmVariant === 'drm-widevine') video._aliDrmVerified = true
-          }
-        } else {
-          video._aliDrmDurationMismatch = false
-        }
+      if (bunnyDurs.length > 0 && ad > 0) {
+        const outsideBunny = ad < (bunnyMin - 3) || ad > (bunnyMax + 3)
+        video._aliDurationMismatch = outsideBunny
       } else {
         video._aliDurationMismatch = false
-        video._aliDrmDurationMismatch = false
       }
     },
     // ═══ Bonus Video verify ═══
@@ -2000,6 +1868,9 @@ export default {
         videos: (section.videos || [])
           .sort((a, b) => (a.order || 0) - (b.order || 0))
           .map(v => ({
+            // ⭐ Content Library link — ต้อง preserve ตอน load ไม่งั้น badge/lock หายทุกครั้ง edit
+            contentId: v.contentId || null,
+            _linkedContentTitle: v.contentId ? (v.title || 'Library content') : '',
             title: v.title || '',
             topic: v.topic || '',
             subtopic: v.subtopic || '',
@@ -2008,7 +1879,6 @@ export default {
             bunnyVideoId: v.bunnyVideoId || '',
             bunnyDrmVideoId: v.bunnyDrmVideoId || '',
             aliVideoId: v.aliVideoId || '',
-            aliDrmVideoId: v.aliDrmVideoId || '',
             bunnyLibraryId: v.bunnyLibraryId || '628424',
             duration: v.duration || '--:--',
             order: v.order || 0,
@@ -2026,10 +1896,7 @@ export default {
             _aliVerifying: false,
             _aliName: '',
             _aliDuration: 0,
-            _aliDrmVerified: v.aliDrmVideoId ? true : null,
-            _aliDrmVerifying: false,
-            _aliDrmName: '',
-            _aliDrmDuration: 0,
+            _aliVerifyReason: '',
             _renaming: false,
             _durationMismatch: false,
             _locked: !!(v.bunnyVideoId && v.bunnyDrmVideoId),
@@ -2038,6 +1905,8 @@ export default {
             bonusTitle: v.bonusTitle || '',
             bonusBunnyVideoId: v.bonusBunnyVideoId || '',
             bonusBunnyDrmVideoId: v.bonusBunnyDrmVideoId || '',
+            // ⭐ Bonus Ali (CN) — schema มี, edit เดิมลืม
+            bonusAliVideoId: v.bonusAliVideoId || '',
             bonusDuration: v.bonusDuration || '--:--',
             bonusPdfFile: v.bonusPdfFile || '',
             bonusPdfFileName: v.bonusPdfFileName || '',
@@ -2065,12 +1934,12 @@ export default {
 
     // rename ครบ 4 ไฟล์ (Bunny NoDRM + Bunny DRM + Ali NoDRM + Ali DRM)
     async renameAllFiles(video) {
-      const current = video._bunnyName || video._drmName || video._aliName || video._aliDrmName || video.title || ''
-      const newName = prompt('ตั้งชื่อไฟล์ (Bunny 2 + Ali 2):', current)
+      const current = video._bunnyName || video._drmName || video._aliName || video.title || ''
+      const newName = prompt('ตั้งชื่อไฟล์ (Bunny 2 + Ali 1):', current)
       if (!newName || newName === current) return
 
       video._renaming = true
-      const results = { bunny: null, bunnyDrm: null, ali: null, aliDrm: null }
+      const results = { bunny: null, bunnyDrm: null, ali: null }
       const errors = []
 
       // Bunny NoDRM
@@ -2095,7 +1964,7 @@ export default {
           errors.push('Bunny DRM: ' + (err.message || err))
         }
       }
-      // Ali NoDRM
+      // Ali (single VID with dual encryption)
       if (video.aliVideoId) {
         try {
           await api.post(`/admin/ali/video/${video.aliVideoId.trim()}/rename`, { title: newName })
@@ -2103,18 +1972,7 @@ export default {
           video._aliName = newName
         } catch (err) {
           results.ali = false
-          errors.push('Ali NoDRM: ' + (err.response?.data?.error || err.message || err))
-        }
-      }
-      // Ali DRM
-      if (video.aliDrmVideoId) {
-        try {
-          await api.post(`/admin/ali/video/${video.aliDrmVideoId.trim()}/rename`, { title: newName })
-          results.aliDrm = true
-          video._aliDrmName = newName
-        } catch (err) {
-          results.aliDrm = false
-          errors.push('Ali DRM: ' + (err.response?.data?.error || err.message || err))
+          errors.push('Ali: ' + (err.response?.data?.error || err.message || err))
         }
       }
 
@@ -2162,7 +2020,7 @@ export default {
 
     // Verify Ali videos ทีละตัวเมื่อ open edit form (throttled)
     async loadAliNames() {
-      const withAli = this.form.videos.filter(v => (v.aliVideoId || '').trim() || (v.aliDrmVideoId || '').trim())
+      const withAli = this.form.videos.filter(v => (v.aliVideoId || '').trim())
       // ทำทีละ 3 คู่ขนาน กัน Alibaba rate-limit
       const CHUNK = 3
       for (let i = 0; i < withAli.length; i += CHUNK) {
@@ -2170,10 +2028,7 @@ export default {
         await Promise.all(chunk.map(async v => {
           const idx = this.form.videos.indexOf(v)
           if (idx < 0) return
-          const tasks = []
-          if ((v.aliVideoId || '').trim()) tasks.push(this.verifyAliVideo(idx))
-          if ((v.aliDrmVideoId || '').trim()) tasks.push(this.verifyAliDrmVideo(idx))
-          await Promise.all(tasks)
+          if ((v.aliVideoId || '').trim()) await this.verifyAliVideo(idx)
         }))
       }
       // recheck all mismatches after all durations loaded
@@ -2200,25 +2055,21 @@ export default {
           this.saving = false
           return
         }
-        // ⭐ STRICT: กัน Ali slot ผิด (NoDRM ≠ ali-proprietary หรือ DRM ≠ drm-widevine)
-        const slotErrors = this.form.videos.filter(v =>
-          v._aliSlotError || v._aliDrmSlotError
+        // ⭐ STRICT: กัน Ali VID ที่ verify ไม่ผ่าน (dual encryption check)
+        const aliInvalid = this.form.videos.filter(v =>
+          (v.aliVideoId || '').trim() && v._aliVerified === false
         )
-        if (slotErrors.length > 0) {
+        if (aliInvalid.length > 0) {
           this.saving = false
-          const preview = slotErrors.slice(0, 3).map(v => {
-            const errs = []
-            if (v._aliSlotError) errs.push('NoDRM: ' + v._aliSlotError)
-            if (v._aliDrmSlotError) errs.push('DRM: ' + v._aliDrmSlotError)
-            return `• ${v.title || '(ไม่มีชื่อ)'}: ${errs.join(', ')}`
-          }).join('\n')
-          alert('⚠️ Ali VID ใส่ผิดช่อง — โปรดตรวจสอบ\n\n' +
-            '• Ali NoDRM slot ต้องเป็น Alibaba Proprietary (template f0a1) เท่านั้น\n' +
-            '• Ali DRM slot ต้องเป็น Widevine DRM (template b0dd) เท่านั้น\n\n' +
+          const preview = aliInvalid.slice(0, 3).map(v =>
+            `• ${v.title || '(ไม่มีชื่อ)'}: ${v._aliVerifyReason || 'verify failed'}`
+          ).join('\n')
+          alert('⚠️ Ali VID บางตัวไม่ผ่านการตรวจสอบ — โปรดตรวจสอบ\n\n' +
+            'VID ต้องมี dual encryption (AliProp + Widevine) ครบทั้งคู่\n\n' +
             preview)
           return
         }
-        // ⭐ STRICT: กันบันทึกถ้ามี video ไหน duration ไม่ตรง (Bunny 2 + Ali 2 ครบ)
+        // ⭐ STRICT: กันบันทึกถ้ามี video ไหน duration ไม่ตรง (Bunny 2 + Ali 1 ครบ)
         const mismatched = this.form.videos.filter(v => v._durationMismatch === true)
         if (mismatched.length > 0) {
           this.saving = false
@@ -2226,8 +2077,7 @@ export default {
             const bd = v._bunnyDuration || 0
             const bdrm = v._drmDurationSec || 0
             const ad = v._aliDuration || 0
-            const adrm = v._aliDrmDuration || 0
-            return `• ${v.title || '(ไม่มีชื่อ)'}: Bunny ${bd}/${bdrm} · Ali ${ad}/${adrm} วิ`
+            return `• ${v.title || '(ไม่มีชื่อ)'}: Bunny ${bd}/${bdrm} · Ali ${ad} วิ`
           }).join('\n')
           alert('⚠️ ความยาววิดีโอไม่ตรงกัน — โปรดตรวจสอบก่อนบันทึก\n(Bunny และ Ali ต้อง encode ให้ length เท่ากัน · tolerance ±3 วิ)\n\n' + preview)
           return

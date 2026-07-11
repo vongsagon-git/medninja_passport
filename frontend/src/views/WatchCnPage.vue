@@ -784,47 +784,29 @@ export default {
       if (this.isAdminPreview) return '/admin/sections'
       return `/my-cn/section/${this.sectionId}`
     },
-    // ⭐ CN: เช็คว่า video มี Ali code (NoDRM หรือ DRM) พร้อมใช้ไหม
+    // ⭐ CN: เช็คว่า video มี Ali code พร้อมใช้ไหม (1 ID dual encryption)
     hasAliVideo() {
       const v = this.video
       if (!v) return false
-      if (this.isBonus) return !!(v.bonusAliVideoId || v.bonusAliDrmVideoId)
-      return !!(v.aliVideoId || v.aliDrmVideoId)
+      if (this.isBonus) return !!v.bonusAliVideoId
+      return !!v.aliVideoId
     },
     aliServeCheck() {
-      // ⭐ Template ใช้ .ok / .variant / .idTail — คืน object เสมอ (กัน undefined.ok → หน้าขาว)
+      // ⭐ 1 ID dual encryption — server ส่ง aliVideoId เดียว ไม่มี variant
       const v = this.video
       const empty = { ok: false, variant: '', idTail: '' }
       if (!v) return empty
-      const variant = (v.aliChosenVariant) || (this._resolveAliVariant ? this._resolveAliVariant() : '')
-      const chosen = (v.aliChosenId || this.aliVideoIdToPlay || '').trim()
+      const chosen = (this.aliVideoIdToPlay || '').trim()
       const idTail = chosen ? chosen.slice(-6) : ''
-      const drmId = (v.aliDrmVideoId || '').trim()
-      const noDrmId = (v.aliVideoId || '').trim()
-      // ok = server เลือกตรงกับ variant ที่ device คาดหวัง
-      let ok = false
-      if (variant === 'drm' && chosen && chosen === drmId) ok = true
-      else if (variant === 'noDrm' && chosen && chosen === noDrmId) ok = true
-      else if (chosen && (chosen === drmId || chosen === noDrmId)) ok = true
-      return { ok, variant, idTail }
+      const variant = detectIOS() ? 'ali-prop' : 'widevine'
+      return { ok: !!chosen, variant, idTail }
     },
     aliVideoIdToPlay() {
       const v = this.video
       if (!v) return ''
-      // ⭐ Backend เลือกให้แล้ว (aliChosenId) — trust ค่าจาก server
-      if (v.aliChosenId) return v.aliChosenId
-      // Fallback (backend เก่ายังไม่ส่ง aliChosenId): เลือกเองตาม device
-      const isIosOrSafari = detectIOS() || detectMacSafari()
-      if (this.isBonus) {
-        const drm = v.bonusAliDrmVideoId || ''
-        const noDrm = v.bonusAliVideoId || ''
-        if (isIosOrSafari) return noDrm || drm
-        return drm || noDrm
-      }
-      const drm = v.aliDrmVideoId || ''
-      const noDrm = v.aliVideoId || ''
-      if (isIosOrSafari) return noDrm || drm
-      return drm || noDrm
+      // ⭐ 1 ID dual encryption — ใช้ ID เดียวทุก device (frontend เลือก path)
+      if (this.isBonus) return v.bonusAliVideoId || ''
+      return v.aliVideoId || ''
     },
     watchedCount() {
       const key = this.sectionId
@@ -1345,11 +1327,10 @@ export default {
           playerError: this._playerError || '',
           appVersion: _getAppVersion(),
           contentType: this.isBonus ? 'bonus' : 'video',
-          // ⭐ Warroom: แหล่ง + bucket + player + variant
+          // ⭐ Warroom: 1 ID dual encryption — variant = ali-prop (iOS) หรือ widevine (Other)
           source: 'passport',
           bucket: 'CN',
           player: 'aliplayer',
-          // aliVideoIdToPlay = aliDrmVideoId → 'drm' (Widevine), aliVideoId → 'noDrm' (Proprietary encryptType 1)
           variant: this._resolveAliVariant()
         })
         if (data.kicked) {
@@ -2403,16 +2384,29 @@ export default {
     },
     async _fetchAliStsToken () {
       try {
-        // ⭐ Backend route: /api/china/sts/:videoId (บังคับต้องมี videoId)
+        // ⭐ Other device path: STS สำหรับ Widevine DRM
         const vid = this.aliVideoIdToPlay
         if (!vid) throw new Error('No Ali videoId')
         const res = await api.get(`/china/sts/${vid}`)
-        // api.js interceptor unwraps → res = data
         const d = (res && res.data) ? res.data : (res || {})
         if (!d.accessKeyId) throw new Error('STS response missing accessKeyId')
         return d
       } catch (e) {
         console.error('[Ali] STS fetch error:', e.message)
+        throw e
+      }
+    },
+    async _fetchAliPlayAuth () {
+      try {
+        // ⭐ iOS path: PlayAuth สำหรับ Ali Prop stream
+        const vid = this.aliVideoIdToPlay
+        if (!vid) throw new Error('No Ali videoId')
+        const res = await api.get(`/china/playauth/${vid}`)
+        const d = (res && res.data) ? res.data : (res || {})
+        if (!d.playAuth) throw new Error('PlayAuth response missing playAuth')
+        return d
+      } catch (e) {
+        console.error('[Ali] PlayAuth fetch error:', e.message)
         throw e
       }
     },
@@ -2446,23 +2440,21 @@ export default {
           throw new Error('Container #J_prismPlayer not found in DOM')
         }
 
-        // 3. Cleanup previous ก่อน fetch STS (กัน 2 STS ยิงซ้อน)
+        // 3. Cleanup previous ก่อน fetch token (กัน 2 requests ยิงซ้อน)
         if (this._aliPlayer) {
           try { this._aliPlayer.dispose() } catch {}
           this._aliPlayer = null
         }
 
-        // 3. Fetch STS (fresh, no race)
-        const sts = await this._fetchAliStsToken()
+        // ⭐ 1 ID dual encryption — 2 paths ตาม device
+        // iOS/Mac Safari → PlayAuth + playConfig.EncryptType filter Ali Prop
+        // Other → STS + encryptType 1 (permissive Widevine)
+        const isIosOrSafari = detectIOS() || detectMacSafari()
 
-        // 4. Config
-        const config = {
+        // Base config (ทุก device เหมือนกัน)
+        const baseConfig = {
           id: 'J_prismPlayer',
           vid: videoId,
-          accessKeyId: sts.accessKeyId,
-          accessKeySecret: sts.accessKeySecret,
-          securityToken: sts.securityToken,
-          region: sts.region || 'ap-southeast-1',
           width: '100%',
           height: '100%',
           autoplay: false,
@@ -2470,21 +2462,41 @@ export default {
           rePlay: false,
           playsinline: true,
           preload: true,
-          // ⭐ ปิด Aliplayer native controls — ใช้ Custom UI (ali-ctl-layer) เอง
           controlBarVisibility: 'never',
           showBigPlayButton: false,
           skinLayout: false,
           useH5Prism: true,
-          // ⭐ Anti-piracy: ปิด AirPlay + Chromecast (mirror ยังได้ + watermark ติดไป)
-          //   AirPlay ส่ง stream HD ต้นฉบับ → HDMI capture card = quality สูงสุด → ต้องปิด
           disableAirplay: true,
           disableChromecast: true,
           license: {
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
-          },
-          // encryptType 1 = Alibaba proprietary (permissive — รับทั้ง Ali + Widevine template)
-          encryptType: 1
+          }
+        }
+
+        let config
+        if (isIosOrSafari) {
+          // ─── PATH 1: iOS/Mac Safari — PlayAuth + filter Ali Prop stream ───
+          const { playAuth } = await this._fetchAliPlayAuth()
+          config = {
+            ...baseConfig,
+            playauth: playAuth,
+            encryptType: 1,
+            playConfig: { EncryptType: 'AliyunVoDEncryption' }  // 🔑 filter Widevine ออก
+          }
+          console.log('[Ali] Config: iOS PlayAuth + Ali Prop filter')
+        } else {
+          // ─── PATH 2: Other (Chrome/Edge/Android/PC) — STS + permissive Widevine ───
+          const sts = await this._fetchAliStsToken()
+          config = {
+            ...baseConfig,
+            accessKeyId: sts.accessKeyId,
+            accessKeySecret: sts.accessKeySecret,
+            securityToken: sts.securityToken,
+            region: sts.region || 'ap-southeast-1',
+            encryptType: 1  // permissive → Aliplayer เลือก Widevine เอง
+          }
+          console.log('[Ali] Config: Other STS + Widevine permissive')
         }
 
         // 5. Instantiate
@@ -2732,19 +2744,11 @@ export default {
     aliOnSeekbarInput (e) {
       this.aliSeekMove(e)
     },
-    // ⭐ ตัดสินใจ variant สำหรับ Warroom — ใช้ backend เลือกก่อน (แม่นสุด)
+    // ⭐ ตัดสินใจ variant สำหรับ Warroom — 1 ID dual encryption
+    // iOS = ali-prop (Ali Prop stream via PlayAuth)
+    // Other = widevine (Widevine stream via STS)
     _resolveAliVariant () {
-      const v = this.video
-      if (!v) return ''
-      // 1. Backend ส่ง aliChosenVariant มาแล้ว → ใช้ตรงๆ (source of truth)
-      if (v.aliChosenVariant) return v.aliChosenVariant
-      // 2. drmMode (Bunny compat)
-      if (v.drmMode === 'widevine') return 'drm'
-      // 3. Fallback compare ID
-      const drmId = (v.aliDrmVideoId || '').trim()
-      const chosen = (this.aliVideoIdToPlay || '').trim()
-      if (drmId && drmId === chosen) return 'drm'
-      return 'noDrm'
+      return detectIOS() || detectMacSafari() ? 'ali-prop' : 'widevine'
     },
     aliSetSpeed (s) {
       if (!this._aliPlayer) return

@@ -9,7 +9,7 @@ const VideoContent = require('./VideoContent.model')
 
 /**
  * Resolve videos array (mutate in place).
- * Fields overridden: bunnyVideoId, bunnyDrmVideoId, aliVideoId, aliDrmVideoId, duration
+ * Fields overridden: bunnyVideoId, bunnyDrmVideoId, aliVideoId (dual encryption), duration
  * Preserved from section: title, order, topic, pdfFile, requiredTier, bonus*, etc.
  */
 async function resolveVideos(videos) {
@@ -32,7 +32,6 @@ async function resolveVideos(videos) {
     v.bunnyVideoId = c.bunnyVideoId
     v.bunnyDrmVideoId = c.bunnyDrmVideoId
     v.aliVideoId = c.aliVideoId
-    v.aliDrmVideoId = c.aliDrmVideoId
     if (c.duration) v.duration = c.duration
     // Do NOT override title — section can rename per usage
   }

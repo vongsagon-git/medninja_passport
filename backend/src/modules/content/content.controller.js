@@ -100,11 +100,9 @@ exports.getSection = async (req, res, next) => {
           bonusHasPdf: !!v.bonusPdfFile,
           bonusPdfFile: (bonusLocked || !v.bonusPdfFile) ? '' : v.bonusPdfFile,
           bonusPdfFileName: (bonusLocked || !v.bonusPdfFile) ? '' : (v.bonusPdfFileName || v.bonusPdfFile),
-          // ⭐ CN: Ali video IDs (SectionCnPage เช็ค hasCnVideo() = aliVideoId && aliDrmVideoId)
+          // ⭐ CN: Ali video ID (1 ID dual encryption — Ali Prop + Widevine ในตัว)
           aliVideoId: locked ? '' : (v.aliVideoId || ''),
-          aliDrmVideoId: locked ? '' : (v.aliDrmVideoId || ''),
-          bonusAliVideoId: bonusLocked ? '' : (v.bonusAliVideoId || ''),
-          bonusAliDrmVideoId: bonusLocked ? '' : (v.bonusAliDrmVideoId || '')
+          bonusAliVideoId: bonusLocked ? '' : (v.bonusAliVideoId || '')
         }
       })
 
@@ -280,9 +278,8 @@ exports.getVideo = async (req, res, next) => {
     // ═══ เลือก video ID ตาม bonus flag ═══
     const targetVideoId = isBonus ? video.bonusBunnyVideoId : video.bunnyVideoId
     const targetDrmId = isBonus ? video.bonusBunnyDrmVideoId : video.bunnyDrmVideoId
-    // ⭐ CN: Ali video IDs
+    // ⭐ CN: Ali video ID (1 ID dual encryption — Ali Prop + Widevine ในตัว)
     const targetAliId = isBonus ? video.bonusAliVideoId : video.aliVideoId
-    const targetAliDrmId = isBonus ? video.bonusAliDrmVideoId : video.aliDrmVideoId
     const targetTitle = isBonus ? (video.bonusTitle || video.title) : video.title
     const targetDuration = isBonus ? (video.bonusDuration || video.duration) : video.duration
 
@@ -356,12 +353,7 @@ exports.getVideo = async (req, res, next) => {
       } catch {}
     }
 
-    // ⭐ CN: Backend เลือก Ali variant ตาม device (กฎเดียวกับ Bunny)
-    // Android/Chrome → DRM, iOS/Safari → NoDRM
-    const aliUseDrm = !!targetAliDrmId && !isIOS(req) && !isMacSafari(req)
-    const aliChosenId = aliUseDrm ? targetAliDrmId : (targetAliId || targetAliDrmId || '')
-    const aliChosenVariant = aliUseDrm ? 'drm' : 'noDrm'
-
+    // ⭐ CN: 1 Video ID มี dual encryption — frontend ตัดสินใจ path (iOS PlayAuth / Other STS)
     res.json({
       video: {
         index: idx,
@@ -371,13 +363,9 @@ exports.getVideo = async (req, res, next) => {
         isDemoLibrary: !useDrm,
         drmMode: useDrm ? 'widevine' : 'protection',
         libraryId: useDrm ? '626874' : '628424',
-        // ⭐ CN: Ali video IDs (Backend เลือก + ส่ง variant มาให้ตรง)
+        // ⭐ CN: Ali video ID เดียว (dual encryption ในตัว)
         aliVideoId: targetAliId || '',
-        aliDrmVideoId: targetAliDrmId || '',
-        aliChosenId,               // ← ใช้ตัวนี้ init Aliplayer
-        aliChosenVariant,          // ← ใช้ตัวนี้ส่ง Warroom (ไม่ต้อง compare string)
         bonusAliVideoId: !isBonus ? (video.bonusAliVideoId || '') : '',
-        bonusAliDrmVideoId: !isBonus ? (video.bonusAliDrmVideoId || '') : '',
         isBonus: !!isBonus,
         // ส่ง bonus info เฉพาะตอนดู VDO หลัก (ให้ frontend รู้ว่ามี bonus)
         hasBonusVideo: !isBonus && !!video.bonusBunnyVideoId,

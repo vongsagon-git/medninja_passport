@@ -14,13 +14,13 @@
 /**
  * ตารางกฎ:
  *
- * COUNTRY=CN (Alibaba VOD, ali-sg)
- * ├─ iOS iPhone Safari    → aliVideoId    (Proprietary AES-128, encryptType 1)
- * ├─ iOS iPad Safari      → aliVideoId    (Proprietary AES-128)
- * ├─ Mac Safari           → aliVideoId    (Proprietary AES-128)
- * ├─ Windows Chrome       → aliDrmVideoId (Widevine)
- * ├─ Mac Chrome           → aliDrmVideoId (Widevine)
- * └─ Android Chrome       → aliDrmVideoId (Widevine)
+ * COUNTRY=CN (Alibaba VOD, ali-sg) — 1 ID dual encryption
+ * ├─ iOS iPhone Safari    → aliVideoId + PlayAuth (Ali Prop stream)
+ * ├─ iOS iPad Safari      → aliVideoId + PlayAuth (Ali Prop stream)
+ * ├─ Mac Safari           → aliVideoId + PlayAuth (Ali Prop stream)
+ * ├─ Windows Chrome       → aliVideoId + STS (Widevine stream)
+ * ├─ Mac Chrome           → aliVideoId + STS (Widevine stream)
+ * └─ Android Chrome       → aliVideoId + STS (Widevine stream)
  *
  * COUNTRY=TH/other (Bunny CDN, bunny-global)
  * ├─ iOS iPhone Safari    → Bunny No-DRM  (FairPlay Cert หาย)
@@ -43,7 +43,7 @@ export function getExpectedServing(country, deviceType, browser) {
   // iOS/Mac Safari branch = No-DRM path (Proprietary or Bunny No-DRM)
   const isIosOrMacSafari = d === 'iPhone' || d === 'iPad' || (d === 'Mac' && b === 'Safari')
 
-  // Rule 1: China → Alibaba VOD (ทุก device)
+  // Rule 1: China → Alibaba VOD (ทุก device, 1 ID dual encryption)
   if (c === 'CN') {
     if (isIosOrMacSafari) {
       return {
@@ -51,17 +51,17 @@ export function getExpectedServing(country, deviceType, browser) {
         bucket: 'ali-sg',
         drm: 'proprietary',
         videoField: 'aliVideoId',
-        reason: `country=CN + ${d} ${b} → Alibaba Proprietary`,
-        notes: 'encryptType=1 AES-128 (iOS/Mac Safari ไม่รองรับ Widevine)'
+        reason: `country=CN + ${d} ${b} → Ali Prop (PlayAuth)`,
+        notes: '1 ID dual encryption + playConfig filter Ali Prop'
       }
     }
     return {
       player: 'ali',
       bucket: 'ali-sg',
       drm: 'widevine',
-      videoField: 'aliDrmVideoId',
-      reason: `country=CN + ${d} ${b} → Alibaba Widevine`,
-      notes: 'Widevine L3 (Windows/Android/Chrome)'
+      videoField: 'aliVideoId',
+      reason: `country=CN + ${d} ${b} → Widevine (STS)`,
+      notes: '1 ID dual encryption + STS permissive Widevine'
     }
   }
 

@@ -7,18 +7,19 @@
 const VideoContent = require('./VideoContent.model')
 
 // POST /api/admin/video-contents
-// Body: { title, tagLv1, tagLv2, tagLv3, bunnyVideoId, bunnyDrmVideoId, aliVideoId, aliDrmVideoId, duration, notes }
+// Body: { title, tagLv1, tagLv2, tagLv3, bunnyVideoId, bunnyDrmVideoId, aliVideoId, duration, notes }
+// aliVideoId = 1 ID มี dual encryption (Ali Prop + Widevine)
 exports.saveContent = async (req, res) => {
   try {
     const {
       title, tagLv1, tagLv2, tagLv3,
-      bunnyVideoId, bunnyDrmVideoId, aliVideoId, aliDrmVideoId,
+      bunnyVideoId, bunnyDrmVideoId, aliVideoId,
       duration, notes
     } = req.body
 
     if (!title || !title.trim()) return res.status(400).json({ error: 'title required' })
-    if (!bunnyVideoId || !bunnyDrmVideoId || !aliVideoId || !aliDrmVideoId) {
-      return res.status(400).json({ error: 'ต้องมี 4 videoIds ครบ (bunny×2 + ali×2)' })
+    if (!bunnyVideoId || !bunnyDrmVideoId || !aliVideoId) {
+      return res.status(400).json({ error: 'ต้องมี 3 videoIds ครบ (bunny×2 + ali×1 dual)' })
     }
 
     const doc = await VideoContent.findOneAndUpdate(
@@ -28,7 +29,7 @@ exports.saveContent = async (req, res) => {
         tagLv1: (tagLv1 || '').trim(),
         tagLv2: (tagLv2 || '').trim(),
         tagLv3: (tagLv3 || '').trim(),
-        bunnyVideoId, bunnyDrmVideoId, aliVideoId, aliDrmVideoId,
+        bunnyVideoId, bunnyDrmVideoId, aliVideoId,
         duration: duration || '',
         notes: notes || '',
         createdBy: req.user?.email || ''

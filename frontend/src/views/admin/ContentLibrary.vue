@@ -65,8 +65,6 @@
               <div class="id-grid">
                 <span class="id-badge bunny" :title="'Bunny NoDRM: ' + c.bunnyVideoId">🌐 B</span>
                 <span class="id-badge bunny drm" :title="'Bunny Widevine: ' + c.bunnyDrmVideoId">🌐 BD</span>
-                <span class="id-badge ali" :title="'Ali NoDRM: ' + c.aliVideoId">🇨🇳 A</span>
-                <span class="id-badge ali drm" :title="'Ali Widevine: ' + c.aliDrmVideoId">🇨🇳 AD</span>
               </div>
             </td>
             <td>
@@ -165,14 +163,24 @@
               <input v-model="modal.bunnyDrmVideoId" type="text" class="form-control mono" placeholder="Bunny UUID" />
             </div>
           </div>
-          <div class="form-row-2">
-            <div class="form-row">
-              <label>🇨🇳 Ali NoDRM ID <span class="required">*</span></label>
-              <input v-model="modal.aliVideoId" type="text" class="form-control mono" placeholder="Ali VideoId" />
+          <div class="form-row">
+            <label>🇨🇳 Ali Video ID (dual encryption) <span class="required">*</span></label>
+            <div class="ali-verify-row">
+              <input v-model="modal.aliVideoId" type="text" class="form-control mono" placeholder="Ali VideoId (1 ID มี Ali Prop + Widevine)" @input="onAliVideoIdChange" />
+              <button type="button" class="btn btn-outline btn-verify" @click="verifyAliDual" :disabled="!modal.aliVideoId || aliVerify.loading">
+                {{ aliVerify.loading ? '⏳' : '🔍 Verify' }}
+              </button>
             </div>
-            <div class="form-row">
-              <label>🇨🇳 Ali Widevine ID <span class="required">*</span></label>
-              <input v-model="modal.aliDrmVideoId" type="text" class="form-control mono" placeholder="Ali VideoId" />
+            <div v-if="aliVerify.result" class="ali-verify-result" :class="aliVerify.result.valid ? 'valid' : 'invalid'">
+              <div class="verify-status">
+                <span v-if="aliVerify.result.valid">✅ Dual encryption OK</span>
+                <span v-else>❌ ไม่ครบ</span>
+              </div>
+              <div class="verify-reason">{{ aliVerify.result.reason }}</div>
+              <div v-if="aliVerify.result.encryptTypes && aliVerify.result.encryptTypes.length" class="verify-details">
+                <span class="enc-badge" :class="{ ok: aliVerify.result.hasAliProp }">{{ aliVerify.result.hasAliProp ? '✓' : '✗' }} Ali Prop</span>
+                <span class="enc-badge" :class="{ ok: aliVerify.result.hasWidevine }">{{ aliVerify.result.hasWidevine ? '✓' : '✗' }} Widevine</span>
+              </div>
             </div>
           </div>
           <div class="form-row-2">
@@ -222,15 +230,23 @@ export default {
         editId: null,
         saving: false,
         title: '', tagLv1: '', tagLv2: '', tagLv3: '',
-        bunnyVideoId: '', bunnyDrmVideoId: '', aliVideoId: '', aliDrmVideoId: '',
+        bunnyVideoId: '', bunnyDrmVideoId: '', aliVideoId: '',
         duration: '', notes: ''
+      },
+      aliVerify: {
+        loading: false,
+        result: null,
+        verifiedVideoId: ''  // เก็บ ID ที่ verify pass ล่าสุด
       }
     }
   },
   computed: {
     canSubmit() {
       const m = this.modal
-      return m.title.trim() && m.bunnyVideoId && m.bunnyDrmVideoId && m.aliVideoId && m.aliDrmVideoId
+      // ต้องมี title + Bunny×2 + Ali×1 + Ali verified pass
+      const baseOk = m.title.trim() && m.bunnyVideoId && m.bunnyDrmVideoId && m.aliVideoId
+      const aliVerified = this.aliVerify.result?.valid && this.aliVerify.verifiedVideoId === m.aliVideoId
+      return baseOk && aliVerified
     }
   },
   mounted() {
@@ -300,13 +316,43 @@ export default {
       this.filters = { search: '', tagLv1: '', tagLv2: '', tagLv3: '' }
       this.load()
     },
+    resetAliVerify() {
+      this.aliVerify = { loading: false, result: null, verifiedVideoId: '' }
+    },
+    onAliVideoIdChange() {
+      // Clear verify result เมื่อ user แก้ ID (บังคับ verify ใหม่)
+      if (this.aliVerify.verifiedVideoId !== this.modal.aliVideoId) {
+        this.aliVerify.result = null
+        this.aliVerify.verifiedVideoId = ''
+      }
+    },
+    async verifyAliDual() {
+      const vid = (this.modal.aliVideoId || '').trim()
+      if (!vid) return
+      this.aliVerify.loading = true
+      this.aliVerify.result = null
+      try {
+        const res = await api.get(`/admin/ali/verify-dual/${vid}`)
+        const data = res && res.data ? res.data : res
+        this.aliVerify.result = data
+        if (data.valid) this.aliVerify.verifiedVideoId = vid
+      } catch (err) {
+        this.aliVerify.result = {
+          valid: false,
+          reason: err.response?.data?.reason || err.response?.data?.error || err.message
+        }
+      } finally {
+        this.aliVerify.loading = false
+      }
+    },
     openNewModal() {
       this.modal = {
         show: true, editId: null, saving: false,
         title: '', tagLv1: '', tagLv2: '', tagLv3: '',
-        bunnyVideoId: '', bunnyDrmVideoId: '', aliVideoId: '', aliDrmVideoId: '',
+        bunnyVideoId: '', bunnyDrmVideoId: '', aliVideoId: '',
         duration: '', notes: ''
       }
+      this.resetAliVerify()
     },
     openEditModal(c) {
       this.modal = {
@@ -316,12 +362,15 @@ export default {
         bunnyVideoId: c.bunnyVideoId,
         bunnyDrmVideoId: c.bunnyDrmVideoId,
         aliVideoId: c.aliVideoId,
-        aliDrmVideoId: c.aliDrmVideoId,
         duration: c.duration || '',
         notes: c.notes || ''
       }
+      this.resetAliVerify()
     },
-    closeModal() { this.modal.show = false },
+    closeModal() {
+      this.modal.show = false
+      this.resetAliVerify()
+    },
     async submitModal() {
       this.modal.saving = true
       try {
@@ -333,7 +382,6 @@ export default {
           bunnyVideoId: this.modal.bunnyVideoId.trim(),
           bunnyDrmVideoId: this.modal.bunnyDrmVideoId.trim(),
           aliVideoId: this.modal.aliVideoId.trim(),
-          aliDrmVideoId: this.modal.aliDrmVideoId.trim(),
           duration: this.modal.duration.trim(),
           notes: this.modal.notes.trim()
         })
@@ -646,5 +694,53 @@ export default {
 @media (max-width: 640px) {
   .filter-bar { grid-template-columns: 1fr; }
   .form-row-2, .form-row-3 { grid-template-columns: 1fr; }
+}
+
+/* Ali Verify Dual Encryption UI */
+.ali-verify-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.ali-verify-row .form-control {
+  flex: 1;
+}
+.btn-verify {
+  white-space: nowrap;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ali-verify-result {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.ali-verify-result.valid {
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+.ali-verify-result.invalid {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+.verify-status { font-weight: 700; margin-bottom: 4px; }
+.verify-reason { font-size: 12px; opacity: 0.85; margin-bottom: 6px; }
+.verify-details { display: flex; gap: 6px; flex-wrap: wrap; }
+.enc-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #991b1b;
+}
+.enc-badge.ok {
+  background: #dcfce7;
+  color: #166534;
 }
 </style>

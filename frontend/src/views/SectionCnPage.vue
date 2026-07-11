@@ -609,15 +609,14 @@ export default {
     }
   },
   methods: {
-    // ⭐ CN mirror: video พร้อมใช้เมื่อ Ali pair ครบทั้งคู่ (NoDRM + DRM)
-    // ถ้าใส่แค่ตัวเดียว = ยังอัพโหลดไม่ครบ → นักเรียนเห็น "รออัพโหลด"
+    // ⭐ CN mirror: 1 ID dual encryption — video พร้อมใช้เมื่อมี aliVideoId
     hasCnVideo(v) {
       if (!v) return false
-      return !!(v.aliVideoId && v.aliDrmVideoId)
+      return !!v.aliVideoId
     },
     hasCnBonusVideo(v) {
       if (!v) return false
-      return !!(v.bonusAliVideoId && v.bonusAliDrmVideoId)
+      return !!v.bonusAliVideoId
     },
     // ─── Self Check ───
     topicSelfCheck(topic) {

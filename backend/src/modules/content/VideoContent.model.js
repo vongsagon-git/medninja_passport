@@ -13,11 +13,11 @@ const videoContentSchema = new mongoose.Schema({
   tagLv2: { type: String, default: '', trim: true, index: true },
   tagLv3: { type: String, default: '', trim: true, index: true },
 
-  // 4 videoIds — ครบทั้ง 4 fields = เข้า library
+  // 3 videoIds — ครบทั้ง 3 fields = เข้า library
+  // Bunny: 2 IDs (NoDRM + Widevine) · Ali: 1 ID (dual encryption ในตัว)
   bunnyVideoId: { type: String, required: true },
   bunnyDrmVideoId: { type: String, required: true },
   aliVideoId: { type: String, required: true },
-  aliDrmVideoId: { type: String, required: true },
 
   duration: { type: String, default: '' },
   notes: { type: String, default: '' },
