@@ -496,14 +496,11 @@
         log(`✅ Chosen: ${chosen.format}/${chosen.definition} enc=${chosen.encryptType}`, 'success')
         log(`   URL: ${chosen.playUrl.substring(0, 100)}...`, 'info')
 
-        // ⭐ Step 3: fetch STS (สำหรับ DRM license — Widevine ต้องมี)
-        const serve = await fetchServe()
-
-        // ⭐ Step 4: Config Aliplayer ด้วย SOURCE (URL ตรง) แทน vid
-        //   = Aliplayer ไม่ต้องเรียก Alibaba VOD API เอง = bypass decision layer
+        // ⭐ Step 3: Config Aliplayer ด้วย SOURCE URL (Ali Prop = signed URL ใน URL เอง ไม่ต้อง STS)
+        //   หมายเหตุ: source mode + STS = error 4400 (Aliplayer confused config)
         const config = {
           id: 'player',
-          source: chosen.playUrl,      // ← ใช้ URL ตรง แทน vid
+          source: chosen.playUrl,      // ← URL ตรง (มี signed auth_key ในตัวเอง)
           width: '100%',
           height: '100%',
           autoplay: false,
@@ -516,15 +513,21 @@
           license: {
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
-          },
-          encryptType: serve.encryptType,
-          // STS สำหรับ DRM license (แม้ใช้ source แต่ Widevine ยังต้อง STS ขอ license key)
-          accessKeyId: serve.accessKeyId,
-          accessKeySecret: serve.accessKeySecret,
-          securityToken: serve.securityToken,
-          region: serve.region
+          }
         }
-        log(`Config: source URL mode (${iosDetected ? 'Ali Prop iOS' : 'Widevine DRM'})`, 'info')
+        // Widevine DRM (other device) ต้อง STS สำหรับขอ license
+        if (!iosDetected) {
+          const serve = await fetchServe()
+          config.accessKeyId = serve.accessKeyId
+          config.accessKeySecret = serve.accessKeySecret
+          config.securityToken = serve.securityToken
+          config.region = serve.region
+          config.encryptType = 3
+          log(`Config: source URL + STS (Widevine DRM other)`, 'info')
+        } else {
+          // iOS = Ali Prop = signed URL อย่างเดียวพอ ไม่ต้อง STS ไม่ใส่ encryptType
+          log(`Config: source URL only (Ali Prop iOS)`, 'info')
+        }
 
         log('สร้าง Aliplayer instance...', 'info')
         const player = new window.Aliplayer(config, function () {
