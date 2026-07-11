@@ -40,12 +40,13 @@ router.get('/landing-serve/:videoId', originCheck, async (req, res) => {
   }
 
   const ua = req.headers['user-agent'] || ''
+  // เฉพาะ iOS (iPad/iPhone/iPod) → Ali Prop เพราะไม่รองรับ Widevine
+  // อื่น ๆ ทั้งหมด (Chrome/Safari Mac/Android/PC/จีน) → Widevine DRM
   const isIOS = /iPad|iPhone|iPod/.test(ua)
-  const isSafariDesktop = /Safari\//.test(ua) && !/Chrome\/|Chromium\//.test(ua) && !/Edg\//.test(ua)
-  const shouldUseAliProp = isIOS || isSafariDesktop
+  const shouldUseAliProp = isIOS
 
   const encryptType = shouldUseAliProp ? 1 : 3
-  const deviceServed = isIOS ? 'iOS' : isSafariDesktop ? 'Safari Desktop' : 'Chrome/Android/PC'
+  const deviceServed = isIOS ? 'iOS' : 'Widevine-compatible (Chrome/Safari Mac/Android/PC)'
 
   // Fetch PlayAuth (ต้องมี PlayAuth ก่อนไม่ว่าจะ Ali Prop หรือ DRM)
   try {
@@ -67,8 +68,8 @@ router.get('/landing-serve/:videoId', originCheck, async (req, res) => {
       encryptType,
       deviceServed,
       reason: shouldUseAliProp
-        ? 'iOS/Safari → Ali Prop (FairPlay cert not available)'
-        : 'Chrome/Android/PC → Widevine DRM (encryptType 3)',
+        ? 'iOS → Ali Prop (encryptType 1) เพราะไม่รองรับ Widevine'
+        : 'อื่น ๆ → Widevine DRM (encryptType 3)',
       uaSample: ua.substring(0, 120),
       requestId: result.RequestId
     })
