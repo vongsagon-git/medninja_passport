@@ -29,6 +29,72 @@ router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   next()
 }, getPlayAuth)
 
+// ⭐ Deep diagnose — ยิงทุก endpoint Alibaba ที่เกี่ยวข้อง + fetch manifest จริง
+// ดูว่า Alibaba throttle หรือ segment expire
+router.get('/test-diagnose/:videoId', originCheck, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store')
+  const { videoId } = req.params
+  if (!LANDING_ALLOWED_VIDEOS.has(videoId)) {
+    return res.status(403).json({ code: 'VIDEO_NOT_WHITELISTED' })
+  }
+  const results = []
+  const traceId = 'diag-' + Date.now()
+
+  try {
+    const RPCClient = require('@alicloud/pop-core').RPCClient
+    const client = new RPCClient({
+      accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
+      accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
+      endpoint: `https://vod.${process.env.ALIBABA_VOD_REGION || 'ap-southeast-1'}.aliyuncs.com`,
+      apiVersion: '2017-03-21'
+    })
+
+    // 1. GetVideoInfo
+    let t = Date.now()
+    try {
+      const info = await client.request('GetVideoInfo', { VideoId: videoId }, { method: 'POST' })
+      results.push({ step: 'GetVideoInfo', ok: true, ms: Date.now()-t, status: info.Video?.Status })
+    } catch (e) {
+      results.push({ step: 'GetVideoInfo', ok: false, ms: Date.now()-t, error: e.message, code: e.code })
+    }
+
+    // 2. GetPlayInfo
+    t = Date.now()
+    let playInfo
+    try {
+      playInfo = await client.request('GetPlayInfo', {
+        VideoId: videoId,
+        Formats: 'm3u8,mpd',
+        StreamType: 'video',
+        ResultType: 'Multiple',
+        AuthTimeout: 3000
+      }, { method: 'POST' })
+      const streams = (playInfo.PlayInfoList?.PlayInfo || [])
+      results.push({ step: 'GetPlayInfo', ok: true, ms: Date.now()-t, streamCount: streams.length,
+        streams: streams.map(s => ({ format: s.Format, def: s.Definition, encType: s.EncryptType, urlHost: (s.PlayURL||'').match(/https?:\/\/[^/]+/)?.[0] }))
+      })
+    } catch (e) {
+      results.push({ step: 'GetPlayInfo', ok: false, ms: Date.now()-t, error: e.message, code: e.code })
+    }
+
+    // 3. Fetch manifest URL จริง (backend → Alibaba CDN)
+    if (playInfo?.PlayInfoList?.PlayInfo?.[0]?.PlayURL) {
+      const manifestUrl = playInfo.PlayInfoList.PlayInfo[0].PlayURL
+      t = Date.now()
+      try {
+        const r = await fetch(manifestUrl, { method: 'HEAD' })
+        results.push({ step: 'FetchManifest', ok: r.ok, ms: Date.now()-t, httpStatus: r.status, url: manifestUrl.substring(0,120) })
+      } catch (e) {
+        results.push({ step: 'FetchManifest', ok: false, ms: Date.now()-t, error: e.message })
+      }
+    }
+
+    return res.json({ traceId, ts: new Date().toISOString(), results })
+  } catch (err) {
+    return res.status(500).json({ traceId, error: err.message, results })
+  }
+})
+
 // ⭐ Test video status — เช็คว่า video ยังพร้อมเล่นไหม (Normal/Transcoding/Failed)
 router.get('/test-status/:videoId', originCheck, async (req, res) => {
   const { videoId } = req.params
@@ -158,6 +224,12 @@ router.get('/test-sts/:videoId', originCheck, async (req, res) => {
 // - iOS → PlayAuth + encryptType 1 (Ali Prop stream)
 // - อื่น ๆ → STS + encryptType 1 (Widevine stream, permissive mode)
 router.get('/test-serve/:videoId', originCheck, async (req, res) => {
+  // ⭐ ห้าม cache ทุกระดับ (browser, DO, Cloudflare) — STS ต้องสด
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
+  res.setHeader('CDN-Cache-Control', 'no-store')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
+
   const startTs = Date.now()
   const { videoId } = req.params
   const ua = req.headers['user-agent'] || ''

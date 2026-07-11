@@ -153,8 +153,9 @@
       <h1>🎯 Player Serve — Auto Select</h1>
       <div class="tag">1 Video ID · Backend เลือก Ali Prop / Widevine ให้อัตโนมัติ</div>
       <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button onclick="checkStatus()" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 Query Video Status</button>
-        <button onclick="reloadPlayer()" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reload Player</button>
+        <button onclick="checkStatus()" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 Status</button>
+        <button onclick="deepDiagnose()" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🩺 Diagnose</button>
+        <button onclick="reloadPlayer()" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reload</button>
       </div>
     </div>
 
@@ -271,15 +272,25 @@
     }
 
     async function fetchServe() {
-      log(`Fetch: ${SERVE_ENDPOINT}`, 'info')
-      // ⭐ Send frontend detect hint (iPad iOS 13+ backup)
-      const headers = {}
+      // ⭐ Cache-bust: fresh serve endpoint ทุกครั้ง (browser + CDN)
+      const bust = Date.now() + '-' + Math.random().toString(36).substring(2, 8)
+      const url = `${SERVE_ENDPOINT}?_=${bust}`
+      log(`Fetch: ${url}`, 'info')
+      const headers = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
       if (detectIOS()) headers['X-MN-Device'] = 'ios'
 
-      const res = await fetch(SERVE_ENDPOINT, { headers })
+      const res = await fetch(url, {
+        headers,
+        cache: 'no-store',           // browser ต้อง fetch ไม่ใช่จาก cache
+        credentials: 'omit'
+      })
       if (!res.ok) throw new Error(`Serve fail ${res.status}: ${(await res.text()).substring(0, 200)}`)
       const data = await res.json()
-      log(`Backend mode=${data.mode} authType=${data.authType} encryptType=${data.encryptType}`, 'success')
+      log(`Backend mode=${data.mode} authType=${data.authType} encryptType=${data.encryptType} sts=${data.accessKeyId?.substring(0,10)}...`, 'success')
+      log(`STS expires: ${data.expiration}`, 'info')
       log(`Reason: ${data.reason}`, 'info')
       renderServe(data)
       return data
@@ -317,15 +328,46 @@
       log('🔄 Reloading player...', 'warn')
       waitingSince = null
       if (currentPlayer) {
+        try { currentPlayer.pause() } catch {}
         try { currentPlayer.dispose() } catch {}
         currentPlayer = null
       }
-      // Clear DOM
-      const p = document.getElementById('player')
-      if (p) p.innerHTML = ''
+      // ⭐ ลบ DOM element เดิมทิ้งทั้งชิ้น + สร้างใหม่ (Aliplayer internal state ค้าง)
+      const oldPlayer = document.getElementById('player')
+      if (oldPlayer && oldPlayer.parentNode) {
+        const newPlayer = document.createElement('div')
+        newPlayer.id = 'player'
+        oldPlayer.parentNode.replaceChild(newPlayer, oldPlayer)
+      }
       document.getElementById('status').style.display = 'grid'
       document.getElementById('status').innerHTML = `<div class="spinner"></div><div>กำลัง reload (retry ${retryCount})...</div>`
+      // รอ DOM settle นิดก่อน init ใหม่
+      await new Promise(r => setTimeout(r, 200))
       await init()
+    }
+
+    async function deepDiagnose() {
+      log('🩺 Deep diagnose — backend เรียก Alibaba ตรง (bypass browser)...', 'warn')
+      try {
+        const bust = Date.now()
+        const res = await fetch(`/api/china/test-diagnose/${VIDEO_ID}?_=${bust}`, { cache: 'no-store' })
+        const data = await res.json()
+        log(`Trace: ${data.traceId} @ ${data.ts}`, 'info')
+        data.results.forEach(r => {
+          const icon = r.ok ? '✅' : '❌'
+          const type = r.ok ? 'success' : 'error'
+          let msg = `${icon} ${r.step} (${r.ms}ms)`
+          if (r.status) msg += ` status=${r.status}`
+          if (r.streamCount != null) msg += ` streams=${r.streamCount}`
+          if (r.httpStatus) msg += ` http=${r.httpStatus}`
+          if (r.error) msg += ` error=${r.error}${r.code?' code='+r.code:''}`
+          log(msg, type)
+          if (r.streams) r.streams.forEach((s, i) => log(`   [${i}] ${s.format}/${s.def} enc=${s.encType||'none'} host=${s.urlHost}`, 'info'))
+          if (r.url) log(`   url=${r.url}`, 'info')
+        })
+      } catch (err) {
+        log(`Diagnose ERROR: ${err.message}`, 'error')
+      }
     }
 
     async function checkStatus() {
