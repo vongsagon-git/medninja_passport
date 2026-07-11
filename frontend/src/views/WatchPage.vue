@@ -2671,28 +2671,29 @@ kbd {
 .wm-play-btn svg { width: 20px; height: 20px; }
 .w-player-box:hover .wm-play-btn { opacity: 1; }
 .wm-play-btn:hover { background: rgba(0, 0, 0, 0.8); }
-/* Custom fullscreen button */
+/* Custom fullscreen button — top-right */
 .wm-fs-btn {
   position: absolute;
-  bottom: 10px;
+  top: 10px;
   right: 10px;
-  z-index: 20;
+  z-index: 9999;
   width: 36px;
   height: 36px;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
+  opacity: 1;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s, transform 0.15s;
 }
 .wm-fs-btn svg { width: 20px; height: 20px; }
-.w-player-box:hover .wm-fs-btn { opacity: 1; }
-.wm-fs-btn:hover { background: rgba(0, 0, 0, 0.8); }
+.wm-fs-btn:hover { background: rgba(0, 0, 0, 0.8); transform: scale(1.05); }
+.wm-fs-btn:active { transform: scale(0.95); }
 /* Fullscreen mode: player box fills screen */
 .w-player-box:fullscreen {
   width: 100vw;
@@ -3332,7 +3333,7 @@ kbd {
 @media (max-width: 640px) {
   .wm-center { font-size: 19px; }
   .wm-play-btn { bottom: 8px; left: 8px; width: 32px; height: 32px; }
-  .wm-fs-btn { bottom: 8px; right: 8px; width: 32px; height: 32px; }
+  .wm-fs-btn { top: 8px; right: 8px; width: 32px; height: 32px; }
 }
 /* Mobile landscape: ลายน้ำใหญ่ขึ้น */
 @media (max-height: 500px) and (orientation: landscape) {
