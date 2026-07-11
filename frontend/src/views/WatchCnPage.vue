@@ -999,10 +999,17 @@ export default {
       }, 5000)
     }
 
-    // ═══ Fullscreen detection (Desktop native เท่านั้น — Mobile ใช้ Vue state) ═══
+    // ═══ Fullscreen detection ═══
+    // - iOS: ใช้ Vue state (CSS fake, native ยิงไม่ได้)
+    // - Android/Desktop: sync ตาม document.fullscreenElement (native)
     this._onFsChange = () => {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      if (!isMobile) this.isFullscreen = !!document.fullscreenElement
+      const isIos = detectIOS() || detectMacSafari()
+      if (isIos) return
+      const nativeFs = !!document.fullscreenElement
+      if (nativeFs !== this.isFullscreen) {
+        this.isFullscreen = nativeFs
+        document.body.style.overflow = nativeFs ? 'hidden' : ''
+      }
     }
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
@@ -2888,21 +2895,28 @@ export default {
     aliToggleFullscreen () {
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      const isIos = detectIOS() || detectMacSafari()
 
-      if (isMobile) {
-        // ⭐ Mobile (iOS+Android): CSS fake fullscreen
-        //  - iOS: native เปิด iOS video player → watermark หาย
-        //  - Android: auto-rotate ไม่ใช่ user gesture → requestFullscreen ถูก block
+      // iOS: CSS fake เท่านั้น (native = เปิด iOS video player → watermark หาย)
+      if (isIos) {
         this.isFullscreen = !this.isFullscreen
         document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
+        return
+      }
+
+      // Android + Desktop: native FS บน .w-player-box → watermark overlay ติดไปด้วย
+      // ถ้า reject (auto-rotate ไม่ใช่ user gesture) → fallback CSS fake
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {
+          this.isFullscreen = false
+          document.body.style.overflow = ''
+        })
       } else {
-        // Desktop: native fullscreen
-        if (document.fullscreenElement) {
-          document.exitFullscreen()
-        } else {
-          box.requestFullscreen().catch(() => {})
-        }
+        const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
+        req.catch(() => {
+          this.isFullscreen = true
+          document.body.style.overflow = 'hidden'
+        })
       }
     },
     aliFmtTime (sec) {

@@ -877,15 +877,24 @@ export default {
       }, 5000)
     }
 
-    // ═══ Fullscreen detection (Desktop native เท่านั้น — Mobile ใช้ Vue state) ═══
+    // ═══ Fullscreen detection ═══
+    // - iOS: ใช้ Vue state (CSS fake, native ยิงไม่ได้)
+    // - Android/Desktop: sync ตาม document.fullscreenElement (native)
+    //   Android fallback CSS fake ตอน reject → toggleFullscreen ตั้ง state เอง
     this._onFsChange = () => {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      if (!isMobile) this.isFullscreen = !!document.fullscreenElement
+      const isIos = detectIOS() || detectMacSafari()
+      if (isIos) return
+      const nativeFs = !!document.fullscreenElement
+      // sync เฉพาะตอน state ไม่ตรงกับ native (กัน override ตอน fallback fake ทำงาน)
+      if (nativeFs !== this.isFullscreen && !this._fakeFsActive) {
+        this.isFullscreen = nativeFs
+        document.body.style.overflow = nativeFs ? 'hidden' : ''
+      }
     }
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
-    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only — iOS+Android ใช้ CSS fake)
+    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only)
     this._onOrientationChange = () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       if (!isMobile) return
@@ -1857,35 +1866,41 @@ export default {
       const url = base + '/api/beacon/heartbeat-clear'
       try { navigator.sendBeacon(url, new Blob([JSON.stringify({ token })], { type: 'application/json' })) } catch {}
     },
-    toggleFullscreen(opts) {
+    toggleFullscreen() {
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
       const isIos = detectIOS() || detectMacSafari()
-      const isAndroid = /Android/i.test(navigator.userAgent)
-      const isMobile = isIos || isAndroid
-      const forceFake = opts && opts.fake === true
 
-      // Mobile (iOS+Android) หรือ forceFake → CSS fake fullscreen
-      //  - iOS: native เปิด iOS video player → watermark หาย
-      //  - Android: auto-rotate ไม่ใช่ user gesture → requestFullscreen ถูก block
-      if (isMobile || forceFake) {
+      // iOS: CSS fake เท่านั้น (native = เปิด iOS video player → watermark หาย)
+      if (isIos) {
         this.isFullscreen = !this.isFullscreen
         document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
         return
       }
 
-      // Desktop: native fullscreen
+      // Android + Desktop: native fullscreen บน .w-player-box
+      //  - .w-player-box ครอบทั้ง iframe + watermark overlay → FS ครอบทั้งหมด ลายน้ำติดไป
+      //  - ถ้า requestFullscreen reject (auto-rotate ไม่ใช่ gesture) → fallback CSS fake
       if (document.fullscreenElement) {
-        document.exitFullscreen()
+        document.exitFullscreen().catch(() => {
+          this.isFullscreen = false
+          document.body.style.overflow = ''
+        })
       } else {
-        box.requestFullscreen().catch(() => {})
-        if (!box._fsProtected) {
-          box._fsProtected = true
-          box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
-          box.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault()
-          })
-        }
+        const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
+        req.then(() => {
+          if (!box._fsProtected) {
+            box._fsProtected = true
+            box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
+            box.addEventListener('keydown', (e) => {
+              if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault()
+            })
+          }
+        }).catch(() => {
+          // Fallback: CSS fake (Android auto-rotate ไม่ใช่ user gesture)
+          this.isFullscreen = true
+          document.body.style.overflow = 'hidden'
+        })
       }
     },
     _startIdleTimer() {
