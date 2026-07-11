@@ -57,18 +57,22 @@ export function checkBrowserSupport() {
     }
   }
 
-  // ═══ 3. iPhone / iPad — Chrome iOS (CriOS/) เท่านั้น (กัน Safari-based downloader) ═══
-  //   เดิม allow Safari → เปลี่ยนเพื่อกันแอพดูดใน iOS ที่ใช้ Safari view (Documents / Aloha / Downloader for iOS)
-  //   iPad detect ใช้ 4-layer จาก deviceDetect.isIPad() (platform + userAgentData + touch + Mac UA fallback)
+  // ═══ 3. iPhone / iPad — Safari + Chrome iOS + Firefox iOS + Edge iOS ═══
+  //   iOS ทุก browser = WebKit engine เดียวกัน (Apple บังคับ) → capability เท่ากัน
+  //   1 ID dual encryption pattern: iOS ใช้ PlayAuth + playConfig filter Ali Prop → work ทุก browser
+  //   ยัง block: In-app browser (Line/FB/IG/WeChat) — เช็คไปแล้วใน step 2
   if (isIOS) {
-    const isIOSChrome = /CriOS\//.test(ua)
-    if (isIOSChrome) {
+    const isRealBrowser = /Safari\//.test(ua)
+      || /CriOS\//.test(ua)
+      || /FxiOS\//.test(ua)
+      || /EdgiOS\//.test(ua)
+    if (isRealBrowser) {
       return { supported: true, isMobile: true }
     }
     return {
       supported: false, isMobile: true,
-      message: 'iPhone/iPad รองรับเฉพาะ Google Chrome',
-      detail: 'กรุณาเปิดลิงก์นี้ใน Google Chrome (โหลดจาก App Store) เพื่อดูวีดีโอ'
+      message: 'iPhone/iPad รองรับเฉพาะ Safari, Chrome, Firefox, Edge',
+      detail: 'กรุณาเปิดใน Safari หรือ Chrome เพื่อดูวีดีโอ'
     }
   }
 
