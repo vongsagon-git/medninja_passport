@@ -1015,22 +1015,33 @@ export default {
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
-    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only) — เรียก aliToggleFullscreen()
+    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only)
+    // เช็ค real fullscreen state จาก DOM/CSS ไม่ใช่ Vue state (กัน race)
     this._onOrientationChange = () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       if (!isMobile) return
+      const isIos = detectIOS() || detectMacSafari()
       const isLandscape = window.innerWidth > window.innerHeight
-      // Rotate landscape → auto enter (ถ้ายังไม่ full)
-      if (isLandscape && !this.isFullscreen) {
+      // Real fullscreen state:
+      // - iOS: ใช้ Vue state (CSS fake)
+      // - Android: ใช้ document.fullscreenElement (native)
+      const inFs = isIos ? this.isFullscreen : !!document.fullscreenElement
+
+      // debounce กัน event ยิงถี่ ๆ (Android bug: resize ยิงหลายครั้งตอน fullscreen enter)
+      if (this._orientBusy) return
+      if (isLandscape && !inFs) {
+        this._orientBusy = true
         this.aliToggleFullscreen && this.aliToggleFullscreen()
-      }
-      // Rotate portrait → auto exit (ถ้ายังใน fullscreen)
-      else if (!isLandscape && this.isFullscreen) {
+        setTimeout(() => { this._orientBusy = false }, 500)
+      } else if (!isLandscape && inFs) {
+        this._orientBusy = true
         this.aliToggleFullscreen && this.aliToggleFullscreen()
+        setTimeout(() => { this._orientBusy = false }, 500)
       }
     }
     window.addEventListener('orientationchange', this._onOrientationChange)
-    window.addEventListener('resize', this._onOrientationChange)  // iPad iOS 13+ ที่ orientationchange ไม่ยิง
+    // ไม่ผูก resize event บน Android — จะยิงถี่ ๆ ตอน enter fullscreen → เด้งกลับ
+    // iPad iOS 13+ ก็ใช้ orientationchange พอ (ทำงานปกติแล้ว)
     // Resize → update wmModeKey (rotate / resize) + counter zoom ลายน้ำ
     // ═══ Zoom detection — periodic innerWidth check (จับ Safari + ทุก browser) ═══
     this._wmBaseDpr = window.devicePixelRatio || 1
@@ -2544,9 +2555,7 @@ export default {
         const isIosOrSafari = detectIOS() || detectMacSafari()
         this._betaLog(`Device path: ${isIosOrSafari ? 'iOS/Safari (PlayAuth)' : 'Other (STS)'}`, 'info')
 
-        // Base config (ทุก device เหมือนกัน) — ตรงกับ /test/serve ที่ verified
-        // ⚠️ ตัด skinLayout: false + showBigPlayButton: false ออก — บาง SDK version
-        //    ตั้งเป็น false = skip DRM subsystem init → error 4022
+        // Base config — custom skinLayout ที่ไม่มี fullScreenButton (ใช้ปุ่ม ⛶ ของเราแทน)
         const baseConfig = {
           id: 'J_prismPlayer',
           vid: videoId,
@@ -2557,14 +2566,34 @@ export default {
           rePlay: false,
           playsinline: true,
           preload: true,
-          controlBarVisibility: 'hover',  // ⚡ เหมือน /test/serve — native controls โผล่ตอน hover (custom controls ยังทำงานปกติ)
+          controlBarVisibility: 'hover',
           useH5Prism: true,
           disableAirplay: true,
           disableChromecast: true,
           license: {
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
-          }
+          },
+          // ⭐ skinLayout: ตัดปุ่ม fullscreen ออกจาก native player
+          skinLayout: [
+            { name: 'bigPlayButton', align: 'blabs', x: 30, y: 80 },
+            { name: 'H5Loading', align: 'cc' },
+            { name: 'errorDisplay', align: 'tlabs', x: 0, y: 0 },
+            { name: 'infoDisplay' },
+            { name: 'tooltip', align: 'blabs', x: 0, y: 56 },
+            { name: 'thumbnail' },
+            {
+              name: 'controlBar', align: 'blabs', x: 0, y: 0,
+              children: [
+                { name: 'progress', align: 'blabs', x: 0, y: 44 },
+                { name: 'playButton', align: 'tl', x: 15, y: 12 },
+                { name: 'timeDisplay', align: 'tl', x: 10, y: 7 },
+                { name: 'volume', align: 'tr', x: 5, y: 10 },
+                { name: 'setting', align: 'tr', x: 15, y: 12 }
+                // ⛔ ตัด fullScreenButton ออก — ใช้ปุ่ม ⛶ ของเราแทน
+              ]
+            }
+          ]
         }
 
         let config
@@ -2874,16 +2903,21 @@ export default {
       this.aliSetVolume(v)
     },
     aliToggleFullscreen () {
-      // ⭐ pattern เดียวกับ WatchPage (Bunny) — native เท่านั้น
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
-      if (document.fullscreenElement) {
-        document.exitFullscreen()
+      const isIos = detectIOS() || detectMacSafari()
+
+      if (isIos) {
+        // ⭐ iOS: ใช้ CSS fake fullscreen เท่านั้น (native จะเปิด iOS video player → watermark หาย)
+        this.isFullscreen = !this.isFullscreen
+        document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
       } else {
-        box.requestFullscreen().catch(() => {
-          // iOS Safari fallback — webkitRequestFullscreen
-          if (box.webkitRequestFullscreen) box.webkitRequestFullscreen()
-        })
+        // Android/Desktop: native fullscreen ปกติ
+        if (document.fullscreenElement) {
+          document.exitFullscreen()
+        } else {
+          box.requestFullscreen().catch(() => {})
+        }
       }
     },
     aliFmtTime (sec) {
@@ -3401,7 +3435,7 @@ kbd {
   aspect-ratio: auto;
   position: relative;
 }
-/* native fullscreen (browser fullscreen API) */
+/* native fullscreen (Android/Desktop — browser fullscreen API) */
 .w-player-box:fullscreen,
 .w-player-box:-webkit-full-screen {
   width: 100vw;
@@ -3409,11 +3443,22 @@ kbd {
   aspect-ratio: auto;
   background: #000;
 }
-/* CSS backup — ถ้า native fullscreen ล้ม */
+/* CSS fake fullscreen (iOS Safari — เพราะ native บล็อค) */
 .w-player-box.is-fullscreen {
-  width: 100vw;
-  height: 100vh;
-  aspect-ratio: auto;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  width: 100dvw !important;
+  height: 100dvh !important;
+  aspect-ratio: auto !important;
+  z-index: 999999 !important;
+  background: #000 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .w-player-box.is-fullscreen .wm-grid {
   top: -200%;
