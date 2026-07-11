@@ -4472,11 +4472,11 @@ kbd {
 }
 .beta-send-log:active { transform: scale(0.95); }
 
-/* ⭐ Custom Aliplayer Controls (เขียนเอง) */
+/* ⭐ Custom Aliplayer Controls (เขียนเอง) — ซ้อนทับ native Aliplayer controls */
 .ali-ctl-layer {
   position: absolute; inset: 0;
   pointer-events: auto;
-  z-index: 20;
+  z-index: 100;  /* ⚡ สูงพอทับ native Aliplayer skin (default z-index 5-10) */
   transition: opacity .2s;
   display: flex; flex-direction: column;
   background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0,0,0,0.7) 100%);
