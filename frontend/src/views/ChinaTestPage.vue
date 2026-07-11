@@ -880,36 +880,73 @@ onUnmounted(() => {
   .footer-copy { text-align: center; }
 }
 @media (max-width: 768px) {
-  .hero { padding: 32px 20px 50px; }
+  .hero { padding: 20px 16px 32px; }
   .hero-inner {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 16px;
     text-align: center;
   }
-  .hero-badge { margin: 0 auto 20px; }
-  .hero-title { font-size: 42px; }
-  .hero-title .line-sm { font-size: 28px; }
-  .hero-features { justify-content: center; }
+  .hero-badge { margin: 0 auto 14px; font-size: 12px; padding: 5px 12px; }
+  .hero-title { font-size: 36px; margin-bottom: 14px; }
+  .hero-title .line-sm { font-size: 26px; }
+  .highlight-box { padding: 0 14px; border-radius: 10px; }
+  .hero-sub { font-size: 14px; line-height: 1.6; margin-bottom: 18px; }
+  .hero-features { justify-content: center; margin-bottom: 20px; gap: 8px; }
   .hero-cta { justify-content: center; }
   .hero-mascot { order: -1; }
-  .hero-mascot img { max-width: 240px; }
+  .hero-mascot img { max-width: 180px; }
   .hero-globe { display: none; }
-  .section-title { font-size: 26px; }
-  .cta-band h2 { font-size: 28px; }
+  .section-title { font-size: 24px; }
+  .section-sub { font-size: 14px; }
+  .video-preview { padding: 40px 16px; }
+  .why { padding: 40px 16px; }
+  .cta-band { padding: 50px 20px; }
+  .cta-band h2 { font-size: 26px; }
   .cta-band p { font-size: 15px; }
-  .thumb-mascot { display: none; }
-  .play-badge { width: 74px; height: 74px; }
-  .play-icon { font-size: 26px; }
+  .thumb-mascot { height: 55%; }
+  .play-badge { width: 68px; height: 68px; }
+  .play-icon { font-size: 24px; }
+  .thumb-title { font-size: 15px; }
+  .thumb-meta { font-size: 11px; }
+  .thumb-label { bottom: 14px; left: 16px; }
+  .nav-inner { padding: 10px 16px; }
   .nav-link { display: none; }
+  .brand-text { font-size: 17px; }
+  .brand-mark { width: 30px; height: 30px; }
+  .nav-cta { padding: 7px 14px; font-size: 13px; }
+  .footer { padding: 32px 20px 24px; }
   .footer-inner { gap: 18px; }
 }
 @media (max-width: 480px) {
-  .hero-title { font-size: 34px; }
-  .hero-title .line-sm { font-size: 24px; }
-  .hero-sub { font-size: 15px; }
-  .btn-primary, .btn-secondary { padding: 12px 20px; font-size: 14px; width: 100%; }
-  .hero-cta { flex-direction: column; }
-  .feat-card { flex: 1 1 100%; }
+  .hero-title { font-size: 30px; line-height: 1.1; }
+  .hero-title .line-sm { font-size: 22px; }
+  .hero-sub { font-size: 13.5px; }
+  .hero-sub br { display: none; }
+  .hero-mascot img { max-width: 150px; }
+  .hero-cta { flex-direction: column; gap: 10px; width: 100%; }
+  .btn-primary, .btn-secondary { padding: 13px 20px; font-size: 14.5px; width: 100%; justify-content: center; }
+  /* Feat cards → 3 ช่องแนวนอน compact */
+  .hero-features { flex-wrap: nowrap; gap: 8px; width: 100%; }
+  .feat-card {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 8px;
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+  }
+  .feat-icon { width: 32px; height: 32px; font-size: 16px; }
+  .feat-label { font-size: 11px; }
+  .feat-label strong { font-size: 11.5px; }
+  .feat-label span { font-size: 10.5px; }
   .modal { border-radius: 12px; }
+  .modal-overlay { padding: 12px; }
+}
+@media (max-width: 360px) {
+  .hero-title { font-size: 26px; }
+  .hero-title .line-sm { font-size: 20px; }
+  .hero-mascot img { max-width: 130px; }
+  .feat-label strong { font-size: 10.5px; }
+  .feat-label span { font-size: 9.5px; }
 }
 </style>
