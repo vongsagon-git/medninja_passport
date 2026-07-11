@@ -17,13 +17,9 @@ const traceSchema = new mongoose.Schema({
   ua: { type: String, default: '' },
   ip: { type: String, default: '' },
   country: { type: String, default: '' },
-  events: [{
-    t: Number,      // timestamp offset from session start (ms)
-    type: String,   // event name
-    data: mongoose.Schema.Types.Mixed
-  }],
+  events: { type: [mongoose.Schema.Types.Mixed], default: [] },
   createdAt: { type: Date, default: Date.now, expires: 86400 }  // TTL 24h
-})
+}, { strict: false, minimize: false })
 const WatchTrace = lmsConn.model('WatchTrace', traceSchema, 'watchtraces')
 
 // POST /api/debug/watch-trace (public — no auth so beacon works even without token)
