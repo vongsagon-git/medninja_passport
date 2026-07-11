@@ -501,10 +501,13 @@
                 <div class="modal-row">
                   <span>ยืนยันอีเมล</span>
                   <span v-if="detailModal._emailVerified" style="color:#10b981;font-weight:700;">ยืนยันแล้ว</span>
-                  <span v-else style="display:flex;align-items:center;gap:8px;">
+                  <span v-else style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     <span style="color:#f59e0b;font-weight:700;">ยังไม่ยืนยัน</span>
-                    <button class="btn btn-sm btn-outline" @click="resendVerify" :disabled="resending" style="font-size:11px;">
+                    <button class="btn btn-sm btn-outline" @click="resendVerify" :disabled="resending || bypassing" style="font-size:11px;">
                       {{ resending ? 'กำลังส่ง...' : 'ส่งอีเมลยืนยันอีกครั้ง' }}
+                    </button>
+                    <button class="btn btn-sm btn-bypass" @click="bypassVerify" :disabled="resending || bypassing" style="font-size:11px;" title="ข้ามการยืนยันอีเมล (Admin only)">
+                      {{ bypassing ? 'กำลัง Bypass...' : '⚡ Bypass Email' }}
                     </button>
                   </span>
                 </div>
@@ -854,6 +857,7 @@ export default {
       detailLoading: false,
       editing: false,
       resending: false,
+      bypassing: false,
       editSaving: false,
       editError: '',
       editForm: {},
@@ -1090,6 +1094,22 @@ export default {
         alert(e.response?.data?.message || 'ส่งไม่สำเร็จ')
       } finally {
         this.resending = false
+      }
+    },
+
+    async bypassVerify() {
+      if (!this.detailModal?._id) return
+      const email = this.detailModal.email || 'อีเมลนี้'
+      if (!confirm(`ยืนยันข้ามการ verify email ${email}?\n\nUser จะ login ได้ทันทีโดยไม่ต้อง click link ในเมล`)) return
+      this.bypassing = true
+      try {
+        const res = await api.post(`/admin/passport/${this.detailModal._id}/bypass-verify`)
+        this.detailModal._emailVerified = true
+        alert(res.message || 'Bypass สำเร็จ')
+      } catch (e) {
+        alert(e.response?.data?.message || 'Bypass ไม่สำเร็จ')
+      } finally {
+        this.bypassing = false
       }
     },
 
@@ -1353,6 +1373,27 @@ export default {
 </script>
 
 <style scoped>
+.btn-bypass {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  transition: box-shadow 0.15s, transform 0.15s, background 0.15s;
+}
+.btn-bypass:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+.btn-bypass:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .stat-card {
   background: var(--white);
   border: 1px solid var(--border);

@@ -313,6 +313,28 @@ router.post('/:id/resend-verify', auth, admin, async (req, res) => {
   }
 })
 
+// POST /api/admin/passport/:id/bypass-verify — ข้ามการยืนยันอีเมล (admin only)
+router.post('/:id/bypass-verify', auth, admin, async (req, res) => {
+  try {
+    const reg = await PreRegistration.findById(req.params.id).lean()
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    if (!user) return res.status(404).json({ message: 'ไม่พบบัญชีผู้ใช้' })
+    if (user.emailVerified) return res.status(400).json({ message: 'อีเมลยืนยันแล้ว' })
+
+    user.emailVerified = true
+    user.verifyToken = undefined
+    user.verifyExpires = undefined
+    await user.save()
+
+    console.log(`[Passport] Admin bypass email verify → ${user.email} by ${req.user?.email || 'unknown'}`)
+    res.json({ message: `ยืนยันอีเมล ${user.email} สำเร็จ (bypass)`, email: user.email })
+  } catch (err) {
+    res.status(500).json({ message: 'Bypass ไม่สำเร็จ: ' + err.message })
+  }
+})
+
 // POST /api/admin/passport/:id/link-line — Admin เชื่อม LINE ให้ user
 router.post('/:id/link-line', auth, admin, async (req, res) => {
   try {
@@ -381,6 +403,147 @@ router.post('/:id/unlink-line', auth, admin, async (req, res) => {
     res.json({ ok: true })
   } catch (err) {
     res.status(500).json({ message: 'ยกเลิกเชื่อม LINE ไม่สำเร็จ' })
+  }
+})
+
+// POST /api/admin/passport/manual-register — Admin สร้าง registration เอง + bypass email verify
+// ใช้จาก skill: ส่งข้อมูลจากรูปบัตร + email + phone
+router.post('/manual-register', auth, admin, async (req, res) => {
+  try {
+    const { validateNationalId } = require('../passport/validation')
+    const {
+      firstName, lastName, firstNameEn, lastNameEn,
+      nationalId, dateOfBirth, sex, phone, email,
+      university, idCardImage
+    } = req.body
+
+    if (!firstName || !lastName || !nationalId || !dateOfBirth || !phone || !email) {
+      return res.status(400).json({ message: 'ข้อมูลไม่ครบ (firstName, lastName, nationalId, dateOfBirth, phone, email)' })
+    }
+
+    const emailClean = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean)) {
+      return res.status(400).json({ message: 'รูปแบบอีเมลไม่ถูกต้อง' })
+    }
+
+    const nidResult = validateNationalId(nationalId)
+    if (!nidResult.valid) return res.status(400).json({ message: nidResult.error })
+
+    const existingReg = await PreRegistration.findOne({ nationalId: nidResult.cleaned }).lean()
+    if (existingReg) return res.status(409).json({ message: `เลขบัตรนี้ลงทะเบียนแล้ว (${existingReg.firstName} ${existingReg.lastName})` })
+
+    const existingUser = await User.findOne({ $or: [{ nationalId: nidResult.cleaned }, { email: emailClean }] }).lean()
+    if (existingUser) {
+      if (existingUser.email === emailClean) return res.status(409).json({ message: 'อีเมลนี้ถูกใช้แล้ว' })
+      return res.status(409).json({ message: 'เลขบัตรประชาชนนี้ลงทะเบียนแล้ว' })
+    }
+
+    const sexClean = ['M', 'F'].includes(sex) ? sex : ''
+    const uniClean = university ? university.trim().toUpperCase() : undefined
+
+    // Sync ศรว. best-effort (5s timeout)
+    let cmaData = { cmaRegistered: false, cmaPassedAll: false, cmaSyncedAt: null }
+    try {
+      const sync = await Promise.race([
+        cmaService.syncOne(nidResult.cleaned, { fetchImage: true }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('cma_timeout')), 5000))
+      ])
+      cmaData.cmaSyncedAt = new Date()
+      if (sync.registered) {
+        cmaData.cmaRegistered = true
+        cmaData.cmaPassedAll = !!sync.passedAll
+        cmaData.cmaNameTh = sync.nameTh || ''
+        cmaData.cmaNameEn = sync.nameEn || ''
+        cmaData.cmaProfileImage = sync.cmaProfileImage || ''
+      }
+    } catch (e) {
+      console.log(`[manual-register] CMA sync skipped: ${e.message}`)
+    }
+
+    // สร้าง PreRegistration
+    const registration = await PreRegistration.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      firstNameEn: (firstNameEn || '').trim(),
+      lastNameEn: (lastNameEn || '').trim(),
+      nationalId: nidResult.cleaned,
+      dateOfBirth,
+      sex: sexClean,
+      phone: phone.trim(),
+      email: emailClean,
+      university: uniClean,
+      idCardImage: idCardImage || '',
+      ocrRawResponse: 'manual-register-by-admin',
+      status: 'reviewed',
+      ...cmaData
+    })
+
+    // สร้าง User + bypass email verify ทันที
+    const defaultPassword = dateOfBirth.replace(/\//g, '')
+    const fullName = `${firstName.trim()} ${lastName.trim()}`
+    try {
+      await User.create({
+        name: fullName,
+        email: emailClean,
+        password: defaultPassword,
+        phone: phone.trim(),
+        nationalId: nidResult.cleaned,
+        dateOfBirth,
+        sex: sexClean,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        university: uniClean,
+        authProvider: 'local',
+        emailVerified: true,  // ← bypass ทันที
+        profileLocked: true,
+        profileCompletedAt: new Date()
+      })
+    } catch (userErr) {
+      await PreRegistration.findByIdAndDelete(registration._id).catch(() => {})
+      if (userErr.code === 11000) return res.status(409).json({ message: 'ข้อมูลซ้ำ' })
+      return res.status(500).json({ message: 'สร้าง User ไม่สำเร็จ: ' + userErr.message })
+    }
+
+    // Auto-assign VISA demo (skip ถ้า passedAll)
+    if (!cmaData.cmaPassedAll) {
+      try {
+        const demoPkg = await Package.findOne({ isDemo: true }).lean()
+        if (demoPkg) {
+          const u = await User.findOne({ nationalId: nidResult.cleaned }).select('_id').lean()
+          const expires = new Date()
+          expires.setDate(expires.getDate() + (demoPkg.durationDays || 30))
+          await Activation.create({
+            userId: u._id,
+            packageId: demoPkg._id,
+            expiresAt: expires,
+            isActive: true,
+            note: 'Manual register by admin'
+          })
+        }
+      } catch (e) {
+        console.error('[manual-register] demo VISA failed:', e.message)
+      }
+    }
+
+    console.log(`[Passport] Manual register + bypass → ${emailClean} by ${req.user?.email || 'admin'}`)
+    res.status(201).json({
+      success: true,
+      message: `ลงทะเบียน ${fullName} สำเร็จ (bypass email verify)`,
+      data: {
+        id: registration._id,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        nationalId: nidResult.cleaned,
+        email: emailClean,
+        loginId: nidResult.cleaned,
+        defaultPassword,
+        emailVerified: true
+      }
+    })
+  } catch (err) {
+    if (err.code === 11000) return res.status(409).json({ message: 'ข้อมูลซ้ำ' })
+    console.error('[manual-register] error:', err)
+    res.status(500).json({ message: 'ลงทะเบียนไม่สำเร็จ: ' + err.message })
   }
 })
 
