@@ -9,6 +9,8 @@ const PLAYAUTH_ENDPOINT = `/api/china/landing-playauth/${VIDEO_ID}`
 const playerReady = ref(false)
 const modalOpen = ref(false)
 const errorMsg = ref('')
+const isPlaying = ref(false)
+const needsUserClick = ref(false) // แสดง overlay ปุ่มเล่นถ้า autoplay โดน block
 
 let player = null
 
@@ -114,15 +116,32 @@ async function initPlayer() {
         const playPromise = p.play()
         if (playPromise && typeof playPromise.catch === 'function') {
           playPromise.catch(() => {
-            // ถ้ายัง block อีก ลอง play ทันที (Aliplayer method)
-            setTimeout(() => { try { p.play() } catch {} }, 100)
+            // Autoplay ถูก block → แสดง overlay ปุ่ม
+            needsUserClick.value = true
           })
         }
-      } catch {}
+      } catch {
+        needsUserClick.value = true
+      }
+      // เช็คหลัง 1.2s ว่าเริ่มเล่นจริงไหม ถ้าไม่ → แสดง overlay
+      setTimeout(() => {
+        if (!isPlaying.value) needsUserClick.value = true
+      }, 1200)
     })
 
     player.on('ready', () => {
       try { player.mute(); player.play() } catch {}
+    })
+    player.on('play', () => {
+      isPlaying.value = true
+      needsUserClick.value = false
+    })
+    player.on('playing', () => {
+      isPlaying.value = true
+      needsUserClick.value = false
+    })
+    player.on('pause', () => {
+      isPlaying.value = false
     })
 
     player.on('error', (e) => {
@@ -149,8 +168,22 @@ function openVideo() {
 function closeVideo() {
   modalOpen.value = false
   document.body.style.overflow = ''
+  needsUserClick.value = false
+  isPlaying.value = false
   if (player) {
     try { player.pause() } catch {}
+  }
+}
+
+// ⭐ User click overlay play button — unmute + play
+function handlePlayClick() {
+  needsUserClick.value = false
+  if (!player) return
+  try {
+    player.unMute && player.unMute()
+    player.play()
+  } catch {
+    try { player.play() } catch {}
   }
 }
 
@@ -263,6 +296,23 @@ onUnmounted(() => {
           <!-- Player -->
           <div class="modal-player-wrap">
             <div id="landing-player" class="modal-player"></div>
+
+            <!-- Custom Play Button Overlay — แสดงเมื่อ browser block autoplay -->
+            <transition name="fade">
+              <div v-if="needsUserClick && !errorMsg" class="play-overlay" @click="handlePlayClick">
+                <div class="play-btn-glow"></div>
+                <button class="play-btn" aria-label="เล่นโฆษณา">
+                  <svg viewBox="0 0 32 32" class="play-svg">
+                    <path d="M11 8 L24 16 L11 24 Z" fill="currentColor"/>
+                  </svg>
+                </button>
+                <div class="play-text">
+                  <div class="play-title">▶ กดเพื่อเล่นโฆษณา</div>
+                  <div class="play-sub">ทดสอบว่าคุณดูได้จริงในจีน</div>
+                </div>
+              </div>
+            </transition>
+
             <div v-if="!playerReady && !errorMsg" class="modal-loading">
               <div class="spinner"></div>
               <div>กำลังเชื่อมต่อกับเซิร์ฟเวอร์ในจีน...</div>
@@ -1019,6 +1069,102 @@ onUnmounted(() => {
   padding: 30px;
   background: linear-gradient(180deg, #0b2b5b 0%, #050f28 100%);
 }
+
+/* ═══════════════ CUSTOM PLAY OVERLAY ═══════════════ */
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 20px;
+  cursor: pointer;
+  background:
+    radial-gradient(ellipse at center, rgba(30, 58, 138, 0.35) 0%, rgba(3, 10, 30, 0.85) 70%),
+    linear-gradient(135deg, rgba(11, 43, 91, 0.5), rgba(220, 38, 38, 0.15));
+  backdrop-filter: blur(4px);
+  transition: background 0.3s;
+}
+.play-overlay:hover { background:
+  radial-gradient(ellipse at center, rgba(56, 189, 248, 0.35) 0%, rgba(3, 10, 30, 0.9) 70%),
+  linear-gradient(135deg, rgba(11, 43, 91, 0.6), rgba(220, 38, 38, 0.2));
+}
+.play-btn-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% - 22px));
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.6) 0%, rgba(30, 58, 138, 0) 70%);
+  filter: blur(20px);
+  pointer-events: none;
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; transform: translate(-50%, calc(-50% - 22px)) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, calc(-50% - 22px)) scale(1.15); }
+}
+.play-btn {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  color: #dc2626;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 0 0 6px rgba(255, 255, 255, 0.15),
+    0 0 0 14px rgba(255, 255, 255, 0.08),
+    0 20px 50px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: btn-pulse 2.2s ease-in-out infinite;
+}
+.play-btn:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 8px rgba(255, 255, 255, 0.2),
+    0 0 0 18px rgba(255, 255, 255, 0.1),
+    0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.play-btn:active { transform: scale(0.95); }
+@keyframes btn-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.15), 0 0 0 14px rgba(255, 255, 255, 0.08), 0 20px 50px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(56, 189, 248, 0.25), 0 0 0 20px rgba(56, 189, 248, 0.12), 0 20px 50px rgba(0, 0, 0, 0.5);
+  }
+}
+.play-svg {
+  width: 42px;
+  height: 42px;
+  margin-left: 4px;
+  filter: drop-shadow(0 2px 4px rgba(220, 38, 38, 0.3));
+}
+.play-text {
+  text-align: center;
+  color: white;
+  pointer-events: none;
+}
+.play-title {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.3px;
+}
+.play-sub {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
 .spinner {
   width: 48px;
   height: 48px;
@@ -1137,6 +1283,11 @@ onUnmounted(() => {
   .modal-brand-tag { font-size: 10.5px; line-height: 1.4; }
   .modal-brand-tag .tag-sep { display: none; }
   .modal-close { width: 32px; height: 32px; font-size: 14px; }
+  .play-btn { width: 78px; height: 78px; }
+  .play-svg { width: 32px; height: 32px; margin-left: 3px; }
+  .play-btn-glow { width: 110px; height: 110px; }
+  .play-title { font-size: 17px; }
+  .play-sub { font-size: 12px; }
 }
 @media (max-width: 360px) {
   .hero-title { font-size: 28px; }
