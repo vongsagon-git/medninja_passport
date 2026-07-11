@@ -53,6 +53,7 @@ export default {
     isVideoRoute() {
       const path = this.$route?.path || ''
       return path.startsWith('/my/watch/')
+        || path.startsWith('/my-cn/watch/')     // ⭐ WATCH CN (Ali)
         || path.startsWith('/live/')
         || path === '/live'
         || path.startsWith('/demo/watch/')

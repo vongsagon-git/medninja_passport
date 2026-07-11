@@ -2874,22 +2874,17 @@ export default {
       this.aliSetVolume(v)
     },
     aliToggleFullscreen () {
-      // ⭐ CSS fake fullscreen — work 100% ทุก browser รวม iOS Safari
-      // ไม่ใช้ native requestFullscreen เพราะ iOS Safari block + จะเปิด iOS video player
-      this.isFullscreen = !this.isFullscreen
-      document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
-      // Try native เผื่อ desktop (มี fullscreen API) — ล้มเหลวก็ไม่เป็นไร (CSS fullscreen ทำงานอยู่แล้ว)
+      // ⭐ pattern เดียวกับ WatchPage (Bunny) — native เท่านั้น
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
-      try {
-        if (this.isFullscreen) {
-          if (box.requestFullscreen) box.requestFullscreen().catch(() => {})
-          else if (box.webkitRequestFullscreen) box.webkitRequestFullscreen()
-        } else {
-          if (document.exitFullscreen) document.exitFullscreen().catch(() => {})
-          else if (document.webkitExitFullscreen) document.webkitExitFullscreen()
-        }
-      } catch {}
+      if (document.fullscreenElement) {
+        document.exitFullscreen()
+      } else {
+        box.requestFullscreen().catch(() => {
+          // iOS Safari fallback — webkitRequestFullscreen
+          if (box.webkitRequestFullscreen) box.webkitRequestFullscreen()
+        })
+      }
     },
     aliFmtTime (sec) {
       const s = Math.max(0, Math.floor(sec || 0))
@@ -3406,21 +3401,19 @@ kbd {
   aspect-ratio: auto;
   position: relative;
 }
+/* native fullscreen (browser fullscreen API) */
+.w-player-box:fullscreen,
+.w-player-box:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  background: #000;
+}
+/* CSS backup — ถ้า native fullscreen ล้ม */
 .w-player-box.is-fullscreen {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  width: 100dvw !important;
-  height: 100dvh !important;
-  aspect-ratio: auto !important;
-  z-index: 999999 !important;
-  background: #000 !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
 }
 .w-player-box.is-fullscreen .wm-grid {
   top: -200%;
