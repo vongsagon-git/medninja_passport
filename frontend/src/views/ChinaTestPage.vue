@@ -90,8 +90,7 @@ async function initPlayer() {
       playauth: playAuth,
       width: '100%',
       height: '100%',
-      autoplay: true,
-      mute: true,           // ⭐ ต้อง mute ถึง browser จะให้ autoplay (policy Chrome/Safari/iOS)
+      autoplay: false,      // ⭐ ไม่ auto — ให้ user กดปุ่ม (มีเสียงเต็ม)
       isLive: false,
       rePlay: false,
       playsinline: true,
@@ -108,30 +107,12 @@ async function initPlayer() {
       playerConfig.encryptType = 1
     }
 
-    player = new window.Aliplayer(playerConfig, function (p) {
+    player = new window.Aliplayer(playerConfig, function () {
       playerReady.value = true
-      // ⭐ Force play + mute — กัน browser block autoplay
-      try {
-        p.mute()
-        const playPromise = p.play()
-        if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(() => {
-            // Autoplay ถูก block → แสดง overlay ปุ่ม
-            needsUserClick.value = true
-          })
-        }
-      } catch {
-        needsUserClick.value = true
-      }
-      // เช็คหลัง 1.2s ว่าเริ่มเล่นจริงไหม ถ้าไม่ → แสดง overlay
-      setTimeout(() => {
-        if (!isPlaying.value) needsUserClick.value = true
-      }, 1200)
+      // ⭐ ไม่ auto play — แสดงปุ่มกดเล่นสวยของเราแทน
+      needsUserClick.value = true
     })
 
-    player.on('ready', () => {
-      try { player.mute(); player.play() } catch {}
-    })
     player.on('play', () => {
       isPlaying.value = true
       needsUserClick.value = false
@@ -175,16 +156,11 @@ function closeVideo() {
   }
 }
 
-// ⭐ User click overlay play button — unmute + play
+// ⭐ User click overlay play button → play (มีเสียงเต็ม)
 function handlePlayClick() {
   needsUserClick.value = false
   if (!player) return
-  try {
-    player.unMute && player.unMute()
-    player.play()
-  } catch {
-    try { player.play() } catch {}
-  }
+  try { player.play() } catch {}
 }
 
 function scrollToVideo() {
