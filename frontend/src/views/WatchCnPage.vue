@@ -2376,16 +2376,28 @@ export default {
     async _loadAliplayerSDK () {
       if (window.Aliplayer && typeof window.Aliplayer === 'function') return true
       return new Promise((resolve, reject) => {
-        // Try aliplayer.js (self-hosted vendor)
+        // ⭐ ใช้ v2.35.4 ตรงกับ ali-test.html ที่ verify ว่าเล่นได้ที่ iOS จีน
+        // v2.15.4 (aliplayer.js) เก่ากว่า 20 ver → ต้อง fetch runtime dep จาก g.alicdn.com/splayer/
+        // → iOS Safari ในจีนโดน GFW throttle บน g.alicdn.com บาง path → hang ไม่มี playerReady
+        // v2.35.4 bundle ครบในไฟล์เดียว → ไม่มี runtime fetch → iOS จีนเล่นได้
+        // โหลด CSS ก่อน (บาง skin ต้องการ CSS ก่อน init)
+        const cssId = '_aliplayer_css_v2354'
+        if (!document.getElementById(cssId)) {
+          const css = document.createElement('link')
+          css.id = cssId
+          css.rel = 'stylesheet'
+          css.href = '/vendor/aliplayer/aliplayer-2.35.4.css'
+          document.head.appendChild(css)
+        }
         const s = document.createElement('script')
-        s.src = '/vendor/aliplayer/aliplayer.js'
-        s.async = true
+        s.src = '/vendor/aliplayer/aliplayer-2.35.4.js'
+        s.async = false
         s.onload = () => {
           setTimeout(() => {
             resolve(typeof window.Aliplayer === 'function')
           }, 200)
         }
-        s.onerror = () => reject(new Error('Failed to load Aliplayer SDK'))
+        s.onerror = () => reject(new Error('Failed to load Aliplayer SDK v2.35.4'))
         document.head.appendChild(s)
       })
     },
