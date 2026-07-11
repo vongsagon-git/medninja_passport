@@ -31,6 +31,7 @@ const MeqCase = () => import('../views/MeqCase.vue')
 const AdminDashboard = () => import('../views/admin/AdminDashboard.vue')
 const ManageSections = () => import('../views/admin/ManageSections.vue')
 const ContentLibrary = () => import('../views/admin/ContentLibrary.vue')
+const WatchDebug = () => import('../views/admin/WatchDebug.vue')
 const ManagePackages = () => import('../views/admin/ManagePackages.vue')
 const ManageActivations = () => import('../views/admin/ManageActivations.vue')
 const ManagePassport = () => import('../views/admin/ManagePassport.vue')
@@ -189,6 +190,12 @@ const routes = [
     path: '/admin/content-library',
     name: 'ContentLibrary',
     component: ContentLibrary,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/watch-debug',
+    name: 'WatchDebug',
+    component: WatchDebug,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {

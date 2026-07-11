@@ -14,6 +14,11 @@ const {
   getAnomalyReport,
   refreshDurations
 } = require('./content.admin.controller')
+// Admin: Watch Debug — view captured trace sessions
+const wd = require('./watch-debug.controller')
+router.get('/watch-debug/sessions', auth, admin, wd.listSessions)
+router.get('/watch-debug/sessions/:sessionId', auth, admin, wd.getSession)
+
 // Admin: VideoContent Library (reusable 4-field video presets)
 const {
   saveContent, listContents, getTags, deleteContent, getUsage

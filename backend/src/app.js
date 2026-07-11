@@ -211,6 +211,17 @@ app.use('/api/line/webhook', require('./modules/line/line.webhook.routes'))
 
 app.use(express.json({ limit: '10mb' })) // เพิ่ม limit สำหรับ preregister submit (base64 image)
 
+// ⭐ Watch Debug — sendBeacon ส่งมาเป็น text/plain ต้อง parse เอง
+// ต้อง raw text handler + no auth (beacon ทำงานแม้ user logout)
+app.post('/api/debug/watch-trace',
+  express.text({ type: '*/*', limit: '1mb' }),
+  require('./modules/content/watch-debug.controller').pushTrace
+)
+// Also accept image beacon (fallback สำหรับ browser ที่ sendBeacon fail)
+app.get('/api/debug/watch-beacon',
+  require('./modules/content/watch-debug.controller').pixelBeacon
+)
+
 // ─── API Routes (Modular Monolith) ───
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)

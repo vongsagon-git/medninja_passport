@@ -43,6 +43,153 @@
         } catch (e) { /* network fail = ปล่อยให้ใช้ cache */ }
       })();
     </script>
+    <!-- ═══ Watch Debug Tracer ═══
+         inline ที่ head → run ก่อน Vue โหลด → ทำงานได้แม้ main thread ค้าง
+         ยิง event ผ่าน sendBeacon (bg thread) + fallback img pixel -->
+    <script>
+      (function () {
+        // ทำงานเฉพาะ /my/watch หรือ /my-cn/watch (ประหยัด traffic)
+        if (!/\/watch\//.test(location.pathname)) return;
+        var SID = 'w_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
+        var t0 = Date.now();
+        var buffer = [];
+        var FLUSH_MS = 1000;
+
+        function trace(type, data) {
+          try {
+            buffer.push({ t: Date.now() - t0, type: type, data: data || null });
+            if (buffer.length >= 20) flush();
+          } catch (e) {}
+        }
+        window.__wdbg = trace;  // expose สำหรับให้ Vue เรียก
+        window.__wdbg_sid = SID;
+
+        function flush() {
+          if (buffer.length === 0) return;
+          var events = buffer.splice(0, buffer.length);
+          var payload = JSON.stringify({
+            sessionId: SID,
+            route: location.pathname,
+            events: events
+          });
+          try {
+            if (navigator.sendBeacon) {
+              var blob = new Blob([payload], { type: 'text/plain' });
+              navigator.sendBeacon('/api/debug/watch-trace', blob);
+              return;
+            }
+          } catch (e) {}
+          // Fallback: image beacon (1 event at a time)
+          events.forEach(function (ev) {
+            var url = '/api/debug/watch-beacon?sid=' + encodeURIComponent(SID)
+                    + '&t=' + ev.t
+                    + '&type=' + encodeURIComponent(ev.type)
+                    + (ev.data ? '&data=' + encodeURIComponent(JSON.stringify(ev.data)) : '');
+            var img = new Image();
+            img.src = url;
+          });
+        }
+        // Auto-flush every 1s
+        setInterval(flush, FLUSH_MS);
+        // Flush ก่อนออกจากหน้า
+        window.addEventListener('pagehide', flush);
+        window.addEventListener('beforeunload', flush);
+
+        // ═══ Startup events ═══
+        trace('boot', {
+          ua: navigator.userAgent,
+          platform: navigator.platform,
+          maxTouch: navigator.maxTouchPoints,
+          online: navigator.onLine,
+          connType: (navigator.connection && navigator.connection.effectiveType) || null,
+          lang: navigator.language,
+          vw: window.innerWidth,
+          vh: window.innerHeight
+        });
+
+        // ═══ Track resource load errors (Aliplayer SDK, Bunny embed) ═══
+        window.addEventListener('error', function (e) {
+          trace('error', {
+            msg: (e.message || '').slice(0, 200),
+            src: e.filename || (e.target && e.target.src) || '',
+            line: e.lineno,
+            col: e.colno,
+            tag: e.target && e.target.tagName
+          });
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          trace('promise_reject', {
+            reason: String(e.reason || '').slice(0, 200)
+          });
+        });
+
+        // ═══ Track network fetches (fetch + XHR) ═══
+        var origFetch = window.fetch;
+        if (origFetch) {
+          window.fetch = function (input, init) {
+            var url = (typeof input === 'string' ? input : input.url) || '';
+            // Skip self (avoid infinite loop)
+            if (url.indexOf('/api/debug/watch-') === 0) return origFetch.apply(this, arguments);
+            var startT = Date.now() - t0;
+            trace('fetch_start', { url: url.slice(0, 150) });
+            return origFetch.apply(this, arguments).then(function (r) {
+              trace('fetch_ok', { url: url.slice(0, 150), status: r.status, dur: (Date.now() - t0) - startT });
+              return r;
+            }).catch(function (err) {
+              trace('fetch_err', { url: url.slice(0, 150), msg: String(err.message || err).slice(0, 150) });
+              throw err;
+            });
+          };
+        }
+
+        // ═══ Freeze detector: main thread heartbeat ═══
+        // ถ้า setTimeout callback ช้า > 1500ms = main thread block
+        var lastBeat = Date.now();
+        setInterval(function () {
+          var now = Date.now();
+          var lag = now - lastBeat - 500;
+          if (lag > 1500) {
+            // trace via inline (buffer อาจ full — ใช้ direct beacon)
+            try {
+              if (navigator.sendBeacon) {
+                var p = JSON.stringify({
+                  sessionId: SID,
+                  route: location.pathname,
+                  events: [{ t: now - t0, type: 'freeze', data: { lagMs: lag } }]
+                });
+                navigator.sendBeacon('/api/debug/watch-trace', new Blob([p], { type: 'text/plain' }));
+              }
+            } catch (e) {}
+          }
+          lastBeat = now;
+        }, 500);
+
+        // ═══ Track DOM lifecycle ═══
+        document.addEventListener('DOMContentLoaded', function () { trace('dom_ready'); });
+        window.addEventListener('load', function () { trace('window_load'); });
+
+        // ═══ Track script load (Aliplayer, Bunny playerjs) ═══
+        var observer = new MutationObserver(function (muts) {
+          muts.forEach(function (m) {
+            m.addedNodes.forEach(function (n) {
+              if (n.tagName === 'SCRIPT' && n.src) {
+                var src = n.src.slice(0, 100);
+                trace('script_added', { src: src });
+                n.addEventListener('load', function () { trace('script_load', { src: src }); });
+                n.addEventListener('error', function () { trace('script_err', { src: src }); });
+              }
+              if (n.tagName === 'IFRAME' && n.src) {
+                var isrc = n.src.slice(0, 100);
+                trace('iframe_added', { src: isrc });
+                n.addEventListener('load', function () { trace('iframe_load', { src: isrc }); });
+                n.addEventListener('error', function () { trace('iframe_err', { src: isrc }); });
+              }
+            });
+          });
+        });
+        try { observer.observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>MedNinja LMS - ติวสอบใบประกอบวิชาชีพแพทย์</title>
