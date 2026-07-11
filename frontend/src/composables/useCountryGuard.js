@@ -12,7 +12,6 @@ import { watch } from 'vue'
 import { useRouter } from 'vue-router'
 import useCountry from './useCountry'
 import { useAuthStore } from '../stores/auth'
-import { isIOS } from '../utils/deviceDetect'
 
 /**
  * @param {string} expectedBucket - 'GLOBAL' หรือ 'CN'
@@ -33,13 +32,6 @@ export function useCountryGuard (expectedBucket) {
   const redirectByCountry = (current) => {
     const currentBucket = bucketOf(current)
     if (currentBucket === target) return
-    // ⭐ TEST: iOS/iPad ไม่ redirect ไป CN bucket
-    // เพราะ Aliplayer SDK บน iOS ค้าง (anti-debugger + license blocking + touch handler jam)
-    // ปล่อยให้ iOS อยู่ /my (Bunny No-DRM) ต่อไป
-    if (currentBucket === 'CN' && target === 'GLOBAL' && isIOS()) {
-      console.warn('[CountryGuard] iOS + CN → stay on Global (Bunny No-DRM test)')
-      return
-    }
     // ไปหน้าคู่กัน (ไม่ logout) — admin ก็ต้องตาม IP เหมือน student
     if (currentBucket === 'CN' && target === 'GLOBAL') {
       console.warn(`[CountryGuard] IP=${current} → redirect /my-cn`)

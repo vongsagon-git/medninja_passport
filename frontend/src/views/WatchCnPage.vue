@@ -938,13 +938,6 @@ export default {
     }
   },
   created() {
-    // ⭐ TEST: CN + iOS/iPad → redirect ไป Global route (Bunny No-DRM)
-    if (detectIOS()) {
-      const { sectionId, videoIndex } = this.$route.params
-      const bonus = this.$route.query.bonus ? '?bonus=1' : ''
-      this.$router.replace(`/my/watch/${sectionId}/${videoIndex}${bonus}`)
-      return
-    }
     // เช็ค zoom ก่อนโหลดอะไร
     // ใช้ outerWidth/innerWidth (ไม่ false positive บน HiDPI 125%/150%)
     // DPR เปลี่ยนตาม Display Scale ของ OS → ใช้เช็ค zoom ไม่ได้
