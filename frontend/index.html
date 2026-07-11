@@ -207,13 +207,35 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="MedNinja LMS - ติวสอบใบประกอบวิชาชีพแพทย์" />
     <meta name="twitter:description" content="ติวสอบใบประกอบวิชาชีพแพทย์ ระบบใหม่ 2570 — วีดีโอบทเรียน + ตะลุยโจทย์ 5000 ข้อ" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Preconnect + preload Bunny player.js เพื่อให้ live ready เร็วขึ้น -->
-    <link rel="preconnect" href="https://assets.mediadelivery.net" crossorigin>
-    <link rel="preconnect" href="https://player.mediadelivery.net" crossorigin>
-    <link rel="preload" href="https://assets.mediadelivery.net/playerjs/playerjs-latest.min.js" as="script" crossorigin>
+    <!-- ⚠️ Google Fonts + Bunny preconnect ย้ายไปโหลด lazy หลัง Vue mount -->
+    <!-- เพราะ GFW บล็อก fonts.googleapis.com + mediadelivery.net → iOS Safari ค้างจอขาวรอ timeout 60-90s -->
+    <!-- ใช้ system font fallback ใน main.css แทน (ดี iOS/Android/Windows/Mac ทุก platform) -->
+    <script>
+      (function () {
+        // โหลด Google Fonts + Bunny preconnect หลัง window.load เท่านั้น
+        // → ถ้าโดนบล็อก (GFW) จะไม่ block first paint
+        function lazyLoad () {
+          try {
+            var f = document.createElement('link');
+            f.rel = 'stylesheet';
+            f.href = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap';
+            document.head.appendChild(f);
+          } catch (e) {}
+          // Bunny preconnect เฉพาะเมื่ออยู่หน้า /my/watch หรือ /live
+          if (/\/watch\/|\/live\//.test(location.pathname)) {
+            try {
+              ['assets.mediadelivery.net', 'player.mediadelivery.net'].forEach(function (h) {
+                var p = document.createElement('link');
+                p.rel = 'preconnect'; p.href = 'https://' + h; p.crossOrigin = 'anonymous';
+                document.head.appendChild(p);
+              });
+            } catch (e) {}
+          }
+        }
+        if (document.readyState === 'complete') lazyLoad();
+        else window.addEventListener('load', lazyLoad);
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>
