@@ -449,6 +449,7 @@
 <script>
 import { useActivationStore } from '../stores/activation'
 import { useCountryGuard } from '../composables/useCountryGuard'
+import { isIOS } from '../utils/deviceDetect'
 import api from '../services/api'
 import SelfCheckModal from '../components/SelfCheckModal.vue'
 
@@ -581,6 +582,13 @@ export default {
     }
   },
   created() {
+    // ⭐ TEST: CN + iOS/iPad → redirect ไป Global route (Bunny No-DRM)
+    // เพราะ Ali Proprietary บน iOS มีปัญหา + Bunny signed URL อาจเข้าจีนได้
+    if (!this.isDemo && isIOS()) {
+      const sectionId = this.$route.params.id
+      this.$router.replace(`/my/section/${sectionId}`)
+      return
+    }
     if (this.isDemo) {
       this.activationStore.fetchDemoSection()
     } else {
