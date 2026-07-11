@@ -165,7 +165,7 @@
                                   <span class="platform-label">🌐 GLOBAL</span>
                                   <div class="vid-slot">
                                     <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._verifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._verified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._verified === false" class="verify-status fail">✗</span>
@@ -174,7 +174,7 @@
                                   </div>
                                   <div class="vid-slot">
                                     <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="vid.ref._locked" @input="scheduleDrmVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleDrmVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._drmVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._drmVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -187,7 +187,7 @@
                                   <span class="platform-label">🇨🇳 CHINA</span>
                                   <div class="vid-slot">
                                     <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" @input="scheduleAliVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleAliVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._aliVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._aliVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -196,7 +196,7 @@
                                   </div>
                                   <div class="vid-slot">
                                     <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" @input="scheduleAliDrmVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleAliDrmVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._aliDrmVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
@@ -285,7 +285,7 @@
                               <span class="platform-label">🌐 GLOBAL</span>
                               <div class="vid-slot">
                                 <div class="vid-input-wrap">
-                                  <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
                                   <span v-if="child.ref._verifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._verified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._verified === false" class="verify-status fail">✗</span>
@@ -294,7 +294,7 @@
                               </div>
                               <div class="vid-slot">
                                 <div class="vid-input-wrap">
-                                  <input v-model="child.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="child.ref._locked" @input="scheduleDrmVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleDrmVerify(child.flatIdx)" />
                                   <span v-if="child.ref._drmVerifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._drmVerified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -307,7 +307,7 @@
                               <span class="platform-label">🇨🇳 CHINA</span>
                               <div class="vid-slot">
                                 <div class="vid-input-wrap">
-                                  <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" @input="scheduleAliVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleAliVerify(child.flatIdx)" />
                                   <span v-if="child.ref._aliVerifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._aliVerified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -316,7 +316,7 @@
                               </div>
                               <div class="vid-slot">
                                 <div class="vid-input-wrap">
-                                  <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" @input="scheduleAliDrmVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleAliDrmVerify(child.flatIdx)" />
                                   <span v-if="child.ref._aliDrmVerifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
@@ -404,7 +404,7 @@
                         <span class="platform-label">🌐 GLOBAL</span>
                         <div class="vid-slot">
                           <div class="vid-input-wrap">
-                            <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
+                            <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
                             <span v-if="node.ref._verifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._verified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._verified === false" class="verify-status fail">✗</span>
@@ -413,7 +413,7 @@
                         </div>
                         <div class="vid-slot">
                           <div class="vid-input-wrap">
-                            <input v-model="node.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="node.ref._locked" @input="scheduleDrmVerify(node.flatIdx)" />
+                            <input v-model="node.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleDrmVerify(node.flatIdx)" />
                             <span v-if="node.ref._drmVerifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._drmVerified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -426,7 +426,7 @@
                         <span class="platform-label">🇨🇳 CHINA</span>
                         <div class="vid-slot">
                           <div class="vid-input-wrap">
-                            <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" @input="scheduleAliVerify(node.flatIdx)" />
+                            <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="NoDRM VID" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleAliVerify(node.flatIdx)" />
                             <span v-if="node.ref._aliVerifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._aliVerified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -435,7 +435,7 @@
                         </div>
                         <div class="vid-slot">
                           <div class="vid-input-wrap">
-                            <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" @input="scheduleAliDrmVerify(node.flatIdx)" />
+                            <input v-model="node.ref.aliDrmVideoId" type="text" class="form-control form-control-sm ali-input drm" placeholder="DRM VID" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleAliDrmVerify(node.flatIdx)" />
                             <span v-if="node.ref._aliDrmVerifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._aliDrmVerified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
@@ -911,7 +911,10 @@ export default {
       this._openMenuIdx = null
     },
     // ═══ 💾 Save to Content Library ═══
+    // ⭐ ครบ 4 fields + ยัง"ไม่ได้"ผูก Library อยู่ = แสดงปุ่มบันทึก
+    //    ถ้ามี contentId แล้ว = มาจาก Library อยู่แล้ว → ไม่ต้องบันทึกซ้ำ
     isFourFieldsComplete(video) {
+      if (video.contentId) return false
       return !!(video.bunnyVideoId && video.bunnyDrmVideoId && video.aliVideoId && video.aliDrmVideoId)
     },
     async openSaveContentModal(video) {
@@ -979,7 +982,7 @@ export default {
         this.loadContentModal.loading = false
       }
     },
-    selectLibContent(content) {
+    async selectLibContent(content) {
       const video = this.loadContentModal._videoRef
       if (!video) return
       const hasExisting = video.bunnyVideoId || video.bunnyDrmVideoId || video.aliVideoId || video.aliDrmVideoId || video.contentId
@@ -1003,6 +1006,25 @@ export default {
       video._aliDrmVerified = true
       this.$forceUpdate()
       this.closeLoadContentModal()
+      // ⭐ Auto-save เข้า DB ทันที (มิฉะนั้น refresh หน้าแล้ว link จะหาย)
+      // Edit mode: this.form.videos = source, ใช้ editingId
+      // Direct tree mode: section ถูก mutate ตรง ๆ, ต้อง lookup จาก video ref
+      try {
+        if (this.editingId && this.form.videos.includes(video)) {
+          // Edit mode — save form.videos ทั้งชุด
+          await api.put(`/admin/sections/${this.editingId}`, { videos: this.form.videos })
+          this.successMsg = `🔗 ผูก Library: ${content.title}`
+        } else {
+          // Direct tree mode — หา section ที่ contains video นี้
+          const parentSec = this.sections.find(s => (s.videos || []).includes(video))
+          if (parentSec) {
+            await api.put(`/admin/sections/${parentSec._id}`, { videos: parentSec.videos })
+            this.successMsg = `🔗 ผูก Library: ${content.title}`
+          }
+        }
+      } catch (err) {
+        this.errorMsg = 'บันทึก link ไม่สำเร็จ — refresh หน้าแล้วอาจหาย'
+      }
     },
     unlinkContent(video) {
       if (!video.contentId) return
