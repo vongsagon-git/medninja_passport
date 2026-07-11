@@ -65,6 +65,10 @@ app.get('/test/encryptType1', (req, res) => {
 app.get('/test/encryptType3', (req, res) => {
   res.sendFile(path.join(__dirname, '../../frontend/dist/test-encrypt3.html'))
 })
+// /test/serve → auto-detect iOS → Ali Prop, other → Widevine
+app.get('/test/serve', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../frontend/dist/test-serve.html'))
+})
 // /diag-no-token = admin only standalone (ไม่ต้อง login)
 app.get('/diag-no-token', (req, res) => {
   res.sendFile(path.join(__dirname, 'pages/diag-no-token.html'))

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Test Serve — Auto Ali Prop / Widevine</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #e2e8f0;
+      font-family: 'Sarabun', -apple-system, sans-serif;
+      padding: 20px 16px;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    .head { text-align: center; margin-bottom: 20px; }
+    .head h1 {
+      font-size: 22px;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, #38bdf8, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .tag {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .card-label {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .card-body {
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: #cbd5e1;
+      font-family: Consolas, monospace;
+    }
+    .card-body b { color: #f1f5f9; font-weight: 700; }
+    .ua {
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 6px;
+      word-break: break-all;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-ali { background: rgba(251,191,36,0.2); color: #fbbf24; }
+    .badge-wv  { background: rgba(34,197,94,0.2); color: #4ade80; }
+    .reason {
+      margin-top: 8px;
+      padding: 8px;
+      background: rgba(167,139,250,0.08);
+      border-radius: 6px;
+      font-size: 11.5px;
+      color: #c4b5fd;
+      line-height: 1.5;
+    }
+    .muted { color: #64748b; }
+
+    .player-wrap {
+      position: relative;
+      aspect-ratio: 16/9;
+      background: #000;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      margin-bottom: 16px;
+    }
+    #player { width: 100% !important; height: 100% !important; }
+    .status {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 12px;
+      color: white;
+      background: rgba(0,0,0,0.65);
+      padding: 20px;
+      text-align: center;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .err-icon { font-size: 40px; }
+    .err-title { font-size: 18px; font-weight: 800; color: #f87171; }
+    .err-detail { font-size: 12px; opacity: 0.85; max-width: 500px; word-break: break-all; }
+    .logs {
+      background: #000;
+      border: 1px solid rgba(74,222,128,0.15);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .logs h3 {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .log-list {
+      max-height: 260px;
+      overflow-y: auto;
+      font-family: Consolas, monospace;
+      font-size: 11.5px;
+      line-height: 1.6;
+    }
+    .log-line { padding: 2px 0; }
+    .log-time { color: #64748b; margin-right: 8px; }
+    .log-info { color: #cbd5e1; }
+    .log-success { color: #4ade80; }
+    .log-warn { color: #fbbf24; }
+    .log-error { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <h1>🎯 Player Serve — Auto Select</h1>
+      <div class="tag">1 Video ID · Backend เลือก Ali Prop / Widevine ให้อัตโนมัติ</div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Your Device</div>
+        <div class="card-body" id="device-info">detecting...</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Backend Served</div>
+        <div class="card-body" id="serve-info"><div class="muted">รอ backend response...</div></div>
+      </div>
+    </div>
+
+    <div class="player-wrap">
+      <div id="player"></div>
+      <div class="status" id="status">
+        <div class="spinner"></div>
+        <div>กำลังโหลด...</div>
+      </div>
+    </div>
+
+    <div class="logs">
+      <h3>📝 Debug Logs (<span id="log-count">0</span>)</h3>
+      <div class="log-list" id="log-list"></div>
+    </div>
+  </div>
+
+  <link rel="stylesheet" href="/vendor/aliplayer/aliplayer.css">
+  <script src="/vendor/aliplayer/aliplayer.js"></script>
+  <script>
+    const VIDEO_ID = '00bef48a7d1071f18224e6f6c55a0102'
+    const SERVE_ENDPOINT = `/api/china/test-serve/${VIDEO_ID}`
+
+    const logs = []
+    function log(msg, type = 'info') {
+      const time = new Date().toTimeString().slice(0, 8)
+      logs.push({ time, msg, type })
+      const html = logs.map(l =>
+        `<div class="log-line log-${l.type}"><span class="log-time">[${l.time}]</span>${escapeHtml(l.msg)}</div>`
+      ).join('')
+      document.getElementById('log-list').innerHTML = html
+      document.getElementById('log-count').textContent = logs.length
+      console.log(`[${time}] ${msg}`)
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))
+    }
+    function hideStatus() { document.getElementById('status').style.display = 'none' }
+    function showError(title, detail) {
+      document.getElementById('status').innerHTML =
+        `<div class="err-icon">⚠️</div><div class="err-title">${escapeHtml(title)}</div><div class="err-detail">${escapeHtml(detail)}</div>`
+      document.getElementById('status').style.display = 'grid'
+    }
+
+    // ⭐ Frontend detect (แม่นกว่า UA — iPad iOS 13+ report เป็น Mac)
+    function detectIOS() {
+      const ua = navigator.userAgent
+      if (/iPad|iPhone|iPod/.test(ua)) return true
+      // iPad iOS 13+: platform=MacIntel + maxTouchPoints > 1
+      if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return true
+      return false
+    }
+
+    function renderDevice() {
+      const ua = navigator.userAgent
+      const isIOS = detectIOS()
+      document.getElementById('device-info').innerHTML = `
+        <div><b>iOS (frontend detect):</b> ${isIOS ? '✅' : '❌'}</div>
+        <div><b>Platform:</b> ${navigator.platform}</div>
+        <div><b>MaxTouchPoints:</b> ${navigator.maxTouchPoints}</div>
+        <div class="ua">${escapeHtml(ua)}</div>
+      `
+    }
+
+    function renderServe(data) {
+      const mode = data.mode === 'ali' ? 'Ali Prop' : 'Widevine DRM'
+      const badge = data.mode === 'ali' ? 'badge-ali' : 'badge-wv'
+      document.getElementById('serve-info').innerHTML = `
+        <div><b>Mode:</b> <span class="badge ${badge}">${mode}</span></div>
+        <div><b>Auth Type:</b> ${data.authType}</div>
+        <div><b>encryptType:</b> ${data.encryptType}</div>
+        <div><b>Device Detect:</b> ${data.deviceServed}</div>
+        <div class="reason">💡 ${data.reason}</div>
+      `
+    }
+
+    async function fetchServe() {
+      log(`Fetch: ${SERVE_ENDPOINT}`, 'info')
+      // ⭐ Send frontend detect hint (iPad iOS 13+ backup)
+      const headers = {}
+      if (detectIOS()) headers['X-MN-Device'] = 'ios'
+
+      const res = await fetch(SERVE_ENDPOINT, { headers })
+      if (!res.ok) throw new Error(`Serve fail ${res.status}: ${(await res.text()).substring(0, 200)}`)
+      const data = await res.json()
+      log(`Backend mode=${data.mode} authType=${data.authType} encryptType=${data.encryptType}`, 'success')
+      log(`Reason: ${data.reason}`, 'info')
+      renderServe(data)
+      return data
+    }
+
+    function waitAli(t = 15000) {
+      return new Promise((resolve, reject) => {
+        const s = Date.now()
+        const i = setInterval(() => {
+          if (window.Aliplayer) { clearInterval(i); resolve() }
+          else if (Date.now() - s > t) { clearInterval(i); reject(new Error('SDK timeout')) }
+        }, 200)
+      })
+    }
+
+    async function init() {
+      try {
+        renderDevice()
+        log('เริ่มทำงาน', 'info')
+        log(`Frontend iOS detect: ${detectIOS()}`, 'info')
+
+        await waitAli()
+        log('Aliplayer SDK พร้อม', 'success')
+
+        const serve = await fetchServe()
+
+        // ─── Config Aliplayer ตาม authType ที่ backend serve ───
+        const baseConfig = {
+          id: 'player',
+          vid: VIDEO_ID,
+          width: '100%',
+          height: '100%',
+          autoplay: false,
+          isLive: false,
+          rePlay: false,
+          playsinline: true,
+          preload: true,
+          controlBarVisibility: 'hover',
+          useH5Prism: true,
+          license: {
+            domain: 'passport.medninja.academy',
+            key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
+          },
+          encryptType: serve.encryptType
+        }
+
+        let config
+        if (serve.authType === 'playauth') {
+          // iOS → PlayAuth (Ali Prop stream)
+          config = { ...baseConfig, playauth: serve.playAuth }
+          log('Config: PlayAuth mode (Ali Prop stream)', 'info')
+        } else {
+          // อื่น ๆ → STS (Widevine DRM stream)
+          config = {
+            ...baseConfig,
+            accessKeyId: serve.accessKeyId,
+            accessKeySecret: serve.accessKeySecret,
+            securityToken: serve.securityToken,
+            region: serve.region
+          }
+          log('Config: STS mode (Widevine DRM stream)', 'info')
+        }
+
+        log('สร้าง Aliplayer instance...', 'info')
+        const player = new window.Aliplayer(config, function () {
+          log('Player instance สร้างสำเร็จ', 'success')
+          hideStatus()
+        })
+
+        player.on('ready', () => log('Event: ready', 'info'))
+        player.on('play', () => log('Event: play', 'success'))
+        player.on('playing', () => log('Event: playing (เล่นจริง!)', 'success'))
+        player.on('canplay', () => log('Event: canplay (พร้อมเล่น)', 'success'))
+        player.on('waiting', () => log('Event: waiting (buffering)', 'warn'))
+        player.on('pause', () => log('Event: pause', 'warn'))
+        player.on('ended', () => log('Event: ended', 'info'))
+        player.on('error', (e) => {
+          const d = e && e.paramData ? JSON.stringify(e.paramData) : (e && e.message) || 'unknown'
+          log(`ERROR: ${d}`, 'error')
+          showError('เล่นวิดีโอไม่ได้', d)
+        })
+      } catch (err) {
+        log(`Init error: ${err.message}`, 'error')
+        showError('เกิดข้อผิดพลาด', err.message)
+      }
+    }
+    init()
+  </script>
+</body>
+</html>
