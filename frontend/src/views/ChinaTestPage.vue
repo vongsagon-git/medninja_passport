@@ -316,12 +316,12 @@ onUnmounted(() => {
               <div class="modal-brand-text">
                 <div class="modal-brand-name">MedNinja</div>
                 <div class="modal-brand-tag">
-                  ดูได้ทั่วโลก · <span class="tag-cn">จีน</span>ก็ดูได้
+                  เพราะ <b>MedNinja</b> มี server ใน<span class="tag-cn">จีน</span>โดยเฉพาะ
+                  <span class="tag-sep">·</span> ไม่ต้องใช้ <b class="tag-vpn">VPN</b> ก็ดูได้
                 </div>
               </div>
             </div>
             <div class="modal-header-right">
-              <span class="modal-badge">🔒 Alibaba Encrypt</span>
               <button class="modal-close" @click="closeVideo" aria-label="ปิด">✕</button>
             </div>
           </div>
@@ -882,6 +882,15 @@ onUnmounted(() => {
   color: #f87171;
   font-weight: 800;
 }
+.modal-brand-tag b {
+  color: white;
+  font-weight: 800;
+}
+.tag-vpn { color: #fbbf24; }
+.tag-sep {
+  color: rgba(255,255,255,0.3);
+  margin: 0 4px;
+}
 .modal-header-right {
   display: flex;
   align-items: center;
@@ -1066,7 +1075,9 @@ onUnmounted(() => {
   .modal-header { padding: 10px 14px; }
   .modal-brand-mark { width: 34px; height: 34px; }
   .modal-brand-name { font-size: 15px; }
-  .modal-brand-tag { font-size: 11px; }
+  .modal-brand-tag { font-size: 10.5px; line-height: 1.4; }
+  .modal-brand-tag .tag-sep { display: none; }
+  .modal-brand-tag .tag-break { display: block; }
   .modal-badge { display: none; }
   .modal-close { width: 32px; height: 32px; font-size: 14px; }
   .modal-footer {
