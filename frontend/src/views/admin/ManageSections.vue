@@ -1494,10 +1494,16 @@ export default {
     async handleLocalUpload(event, idx) {
       const file = event.target.files[0]
       if (!file) return
+      if (!this.editingId) {
+        alert('กรุณา "บันทึก" section ก่อน แล้วค่อยกด Local Upload')
+        event.target.value = ''
+        return
+      }
       const video = this.form.videos[idx]
       if (!confirm(`Upload "${file.name}" → Ali (2 mediaIds)?\n\nFile size: ${(file.size / 1024 / 1024).toFixed(1)}MB`)) return
       video._aliSyncing = true
       video._aliSyncStatus = 'Requesting auth'
+      video._aliSyncProgress = 0
       try {
         // Step 1: get 2 upload auths
         const authRes = await api.post('/admin/ali-sync/local-auth', {
@@ -1510,17 +1516,20 @@ export default {
         // Step 3: upload NoDRM version
         await this.aliUploadFile(file, authRes.noDrm, (progress) => {
           video._aliSyncProgress = Math.round(progress * 100)
+          this.$forceUpdate()
         })
         video._aliSyncStatus = 'Uploading Widevine'
         video._aliSyncProgress = 0
+        this.$forceUpdate()
         // Step 4: upload Widevine version (same file, second upload)
         await this.aliUploadFile(file, authRes.drm, (progress) => {
           video._aliSyncProgress = Math.round(progress * 100)
+          this.$forceUpdate()
         })
         // Step 5: save both mediaIds
         video._aliSyncStatus = 'Saving'
         await api.post('/admin/ali-sync/save-ids', {
-          sectionId: this.form._id,
+          sectionId: this.editingId,
           videoIndex: idx,
           aliVideoId: authRes.noDrm.videoId,
           aliDrmVideoId: authRes.drm.videoId
@@ -1565,10 +1574,13 @@ export default {
           retryCount: 3,
           retryDuration: 2,
           onUploadstarted: (info) => {
+            console.log('[AliUpload] started', info)
             uploader.setUploadAuthAndAddress(info, authInfo.uploadAuth, authInfo.uploadAddress, authInfo.videoId)
           },
-          onUploadProgress: (uploadInfo, totalSize, progress) => {
-            if (onProgress) onProgress(progress)
+          onUploadProgress: (uploadInfo, total, loaded) => {
+            // SDK signature: (uploadInfo, total_bytes, loaded_bytes) — NOT ratio
+            const ratio = total > 0 ? loaded / total : 0
+            if (onProgress) onProgress(ratio)
           },
           onUploadSucceed: () => resolve(),
           onUploadFailed: (uploadInfo, code, msg) => reject(new Error(`Ali upload fail: ${code} ${msg}`)),
