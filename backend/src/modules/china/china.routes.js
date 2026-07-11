@@ -29,6 +29,49 @@ router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   next()
 }, getPlayAuth)
 
+// ⭐ Upload logs from mobile test client — เก็บใน memory 30 นาที
+// ให้ dev fetch ดู log จาก /api/china/test-logs โดยตรง
+const _testLogsCache = { latest: null, all: [] }
+router.post('/test-logs-upload', express.json({ limit: '2mb' }), (req, res) => {
+  const body = req.body || {}
+  const entry = {
+    ts: new Date().toISOString(),
+    ip: (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(),
+    ua: (req.headers['user-agent'] || '').substring(0, 200),
+    device: body.device || null,
+    serveInfo: body.serveInfo || null,
+    logs: body.logs || []
+  }
+  _testLogsCache.latest = entry
+  _testLogsCache.all.push(entry)
+  // เก็บล่าสุด 20 sessions
+  if (_testLogsCache.all.length > 20) _testLogsCache.all.shift()
+  console.log(`[test-logs-upload] session logged: ${entry.logs.length} lines from ${entry.ip} (${entry.ua.substring(0, 60)}...)`)
+  return res.json({ ok: true, id: _testLogsCache.all.length - 1 })
+})
+
+// GET latest logs (สำหรับ dev)
+router.get('/test-logs', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.query.format === 'text') {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    const latest = _testLogsCache.latest
+    if (!latest) return res.send('(ยังไม่มี test log)')
+    let txt = `═══ Latest Test Log ═══\n`
+    txt += `Uploaded: ${latest.ts}\n`
+    txt += `IP: ${latest.ip}\n`
+    txt += `UA: ${latest.ua}\n`
+    if (latest.device) txt += `Device: ${JSON.stringify(latest.device)}\n`
+    if (latest.serveInfo) txt += `Serve: ${JSON.stringify(latest.serveInfo)}\n`
+    txt += `\n─── Logs (${latest.logs.length}) ───\n`
+    latest.logs.forEach(l => {
+      txt += `[${l.time || '?'}] [${l.type || 'info'}] ${l.msg || ''}\n`
+    })
+    return res.send(txt)
+  }
+  res.json({ latest: _testLogsCache.latest, sessionCount: _testLogsCache.all.length })
+})
+
 // ⭐ Deep diagnose — ยิงทุก endpoint Alibaba ที่เกี่ยวข้อง + fetch manifest จริง
 // ดูว่า Alibaba throttle หรือ segment expire
 router.get('/test-diagnose/:videoId', originCheck, async (req, res) => {

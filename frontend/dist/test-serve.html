@@ -156,6 +156,7 @@
         <button onclick="checkStatus()" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 Status</button>
         <button onclick="deepDiagnose()" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🩺 Diagnose</button>
         <button onclick="reloadPlayer()" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reload</button>
+        <button onclick="sendLogsToDev()" style="background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.5);padding:8px 18px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">📤 ส่ง Logs ให้ Dev</button>
       </div>
     </div>
 
@@ -289,6 +290,7 @@
       })
       if (!res.ok) throw new Error(`Serve fail ${res.status}: ${(await res.text()).substring(0, 200)}`)
       const data = await res.json()
+      _lastServe = { mode: data.mode, authType: data.authType, encryptType: data.encryptType, deviceServed: data.deviceServed, expiration: data.expiration, stsPrefix: data.accessKeyId?.substring(0,10) }
       log(`Backend mode=${data.mode} authType=${data.authType} encryptType=${data.encryptType} sts=${data.accessKeyId?.substring(0,10)}...`, 'success')
       log(`STS expires: ${data.expiration}`, 'info')
       log(`Reason: ${data.reason}`, 'info')
@@ -344,6 +346,53 @@
       // รอ DOM settle นิดก่อน init ใหม่
       await new Promise(r => setTimeout(r, 200))
       await init()
+    }
+
+    let _lastServe = null // เก็บ serve response ไว้ upload ด้วย
+
+    async function sendLogsToDev() {
+      const btn = event?.target
+      const orig = btn ? btn.textContent : ''
+      if (btn) btn.textContent = '⏳ กำลังส่ง...'
+      try {
+        // Auto-run diagnose ก่อนส่ง — ให้ dev เห็นสถานะ Alibaba ล่าสุด
+        log('📤 ส่ง logs ให้ dev...', 'info')
+        try { await deepDiagnose() } catch {}
+
+        const device = {
+          ua: navigator.userAgent,
+          isIOS: detectIOS(),
+          platform: navigator.platform,
+          touch: navigator.maxTouchPoints,
+          uaPlatform: navigator.userAgentData?.platform || null
+        }
+        const res = await fetch('/api/china/test-logs-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            device,
+            serveInfo: _lastServe,
+            logs
+          })
+        })
+        if (!res.ok) throw new Error(`Upload fail ${res.status}`)
+        const data = await res.json()
+        log(`✅ ส่งแล้ว! session id=${data.id} — บอก dev มาดูได้เลย`, 'success')
+        if (btn) {
+          btn.textContent = '✅ ส่งแล้ว!'
+          btn.style.background = 'rgba(74,222,128,0.4)'
+          setTimeout(() => {
+            btn.textContent = orig
+            btn.style.background = 'rgba(74,222,128,0.2)'
+          }, 3000)
+        }
+      } catch (err) {
+        log(`❌ ส่งไม่สำเร็จ: ${err.message}`, 'error')
+        if (btn) {
+          btn.textContent = '❌ Error'
+          setTimeout(() => btn.textContent = orig, 3000)
+        }
+      }
     }
 
     async function deepDiagnose() {
