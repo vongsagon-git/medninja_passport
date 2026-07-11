@@ -2518,7 +2518,9 @@ export default {
         const isIosOrSafari = detectIOS() || detectMacSafari()
         this._betaLog(`Device path: ${isIosOrSafari ? 'iOS/Safari (PlayAuth)' : 'Other (STS)'}`, 'info')
 
-        // Base config (ทุก device เหมือนกัน)
+        // Base config (ทุก device เหมือนกัน) — ตรงกับ /test/serve ที่ verified
+        // ⚠️ ตัด skinLayout: false + showBigPlayButton: false ออก — บาง SDK version
+        //    ตั้งเป็น false = skip DRM subsystem init → error 4022
         const baseConfig = {
           id: 'J_prismPlayer',
           vid: videoId,
@@ -2529,9 +2531,7 @@ export default {
           rePlay: false,
           playsinline: true,
           preload: true,
-          controlBarVisibility: 'never',
-          showBigPlayButton: false,
-          skinLayout: false,
+          controlBarVisibility: 'hover',  // ⚡ เหมือน /test/serve — native controls โผล่ตอน hover (custom controls ยังทำงานปกติ)
           useH5Prism: true,
           disableAirplay: true,
           disableChromecast: true,

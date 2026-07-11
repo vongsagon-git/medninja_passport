@@ -190,7 +190,9 @@
   <link rel="stylesheet" href="/vendor/aliplayer/aliplayer-2.35.4.css">
   <script src="/vendor/aliplayer/aliplayer-2.35.4.js"></script>
   <script>
-    const VIDEO_ID = '00bef48a7d1071f18224e6f6c55a0102'
+    // ⭐ Support ?vid=xxx query param สำหรับเทส video อื่น
+    const urlParams = new URLSearchParams(window.location.search)
+    const VIDEO_ID = urlParams.get('vid') || '00bef48a7d1071f18224e6f6c55a0102'
     const SERVE_ENDPOINT = `/api/china/test-serve/${VIDEO_ID}`
     const STATUS_ENDPOINT = `/api/china/test-status/${VIDEO_ID}`
     const PLAYINFO_ENDPOINT = `/api/china/test-playinfo/${VIDEO_ID}`

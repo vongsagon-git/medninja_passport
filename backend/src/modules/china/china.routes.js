@@ -20,7 +20,8 @@ router.get('/playauth/:videoId', originCheck, chromeOnly, auth, getPlayAuth)
 // ⭐ Landing page playauth — public (no auth, no chrome guard) สำหรับหน้าขาย /china
 // Whitelist เฉพาะ video ID ที่ตั้งไว้ (แสดง demo เท่านั้น)
 const LANDING_ALLOWED_VIDEOS = new Set([
-  '00bef48a7d1071f18224e6f6c55a0102' // Introduce.mov — DRM + Ali Prop dual encryption
+  '00bef48a7d1071f18224e6f6c55a0102', // Introduce.mov — DRM + Ali Prop dual encryption
+  'c0e75fef7d3371f18224e6f6c55a0102'  // B1 Microbiology 1.mov — DRM + Ali Prop dual encryption
 ])
 router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   if (!LANDING_ALLOWED_VIDEOS.has(req.params.videoId)) {
