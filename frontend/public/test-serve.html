@@ -193,6 +193,7 @@
     const VIDEO_ID = '00bef48a7d1071f18224e6f6c55a0102'
     const SERVE_ENDPOINT = `/api/china/test-serve/${VIDEO_ID}`
     const STATUS_ENDPOINT = `/api/china/test-status/${VIDEO_ID}`
+    const PLAYINFO_ENDPOINT = `/api/china/test-playinfo/${VIDEO_ID}`
 
     let currentPlayer = null
     let waitingSince = null
@@ -466,17 +467,43 @@
       try {
         renderDevice()
         log('เริ่มทำงาน', 'info')
-        log(`Frontend iOS detect: ${detectIOS()}`, 'info')
+        const iosDetected = detectIOS()
+        log(`Frontend iOS detect: ${iosDetected}`, 'info')
 
         await waitAli()
         log('Aliplayer SDK พร้อม', 'success')
 
+        // ⭐ Step 1: fetch PlayInfo → เลือก stream URL ตาม device (backend proxy)
+        log(`Fetch PlayInfo (proxy): ${PLAYINFO_ENDPOINT}`, 'info')
+        const piBust = Date.now() + '-' + Math.random().toString(36).substring(2, 8)
+        const piRes = await fetch(`${PLAYINFO_ENDPOINT}?_=${piBust}`, { cache: 'no-store' })
+        if (!piRes.ok) throw new Error(`PlayInfo fail ${piRes.status}: ${(await piRes.text()).substring(0, 200)}`)
+        const playInfo = await piRes.json()
+        log(`PlayInfo streams: ${playInfo.streams.length}`, 'success')
+        playInfo.streams.forEach((s, i) => log(`  [${i}] ${s.format}/${s.definition} enc=${s.encryptType} bitrate=${s.bitrate}`, 'info'))
+
+        // ⭐ Step 2: เลือก stream ที่เหมาะกับ device
+        // iOS = AliyunVoDEncryption (Ali Prop m3u8)
+        // Other = Widevine-FairPlay (Widevine m3u8/mpd)
+        let chosen
+        if (iosDetected) {
+          chosen = playInfo.streams.find(s => s.encryptType === 'AliyunVoDEncryption')
+        } else {
+          chosen = playInfo.streams.find(s => s.encryptType === 'Widevine-FairPlay')
+                || playInfo.streams.find(s => s.encryptType === 'AliyunVoDEncryption')
+        }
+        if (!chosen) throw new Error(`ไม่พบ stream ที่เหมาะกับ device (iOS=${iosDetected})`)
+        log(`✅ Chosen: ${chosen.format}/${chosen.definition} enc=${chosen.encryptType}`, 'success')
+        log(`   URL: ${chosen.playUrl.substring(0, 100)}...`, 'info')
+
+        // ⭐ Step 3: fetch STS (สำหรับ DRM license — Widevine ต้องมี)
         const serve = await fetchServe()
 
-        // ─── Config Aliplayer ตาม authType ที่ backend serve ───
-        const baseConfig = {
+        // ⭐ Step 4: Config Aliplayer ด้วย SOURCE (URL ตรง) แทน vid
+        //   = Aliplayer ไม่ต้องเรียก Alibaba VOD API เอง = bypass decision layer
+        const config = {
           id: 'player',
-          vid: VIDEO_ID,
+          source: chosen.playUrl,      // ← ใช้ URL ตรง แทน vid
           width: '100%',
           height: '100%',
           autoplay: false,
@@ -490,24 +517,14 @@
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           },
-          encryptType: serve.encryptType
+          encryptType: serve.encryptType,
+          // STS สำหรับ DRM license (แม้ใช้ source แต่ Widevine ยังต้อง STS ขอ license key)
+          accessKeyId: serve.accessKeyId,
+          accessKeySecret: serve.accessKeySecret,
+          securityToken: serve.securityToken,
+          region: serve.region
         }
-
-        let config
-        if (serve.authType === 'playauth') {
-          config = { ...baseConfig, playauth: serve.playAuth }
-          log(`Config: PlayAuth mode (${serve.mode})`, 'info')
-        } else {
-          // STS mode — ใช้ทั้ง iOS (Ali Prop) และ Other (Widevine)
-          config = {
-            ...baseConfig,
-            accessKeyId: serve.accessKeyId,
-            accessKeySecret: serve.accessKeySecret,
-            securityToken: serve.securityToken,
-            region: serve.region
-          }
-          log(`Config: STS mode (${serve.mode === 'ali' ? 'Ali Prop iOS' : 'Widevine DRM'})`, 'info')
-        }
+        log(`Config: source URL mode (${iosDetected ? 'Ali Prop iOS' : 'Widevine DRM'})`, 'info')
 
         log('สร้าง Aliplayer instance...', 'info')
         const player = new window.Aliplayer(config, function () {

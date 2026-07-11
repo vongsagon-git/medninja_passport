@@ -266,6 +266,50 @@ router.get('/test-sts/:videoId', originCheck, async (req, res) => {
 // 1 video ID เดียว → serve ไฟล์ + auth ให้ตรง device
 // - iOS → PlayAuth + encryptType 1 (Ali Prop stream)
 // - อื่น ๆ → STS + encryptType 1 (Widevine stream, permissive mode)
+// ⭐ Test PlayInfo proxy — backend เรียก Alibaba ให้ (บายพาส IP throttle)
+// ตอบ playUrl ตรง ๆ → Aliplayer set video.src = playUrl ได้เลย ไม่ต้องเรียก Alibaba
+router.get('/test-playinfo/:videoId', originCheck, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store')
+  const { videoId } = req.params
+  if (!LANDING_ALLOWED_VIDEOS.has(videoId)) {
+    return res.status(403).json({ code: 'VIDEO_NOT_WHITELISTED' })
+  }
+  try {
+    const RPCClient = require('@alicloud/pop-core').RPCClient
+    const client = new RPCClient({
+      accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
+      accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
+      endpoint: `https://vod.${process.env.ALIBABA_VOD_REGION || 'ap-southeast-1'}.aliyuncs.com`,
+      apiVersion: '2017-03-21'
+    })
+    const result = await client.request('GetPlayInfo', {
+      VideoId: videoId,
+      Formats: 'm3u8,mpd',
+      StreamType: 'video',
+      ResultType: 'Multiple',
+      AuthTimeout: 3600
+    }, { method: 'POST' })
+
+    const streams = (result.PlayInfoList?.PlayInfo || []).map(s => ({
+      format: s.Format,
+      definition: s.Definition,
+      encryptType: s.EncryptType,
+      bitrate: s.Bitrate,
+      duration: s.Duration,
+      size: s.Size,
+      playUrl: s.PlayURL,
+      streamType: s.StreamType
+    }))
+    return res.json({
+      videoBase: result.VideoBase,
+      streams,
+      requestId: result.RequestId
+    })
+  } catch (err) {
+    return res.status(500).json({ error: err.message, code: err.code || 'UNKNOWN' })
+  }
+})
+
 router.get('/test-serve/:videoId', originCheck, async (req, res) => {
   // ⭐ ห้าม cache ทุกระดับ (browser, DO, Cloudflare) — STS ต้องสด
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
