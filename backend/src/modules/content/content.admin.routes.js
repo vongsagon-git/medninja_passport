@@ -14,6 +14,15 @@ const {
   getAnomalyReport,
   refreshDurations
 } = require('./content.admin.controller')
+// Admin: VideoContent Library (reusable 4-field video presets)
+const {
+  saveContent, listContents, getTags, deleteContent
+} = require('./video-content.controller')
+router.get('/video-contents', auth, admin, listContents)
+router.get('/video-contents/tags', auth, admin, getTags)
+router.post('/video-contents', auth, admin, saveContent)
+router.delete('/video-contents/:id', auth, admin, deleteContent)
+
 // Admin: CRUD Sections
 router.get('/sections', auth, admin, getAllSections)
 router.get('/sections/:id', auth, admin, getSection)

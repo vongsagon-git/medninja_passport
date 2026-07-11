@@ -30,6 +30,7 @@ const MeqCase = () => import('../views/MeqCase.vue')
 // Lazy admin chunk — never needed by students
 const AdminDashboard = () => import('../views/admin/AdminDashboard.vue')
 const ManageSections = () => import('../views/admin/ManageSections.vue')
+const ContentLibrary = () => import('../views/admin/ContentLibrary.vue')
 const ManagePackages = () => import('../views/admin/ManagePackages.vue')
 const ManageActivations = () => import('../views/admin/ManageActivations.vue')
 const ManagePassport = () => import('../views/admin/ManagePassport.vue')
@@ -182,6 +183,12 @@ const routes = [
     path: '/admin/sections',
     name: 'ManageSections',
     component: ManageSections,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/content-library',
+    name: 'ContentLibrary',
+    component: ContentLibrary,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {

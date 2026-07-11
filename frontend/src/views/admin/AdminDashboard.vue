@@ -152,6 +152,17 @@
             <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </router-link>
 
+          <router-link to="/admin/content-library" class="admin-nav-card">
+            <div class="nav-icon" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;">
+              <span style="font-size:22px;line-height:1;">📚</span>
+            </div>
+            <div class="nav-content">
+              <h3>Content Library</h3>
+              <p>คลัง video ครบ 4 fields — reuse ตอนสร้าง Section</p>
+            </div>
+            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </router-link>
+
           <router-link to="/admin/self-checks" class="admin-nav-card">
             <div class="nav-icon" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;">
               <span style="font-size:22px;line-height:1;">📋</span>

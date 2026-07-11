@@ -202,6 +202,12 @@
                                     </div>
                                     <div v-if="vid.ref._aliDrmName" class="bunny-filename drm" :title="vid.ref._aliDrmName">{{ vid.ref._aliDrmName }}</div>
                                   </div>
+                                  <!-- ⭐ Save to Library — แสดงเมื่อครบ 4 fields -->
+                                  <div v-if="isFourFieldsComplete(vid.ref)" class="save-to-lib-row">
+                                    <button type="button" class="btn-save-to-lib" @click="openSaveContentModal(vid.ref)" title="บันทึกเข้า Library เพื่อ reuse ในอนาคต">
+                                      💾 บันทึกเข้า Content Library
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                               <span v-if="vid.ref._locked" class="lock-badge" @click="unlockVideo(vid.flatIdx)">🔒</span>
@@ -315,6 +321,11 @@
                                 <div v-if="child.ref._aliDrmName" class="bunny-filename drm" :title="child.ref._aliDrmName">{{ child.ref._aliDrmName }}</div>
                               </div>
                             </div>
+                            <div v-if="isFourFieldsComplete(child.ref)" class="save-to-lib-row">
+                              <button type="button" class="btn-save-to-lib" @click="openSaveContentModal(child.ref)" title="บันทึกเข้า Library เพื่อ reuse ในอนาคต">
+                                💾 บันทึกเข้า Content Library
+                              </button>
+                            </div>
                           </div>
                           <span v-if="child.ref._locked" class="lock-badge" @click="unlockVideo(child.flatIdx)">🔒</span>
                           <select v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
@@ -426,6 +437,11 @@
                           </div>
                           <div v-if="node.ref._aliDrmName" class="bunny-filename drm" :title="node.ref._aliDrmName">{{ node.ref._aliDrmName }}</div>
                         </div>
+                      </div>
+                      <div v-if="isFourFieldsComplete(node.ref)" class="save-to-lib-row">
+                        <button type="button" class="btn-save-to-lib" @click="openSaveContentModal(node.ref)" title="บันทึกเข้า Library เพื่อ reuse ในอนาคต">
+                          💾 บันทึกเข้า Content Library
+                        </button>
                       </div>
                     </div>
                     <span v-if="node.ref._locked" class="lock-badge" @click="unlockVideo(node.flatIdx)">🔒</span>
@@ -653,6 +669,60 @@
 
     <!-- Hidden PDF upload input -->
     <input ref="pdfInput" type="file" accept=".pdf" style="display:none" @change="onPdfSelected">
+
+    <!-- 💾 Save to Content Library Modal -->
+    <div v-if="saveContentModal.show" class="modal-overlay" @click.self="closeSaveContentModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>💾 บันทึกเข้า Content Library</h3>
+          <button type="button" class="modal-close" @click="closeSaveContentModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>ชื่อ Content <span class="required">*</span></label>
+            <input v-model="saveContentModal.title" type="text" class="form-control" placeholder="เช่น B1 Microbiology 8" />
+          </div>
+          <div class="form-row">
+            <label>Tag Lv1 <span class="tag-hint">(หมวดหลัก)</span></label>
+            <input v-model="saveContentModal.tagLv1" type="text" class="form-control" placeholder="เช่น Basic Science" list="lib-tags-lv1" />
+            <datalist id="lib-tags-lv1">
+              <option v-for="t in libTags.tagLv1" :key="t" :value="t"></option>
+            </datalist>
+          </div>
+          <div class="form-row">
+            <label>Tag Lv2 <span class="tag-hint">(หมวดย่อย)</span></label>
+            <input v-model="saveContentModal.tagLv2" type="text" class="form-control" placeholder="เช่น Microbiology" list="lib-tags-lv2" />
+            <datalist id="lib-tags-lv2">
+              <option v-for="t in libTags.tagLv2" :key="t" :value="t"></option>
+            </datalist>
+          </div>
+          <div class="form-row">
+            <label>Tag Lv3 <span class="tag-hint">(หัวข้อย่อย)</span></label>
+            <input v-model="saveContentModal.tagLv3" type="text" class="form-control" placeholder="เช่น Bacteriology" list="lib-tags-lv3" />
+            <datalist id="lib-tags-lv3">
+              <option v-for="t in libTags.tagLv3" :key="t" :value="t"></option>
+            </datalist>
+          </div>
+          <div class="form-row">
+            <label>Notes <span class="tag-hint">(optional)</span></label>
+            <textarea v-model="saveContentModal.notes" class="form-control" rows="2" placeholder="โน้ตช่วยจำ..."></textarea>
+          </div>
+          <div class="preview-4-fields">
+            <div class="preview-title">4 videoIds ที่จะบันทึก:</div>
+            <div class="preview-row"><span>🌐 Bunny NoDRM</span><code>{{ saveContentModal.bunnyVideoId }}</code></div>
+            <div class="preview-row"><span>🌐 Bunny Widevine</span><code>{{ saveContentModal.bunnyDrmVideoId }}</code></div>
+            <div class="preview-row"><span>🇨🇳 Ali NoDRM</span><code>{{ saveContentModal.aliVideoId }}</code></div>
+            <div class="preview-row"><span>🇨🇳 Ali Widevine</span><code>{{ saveContentModal.aliDrmVideoId }}</code></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" @click="closeSaveContentModal" :disabled="saveContentModal.saving">ยกเลิก</button>
+          <button type="button" class="btn btn-primary" @click="submitSaveContent" :disabled="!saveContentModal.title || saveContentModal.saving">
+            {{ saveContentModal.saving ? 'กำลังบันทึก...' : '💾 บันทึก' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -677,6 +747,19 @@ export default {
       pdfLibrary: [], // PDF files from Bunny Storage
       refreshing: false,
       collapsed: {},
+      // 💾 Save to Content Library
+      saveContentModal: {
+        show: false,
+        saving: false,
+        title: '',
+        tagLv1: '',
+        tagLv2: '',
+        tagLv3: '',
+        notes: '',
+        bunnyVideoId: '', bunnyDrmVideoId: '', aliVideoId: '', aliDrmVideoId: '',
+        _videoRef: null
+      },
+      libTags: { tagLv1: [], tagLv2: [], tagLv3: [] },
       form: {
         code: '',
         name: '',
@@ -757,6 +840,61 @@ export default {
     },
     _closeActionMenu() {
       this._openMenuIdx = null
+    },
+    // ═══ 💾 Save to Content Library ═══
+    isFourFieldsComplete(video) {
+      return !!(video.bunnyVideoId && video.bunnyDrmVideoId && video.aliVideoId && video.aliDrmVideoId)
+    },
+    async openSaveContentModal(video) {
+      // Fetch existing tags for autocomplete
+      try {
+        const res = await api.get('/admin/video-contents/tags')
+        this.libTags = { tagLv1: res.tagLv1 || [], tagLv2: res.tagLv2 || [], tagLv3: res.tagLv3 || [] }
+      } catch (e) {
+        this.libTags = { tagLv1: [], tagLv2: [], tagLv3: [] }
+      }
+      this.saveContentModal = {
+        show: true,
+        saving: false,
+        title: video.title || '',
+        tagLv1: '', tagLv2: '', tagLv3: '',
+        notes: '',
+        bunnyVideoId: video.bunnyVideoId,
+        bunnyDrmVideoId: video.bunnyDrmVideoId,
+        aliVideoId: video.aliVideoId,
+        aliDrmVideoId: video.aliDrmVideoId,
+        _videoRef: video
+      }
+    },
+    closeSaveContentModal() {
+      this.saveContentModal.show = false
+    },
+    async submitSaveContent() {
+      const m = this.saveContentModal
+      if (!m.title.trim()) { alert('กรอกชื่อ Content'); return }
+      m.saving = true
+      try {
+        await api.post('/admin/video-contents', {
+          title: m.title.trim(),
+          tagLv1: m.tagLv1.trim(),
+          tagLv2: m.tagLv2.trim(),
+          tagLv3: m.tagLv3.trim(),
+          bunnyVideoId: m.bunnyVideoId,
+          bunnyDrmVideoId: m.bunnyDrmVideoId,
+          aliVideoId: m.aliVideoId,
+          aliDrmVideoId: m.aliDrmVideoId,
+          duration: m._videoRef?.duration || '',
+          notes: m.notes.trim()
+        })
+        // Mark video so save button hides
+        if (m._videoRef) m._videoRef._savedToLib = true
+        alert('✅ บันทึกเข้า Library แล้ว')
+        this.closeSaveContentModal()
+      } catch (err) {
+        alert('บันทึกไม่สำเร็จ: ' + (err.response?.data?.error || err.message))
+      } finally {
+        m.saving = false
+      }
     },
     // ─── Self Check ───
     async loadSelfCheckTemplates() {
@@ -2644,5 +2782,132 @@ export default {
   outline: 2px solid rgba(220, 38, 38, 0.2);
 }
 
+/* ═══ 💾 Save to Content Library ═══ */
+.save-to-lib-row {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+  border-top: 1px dashed #c7d2fe;
+  margin-top: 4px;
+}
+.btn-save-to-lib {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s;
+}
+.btn-save-to-lib:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+.modal-card {
+  background: white;
+  border-radius: 12px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.modal-close:hover { background: #f3f4f6; }
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+.form-row {
+  margin-bottom: 14px;
+}
+.form-row label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+.form-row .required { color: #ef4444; }
+.form-row .tag-hint { font-weight: 400; color: #9ca3af; font-size: 11px; }
+.preview-4-fields {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+}
+.preview-title {
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 6px;
+}
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+.preview-row code {
+  background: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 10px;
+  color: #0c4a6e;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 </style>
