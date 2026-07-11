@@ -1015,7 +1015,22 @@ export default {
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
-    // ⭐ ไม่มี auto fullscreen ตอน rotate — user ต้องกดปุ่ม ⛶ เท่านั้น
+    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only) — เรียก aliToggleFullscreen()
+    this._onOrientationChange = () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      if (!isMobile) return
+      const isLandscape = window.innerWidth > window.innerHeight
+      // Rotate landscape → auto enter (ถ้ายังไม่ full)
+      if (isLandscape && !this.isFullscreen) {
+        this.aliToggleFullscreen && this.aliToggleFullscreen()
+      }
+      // Rotate portrait → auto exit (ถ้ายังใน fullscreen)
+      else if (!isLandscape && this.isFullscreen) {
+        this.aliToggleFullscreen && this.aliToggleFullscreen()
+      }
+    }
+    window.addEventListener('orientationchange', this._onOrientationChange)
+    window.addEventListener('resize', this._onOrientationChange)  // iPad iOS 13+ ที่ orientationchange ไม่ยิง
     // Resize → update wmModeKey (rotate / resize) + counter zoom ลายน้ำ
     // ═══ Zoom detection — periodic innerWidth check (จับ Safari + ทุก browser) ═══
     this._wmBaseDpr = window.devicePixelRatio || 1
@@ -1143,6 +1158,10 @@ export default {
     if (this._lineLinkPoll) clearInterval(this._lineLinkPoll)
     document.removeEventListener('fullscreenchange', this._onFsChange)
     document.removeEventListener('webkitfullscreenchange', this._onFsChange)
+    if (this._onOrientationChange) {
+      window.removeEventListener('orientationchange', this._onOrientationChange)
+      window.removeEventListener('resize', this._onOrientationChange)
+    }
     if (this._onWmResize) window.removeEventListener('resize', this._onWmResize)
     if (this._onBunnyMessage) window.removeEventListener('message', this._onBunnyMessage)
     if (this.$el) this.$el.style.zoom = ''
