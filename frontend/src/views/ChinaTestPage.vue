@@ -1,59 +1,19 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
+// ⭐ Video สำหรับ landing page ขาย (Alibaba Encrypt — เล่นได้ทั้งไทย + จีน)
+const VIDEO_ID = 'f0a10c4f79dc71f1a46bf6f7f45a0102'
+const PLAYAUTH_ENDPOINT = `/api/china/playauth/${VIDEO_ID}`
+
 const playerReady = ref(false)
-const playerStatus = ref('loading')
-const logs = ref([])
+const modalOpen = ref(false)
 const errorMsg = ref('')
 
-const VIDEO_ID = '700e030e797271f1977bf6e6c5490102'
-const CDN_DOMAIN = 'cdn-cn.medninja.academy'
-const PLAYAUTH_ENDPOINT = `/api/china/playauth/${VIDEO_ID}`
-const HEALTHCHECK_URL = `https://${CDN_DOMAIN}/${VIDEO_ID}/3c72bdfb27c83a11628939deb885b395-ld-encrypt-stream.m3u8`
-
-const cdnInfo = ref({
-  edge: 'ตรวจสอบ...',
-  location: 'ตรวจสอบ...',
-  cache: 'ตรวจสอบ...',
-  responseMs: 0
-})
-
 let player = null
-let playerContainer = null
 
-// Session ID สำหรับ track log ของแต่ละคน
-const sessionId = Math.random().toString(36).substring(2, 10) + '-' + Date.now().toString(36).substring(-4)
-const logBuffer = []
-let logFlushTimer = null
-
-function flushLogsToServer() {
-  if (logBuffer.length === 0) return
-  const batch = logBuffer.splice(0, logBuffer.length)
-  fetch('/api/china/log/batch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId, entries: batch })
-  }).catch(() => {}) // silent fail
-}
-
-function log(msg, type = 'info') {
-  const time = new Date().toTimeString().slice(0, 8)
-  logs.value.push({ time, msg, type })
-  if (logs.value.length > 50) logs.value.shift()
-  console.log(`[${time}] ${msg}`)
-
-  // Send to server (batched)
-  logBuffer.push({ level: type, msg, clientTs: new Date().toISOString() })
-  if (logFlushTimer) clearTimeout(logFlushTimer)
-  logFlushTimer = setTimeout(flushLogsToServer, 500)
-}
-
-// Self-hosted SDK ที่ passport server = ตัดปัญหา CDN Alibaba ทั้งหมด
-// - ทำงานทุกเครื่อง เท่ากัน
-// - ในจีนโหลดได้ (DO Singapore ใกล้จีน)
+// ─── Aliplayer SDK loader — self-hosted ก่อน แล้ว fallback CDN Alibaba ───
 const ALIPLAYER_VERSIONS = [
   { path: 'self-hosted', v: '2.15.4', jsUrl: '/vendor/aliplayer/aliplayer.js', cssUrl: '/vendor/aliplayer/aliplayer.css' },
-  // Fallback ไป CDN Alibaba ถ้า self-hosted โหลดไม่ได้
   { path: 'de/prismplayer', v: '2.15.4' },
   { path: 'apsara-media-box/imp-web-player', v: '2.27.0' }
 ]
@@ -61,138 +21,66 @@ const ALIPLAYER_VERSIONS = [
 function waitForAliplayer(timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const start = Date.now()
-    let elapsed = 0
     const timer = setInterval(() => {
       if (window.Aliplayer) {
         clearInterval(timer)
-        log(`window.Aliplayer พร้อม (ใช้เวลา ${Date.now() - start}ms)`, 'success')
         resolve()
-      } else {
-        elapsed = Date.now() - start
-        if (elapsed > timeoutMs) {
-          clearInterval(timer)
-          reject(new Error(`Timeout (${timeoutMs}ms) รอ window.Aliplayer`))
-        } else if (elapsed % 5000 < 200) {
-          log(`ยังรอ Aliplayer... ${Math.round(elapsed/1000)}s`, 'warn')
-        }
+      } else if (Date.now() - start > timeoutMs) {
+        clearInterval(timer)
+        reject(new Error('Aliplayer SDK timeout'))
       }
     }, 200)
   })
 }
 
-function loadScriptWithFallback(versions, currentIndex = 0) {
+function loadScriptWithFallback(versions, idx = 0) {
   return new Promise((resolve, reject) => {
-    if (currentIndex >= versions.length) {
-      return reject(new Error('ลอง SDK ทุก version แล้วยังไม่ได้'))
-    }
-    const { path, v: version, jsUrl, cssUrl } = versions[currentIndex]
+    if (idx >= versions.length) return reject(new Error('SDK ทุก version fail'))
+    if (window.Aliplayer) return resolve()
 
-    if (window.Aliplayer) {
-      log(`window.Aliplayer มีอยู่แล้ว (skip load)`, 'info')
-      return resolve()
-    }
-
-    const sourceLabel = path === 'self-hosted' ? '(passport self-hosted)' : `(g.alicdn.com)`
-    log(`กำลังโหลด Aliplayer SDK ${path}@${version} ${sourceLabel}...`, 'info')
-
-    const finalJsUrl = jsUrl || `https://g.alicdn.com/${path}/${version}/aliplayer-min.js`
-    const finalCssUrl = cssUrl || `https://g.alicdn.com/${path}/${version}/skins/default/aliplayer-min.css`
+    const { path: sdkPath, v, jsUrl, cssUrl } = versions[idx]
+    const finalJs = jsUrl || `https://g.alicdn.com/${sdkPath}/${v}/aliplayer-min.js`
+    const finalCss = cssUrl || `https://g.alicdn.com/${sdkPath}/${v}/skins/default/aliplayer-min.css`
 
     const css = document.createElement('link')
     css.rel = 'stylesheet'
-    css.href = finalCssUrl
+    css.href = finalCss
     document.head.appendChild(css)
 
     const script = document.createElement('script')
-    script.src = finalJsUrl
+    script.src = finalJs
     script.async = false
-
-    const startTime = Date.now()
     script.onload = async () => {
-      log(`SDK ${path}@${version} โหลดสำเร็จ (${Date.now() - startTime}ms)`, 'info')
-
-      // Debug: เช็คว่ามี global อะไรที่ SDK เพิ่งใส่
-      const availableGlobals = ['Aliplayer', 'AliPlayer', 'aliplayer', 'IntlPlayer', 'PrismPlayer']
-        .filter(k => typeof window[k] !== 'undefined')
-      log(`Globals ที่เจอ: [${availableGlobals.join(', ') || 'ไม่มี'}]`, availableGlobals.length ? 'info' : 'warn')
-
-      // Detect device info สำหรับ debug
-      const ua = navigator.userAgent
-      const isMobile = /Android|iPhone|iPad|Mobile/i.test(ua)
-      const isAndroid = /Android/i.test(ua)
-      const chromeVer = (ua.match(/Chrome\/([\d.]+)/) || [])[1] || 'n/a'
-      log(`Device: ${isMobile ? 'Mobile' : 'Desktop'} · Android:${isAndroid} · Chrome ${chromeVer}`, 'info')
-
-      try {
-        await waitForAliplayer(30000)
-        resolve()
-      } catch (e) {
-        log(`${path}@${version} timeout — ลอง version ถัดไป`, 'warn')
-        try {
-          await loadScriptWithFallback(versions, currentIndex + 1)
-          resolve()
-        } catch (err) {
-          reject(err)
-        }
-      }
+      try { await waitForAliplayer(30000); resolve() }
+      catch { loadScriptWithFallback(versions, idx + 1).then(resolve).catch(reject) }
     }
-    script.onerror = async () => {
-      log(`โหลด ${path}@${version} ไม่สำเร็จ — ลอง version ถัดไป`, 'warn')
-      try {
-        await loadScriptWithFallback(versions, currentIndex + 1)
-        resolve()
-      } catch (err) {
-        reject(err)
-      }
-    }
+    script.onerror = () => loadScriptWithFallback(versions, idx + 1).then(resolve).catch(reject)
     document.head.appendChild(script)
   })
 }
 
-function loadAliplayerSDK() {
-  return loadScriptWithFallback(ALIPLAYER_VERSIONS)
-}
-
 async function fetchPlayAuth() {
-  log(`ขอ PlayAuth token จาก backend: ${PLAYAUTH_ENDPOINT}`, 'info')
-  const res = await fetch(PLAYAUTH_ENDPOINT, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`Backend error ${res.status}: ${errText.substring(0, 200)}`)
-  }
-
+  const res = await fetch(PLAYAUTH_ENDPOINT)
+  if (!res.ok) throw new Error(`โหลดวิดีโอไม่สำเร็จ (${res.status})`)
   const data = await res.json()
-  if (!data.playAuth) {
-    throw new Error('Backend ไม่ได้ส่ง playAuth กลับมา')
-  }
-
-  log(`PlayAuth token ได้แล้ว (expire ~50 นาที)`, 'success')
+  if (!data.playAuth) throw new Error('ไม่ได้ playAuth')
   return data.playAuth
 }
 
 async function initPlayer() {
   try {
-    await loadAliplayerSDK()
-
-    if (!window.Aliplayer) {
-      throw new Error('Aliplayer is not defined')
-    }
+    await loadScriptWithFallback(ALIPLAYER_VERSIONS)
+    if (!window.Aliplayer) throw new Error('Aliplayer SDK ไม่พร้อม')
 
     const playAuth = await fetchPlayAuth()
 
-    log(`กำลังสร้าง Aliplayer (VidAuth mode) สำหรับ video: ${VIDEO_ID.substring(0, 8)}...`, 'info')
-
     player = new window.Aliplayer({
-      id: 'china-player',
+      id: 'landing-player',
       vid: VIDEO_ID,
       playauth: playAuth,
       width: '100%',
       height: '100%',
-      autoplay: false,
+      autoplay: true,
       isLive: false,
       rePlay: false,
       playsinline: true,
@@ -204,400 +92,824 @@ async function initPlayer() {
         key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
       },
       encryptType: 1
-    }, function (p) {
-      log('Aliplayer instance สร้างสำเร็จ (encrypted mode)', 'success')
+    }, function () {
       playerReady.value = true
-      playerStatus.value = 'ready'
     })
 
-    player.on('ready', () => log('Event: ready', 'info'))
-    player.on('play', () => {
-      log('Event: play', 'success')
-      playerStatus.value = 'playing'
-    })
-    player.on('pause', () => {
-      log('Event: pause', 'warn')
-      playerStatus.value = 'paused'
-    })
-    player.on('canplay', () => {
-      log('Event: canplay - วิดีโอพร้อมเล่น', 'success')
-    })
-    player.on('waiting', () => {
-      log('Event: waiting (กำลัง buffer)', 'warn')
-    })
     player.on('error', (e) => {
-      const details = e?.paramData ? JSON.stringify(e.paramData) : (e?.message || 'unknown')
-      log(`Event: ERROR - ${details}`, 'error')
-      errorMsg.value = `เล่นวิดีโอไม่ได้: ${details}`
-      playerStatus.value = 'error'
+      const details = e?.paramData ? JSON.stringify(e.paramData) : (e?.message || 'เล่นวิดีโอไม่ได้')
+      errorMsg.value = details
     })
-    player.on('ended', () => log('Event: ended', 'info'))
   } catch (err) {
-    log(`เกิด Error: ${err.message}`, 'error')
     errorMsg.value = err.message
-    playerStatus.value = 'error'
   }
 }
 
-function parseEdgeCode(via) {
-  if (!via) return { edge: 'ไม่มี Via header', location: '?' }
+function openVideo() {
+  modalOpen.value = true
+  errorMsg.value = ''
+  // รอ DOM render ก่อน init player
+  setTimeout(() => { if (!player) initPlayer() }, 50)
+  document.body.style.overflow = 'hidden'
+}
 
-  const codes = {
-    'sg': '🇸🇬 Singapore',
-    'l2sg': '🇸🇬 Singapore L2',
-    'hk': '🇭🇰 Hong Kong',
-    'l2hk': '🇭🇰 Hong Kong L2',
-    'tw': '🇹🇼 Taiwan',
-    'jp': '🇯🇵 Japan',
-    'l2jp': '🇯🇵 Japan L2',
-    'th': '🇹🇭 Thailand',
-    'kr': '🇰🇷 Korea',
-    'bj': '🇨🇳 Beijing',
-    'sh': '🇨🇳 Shanghai',
-    'gz': '🇨🇳 Guangzhou',
-    'sz': '🇨🇳 Shenzhen'
-  }
-
-  const firstEdge = via.split(',')[0].trim()
-  const match = firstEdge.match(/ens-cache\d+\.(l2)?([a-z]+)\d+/i)
-  if (!match) return { edge: firstEdge, location: 'unknown' }
-
-  const key = (match[1] || '') + match[2]
-  return {
-    edge: firstEdge,
-    location: codes[key.toLowerCase()] || `? (${key})`
+function closeVideo() {
+  modalOpen.value = false
+  document.body.style.overflow = ''
+  if (player) {
+    try { player.pause() } catch {}
   }
 }
 
-async function checkCdnEdge() {
-  log('กำลังตรวจ CDN edge location...', 'info')
-  const start = performance.now()
+function scrollToVideo() {
+  openVideo()
+}
 
-  try {
-    const res = await fetch(HEALTHCHECK_URL, { method: 'HEAD', cache: 'no-store' })
-    const ms = Math.round(performance.now() - start)
-    const via = res.headers.get('via') || res.headers.get('Via')
-    const cache = res.headers.get('x-cache') || res.headers.get('X-Cache') || 'unknown'
-    const { edge, location } = parseEdgeCode(via)
-
-    cdnInfo.value = {
-      edge,
-      location,
-      cache: cache.split(' ')[0],
-      responseMs: ms
-    }
-
-    log(`CDN Edge: ${location} (${edge})`, 'success')
-    log(`Cache: ${cache} · Response time: ${ms}ms`, 'info')
-  } catch (err) {
-    log(`ตรวจ CDN ไม่สำเร็จ: ${err.message}`, 'warn')
-    cdnInfo.value = { edge: 'error', location: 'ตรวจไม่ได้', cache: '-', responseMs: 0 }
-  }
+function contactLine() {
+  window.open('https://lin.ee/nEEK4Kv', '_blank')
 }
 
 onMounted(() => {
-  document.title = 'MedNinja - Test China Video'
-  log('หน้าเทส MedNinja China VOD เริ่มทำงาน', 'info')
-  log(`Video ID: ${VIDEO_ID}`, 'info')
-  checkCdnEdge()
-  initPlayer()
+  document.title = 'MedNinja LMS — ดูได้ทั่วโลก แม้ในประเทศจีน (ไม่ต้อง VPN)'
 })
 
 onUnmounted(() => {
   if (player) {
-    try {
-      player.dispose()
-    } catch (e) {
-      console.warn('Error disposing player:', e)
-    }
+    try { player.dispose() } catch {}
   }
+  document.body.style.overflow = ''
 })
 </script>
 
 <template>
-  <div class="china-test-page">
-    <div class="container">
-      <header class="page-header">
-        <div class="logo">
-          <span class="logo-icon">🎬</span>
-          <span class="logo-text">MedNinja <em>China Test</em></span>
+  <div class="landing">
+    <!-- ═══════════════ NAV ═══════════════ -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <div class="brand">
+          <img src="/img/mascot.png" alt="MedNinja" class="brand-mark" />
+          <span class="brand-text">MedNinja</span>
         </div>
-        <p class="tagline">ทดสอบระบบเล่นวิดีโอสำหรับผู้ใช้งานในประเทศจีน</p>
-      </header>
-
-      <div class="info-grid">
-        <div class="info-card">
-          <div class="info-label">CDN Edge (ที่คุณ hit)</div>
-          <div class="info-value">
-            <strong style="color:#38bdf8">{{ cdnInfo.location }}</strong>
-            <div style="font-size:11px;color:#94a3b8;margin-top:2px">{{ cdnInfo.edge }}</div>
-          </div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">CDN Cache</div>
-          <div class="info-value">
-            <span class="badge" :class="cdnInfo.cache === 'HIT' ? 'badge-playing' : 'badge-loading'">
-              {{ cdnInfo.cache }}
-            </span>
-            <div style="font-size:11px;color:#94a3b8;margin-top:4px">{{ cdnInfo.responseMs }}ms</div>
-          </div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">Encryption</div>
-          <div class="info-value">
-            <span class="badge badge-encrypt">เข้ารหัสระดับสูง 🔒</span>
-          </div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">Player Status</div>
-          <div class="info-value">
-            <span :class="['badge', `badge-${playerStatus}`]">
-              {{ playerStatus === 'loading' ? 'กำลังโหลด...' :
-                 playerStatus === 'ready' ? 'พร้อมเล่น' :
-                 playerStatus === 'playing' ? 'กำลังเล่น' :
-                 playerStatus === 'paused' ? 'หยุด' :
-                 playerStatus === 'error' ? 'ผิดพลาด' : playerStatus }}
-            </span>
-          </div>
+        <div class="nav-actions">
+          <a href="https://medninja.academy" class="nav-link">หน้าหลัก</a>
+          <button class="nav-cta" @click="contactLine">ติดต่อทีมงาน</button>
         </div>
       </div>
+    </nav>
 
-      <div class="player-wrap">
-        <div id="china-player" class="player"></div>
-      </div>
+    <!-- ═══════════════ HERO ═══════════════ -->
+    <section class="hero">
+      <div class="hero-grid"></div>
+      <div class="hero-globe"></div>
 
-      <div v-if="errorMsg" class="error-banner">
-        ⚠️ {{ errorMsg }}
-      </div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="hero-badge">
+            <span class="dot"></span>
+            ระบบพร้อมใช้งานในจีนแล้ววันนี้
+          </div>
 
-      <details class="debug-panel" open>
-        <summary>📝 Debug Console ({{ logs.length }})</summary>
-        <div class="log-list">
-          <div
-            v-for="(l, i) in logs"
-            :key="i"
-            :class="['log-line', `log-${l.type}`]"
-          >
-            <span class="log-time">[{{ l.time }}]</span>
-            <span class="log-msg">{{ l.msg }}</span>
+          <h1 class="hero-title">
+            <span class="line">MedNinja</span>
+            <span class="line highlight-box">LMS</span>
+            <span class="line">ดูได้ทั่วโลก</span>
+            <span class="line line-sm">ประเทศ<span class="cn-red">จีน</span>ก็ดูได้</span>
+            <span class="line line-sm">ไม่ต้องใช้ <span class="cn-red">VPN</span></span>
+          </h1>
+
+          <p class="hero-sub">
+            เราลงทุนกับ CDN + Encryption ระดับสูงในประเทศจีน<br>
+            เพื่อให้นักเรียนแพทย์ไทยที่กำลังเรียนอยู่ในจีน<br>
+            <strong>เข้าเรียนได้ลื่นเหมือนอยู่ในไทย</strong>
+          </p>
+
+          <div class="hero-features">
+            <div class="feat-card">
+              <div class="feat-icon">🌐</div>
+              <div class="feat-label"><strong>ดูได้ทุกที่</strong><br><span>ทุกประเทศ</span></div>
+            </div>
+            <div class="feat-card">
+              <div class="feat-icon">🗄️</div>
+              <div class="feat-label"><strong>เซิร์ฟเวอร์เสถียร</strong><br><span>ความเร็วสูง</span></div>
+            </div>
+            <div class="feat-card">
+              <div class="feat-icon">🛡️</div>
+              <div class="feat-label"><strong>ปลอดภัย</strong><br><span>มั่นใจข้อมูล</span></div>
+            </div>
+          </div>
+
+          <div class="hero-cta">
+            <button class="btn-primary" @click="scrollToVideo">
+              <span>▶</span> ดูวิดีโอทดสอบระบบ
+            </button>
+            <button class="btn-secondary" @click="contactLine">
+              💬 สอบถามผ่าน LINE
+            </button>
           </div>
         </div>
-      </details>
 
-      <footer class="page-footer">
-        <p>
-          <strong>ติดต่อ</strong>: ส่ง screenshot + browser console log กลับมาที่ทีม MedNinja
+        <div class="hero-mascot">
+          <img src="/img/mascot.png" alt="MedNinja Mascot" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ VIDEO PREVIEW ═══════════════ -->
+    <section class="video-preview">
+      <div class="section-head">
+        <div class="section-tag">พิสูจน์ด้วยตัวเอง</div>
+        <h2 class="section-title">กดเล่นวิดีโอนี้เพื่อทดสอบ</h2>
+        <p class="section-sub">
+          ถ้าคุณอยู่ในประเทศจีน ไม่ต้องเปิด VPN
+          — วิดีโอนี้จะเล่นได้ทันที
         </p>
-        <p class="footer-meta">
-          MedNinja © 2026 · China Test Page
-        </p>
-      </footer>
-    </div>
+      </div>
+
+      <div class="video-thumb-wrap">
+        <div class="video-thumb" @click="openVideo">
+          <img src="/img/mascot.png" alt="preview" class="thumb-mascot" />
+          <div class="play-badge">
+            <span class="play-icon">▶</span>
+          </div>
+          <div class="thumb-label">
+            <div class="thumb-title">MedNinja LMS Demo</div>
+            <div class="thumb-meta">🔒 Alibaba Encrypt · เล่นได้ในจีน</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ WHY ═══════════════ -->
+    <section class="why">
+      <div class="section-head">
+        <div class="section-tag">ทำไมเลือก MedNinja</div>
+        <h2 class="section-title">ระบบสำหรับนักเรียนแพทย์ที่อยู่นอกไทย</h2>
+      </div>
+
+      <div class="why-grid">
+        <div class="why-card">
+          <div class="why-icon">🇨🇳</div>
+          <h3>CDN ในประเทศจีน</h3>
+          <p>เราลงทุนกับ Alibaba VOD + edge server ในจีน<br>เพื่อความเร็วและเสถียรภาพ</p>
+        </div>
+        <div class="why-card">
+          <div class="why-icon">🔐</div>
+          <h3>Encryption ระดับสูง</h3>
+          <p>ลิขสิทธิ์เนื้อหาปลอดภัย<br>วิดีโอเข้ารหัสไม่ให้ดาวน์โหลด</p>
+        </div>
+        <div class="why-card">
+          <div class="why-icon">📱</div>
+          <h3>ใช้ได้ทุกอุปกรณ์</h3>
+          <p>คอมพิวเตอร์ Chrome<br>iPad, iPhone, Android — เล่นได้</p>
+        </div>
+        <div class="why-card">
+          <div class="why-icon">🩺</div>
+          <h3>เนื้อหาแพทย์ครบ</h3>
+          <p>Pre-clinic → NL1 → NL2 → OSCE<br>เตรียมสอบทุกด่าน</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ CTA ═══════════════ -->
+    <section class="cta-band">
+      <div class="cta-inner">
+        <h2>เรียนได้ทุกที่ ทุกเวลา</h2>
+        <p>MedNinja LMS พร้อมให้คุณก้าวไปได้ไกลกว่าเดิม</p>
+        <div class="cta-buttons">
+          <button class="btn-primary btn-lg" @click="contactLine">
+            💬 ติดต่อทีมงานผ่าน LINE
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ FOOTER ═══════════════ -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <img src="/img/mascot.png" alt="MedNinja" class="footer-mark" />
+          <div>
+            <div class="footer-name">MedNinja</div>
+            <div class="footer-tagline">เตรียมสอบใบประกอบวิชาชีพเวชกรรม</div>
+          </div>
+        </div>
+        <div class="footer-links">
+          <a href="https://medninja.academy">หน้าหลัก</a>
+          <a href="https://passport.medninja.academy">Passport</a>
+          <a href="/privacy-policy.html">นโยบายความเป็นส่วนตัว</a>
+        </div>
+        <div class="footer-copy">© 2026 MedNinja Technology</div>
+      </div>
+    </footer>
+
+    <!-- ═══════════════ VIDEO MODAL ═══════════════ -->
+    <transition name="fade">
+      <div v-if="modalOpen" class="modal-overlay" @click.self="closeVideo">
+        <div class="modal">
+          <button class="modal-close" @click="closeVideo" aria-label="ปิด">✕</button>
+          <div class="modal-player-wrap">
+            <div id="landing-player" class="modal-player"></div>
+            <div v-if="!playerReady && !errorMsg" class="modal-loading">
+              <div class="spinner"></div>
+              <div>กำลังเชื่อมต่อกับเซิร์ฟเวอร์ในจีน...</div>
+            </div>
+            <div v-if="errorMsg" class="modal-error">
+              <div class="err-icon">⚠️</div>
+              <div class="err-title">เกิดข้อผิดพลาด</div>
+              <div class="err-msg">{{ errorMsg }}</div>
+              <button class="btn-secondary" @click="closeVideo">ปิด</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <style scoped>
+/* ═══════════════ RESET / BASE ═══════════════ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-.china-test-page {
+.landing {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0c1e3f 100%);
-  color: #f1f5f9;
-  font-family: 'Sarabun', 'Segoe UI', -apple-system, sans-serif;
-  padding: 24px 16px;
+  background: #f4f7fc;
+  color: #0f172a;
+  font-family: 'Sarabun', 'Noto Sans Thai', 'Segoe UI', -apple-system, sans-serif;
+  overflow-x: hidden;
 }
 
-.container {
-  max-width: 1080px;
+/* ═══════════════ NAV ═══════════════ */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+.nav-inner {
+  max-width: 1180px;
   margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-
-.page-header {
-  text-align: center;
-  margin-bottom: 32px;
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
+.brand-text {
+  font-size: 20px;
+  font-weight: 900;
+  color: #0b2b5b;
+  letter-spacing: 0.3px;
 }
+.nav-actions { display: flex; align-items: center; gap: 8px; }
+.nav-link {
+  color: #334155;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+.nav-link:hover { background: #eef4ff; color: #0b2b5b; }
+.nav-cta {
+  background: #1e3a8a;
+  color: white;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+  transition: transform 0.15s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(30, 58, 138, 0.35); }
 
-.logo {
+/* ═══════════════ HERO ═══════════════ */
+.hero {
+  position: relative;
+  padding: 40px 20px 60px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #eef2fa 100%);
+}
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(30, 58, 138, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 58, 138, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+  pointer-events: none;
+}
+.hero-globe {
+  position: absolute;
+  right: -180px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(56, 189, 248, 0.35) 0%, rgba(30, 58, 138, 0.12) 40%, transparent 70%);
+  filter: blur(2px);
+  pointer-events: none;
+}
+.hero-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+.hero-badge {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  font-size: 32px;
+  gap: 8px;
+  background: rgba(30, 58, 138, 0.08);
+  color: #0b2b5b;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 20px;
 }
-
-.logo-icon {
-  font-size: 36px;
+.hero-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+  animation: pulse 2s infinite;
 }
-
-.logo-text em {
-  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-style: normal;
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }
+  50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.05); }
+}
+.hero-title {
+  font-size: 56px;
+  line-height: 1.05;
+  font-weight: 900;
+  color: #0b2b5b;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+.hero-title .line { display: block; }
+.hero-title .line-sm { font-size: 40px; }
+.highlight-box {
+  display: inline-block !important;
+  background: #dc2626;
+  color: white;
+  padding: 0 18px;
+  border-radius: 12px;
+  margin: 4px 0;
+  transform: skew(-4deg);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+.cn-red { color: #dc2626; }
+.hero-sub {
+  font-size: 17px;
+  line-height: 1.7;
+  color: #475569;
+  margin-bottom: 28px;
+}
+.hero-sub strong { color: #0b2b5b; }
+.hero-features {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+.feat-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 12px 16px;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(30, 58, 138, 0.06);
+}
+.feat-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-radius: 10px;
+  font-size: 20px;
+}
+.feat-label {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #64748b;
+}
+.feat-label strong {
+  display: block;
+  color: #0b2b5b;
+  font-size: 13px;
   font-weight: 800;
 }
-
-.tagline {
-  color: #94a3b8;
-  font-size: 15px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.hero-cta {
+  display: flex;
   gap: 12px;
-  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  padding: 14px 26px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 24px rgba(30, 58, 138, 0.35);
+  transition: transform 0.15s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(30, 58, 138, 0.45);
+}
+.btn-primary span { font-size: 13px; }
+.btn-primary.btn-lg { padding: 16px 32px; font-size: 17px; }
+.btn-secondary {
+  background: white;
+  color: #0b2b5b;
+  border: 1.5px solid rgba(30, 58, 138, 0.2);
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: inherit;
+}
+.btn-secondary:hover { border-color: #1e3a8a; background: #f8fafc; }
+
+.hero-mascot {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.hero-mascot img {
+  width: 100%;
+  max-width: 420px;
+  filter: drop-shadow(0 30px 50px rgba(30, 58, 138, 0.25));
+  animation: float 4s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
-.info-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 14px 16px;
-  transition: border-color 0.2s;
+/* ═══════════════ SECTION HEADS ═══════════════ */
+.section-head {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 40px;
 }
-
-.info-card:hover {
-  border-color: rgba(56, 189, 248, 0.4);
-}
-
-.info-label {
-  font-size: 11px;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
-}
-
-.info-value {
-  font-size: 14px;
-  color: #e2e8f0;
-  font-family: 'Consolas', 'Monaco', monospace;
-  word-break: break-all;
-}
-
-.badge {
+.section-tag {
   display: inline-block;
-  padding: 4px 10px;
+  background: rgba(30, 58, 138, 0.08);
+  color: #1e3a8a;
+  padding: 5px 14px;
   border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 800;
   letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 34px;
+  font-weight: 900;
+  color: #0b2b5b;
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+.section-sub {
+  font-size: 15px;
+  color: #64748b;
+  line-height: 1.7;
 }
 
-.badge-encrypt {
-  background: rgba(139, 92, 246, 0.2);
-  color: #c4b5fd;
+/* ═══════════════ VIDEO PREVIEW ═══════════════ */
+.video-preview {
+  padding: 60px 20px;
+  background: white;
 }
-
-.badge-loading {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
+.video-thumb-wrap {
+  max-width: 900px;
+  margin: 0 auto;
 }
-
-.badge-ready {
-  background: rgba(56, 189, 248, 0.2);
-  color: #38bdf8;
-}
-
-.badge-playing {
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
-}
-
-.badge-paused {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
-}
-
-.badge-error {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-}
-
-.player-wrap {
-  background: #000;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+.video-thumb {
+  position: relative;
   aspect-ratio: 16 / 9;
-  margin-bottom: 16px;
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  background: linear-gradient(135deg, #0b2b5b 0%, #1e3a8a 60%, #2563eb 100%);
+  box-shadow: 0 30px 60px rgba(11, 43, 91, 0.35);
+  transition: transform 0.25s, box-shadow 0.25s;
+  display: grid;
+  place-items: center;
+}
+.video-thumb:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 40px 80px rgba(11, 43, 91, 0.45);
+}
+.thumb-mascot {
+  height: 70%;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.4));
+  opacity: 0.9;
+}
+.play-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+}
+.video-thumb:hover .play-badge { transform: translate(-50%, -50%) scale(1.08); }
+.play-icon {
+  font-size: 32px;
+  color: #dc2626;
+  margin-left: 5px;
+}
+.thumb-label {
+  position: absolute;
+  bottom: 20px;
+  left: 24px;
+  color: white;
+}
+.thumb-title {
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.thumb-meta {
+  font-size: 13px;
+  opacity: 0.9;
+  margin-top: 4px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-.player {
+/* ═══════════════ WHY ═══════════════ */
+.why {
+  padding: 60px 20px;
+  background: linear-gradient(180deg, #f4f7fc 0%, #ffffff 100%);
+}
+.why-grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+}
+.why-card {
+  background: white;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  padding: 26px 22px;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  box-shadow: 0 4px 14px rgba(30, 58, 138, 0.05);
+}
+.why-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(30, 58, 138, 0.2);
+  box-shadow: 0 20px 40px rgba(30, 58, 138, 0.12);
+}
+.why-icon {
+  font-size: 44px;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+.why-card h3 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0b2b5b;
+  margin-bottom: 8px;
+}
+.why-card p {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+/* ═══════════════ CTA BAND ═══════════════ */
+.cta-band {
+  padding: 70px 20px;
+  background: linear-gradient(135deg, #0b2b5b 0%, #1e3a8a 100%);
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.cta-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 70%);
+}
+.cta-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.cta-band h2 {
+  font-size: 36px;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+.cta-band p {
+  font-size: 17px;
+  opacity: 0.9;
+  margin-bottom: 32px;
+}
+.cta-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ═══════════════ FOOTER ═══════════════ */
+.footer {
+  background: #0b1e3d;
+  color: #cbd5e1;
+  padding: 40px 20px 30px;
+}
+.footer-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr auto;
+  gap: 24px;
+  align-items: center;
+}
+.footer-brand { display: flex; align-items: center; gap: 12px; }
+.footer-mark { width: 44px; height: 44px; border-radius: 10px; }
+.footer-name { font-size: 18px; font-weight: 900; color: white; }
+.footer-tagline { font-size: 12px; opacity: 0.7; }
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: white; }
+.footer-copy {
+  font-size: 12px;
+  opacity: 0.6;
+  text-align: right;
+}
+
+/* ═══════════════ MODAL ═══════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 1080px;
+  background: #000;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  border: none;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.modal-close:hover { background: rgba(220, 38, 38, 0.9); }
+.modal-player-wrap {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  background: #000;
+}
+.modal-player {
   width: 100% !important;
   height: 100% !important;
 }
-
-.error-banner {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #fca5a5;
-  padding: 12px 16px;
-  border-radius: 10px;
+.modal-loading, .modal-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  color: white;
+  text-align: center;
+  padding: 30px;
+}
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.modal-error .err-icon { font-size: 48px; }
+.modal-error .err-title { font-size: 20px; font-weight: 800; }
+.modal-error .err-msg {
   font-size: 14px;
-  margin-bottom: 16px;
-}
-
-.debug-panel {
-  background: #000;
-  border: 1px solid rgba(74, 222, 128, 0.15);
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 24px;
-}
-
-.debug-panel summary {
-  cursor: pointer;
-  color: #94a3b8;
-  font-size: 13px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 8px;
-  user-select: none;
-}
-
-.log-list {
-  max-height: 240px;
-  overflow-y: auto;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 12px;
+  opacity: 0.8;
+  max-width: 460px;
   line-height: 1.6;
 }
 
-.log-line {
-  padding: 2px 0;
-  opacity: 0.9;
+/* ═══════════════ TRANSITIONS ═══════════════ */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* ═══════════════ RESPONSIVE ═══════════════ */
+@media (max-width: 1024px) {
+  .hero-title { font-size: 46px; }
+  .hero-title .line-sm { font-size: 32px; }
+  .hero-mascot img { max-width: 340px; }
+  .footer-inner { grid-template-columns: 1fr; text-align: center; }
+  .footer-brand { justify-content: center; }
+  .footer-links { justify-content: center; }
+  .footer-copy { text-align: center; }
 }
-
-.log-time {
-  color: #64748b;
-  margin-right: 8px;
+@media (max-width: 768px) {
+  .hero { padding: 32px 20px 50px; }
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    text-align: center;
+  }
+  .hero-badge { margin: 0 auto 20px; }
+  .hero-title { font-size: 42px; }
+  .hero-title .line-sm { font-size: 28px; }
+  .hero-features { justify-content: center; }
+  .hero-cta { justify-content: center; }
+  .hero-mascot { order: -1; }
+  .hero-mascot img { max-width: 240px; }
+  .hero-globe { display: none; }
+  .section-title { font-size: 26px; }
+  .cta-band h2 { font-size: 28px; }
+  .cta-band p { font-size: 15px; }
+  .thumb-mascot { display: none; }
+  .play-badge { width: 74px; height: 74px; }
+  .play-icon { font-size: 26px; }
+  .nav-link { display: none; }
+  .footer-inner { gap: 18px; }
 }
-
-.log-info .log-msg { color: #cbd5e1; }
-.log-success .log-msg { color: #4ade80; }
-.log-warn .log-msg { color: #fbbf24; }
-.log-error .log-msg { color: #f87171; }
-
-.page-footer {
-  text-align: center;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.7;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.footer-meta {
-  margin-top: 4px;
-  opacity: 0.7;
-}
-
-@media (max-width: 640px) {
-  .logo { font-size: 24px; }
-  .info-grid { grid-template-columns: 1fr 1fr; }
-  .china-test-page { padding: 16px 12px; }
+@media (max-width: 480px) {
+  .hero-title { font-size: 34px; }
+  .hero-title .line-sm { font-size: 24px; }
+  .hero-sub { font-size: 15px; }
+  .btn-primary, .btn-secondary { padding: 12px 20px; font-size: 14px; width: 100%; }
+  .hero-cta { flex-direction: column; }
+  .feat-card { flex: 1 1 100%; }
+  .modal { border-radius: 12px; }
 }
 </style>

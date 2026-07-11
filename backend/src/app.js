@@ -43,6 +43,19 @@ app.get('/api/version', (req, res) => {
 
 // ─── Standalone pages (bypass Helmet/CSP) ───
 // เสิร์ฟก่อน Helmet เพื่อให้ external SDK โหลดได้
+// china.medninja.academy → passport.medninja.academy/china (landing page ขาย)
+app.use((req, res, next) => {
+  const host = (req.headers.host || '').toLowerCase()
+  if (host === 'china.medninja.academy' || host.startsWith('china.medninja.academy:')) {
+    // API + assets ให้ผ่าน (เผื่อ frontend fetch /api/china/... ด้วย host เดิม)
+    if (req.path.startsWith('/api/') || req.path.startsWith('/vendor/') || req.path.startsWith('/assets/') || req.path.startsWith('/img/')) {
+      return next()
+    }
+    // ทุก path อื่น → redirect ไป landing เดียว
+    return res.redirect(302, 'https://passport.medninja.academy/china')
+  }
+  next()
+})
 // /nlex → redirect ไป miniapp
 app.get('/nlex', (req, res) => res.redirect(301, 'https://nlex.medninja.academy'))
 // /diag-no-token = admin only standalone (ไม่ต้อง login)
