@@ -134,6 +134,14 @@ function contactLine() {
   window.open('https://lin.ee/nEEK4Kv', '_blank')
 }
 
+const wechatModalOpen = ref(false)
+function openWechat() {
+  wechatModalOpen.value = true
+}
+function closeWechat() {
+  wechatModalOpen.value = false
+}
+
 onMounted(() => {
   document.title = 'MedNinja LMS — ดูได้ทั่วโลก แม้ในประเทศจีน (ไม่ต้อง VPN)'
   // ⭐ Auto-open modal โฆษณาทันทีที่เข้าเว็บ
@@ -150,21 +158,7 @@ onUnmounted(() => {
 
 <template>
   <div class="landing">
-    <!-- ═══════════════ NAV ═══════════════ -->
-    <nav class="nav">
-      <div class="nav-inner">
-        <div class="brand">
-          <img src="/img/mascot.png" alt="MedNinja" class="brand-mark" />
-          <span class="brand-text">MedNinja</span>
-        </div>
-        <div class="nav-actions">
-          <a href="https://medninja.academy" class="nav-link">หน้าหลัก</a>
-          <button class="nav-cta" @click="contactLine">ติดต่อทีมงาน</button>
-        </div>
-      </div>
-    </nav>
-
-    <!-- ═══════════════ HERO ═══════════════ -->
+    <!-- ═══════════════ SINGLE-VIEW HERO ═══════════════ -->
     <section class="hero">
       <div class="hero-grid"></div>
       <div class="hero-globe"></div>
@@ -184,33 +178,27 @@ onUnmounted(() => {
             <span class="line line-sm">ไม่ต้องใช้ <span class="cn-red">VPN</span></span>
           </h1>
 
-          <p class="hero-sub">
-            เราลงทุนกับ CDN + Encryption ระดับสูงในประเทศจีน<br>
-            เพื่อให้นักเรียนแพทย์ไทยที่กำลังเรียนอยู่ในจีน<br>
-            <strong>เข้าเรียนได้ลื่นเหมือนอยู่ในไทย</strong>
-          </p>
-
           <div class="hero-features">
             <div class="feat-card">
               <div class="feat-icon">🌐</div>
               <div class="feat-label"><strong>ดูได้ทุกที่</strong><br><span>ทุกประเทศ</span></div>
             </div>
             <div class="feat-card">
-              <div class="feat-icon">🗄️</div>
-              <div class="feat-label"><strong>เซิร์ฟเวอร์เสถียร</strong><br><span>ความเร็วสูง</span></div>
+              <div class="feat-icon">⚡</div>
+              <div class="feat-label"><strong>เร็ว เสถียร</strong><br><span>ไม่มี lag</span></div>
             </div>
             <div class="feat-card">
               <div class="feat-icon">🛡️</div>
-              <div class="feat-label"><strong>ปลอดภัย</strong><br><span>มั่นใจข้อมูล</span></div>
+              <div class="feat-label"><strong>ปลอดภัย</strong><br><span>เจ้าเดียวที่ทำได้</span></div>
             </div>
           </div>
 
           <div class="hero-cta">
             <button class="btn-primary" @click="scrollToVideo">
-              <span>▶</span> ดูโฆษณาทดสอบระบบ
+              <span>▶</span> ดูโฆษณาอีกครั้ง
             </button>
-            <button class="btn-secondary" @click="contactLine">
-              💬 สอบถามผ่าน LINE
+            <button class="btn-wechat" @click="openWechat">
+              <span class="wc-icon">💬</span> WeChat
             </button>
           </div>
         </div>
@@ -219,95 +207,9 @@ onUnmounted(() => {
           <img src="/img/mascot.png" alt="MedNinja Mascot" />
         </div>
       </div>
+
+      <div class="hero-foot">© 2026 MedNinja — เตรียมสอบแพทย์ ทุกที่ ทุกเวลา</div>
     </section>
-
-    <!-- ═══════════════ VIDEO PREVIEW ═══════════════ -->
-    <section class="video-preview">
-      <div class="section-head">
-        <div class="section-tag">พิสูจน์ด้วยตัวเอง</div>
-        <h2 class="section-title">กดดูโฆษณาสั้น ๆ นี้</h2>
-        <p class="section-sub">
-          ถ้าคุณอยู่ในประเทศจีน ไม่ต้องเปิด VPN
-          — โฆษณานี้จะเล่นได้ทันที
-        </p>
-      </div>
-
-      <div class="video-thumb-wrap">
-        <div class="video-thumb" @click="openVideo">
-          <img src="/img/mascot.png" alt="preview" class="thumb-mascot" />
-          <div class="play-badge">
-            <span class="play-icon">▶</span>
-          </div>
-          <div class="thumb-label">
-            <div class="thumb-title">โฆษณา MedNinja LMS</div>
-            <div class="thumb-meta">⚡ เร็ว · เสถียร · ไม่ต้อง VPN · เจ้าเดียวที่ทำได้</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════ WHY ═══════════════ -->
-    <section class="why">
-      <div class="section-head">
-        <div class="section-tag">ทำไมเลือก MedNinja</div>
-        <h2 class="section-title">ระบบสำหรับนักเรียนแพทย์ที่อยู่นอกไทย</h2>
-      </div>
-
-      <div class="why-grid">
-        <div class="why-card">
-          <div class="why-icon">🇨🇳</div>
-          <h3>Server เฉพาะทางในจีน</h3>
-          <p>เราลงทุนเซิร์ฟเวอร์ในจีนโดยเฉพาะ<br>เจ้าอื่นเปิดไม่ได้ — เราเปิดได้</p>
-        </div>
-        <div class="why-card">
-          <div class="why-icon">⚡</div>
-          <h3>ความเร็วเท่าอยู่ไทย</h3>
-          <p>ไม่มี lag ไม่มี buffer<br>ลื่นเหมือนนักเรียนในไทยเรียน</p>
-        </div>
-        <div class="why-card">
-          <div class="why-icon">📱</div>
-          <h3>ใช้ได้ทุกอุปกรณ์</h3>
-          <p>คอมพิวเตอร์ Chrome<br>iPad, iPhone, Android — เล่นได้</p>
-        </div>
-        <div class="why-card">
-          <div class="why-icon">🩺</div>
-          <h3>เนื้อหาแพทย์ครบ</h3>
-          <p>Pre-clinic → NL1 → NL2 → OSCE<br>เตรียมสอบทุกด่าน</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════ CTA ═══════════════ -->
-    <section class="cta-band">
-      <div class="cta-inner">
-        <h2>เรียนได้ทุกที่ ทุกเวลา</h2>
-        <p>MedNinja LMS พร้อมให้คุณก้าวไปได้ไกลกว่าเดิม</p>
-        <div class="cta-buttons">
-          <button class="btn-primary btn-lg" @click="contactLine">
-            💬 ติดต่อทีมงานผ่าน LINE
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════ FOOTER ═══════════════ -->
-    <footer class="footer">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <img src="/img/mascot.png" alt="MedNinja" class="footer-mark" />
-          <div>
-            <div class="footer-name">MedNinja</div>
-            <div class="footer-tagline">เตรียมสอบใบประกอบวิชาชีพเวชกรรม</div>
-          </div>
-        </div>
-        <div class="footer-links">
-          <a href="https://medninja.academy">หน้าหลัก</a>
-          <a href="https://passport.medninja.academy">Passport</a>
-          <a href="/privacy-policy.html">นโยบายความเป็นส่วนตัว</a>
-        </div>
-        <div class="footer-copy">© 2026 MedNinja Technology</div>
-      </div>
-    </footer>
 
     <!-- ═══════════════ VIDEO MODAL ═══════════════ -->
     <transition name="fade">
@@ -348,6 +250,28 @@ onUnmounted(() => {
         </div>
       </div>
     </transition>
+
+    <!-- ═══════════════ WECHAT MODAL ═══════════════ -->
+    <transition name="fade">
+      <div v-if="wechatModalOpen" class="modal-overlay wechat-overlay" @click.self="closeWechat">
+        <div class="wechat-modal">
+          <button class="modal-close wechat-close" @click="closeWechat" aria-label="ปิด">✕</button>
+          <div class="wechat-body">
+            <div class="wechat-title">เพิ่มเราใน WeChat</div>
+            <div class="wechat-sub">สแกน QR ด้านล่างเพื่อเพิ่มเพื่อน</div>
+            <div class="wechat-qr-slot">
+              <div class="qr-placeholder">
+                <div class="qr-icon">📱</div>
+                <div class="qr-text">QR Code<br>เร็ว ๆ นี้</div>
+              </div>
+            </div>
+            <div class="wechat-hint">
+              💡 หรือค้นหา WeChat ID: <b>medninja_official</b>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -357,10 +281,22 @@ onUnmounted(() => {
 
 .landing {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #f4f7fc;
   color: #0f172a;
   font-family: 'Sarabun', 'Noto Sans Thai', 'Segoe UI', -apple-system, sans-serif;
   overflow-x: hidden;
+}
+.hero-foot {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: #64748b;
+  z-index: 2;
+  opacity: 0.7;
 }
 
 /* ═══════════════ NAV ═══════════════ */
@@ -417,9 +353,13 @@ onUnmounted(() => {
 /* ═══════════════ HERO ═══════════════ */
 .hero {
   position: relative;
-  padding: 40px 20px 60px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px 20px 40px;
   overflow: hidden;
   background: linear-gradient(180deg, #ffffff 0%, #eef2fa 100%);
+  display: flex;
+  align-items: center;
 }
 .hero-grid {
   position: absolute;
@@ -581,6 +521,107 @@ onUnmounted(() => {
   font-family: inherit;
 }
 .btn-secondary:hover { border-color: #1e3a8a; background: #f8fafc; }
+
+/* WeChat button */
+.btn-wechat {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border: none;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 24px rgba(34, 197, 94, 0.35);
+  transition: transform 0.15s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.btn-wechat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(34, 197, 94, 0.45);
+}
+.wc-icon { font-size: 16px; }
+
+/* WeChat modal */
+.wechat-overlay { z-index: 110; }
+.wechat-modal {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+.wechat-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+.wechat-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+.wechat-close:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+.wechat-body {
+  padding: 32px 24px 26px;
+  text-align: center;
+}
+.wechat-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #0b2b5b;
+  margin-bottom: 6px;
+}
+.wechat-sub {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 20px;
+}
+.wechat-qr-slot {
+  width: 240px;
+  height: 240px;
+  margin: 0 auto 18px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+}
+.qr-placeholder {
+  text-align: center;
+  color: #94a3b8;
+}
+.qr-icon { font-size: 48px; margin-bottom: 8px; }
+.qr-text { font-size: 13px; font-weight: 700; line-height: 1.5; }
+.wechat-hint {
+  font-size: 13px;
+  color: #475569;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+.wechat-hint b {
+  color: #16a34a;
+  font-weight: 800;
+}
 
 .hero-mascot {
   position: relative;
@@ -1015,65 +1056,51 @@ onUnmounted(() => {
   .footer-copy { text-align: center; }
 }
 @media (max-width: 768px) {
-  .hero { padding: 20px 16px 32px; }
+  .hero {
+    padding: 16px 14px 28px;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
   .hero-inner {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 10px;
     text-align: center;
+    width: 100%;
   }
-  .hero-badge { margin: 0 auto 14px; font-size: 12px; padding: 5px 12px; }
-  .hero-title { font-size: 36px; margin-bottom: 14px; }
-  .hero-title .line-sm { font-size: 26px; }
-  .highlight-box { padding: 0 14px; border-radius: 10px; }
-  .hero-sub { font-size: 14px; line-height: 1.6; margin-bottom: 18px; }
-  .hero-features { justify-content: center; margin-bottom: 20px; gap: 8px; }
-  .hero-cta { justify-content: center; }
-  .hero-mascot { order: -1; }
-  .hero-mascot img { max-width: 180px; }
-  .hero-globe { display: none; }
-  .section-title { font-size: 24px; }
-  .section-sub { font-size: 14px; }
-  .video-preview { padding: 40px 16px; }
-  .why { padding: 40px 16px; }
-  .cta-band { padding: 50px 20px; }
-  .cta-band h2 { font-size: 26px; }
-  .cta-band p { font-size: 15px; }
-  .thumb-mascot { height: 55%; }
-  .play-badge { width: 68px; height: 68px; }
-  .play-icon { font-size: 24px; }
-  .thumb-title { font-size: 15px; }
-  .thumb-meta { font-size: 11px; }
-  .thumb-label { bottom: 14px; left: 16px; }
-  .nav-inner { padding: 10px 16px; }
-  .nav-link { display: none; }
-  .brand-text { font-size: 17px; }
-  .brand-mark { width: 30px; height: 30px; }
-  .nav-cta { padding: 7px 14px; font-size: 13px; }
-  .footer { padding: 32px 20px 24px; }
-  .footer-inner { gap: 18px; }
-}
-@media (max-width: 480px) {
-  .hero-title { font-size: 30px; line-height: 1.1; }
+  .hero-badge { margin: 0 auto 8px; font-size: 11.5px; padding: 4px 12px; }
+  .hero-badge .dot { width: 7px; height: 7px; }
+  .hero-title { font-size: 32px; margin-bottom: 10px; line-height: 1.05; }
   .hero-title .line-sm { font-size: 22px; }
-  .hero-sub { font-size: 13.5px; }
-  .hero-sub br { display: none; }
-  .hero-mascot img { max-width: 150px; }
-  .hero-cta { flex-direction: column; gap: 10px; width: 100%; }
-  .btn-primary, .btn-secondary { padding: 13px 20px; font-size: 14.5px; width: 100%; justify-content: center; }
-  /* Feat cards → 3 ช่องแนวนอน compact */
-  .hero-features { flex-wrap: nowrap; gap: 8px; width: 100%; }
+  .highlight-box { padding: 0 12px; border-radius: 10px; margin: 2px 0; }
+  .hero-features { justify-content: center; margin-bottom: 12px; gap: 6px; flex-wrap: nowrap; width: 100%; }
   .feat-card {
     flex: 1 1 0;
     min-width: 0;
-    padding: 10px 8px;
+    padding: 8px 6px;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     text-align: center;
+    border-radius: 12px;
   }
-  .feat-icon { width: 32px; height: 32px; font-size: 16px; }
-  .feat-label { font-size: 11px; }
-  .feat-label strong { font-size: 11.5px; }
-  .feat-label span { font-size: 10.5px; }
+  .feat-icon { width: 30px; height: 30px; font-size: 15px; border-radius: 8px; }
+  .feat-label { font-size: 10.5px; line-height: 1.3; }
+  .feat-label strong { font-size: 11px; }
+  .feat-label span { font-size: 10px; }
+  .hero-cta { justify-content: center; width: 100%; gap: 8px; }
+  .btn-primary, .btn-secondary, .btn-wechat {
+    padding: 11px 14px;
+    font-size: 13px;
+    flex: 1 1 0;
+    justify-content: center;
+  }
+  .wechat-modal { max-width: 320px; }
+  .wechat-body { padding: 26px 20px 22px; }
+  .wechat-qr-slot { width: 200px; height: 200px; }
+  .wechat-title { font-size: 18px; }
+  .hero-mascot { order: -1; }
+  .hero-mascot img { max-width: 130px; margin-bottom: 4px; }
+  .hero-globe { display: none; }
+  .hero-foot { font-size: 10px; bottom: 6px; }
   .modal { border-radius: 14px; }
   .modal-overlay { padding: 10px; }
   .modal-header { padding: 10px 14px; }
@@ -1081,22 +1108,13 @@ onUnmounted(() => {
   .modal-brand-name { font-size: 15px; }
   .modal-brand-tag { font-size: 10.5px; line-height: 1.4; }
   .modal-brand-tag .tag-sep { display: none; }
-  .modal-brand-tag .tag-break { display: block; }
-  .modal-badge { display: none; }
   .modal-close { width: 32px; height: 32px; font-size: 14px; }
-  .modal-footer {
-    flex-direction: column;
-    padding: 10px 14px;
-    gap: 8px;
-  }
-  .modal-footer-hint { font-size: 11.5px; text-align: center; }
-  .modal-cta { width: 100%; padding: 10px 14px; font-size: 13px; }
 }
 @media (max-width: 360px) {
-  .hero-title { font-size: 26px; }
-  .hero-title .line-sm { font-size: 20px; }
-  .hero-mascot img { max-width: 130px; }
-  .feat-label strong { font-size: 10.5px; }
+  .hero-title { font-size: 28px; }
+  .hero-title .line-sm { font-size: 19px; }
+  .hero-mascot img { max-width: 110px; }
+  .feat-label strong { font-size: 10px; }
   .feat-label span { font-size: 9.5px; }
 }
 </style>
