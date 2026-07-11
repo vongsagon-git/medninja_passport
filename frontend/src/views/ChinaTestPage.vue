@@ -75,7 +75,14 @@ async function initPlayer() {
 
     const playAuth = await fetchPlayAuth()
 
-    player = new window.Aliplayer({
+    // ⭐ Detect iOS/Safari → ไม่ force encryptType (ให้ Aliplayer เลือก original mp4)
+    // Device อื่น (Android/PC/Chrome/จีน) → encryptType 1 (Alibaba Proprietary)
+    const ua = navigator.userAgent
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const isSafari = /^((?!chrome|android).)*safari/i.test(ua)
+    const skipEncrypt = isIOS || isSafari
+
+    const playerConfig = {
       id: 'landing-player',
       vid: VIDEO_ID,
       playauth: playAuth,
@@ -91,9 +98,14 @@ async function initPlayer() {
       license: {
         domain: 'passport.medninja.academy',
         key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
-      },
-      encryptType: 1
-    }, function () {
+      }
+    }
+    // เฉพาะเครื่องที่รองรับ Alibaba Proprietary
+    if (!skipEncrypt) {
+      playerConfig.encryptType = 1
+    }
+
+    player = new window.Aliplayer(playerConfig, function () {
       playerReady.value = true
     })
 
