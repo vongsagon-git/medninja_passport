@@ -132,8 +132,8 @@ function contactLine() {
 
 onMounted(() => {
   document.title = 'MedNinja LMS — ดูได้ทั่วโลก แม้ในประเทศจีน (ไม่ต้อง VPN)'
-  // Preload SDK ทันที เพื่อลด delay ตอนกดเปิด modal
-  loadScriptWithFallback(ALIPLAYER_VERSIONS).catch(() => {})
+  // ⭐ Auto-open modal โฆษณาทันทีที่เข้าเว็บ
+  openVideo()
 })
 
 onUnmounted(() => {
@@ -341,15 +341,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Footer -->
-          <div class="modal-footer">
-            <div class="modal-footer-hint">
-              💡 ถ้าคุณอยู่ในจีนและวิดีโอเล่นได้ = ระบบพร้อมใช้งาน
-            </div>
-            <button class="modal-cta" @click="contactLine">
-              💬 สอบถามผ่าน LINE
-            </button>
-          </div>
         </div>
       </div>
     </transition>
