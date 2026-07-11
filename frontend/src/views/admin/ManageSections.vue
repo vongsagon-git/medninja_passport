@@ -232,8 +232,13 @@
                                     />
                                   </div>
                                   <div v-else-if="vid.ref._aliSyncing" class="ali-sync-progress">
-                                    ⏳ {{ vid.ref._aliSyncStatus || 'Uploading' }}
-                                    <span v-if="vid.ref._aliSyncProgress">({{ vid.ref._aliSyncProgress }}%)</span>
+                                    <div class="ali-progress-label">
+                                      <span>⏳ {{ vid.ref._aliSyncStatus || 'Uploading' }}</span>
+                                      <span v-if="vid.ref._aliSyncProgress != null" class="ali-progress-pct">{{ vid.ref._aliSyncProgress }}%</span>
+                                    </div>
+                                    <div class="ali-progress-bar-wrap">
+                                      <div class="ali-progress-bar-fill" :style="{ width: (vid.ref._aliSyncProgress || 0) + '%' }"></div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -357,8 +362,13 @@
                                 <input type="file" :ref="'aliFileInput_' + child.flatIdx" accept="video/*" style="display:none" @change="handleLocalUpload($event, child.flatIdx)" />
                               </div>
                               <div v-else-if="child.ref._aliSyncing" class="ali-sync-progress">
-                                ⏳ {{ child.ref._aliSyncStatus || 'Uploading' }}
-                                <span v-if="child.ref._aliSyncProgress">({{ child.ref._aliSyncProgress }}%)</span>
+                                <div class="ali-progress-label">
+                                  <span>⏳ {{ child.ref._aliSyncStatus || 'Uploading' }}</span>
+                                  <span v-if="child.ref._aliSyncProgress != null" class="ali-progress-pct">{{ child.ref._aliSyncProgress }}%</span>
+                                </div>
+                                <div class="ali-progress-bar-wrap">
+                                  <div class="ali-progress-bar-fill" :style="{ width: (child.ref._aliSyncProgress || 0) + '%' }"></div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -471,6 +481,24 @@
                             <span v-else-if="node.ref._aliDrmVerified === false" class="verify-status fail">✗</span>
                           </div>
                           <div v-if="node.ref._aliDrmName" class="bunny-filename drm" :title="node.ref._aliDrmName">{{ node.ref._aliDrmName }}</div>
+                        </div>
+                        <div class="ali-sync-actions" v-if="!node.ref.aliVideoId && !node.ref.aliDrmVideoId">
+                          <div v-if="!node.ref._aliSyncing" class="ali-sync-btns">
+                            <button type="button" class="btn btn-sm btn-sync-bunny" :disabled="!node.ref.bunnyVideoId" :title="node.ref.bunnyVideoId ? 'ดึงจาก Bunny → Ali' : 'ต้องมี Bunny ก่อน'" @click="syncFromBunny(node.flatIdx)">
+                              🔄 Pull from Bunny
+                            </button>
+                            <button type="button" class="btn btn-sm btn-upload-local" title="Upload local → Ali" @click="triggerLocalUpload(node.flatIdx)">📁 Local Upload</button>
+                            <input type="file" :ref="'aliFileInput_' + node.flatIdx" accept="video/*" style="display:none" @change="handleLocalUpload($event, node.flatIdx)" />
+                          </div>
+                          <div v-else class="ali-sync-progress">
+                            <div class="ali-progress-label">
+                              <span>⏳ {{ node.ref._aliSyncStatus || 'Uploading' }}</span>
+                              <span v-if="node.ref._aliSyncProgress != null" class="ali-progress-pct">{{ node.ref._aliSyncProgress }}%</span>
+                            </div>
+                            <div class="ali-progress-bar-wrap">
+                              <div class="ali-progress-bar-fill" :style="{ width: (node.ref._aliSyncProgress || 0) + '%' }"></div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2901,10 +2929,35 @@ export default {
   color: #a855f7;
   font-size: 11px;
   font-weight: 600;
-  margin-left: 8px;
-  padding: 4px 8px;
-  background: rgba(168, 85, 247, 0.1);
+  padding: 6px 10px;
+  background: rgba(168, 85, 247, 0.08);
   border-radius: 6px;
+  min-width: 240px;
+  flex: 1;
+}
+.ali-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.ali-progress-pct {
+  font-weight: 700;
+  color: #7c3aed;
+  font-variant-numeric: tabular-nums;
+}
+.ali-progress-bar-wrap {
+  height: 6px;
+  background: rgba(168, 85, 247, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ali-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7, #7c3aed);
+  border-radius: 999px;
+  transition: width 0.25s ease-out;
+  min-width: 2%;
 }
 
 </style>
