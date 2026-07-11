@@ -162,6 +162,16 @@
                 class="ali-player-box"
               ></div>
 
+              <!-- 📤 Debug: send log button (top-right, admin/dev only) -->
+              <button
+                v-if="hasAliVideo && !replaced && !recorderBlocked"
+                class="beta-send-log"
+                @click="sendBetaLogs"
+                :title="'ส่ง log ให้ dev debug (' + betaLogs.length + ' entries)'"
+              >
+                📤 {{ betaLogSending ? 'ส่ง...' : (betaLogSent ? '✅' : 'Log') }}
+              </button>
+
               <!-- Loading overlay — บังจน Ali player ready -->
               <div v-if="hasAliVideo && !replaced && !recorderBlocked && !playerReady" class="player-loading-overlay">
                 <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
@@ -708,6 +718,10 @@ export default {
       showLineLinkPopup: false,
       isPlaying: false,
       playerReady: false,
+      // ⭐ Beta 1-ID debug: log collector + send button state
+      betaLogs: [],
+      betaLogSending: false,
+      betaLogSent: false,
       // ⭐ Custom Ali controls state
       aliCurrentTime: 0,
       aliSeeking: false,      // ⭐ user กำลัง drag slider — หยุด sync จาก timeupdate
@@ -2387,12 +2401,15 @@ export default {
         // ⭐ Other device path: STS สำหรับ Widevine DRM
         const vid = this.aliVideoIdToPlay
         if (!vid) throw new Error('No Ali videoId')
+        this._betaLog(`Fetch STS: /api/china/sts/${vid}`, 'info')
         const res = await api.get(`/china/sts/${vid}`)
         const d = (res && res.data) ? res.data : (res || {})
         if (!d.accessKeyId) throw new Error('STS response missing accessKeyId')
+        this._betaLog(`STS ok (key=${d.accessKeyId?.substring(0, 10)}...)`, 'success')
         return d
       } catch (e) {
         console.error('[Ali] STS fetch error:', e.message)
+        this._betaLog(`STS fetch error: ${e.message}`, 'error')
         throw e
       }
     },
@@ -2401,27 +2418,76 @@ export default {
         // ⭐ iOS path: PlayAuth สำหรับ Ali Prop stream
         const vid = this.aliVideoIdToPlay
         if (!vid) throw new Error('No Ali videoId')
+        this._betaLog(`Fetch PlayAuth: /api/china/playauth/${vid}`, 'info')
         const res = await api.get(`/china/playauth/${vid}`)
         const d = (res && res.data) ? res.data : (res || {})
         if (!d.playAuth) throw new Error('PlayAuth response missing playAuth')
+        this._betaLog(`PlayAuth ok (length=${d.playAuth.length})`, 'success')
         return d
       } catch (e) {
         console.error('[Ali] PlayAuth fetch error:', e.message)
+        this._betaLog(`PlayAuth fetch error: ${e.message}`, 'error')
         throw e
+      }
+    },
+    // ⭐ Beta debug: log collector
+    _betaLog (msg, type = 'info') {
+      const time = new Date().toTimeString().slice(0, 8)
+      this.betaLogs.push({ time, msg, type })
+      if (this.betaLogs.length > 200) this.betaLogs.shift()
+      console.log(`[Beta ${time}] ${msg}`)
+    },
+    async sendBetaLogs () {
+      this.betaLogSending = true
+      try {
+        const device = {
+          ua: navigator.userAgent,
+          isIOS: detectIOS(),
+          isMacSafari: detectMacSafari(),
+          platform: navigator.platform,
+          touch: navigator.maxTouchPoints,
+          uaPlatform: navigator.userAgentData?.platform || null
+        }
+        const context = {
+          source: 'WatchCnPage',
+          sectionId: this.sectionId,
+          videoIndex: this.videoIndex,
+          aliVideoId: this.aliVideoIdToPlay,
+          hasAliVideo: this.hasAliVideo,
+          playerReady: this.playerReady,
+          replaced: this.replaced,
+          recorderBlocked: this.recorderBlocked,
+          user: this.$store?.state?.auth?.user?.email || 'unknown'
+        }
+        await fetch('/api/china/test-logs-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device, serveInfo: context, logs: this.betaLogs })
+        })
+        this.betaLogSent = true
+        setTimeout(() => { this.betaLogSent = false }, 3000)
+      } catch (err) {
+        console.error('[Beta] send log fail:', err.message)
+        alert('ส่ง log ไม่สำเร็จ: ' + err.message)
+      } finally {
+        this.betaLogSending = false
       }
     },
     async _initAliPlayer () {
       if (!this.hasAliVideo) {
         console.log('[Ali] No aliVideoId — skip player init')
+        this._betaLog('SKIP: no aliVideoId', 'warn')
         return
       }
       // ⭐ กัน double-init — ถ้ากำลัง init อยู่ให้ skip (STS race → Widevine 4022)
       if (this._aliInitInFlight) {
         console.log('[Ali] init in flight — skip')
+        this._betaLog('SKIP: init in flight', 'warn')
         return
       }
       const videoId = this.aliVideoIdToPlay
       console.log('[Ali] Initializing player with videoId:', videoId)
+      this._betaLog(`Init player: videoId=${videoId}`, 'info')
       this._aliInitInFlight = true
 
       try {
@@ -2450,6 +2516,7 @@ export default {
         // iOS/Mac Safari → PlayAuth + playConfig.EncryptType filter Ali Prop
         // Other → STS + encryptType 1 (permissive Widevine)
         const isIosOrSafari = detectIOS() || detectMacSafari()
+        this._betaLog(`Device path: ${isIosOrSafari ? 'iOS/Safari (PlayAuth)' : 'Other (STS)'}`, 'info')
 
         // Base config (ทุก device เหมือนกัน)
         const baseConfig = {
@@ -2500,13 +2567,16 @@ export default {
         }
 
         // 5. Instantiate
+        this._betaLog('Creating Aliplayer instance...', 'info')
         this._aliPlayer = new window.Aliplayer(config, (p) => {
           console.log('[Ali] Player instance created')
+          this._betaLog('Player instance created ✅', 'success')
         })
 
         // 6. Events
         this._aliPlayer.on('ready', () => {
           console.log('[Ali] Player ready')
+          this._betaLog('Event: ready', 'success')
           this.playerReady = true
           try { this.aliDuration = this._aliPlayer.getDuration() || 0 } catch {}
           // ⭐ Anti-piracy: set video element attribute หลัง Aliplayer inject <video> เข้ามาแล้ว
@@ -2615,16 +2685,20 @@ export default {
           const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {})
           this._playerError = details
           console.error('[Ali] Player error:', details)
+          this._betaLog(`Event: error — ${details}`, 'error')
           if (this._socket?.connected) this._socket.emit('video:error', { detail: details })
           this._diagLog && this._diagLog('player_error', 'Ali error', { detail: details })
         })
         // ⭐ Waiting/Loading (buffering)
         this._aliPlayer.on('waiting', () => {
+          this._betaLog('Event: waiting (buffering)', 'warn')
           this._diagLog && this._diagLog('waiting_event', 'buffering')
         })
 
       } catch (err) {
         console.error('[Ali] Init failed:', err.message)
+        this._betaLog(`❌ INIT FAILED: ${err.message}`, 'error')
+        if (err.stack) this._betaLog(`Stack: ${err.stack.split('\n').slice(0, 3).join(' | ')}`, 'error')
       } finally {
         this._aliInitInFlight = false
       }
@@ -4370,6 +4444,30 @@ kbd {
   height: 100%;
   background: #000;
 }
+
+/* 📤 Beta send log button — top-right on player */
+.beta-send-log {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 50;
+  background: rgba(167, 139, 250, 0.85);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s, transform 0.15s;
+}
+.beta-send-log:hover {
+  background: rgba(139, 92, 246, 0.95);
+  transform: scale(1.05);
+}
+.beta-send-log:active { transform: scale(0.95); }
 
 /* ⭐ Custom Aliplayer Controls (เขียนเอง) */
 .ali-ctl-layer {
