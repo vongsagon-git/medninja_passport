@@ -309,7 +309,24 @@ onUnmounted(() => {
     <transition name="fade">
       <div v-if="modalOpen" class="modal-overlay" @click.self="closeVideo">
         <div class="modal">
-          <button class="modal-close" @click="closeVideo" aria-label="ปิด">✕</button>
+          <!-- Header brand -->
+          <div class="modal-header">
+            <div class="modal-brand">
+              <img src="/img/mascot.png" alt="MedNinja" class="modal-brand-mark" />
+              <div class="modal-brand-text">
+                <div class="modal-brand-name">MedNinja</div>
+                <div class="modal-brand-tag">
+                  ดูได้ทั่วโลก · <span class="tag-cn">จีน</span>ก็ดูได้
+                </div>
+              </div>
+            </div>
+            <div class="modal-header-right">
+              <span class="modal-badge">🔒 Alibaba Encrypt</span>
+              <button class="modal-close" @click="closeVideo" aria-label="ปิด">✕</button>
+            </div>
+          </div>
+
+          <!-- Player -->
           <div class="modal-player-wrap">
             <div id="landing-player" class="modal-player"></div>
             <div v-if="!playerReady && !errorMsg" class="modal-loading">
@@ -322,6 +339,16 @@ onUnmounted(() => {
               <div class="err-msg">{{ errorMsg }}</div>
               <button class="btn-secondary" @click="closeVideo">ปิด</button>
             </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="modal-footer">
+            <div class="modal-footer-hint">
+              💡 ถ้าคุณอยู่ในจีนและวิดีโอเล่นได้ = ระบบพร้อมใช้งาน
+            </div>
+            <button class="modal-cta" @click="contactLine">
+              💬 สอบถามผ่าน LINE
+            </button>
           </div>
         </div>
       </div>
@@ -796,8 +823,8 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.82);
-  backdrop-filter: blur(6px);
+  background: rgba(3, 10, 30, 0.85);
+  backdrop-filter: blur(8px);
   display: grid;
   place-items: center;
   padding: 20px;
@@ -805,29 +832,98 @@ onUnmounted(() => {
 .modal {
   position: relative;
   width: 100%;
-  max-width: 1080px;
-  background: #000;
-  border-radius: 18px;
+  max-width: 1040px;
+  background: linear-gradient(180deg, #0b2b5b 0%, #0a1e3f 100%);
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(56, 189, 248, 0.2),
+    0 0 60px rgba(30, 58, 138, 0.3);
+}
+/* Gradient border ด้านบนสุด */
+.modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #38bdf8 0%, #2563eb 40%, #dc2626 70%, #f59e0b 100%);
+  z-index: 5;
+}
+
+/* Modal header — brand + close */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+.modal-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.modal-brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+}
+.modal-brand-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: white;
+  letter-spacing: 0.3px;
+  line-height: 1.1;
+}
+.modal-brand-tag {
+  font-size: 13px;
+  color: #cbd5e1;
+  margin-top: 2px;
+  font-weight: 600;
+}
+.tag-cn {
+  color: #f87171;
+  font-weight: 800;
+}
+.modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-badge {
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(56, 189, 248, 0.25);
 }
 .modal-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 5;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(255, 255, 255, 0.08);
   color: white;
-  border: none;
-  font-size: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.15s;
 }
-.modal-close:hover { background: rgba(220, 38, 38, 0.9); }
+.modal-close:hover {
+  background: rgba(220, 38, 38, 0.9);
+  border-color: rgba(220, 38, 38, 0.9);
+  transform: rotate(90deg);
+}
+
+/* Player */
 .modal-player-wrap {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -848,11 +944,12 @@ onUnmounted(() => {
   color: white;
   text-align: center;
   padding: 30px;
+  background: linear-gradient(180deg, #0b2b5b 0%, #050f28 100%);
 }
 .spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid rgba(255, 255, 255, 0.15);
+  border: 4px solid rgba(255, 255, 255, 0.12);
   border-top-color: #38bdf8;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -867,6 +964,37 @@ onUnmounted(() => {
   max-width: 460px;
   line-height: 1.6;
 }
+
+/* Modal footer */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(56, 189, 248, 0.1);
+}
+.modal-footer-hint {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.modal-cta {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35);
+  transition: transform 0.15s;
+  white-space: nowrap;
+}
+.modal-cta:hover { transform: translateY(-1px); }
 
 /* ═══════════════ TRANSITIONS ═══════════════ */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
@@ -942,8 +1070,21 @@ onUnmounted(() => {
   .feat-label { font-size: 11px; }
   .feat-label strong { font-size: 11.5px; }
   .feat-label span { font-size: 10.5px; }
-  .modal { border-radius: 12px; }
-  .modal-overlay { padding: 12px; }
+  .modal { border-radius: 14px; }
+  .modal-overlay { padding: 10px; }
+  .modal-header { padding: 10px 14px; }
+  .modal-brand-mark { width: 34px; height: 34px; }
+  .modal-brand-name { font-size: 15px; }
+  .modal-brand-tag { font-size: 11px; }
+  .modal-badge { display: none; }
+  .modal-close { width: 32px; height: 32px; font-size: 14px; }
+  .modal-footer {
+    flex-direction: column;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .modal-footer-hint { font-size: 11.5px; text-align: center; }
+  .modal-cta { width: 100%; padding: 10px 14px; font-size: 13px; }
 }
 @media (max-width: 360px) {
   .hero-title { font-size: 26px; }
