@@ -30,13 +30,15 @@ function checkBrowser(req) {
     return { ok: false, reason: 'in-app browser ไม่รองรับ — กรุณาเปิดใน Safari หรือ Chrome' }
   }
 
-  // ── 2. iPhone / iPad — Chrome iOS (CriOS/) เท่านั้น ──
-  //   Block Safari mobile + iPad Safari (เดิม allow — เปลี่ยนเพื่อกัน downloader browser
-  //   เช่น Documents by Readdle ที่ pipeline ผ่าน Safari-based views)
+  // ── 2. iPhone / iPad — Safari + Chrome iOS (CriOS/) + Firefox iOS (FxiOS) ──
+  //   iOS ทุก browser ใช้ WebKit engine เหมือนกัน (Apple บังคับ) → ปลดล็อค Safari ได้
+  //   1 ID dual encryption pattern: iOS ใช้ PlayAuth + playConfig filter Ali Prop → work ทุก browser
   if (isIOS(req)) {
-    const isIOSChrome = /CriOS\//.test(ua)
-    if (isIOSChrome) return { ok: true }
-    return { ok: false, reason: 'iPhone/iPad รองรับเฉพาะ Google Chrome (โหลดจาก App Store)' }
+    // Block เฉพาะ in-app browsers (Documents by Readdle etc.) ที่ยังปลอมตัวเป็น Safari
+    // ปล่อยผ่าน Safari native + CriOS + FxiOS (ทั้งหมด WebKit)
+    const isRealBrowser = /Safari\//.test(ua) || /CriOS\//.test(ua) || /FxiOS\//.test(ua) || /EdgiOS\//.test(ua)
+    if (isRealBrowser) return { ok: true }
+    return { ok: false, reason: 'iPhone/iPad รองรับเฉพาะ Safari, Chrome, Firefox, Edge' }
   }
 
   // ── 3. Android — Chrome เท่านั้น ──
