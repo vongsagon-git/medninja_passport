@@ -317,11 +317,10 @@
 
         let config
         if (serve.authType === 'playauth') {
-          // iOS → PlayAuth (Ali Prop stream)
           config = { ...baseConfig, playauth: serve.playAuth }
-          log('Config: PlayAuth mode (Ali Prop stream)', 'info')
+          log(`Config: PlayAuth mode (${serve.mode})`, 'info')
         } else {
-          // อื่น ๆ → STS (Widevine DRM stream)
+          // STS mode — ใช้ทั้ง iOS (Ali Prop) และ Other (Widevine)
           config = {
             ...baseConfig,
             accessKeyId: serve.accessKeyId,
@@ -329,7 +328,7 @@
             securityToken: serve.securityToken,
             region: serve.region
           }
-          log('Config: STS mode (Widevine DRM stream)', 'info')
+          log(`Config: STS mode (${serve.mode === 'ali' ? 'Ali Prop iOS' : 'Widevine DRM'})`, 'info')
         }
 
         log('สร้าง Aliplayer instance...', 'info')

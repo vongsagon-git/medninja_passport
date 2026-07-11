@@ -126,25 +126,34 @@ router.get('/test-serve/:videoId', originCheck, async (req, res) => {
     const RPCClient = require('@alicloud/pop-core').RPCClient
 
     if (mode === 'ali') {
-      // iOS → PlayAuth (Ali Prop stream)
-      const client = new RPCClient({
+      // iOS → STS (มีสิทธิ์ทั้ง Ali+DRM) + encryptType 1
+      // เหตุผล: video ID นี้มี DRM stream ด้วย → Aliplayer เจอ DRM → ต้อง STS แม้จะเลือกเล่น Ali Prop
+      const roleArn = process.env.ALIBABA_VOD_ROLE_ARN
+      if (!roleArn) {
+        return res.status(500).json({ error: 'ALIBABA_VOD_ROLE_ARN not configured' })
+      }
+      const stsClient = new RPCClient({
         accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
         accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
-        endpoint: `https://vod.${process.env.ALIBABA_VOD_REGION || 'ap-southeast-1'}.aliyuncs.com`,
-        apiVersion: '2017-03-21'
+        endpoint: 'https://sts.aliyuncs.com',
+        apiVersion: '2015-04-01'
       })
-      const result = await client.request('GetVideoPlayAuth', {
-        VideoId: videoId,
-        AuthInfoTimeout: 3000
+      const result = await stsClient.request('AssumeRole', {
+        RoleArn: roleArn,
+        RoleSessionName: 'medninja-ios-serve-' + Date.now(),
+        DurationSeconds: 3600
       }, { method: 'POST' })
 
       return res.json({
         mode: 'ali',
-        authType: 'playauth',
-        playAuth: result.PlayAuth,
+        authType: 'sts',
+        accessKeyId: result.Credentials.AccessKeyId,
+        accessKeySecret: result.Credentials.AccessKeySecret,
+        securityToken: result.Credentials.SecurityToken,
+        region: process.env.ALIBABA_VOD_REGION || 'ap-southeast-1',
         encryptType: 1,
         deviceServed: 'iOS',
-        reason: 'iOS → Ali Prop stream (PlayAuth + encryptType 1)',
+        reason: 'iOS → STS + encryptType 1 (Aliplayer เลือก Ali Prop stream อัตโนมัติเพราะ iOS ไม่มี Widevine)',
         uaSample: ua.substring(0, 120)
       })
     } else {
