@@ -89,6 +89,7 @@ async function initPlayer() {
       width: '100%',
       height: '100%',
       autoplay: true,
+      mute: true,           // ⭐ ต้อง mute ถึง browser จะให้ autoplay (policy Chrome/Safari/iOS)
       isLive: false,
       rePlay: false,
       playsinline: true,
@@ -105,8 +106,23 @@ async function initPlayer() {
       playerConfig.encryptType = 1
     }
 
-    player = new window.Aliplayer(playerConfig, function () {
+    player = new window.Aliplayer(playerConfig, function (p) {
       playerReady.value = true
+      // ⭐ Force play + mute — กัน browser block autoplay
+      try {
+        p.mute()
+        const playPromise = p.play()
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {
+            // ถ้ายัง block อีก ลอง play ทันที (Aliplayer method)
+            setTimeout(() => { try { p.play() } catch {} }, 100)
+          })
+        }
+      } catch {}
+    })
+
+    player.on('ready', () => {
+      try { player.mute(); player.play() } catch {}
     })
 
     player.on('error', (e) => {
