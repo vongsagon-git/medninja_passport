@@ -29,6 +29,53 @@ router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   next()
 }, getPlayAuth)
 
+// ⭐ Test video status — เช็คว่า video ยังพร้อมเล่นไหม (Normal/Transcoding/Failed)
+router.get('/test-status/:videoId', originCheck, async (req, res) => {
+  const { videoId } = req.params
+  if (!LANDING_ALLOWED_VIDEOS.has(videoId)) {
+    return res.status(403).json({ code: 'VIDEO_NOT_WHITELISTED' })
+  }
+  try {
+    const RPCClient = require('@alicloud/pop-core').RPCClient
+    const client = new RPCClient({
+      accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
+      accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
+      endpoint: `https://vod.${process.env.ALIBABA_VOD_REGION || 'ap-southeast-1'}.aliyuncs.com`,
+      apiVersion: '2017-03-21'
+    })
+    const info = await client.request('GetVideoInfo', { VideoId: videoId }, { method: 'POST' })
+    const playInfo = await client.request('GetPlayInfo', {
+      VideoId: videoId,
+      Formats: 'mp4,m3u8,mpd',
+      StreamType: 'video',
+      ResultType: 'Multiple',
+      AuthTimeout: 3000
+    }, { method: 'POST' })
+
+    const v = info.Video || {}
+    const streams = (playInfo.PlayInfoList && playInfo.PlayInfoList.PlayInfo) || []
+    return res.json({
+      videoId: v.VideoId,
+      title: v.Title,
+      status: v.Status,
+      duration: v.Duration,
+      streamCount: streams.length,
+      streams: streams.map(s => ({
+        definition: s.Definition,
+        format: s.Format,
+        encrypt: s.Encrypt,
+        encryptType: s.EncryptType,
+        size: s.Size,
+        bitrate: s.Bitrate,
+        playUrlHost: (s.PlayURL || '').split('/').slice(0, 3).join('/'),
+        urlExpireHint: (s.PlayURL || '').match(/Expires=\d+/)?.[0]
+      }))
+    })
+  } catch (err) {
+    return res.status(500).json({ error: err.message, code: err.code })
+  }
+})
+
 // ⭐ Test PlayAuth — return playAuth ตรง ๆ (frontend ตัดสิน encryptType เอง)
 router.get('/test-playauth/:videoId', originCheck, async (req, res) => {
   const { videoId } = req.params
@@ -87,7 +134,7 @@ router.get('/test-sts/:videoId', originCheck, async (req, res) => {
     })
     const result = await stsClient.request('AssumeRole', {
       RoleArn: roleArn,
-      RoleSessionName: 'medninja-landing-test-' + Date.now(),
+      RoleSessionName: 'mn-test-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8),
       DurationSeconds: 3600
     }, { method: 'POST' })
 
@@ -110,83 +157,66 @@ router.get('/test-sts/:videoId', originCheck, async (req, res) => {
 // 1 video ID เดียว → serve ไฟล์ + auth ให้ตรง device
 // - iOS → PlayAuth + encryptType 1 (Ali Prop stream)
 // - อื่น ๆ → STS + encryptType 1 (Widevine stream, permissive mode)
+// ⭐ STS cache — reuse token ที่ยังไม่หมดอายุ (Alibaba rate limit ~10 req/sec)
+// refresh 5 นาทีก่อนหมดอายุจริง เพื่อกัน edge case
+let _stsCache = { expiresAt: 0, credentials: null, mode: null }
+async function getCachedSTS(sessionPrefix) {
+  const now = Date.now()
+  if (_stsCache.credentials && _stsCache.expiresAt > now + 5 * 60 * 1000) {
+    return { cached: true, credentials: _stsCache.credentials }
+  }
+  const RPCClient = require('@alicloud/pop-core').RPCClient
+  const stsClient = new RPCClient({
+    accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
+    accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
+    endpoint: 'https://sts.aliyuncs.com',
+    apiVersion: '2015-04-01'
+  })
+  const result = await stsClient.request('AssumeRole', {
+    RoleArn: process.env.ALIBABA_VOD_ROLE_ARN,
+    RoleSessionName: sessionPrefix + '-' + now + '-' + Math.random().toString(36).substring(2, 8),
+    DurationSeconds: 3600
+  }, { method: 'POST' })
+
+  _stsCache = {
+    credentials: result.Credentials,
+    expiresAt: now + 3600 * 1000, // 60 นาที
+  }
+  return { cached: false, credentials: result.Credentials }
+}
+
 router.get('/test-serve/:videoId', originCheck, async (req, res) => {
   const { videoId } = req.params
   if (!LANDING_ALLOWED_VIDEOS.has(videoId)) {
     return res.status(403).json({ code: 'VIDEO_NOT_WHITELISTED' })
   }
+  if (!process.env.ALIBABA_VOD_ROLE_ARN) {
+    return res.status(500).json({ error: 'ALIBABA_VOD_ROLE_ARN not configured' })
+  }
 
   const ua = req.headers['user-agent'] || ''
   const deviceHint = (req.headers['x-mn-device'] || '').toLowerCase()
-  // Frontend override (iPad iOS 13+ UA=Mac trick) หรือ backend UA detect
   const isIOS = deviceHint === 'ios' || /iPad|iPhone|iPod/.test(ua)
   const mode = isIOS ? 'ali' : 'wv'
 
   try {
-    const RPCClient = require('@alicloud/pop-core').RPCClient
+    const { cached, credentials } = await getCachedSTS(mode === 'ali' ? 'mn-ios' : 'mn-wv')
 
-    if (mode === 'ali') {
-      // iOS → STS (มีสิทธิ์ทั้ง Ali+DRM) + encryptType 1
-      // เหตุผล: video ID นี้มี DRM stream ด้วย → Aliplayer เจอ DRM → ต้อง STS แม้จะเลือกเล่น Ali Prop
-      const roleArn = process.env.ALIBABA_VOD_ROLE_ARN
-      if (!roleArn) {
-        return res.status(500).json({ error: 'ALIBABA_VOD_ROLE_ARN not configured' })
-      }
-      const stsClient = new RPCClient({
-        accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
-        accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
-        endpoint: 'https://sts.aliyuncs.com',
-        apiVersion: '2015-04-01'
-      })
-      const result = await stsClient.request('AssumeRole', {
-        RoleArn: roleArn,
-        RoleSessionName: 'medninja-ios-serve-' + Date.now(),
-        DurationSeconds: 3600
-      }, { method: 'POST' })
-
-      return res.json({
-        mode: 'ali',
-        authType: 'sts',
-        accessKeyId: result.Credentials.AccessKeyId,
-        accessKeySecret: result.Credentials.AccessKeySecret,
-        securityToken: result.Credentials.SecurityToken,
-        region: process.env.ALIBABA_VOD_REGION || 'ap-southeast-1',
-        encryptType: 1,
-        deviceServed: 'iOS',
-        reason: 'iOS → STS + encryptType 1 (Aliplayer เลือก Ali Prop stream อัตโนมัติเพราะ iOS ไม่มี Widevine)',
-        uaSample: ua.substring(0, 120)
-      })
-    } else {
-      // อื่น ๆ → STS (Widevine stream, encryptType 1 permissive)
-      const roleArn = process.env.ALIBABA_VOD_ROLE_ARN
-      if (!roleArn) {
-        return res.status(500).json({ error: 'ALIBABA_VOD_ROLE_ARN not configured' })
-      }
-      const stsClient = new RPCClient({
-        accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
-        accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
-        endpoint: 'https://sts.aliyuncs.com',
-        apiVersion: '2015-04-01'
-      })
-      const result = await stsClient.request('AssumeRole', {
-        RoleArn: roleArn,
-        RoleSessionName: 'medninja-landing-serve-' + Date.now(),
-        DurationSeconds: 3600
-      }, { method: 'POST' })
-
-      return res.json({
-        mode: 'wv',
-        authType: 'sts',
-        accessKeyId: result.Credentials.AccessKeyId,
-        accessKeySecret: result.Credentials.AccessKeySecret,
-        securityToken: result.Credentials.SecurityToken,
-        region: process.env.ALIBABA_VOD_REGION || 'ap-southeast-1',
-        encryptType: 1,
-        deviceServed: 'Chrome/Android/PC/Mac',
-        reason: 'อื่น ๆ → Widevine stream (STS + encryptType 1 permissive)',
-        uaSample: ua.substring(0, 120)
-      })
-    }
+    return res.json({
+      mode,
+      authType: 'sts',
+      accessKeyId: credentials.AccessKeyId,
+      accessKeySecret: credentials.AccessKeySecret,
+      securityToken: credentials.SecurityToken,
+      region: process.env.ALIBABA_VOD_REGION || 'ap-southeast-1',
+      encryptType: 1,
+      deviceServed: isIOS ? 'iOS' : 'Chrome/Android/PC/Mac',
+      reason: isIOS
+        ? 'iOS → STS + encryptType 1 (Aliplayer เลือก Ali Prop stream อัตโนมัติเพราะ iOS ไม่มี Widevine)'
+        : 'อื่น ๆ → Widevine stream (STS + encryptType 1 permissive)',
+      stsCached: cached,
+      uaSample: ua.substring(0, 120)
+    })
   } catch (err) {
     return res.status(500).json({
       error: err.message,
