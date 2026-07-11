@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
-// ⭐ Video สำหรับ landing page ขาย (Alibaba Encrypt — เล่นได้ทั้งไทย + จีน)
+// ⭐ Video สำหรับ landing page ขาย (encrypted — เล่นได้ทั้งไทย + จีน)
 const VIDEO_ID = 'f0a10c4f79dc71f1a46bf6f7f45a0102'
 // ⭐ Landing endpoint = public (no auth, no chrome guard) — สำหรับหน้าขาย
 const PLAYAUTH_ENDPOINT = `/api/china/landing-playauth/${VIDEO_ID}`
@@ -100,6 +100,10 @@ async function initPlayer() {
     player.on('error', (e) => {
       const details = e?.paramData ? JSON.stringify(e.paramData) : (e?.message || 'เล่นวิดีโอไม่ได้')
       errorMsg.value = details
+    })
+    // ⭐ วิดีโอจบ → ปิด modal auto
+    player.on('ended', () => {
+      setTimeout(() => closeVideo(), 300)
     })
   } catch (err) {
     errorMsg.value = err.message
@@ -236,7 +240,7 @@ onUnmounted(() => {
           </div>
           <div class="thumb-label">
             <div class="thumb-title">โฆษณา MedNinja LMS</div>
-            <div class="thumb-meta">🔒 Alibaba Encrypt · เล่นได้ในจีน</div>
+            <div class="thumb-meta">⚡ เร็ว · เสถียร · ไม่ต้อง VPN · เจ้าเดียวที่ทำได้</div>
           </div>
         </div>
       </div>
@@ -252,13 +256,13 @@ onUnmounted(() => {
       <div class="why-grid">
         <div class="why-card">
           <div class="why-icon">🇨🇳</div>
-          <h3>CDN ในประเทศจีน</h3>
-          <p>เราลงทุนกับ Alibaba VOD + edge server ในจีน<br>เพื่อความเร็วและเสถียรภาพ</p>
+          <h3>Server เฉพาะทางในจีน</h3>
+          <p>เราลงทุนเซิร์ฟเวอร์ในจีนโดยเฉพาะ<br>เจ้าอื่นเปิดไม่ได้ — เราเปิดได้</p>
         </div>
         <div class="why-card">
-          <div class="why-icon">🔐</div>
-          <h3>Encryption ระดับสูง</h3>
-          <p>ลิขสิทธิ์เนื้อหาปลอดภัย<br>วิดีโอเข้ารหัสไม่ให้ดาวน์โหลด</p>
+          <div class="why-icon">⚡</div>
+          <h3>ความเร็วเท่าอยู่ไทย</h3>
+          <p>ไม่มี lag ไม่มี buffer<br>ลื่นเหมือนนักเรียนในไทยเรียน</p>
         </div>
         <div class="why-card">
           <div class="why-icon">📱</div>
