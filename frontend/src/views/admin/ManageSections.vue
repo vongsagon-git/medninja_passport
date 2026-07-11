@@ -1516,29 +1516,15 @@ export default {
         s.onerror = () => reject(new Error('load fail: ' + src))
         document.head.appendChild(s)
       })
-      // Upload SDK ต้องพ่วง 3 dependencies: es6-promise + aliyun-oss-sdk + aliyun-upload-sdk
-      // ต้องโหลดตามลำดับ (dependencies ก่อน)
-      const urls = [
-        'https://g.alicdn.com/aliyun-vod/upload-sdk/1.5.5/lib/es6-promise.min.js',
-        'https://g.alicdn.com/aliyun-vod/upload-sdk/1.5.5/lib/aliyun-oss-sdk-6.17.1.min.js',
-        'https://g.alicdn.com/aliyun-vod/upload-sdk/1.5.5/aliyun-upload-sdk-1.5.5.min.js'
-      ]
-      // Fallback URLs ถ้า path แรกไม่ work
-      const fallbacks = [
-        'https://g.alicdn.com/de/aliplayer/2.15.4/es6-promise.min.js',
-        'https://g.alicdn.com/de/aliplayer/2.15.4/aliyun-oss-sdk-6.17.1.min.js',
-        'https://g.alicdn.com/de/aliplayer/2.15.4/aliyun-upload-sdk-1.5.5.min.js'
-      ]
+      // Serve locally (copied from npm aliyun-upload-vod + ali-oss)
+      // aliyun-upload-vod is UMD → attaches window.AliyunUpload
+      // Depends on external ali-oss → attaches window.OSS (must load first)
       return (async () => {
-        for (let i = 0; i < urls.length; i++) {
-          try {
-            await loadScript(urls[i])
-          } catch (e) {
-            console.warn('[AliSDK] primary fail, try fallback:', fallbacks[i])
-            await loadScript(fallbacks[i])
-          }
+        await loadScript('/vendor/ali-upload/aliyun-oss-sdk.min.js')
+        await loadScript('/vendor/ali-upload/aliyun-upload-vod.min.js')
+        if (!window.AliyunUpload || !window.AliyunUpload.Vod) {
+          throw new Error('SDK loaded but AliyunUpload.Vod missing')
         }
-        if (!window.AliyunUpload) throw new Error('Ali Upload SDK loaded but window.AliyunUpload not found')
       })()
     },
     aliUploadFile(file, authInfo, onProgress) {
