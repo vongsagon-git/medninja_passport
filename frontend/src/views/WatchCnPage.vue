@@ -162,17 +162,7 @@
                 class="ali-player-box"
               ></div>
 
-              <!-- 📤 Debug: send log button (top-right, admin/dev only) -->
-              <button
-                v-if="hasAliVideo && !replaced && !recorderBlocked"
-                class="beta-send-log"
-                @click="sendBetaLogs"
-                :title="'ส่ง log ให้ dev debug (' + betaLogs.length + ' entries)'"
-              >
-                📤 {{ betaLogSending ? 'ส่ง...' : (betaLogSent ? '✅' : 'Log') }}
-              </button>
-
-              <!-- ⛶ Fullscreen button (top-right ข้างซ้ายของ Log) -->
+              <!-- ⛶ Custom Fullscreen button (top-right) — บังคับใช้ปุ่มนี้เท่านั้น -->
               <button
                 v-if="hasAliVideo && !replaced && !recorderBlocked && playerReady"
                 class="beta-fs-btn"
@@ -1025,29 +1015,7 @@ export default {
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
-    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only)
-    this._onOrientationChange = () => {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      if (!isMobile) return
-
-      // ใช้ innerWidth > innerHeight = landscape (แม่นยำสุด — ทุก browser)
-      const isLandscape = window.innerWidth > window.innerHeight
-      const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement)
-
-      if (isLandscape && !inFs) {
-        // Rotate เข้า landscape + ยังไม่ fullscreen → auto enter
-        this.aliToggleFullscreen && this.aliToggleFullscreen()
-      } else if (!isLandscape && inFs) {
-        // Rotate กลับ portrait + อยู่ fullscreen → auto exit
-        const doc = document
-        try {
-          (doc.exitFullscreen || doc.webkitExitFullscreen).call(doc)
-        } catch {}
-      }
-    }
-    window.addEventListener('orientationchange', this._onOrientationChange)
-    // resize ก็ช่วยจับ iPad iOS 13+ ที่ orientationchange ไม่ยิง
-    window.addEventListener('resize', this._onOrientationChange)
+    // ⭐ ไม่มี auto fullscreen ตอน rotate — user ต้องกดปุ่ม ⛶ เท่านั้น
     // Resize → update wmModeKey (rotate / resize) + counter zoom ลายน้ำ
     // ═══ Zoom detection — periodic innerWidth check (จับ Safari + ทุก browser) ═══
     this._wmBaseDpr = window.devicePixelRatio || 1
@@ -1175,10 +1143,6 @@ export default {
     if (this._lineLinkPoll) clearInterval(this._lineLinkPoll)
     document.removeEventListener('fullscreenchange', this._onFsChange)
     document.removeEventListener('webkitfullscreenchange', this._onFsChange)
-    if (this._onOrientationChange) {
-      window.removeEventListener('orientationchange', this._onOrientationChange)
-      window.removeEventListener('resize', this._onOrientationChange)
-    }
     if (this._onWmResize) window.removeEventListener('resize', this._onWmResize)
     if (this._onBunnyMessage) window.removeEventListener('message', this._onBunnyMessage)
     if (this.$el) this.$el.style.zoom = ''
@@ -2891,14 +2855,22 @@ export default {
       this.aliSetVolume(v)
     },
     aliToggleFullscreen () {
+      // ⭐ CSS fake fullscreen — work 100% ทุก browser รวม iOS Safari
+      // ไม่ใช้ native requestFullscreen เพราะ iOS Safari block + จะเปิด iOS video player
+      this.isFullscreen = !this.isFullscreen
+      document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
+      // Try native เผื่อ desktop (มี fullscreen API) — ล้มเหลวก็ไม่เป็นไร (CSS fullscreen ทำงานอยู่แล้ว)
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
-      const doc = document
-      if (doc.fullscreenElement || doc.webkitFullscreenElement) {
-        (doc.exitFullscreen || doc.webkitExitFullscreen).call(doc)
-      } else {
-        (box.requestFullscreen || box.webkitRequestFullscreen).call(box)
-      }
+      try {
+        if (this.isFullscreen) {
+          if (box.requestFullscreen) box.requestFullscreen().catch(() => {})
+          else if (box.webkitRequestFullscreen) box.webkitRequestFullscreen()
+        } else {
+          if (document.exitFullscreen) document.exitFullscreen().catch(() => {})
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen()
+        }
+      } catch {}
     },
     aliFmtTime (sec) {
       const s = Math.max(0, Math.floor(sec || 0))
@@ -3416,10 +3388,20 @@ kbd {
   position: relative;
 }
 .w-player-box.is-fullscreen {
-  width: 100vw;
-  height: 100vh;
-  aspect-ratio: auto;
-  position: relative;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  width: 100dvw !important;
+  height: 100dvh !important;
+  aspect-ratio: auto !important;
+  z-index: 999999 !important;
+  background: #000 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .w-player-box.is-fullscreen .wm-grid {
   top: -200%;
@@ -4512,11 +4494,11 @@ kbd {
 }
 .beta-send-log:active { transform: scale(0.95); }
 
-/* ⛶ Custom Fullscreen button — top-right (ข้างซ้ายของ Log) — ทับ native fullscreen ของ Aliplayer */
+/* ⛶ Custom Fullscreen button — top-right — บังคับใช้ปุ่มนี้เท่านั้น */
 .beta-fs-btn {
   position: absolute;
   top: 10px;
-  right: 78px;    /* ห่างจาก Log button */
+  right: 10px;
   z-index: 9999;
   width: 36px;
   height: 30px;
@@ -4541,21 +4523,24 @@ kbd {
 }
 .beta-fs-btn:active { transform: scale(0.95); }
 
-/* ⭐ บังปุ่ม native ของ Aliplayer — ครอบทั้งหมด (ทั้ง prism-* + player-* + tl-* skins) */
-.ali-player-box .prism-controlbar,
-.ali-player-box .prism-big-play-btn,
+/* ⭐ บล็อค native fullscreen ทั้งหมด — บังคับใช้ปุ่ม ⛶ ของเราเท่านั้น
+   (ป้องกัน user กด native fullscreen → iOS native video player → watermark หาย)
+*/
 .ali-player-box .prism-fullscreen-btn,
-.ali-player-box .prism-cc-btn,
-.ali-player-box .prism-setting-btn,
-.ali-player-box .prism-info-display,
-.ali-player-box .prism-cover,
-.ali-player-box .player-controlbar,
-.ali-player-box [class*="fullscreen"],
-.ali-player-box [class*="controlbar"] {
+.ali-player-box .prism-fullscreen,
+.ali-player-box [class*="fullscreen"] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
+}
+
+/* Block double-tap zoom + pinch fullscreen บน video element */
+.ali-player-box video {
+  touch-action: pan-x pan-y !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 /* ⭐ Custom Aliplayer Controls (เขียนเอง) — ซ้อนทับ native Aliplayer controls */
