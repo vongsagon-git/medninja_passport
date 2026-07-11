@@ -206,22 +206,41 @@
       document.getElementById('status').style.display = 'grid'
     }
 
-    // ⭐ Frontend detect (แม่นกว่า UA — iPad iOS 13+ report เป็น Mac)
+    // ⭐ Frontend detect โดยใช้ TOUCH POINT เป็นตัวหลัก
+    // เหตุผล: Mac จริง = maxTouchPoints === 0, iPad/iPhone = > 0 เสมอ
+    // Windows touch laptop ก็มี > 0 แต่ UA จะไม่ใช่ Mac/Safari
     function detectIOS() {
       const ua = navigator.userAgent
-      if (/iPad|iPhone|iPod/.test(ua)) return true
-      // iPad iOS 13+: platform=MacIntel + maxTouchPoints > 1
-      if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return true
+      const touch = navigator.maxTouchPoints || 0
+
+      // Rule 1: UA ตรงเลย (iPhone/iPod/iPad เก่า + Chrome iOS)
+      if (/iPad|iPhone|iPod|CriOS|FxiOS/.test(ua)) return true
+
+      // Rule 2: TOUCH POINT + Apple-like environment = iPad iOS 13+
+      // Mac จริง touch = 0 → ถ้า > 0 = ไม่ใช่ Mac แล้ว
+      if (touch > 0) {
+        // Safari + Mac-like UA + มี touch = iPad iOS 13+ (ปลอมตัว)
+        if (/Safari/.test(ua) && /Mac/.test(ua) && !/Chrome/.test(ua)) return true
+        // iPad บาง Chrome iOS อาจไม่มี CriOS แต่มี touch + MacIntel
+        if (navigator.platform === 'MacIntel') return true
+      }
+
+      // Rule 3: userAgentData (Chrome-based สมัยใหม่)
+      if (navigator.userAgentData && navigator.userAgentData.platform === 'iOS') return true
+
       return false
     }
 
     function renderDevice() {
       const ua = navigator.userAgent
       const isIOS = detectIOS()
+      const touch = navigator.maxTouchPoints || 0
+      const touchBadge = touch > 0 ? '📱 has touch' : '💻 no touch'
       document.getElementById('device-info').innerHTML = `
-        <div><b>iOS (frontend detect):</b> ${isIOS ? '✅' : '❌'}</div>
+        <div><b>iOS Detect:</b> ${isIOS ? '✅ iOS' : '❌ Not iOS'}</div>
+        <div><b>Touch Points:</b> ${touch} <span style="color:${touch>0?'#4ade80':'#94a3b8'}">(${touchBadge})</span></div>
         <div><b>Platform:</b> ${navigator.platform}</div>
-        <div><b>MaxTouchPoints:</b> ${navigator.maxTouchPoints}</div>
+        <div><b>UA Data Platform:</b> ${navigator.userAgentData?.platform || 'n/a'}</div>
         <div class="ua">${escapeHtml(ua)}</div>
       `
     }
