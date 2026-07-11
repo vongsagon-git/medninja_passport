@@ -999,40 +999,32 @@ export default {
       }, 5000)
     }
 
-    // ═══ Fullscreen detection ═══
+    // ═══ Fullscreen detection (Desktop native เท่านั้น — Mobile ใช้ Vue state) ═══
     this._onFsChange = () => {
-      this.isFullscreen = !!document.fullscreenElement
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      if (!isMobile) this.isFullscreen = !!document.fullscreenElement
     }
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
-    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only)
-    // เช็ค real fullscreen state จาก DOM/CSS ไม่ใช่ Vue state (กัน race)
+    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only — CSS fake ทั้ง iOS+Android)
     this._onOrientationChange = () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       if (!isMobile) return
-      const isIos = detectIOS() || detectMacSafari()
       const isLandscape = window.innerWidth > window.innerHeight
-      // Real fullscreen state:
-      // - iOS: ใช้ Vue state (CSS fake)
-      // - Android: ใช้ document.fullscreenElement (native)
-      const inFs = isIos ? this.isFullscreen : !!document.fullscreenElement
-
-      // debounce กัน event ยิงถี่ ๆ (Android bug: resize ยิงหลายครั้งตอน fullscreen enter)
       if (this._orientBusy) return
-      if (isLandscape && !inFs) {
+      if (isLandscape && !this.isFullscreen) {
         this._orientBusy = true
         this.aliToggleFullscreen && this.aliToggleFullscreen()
         setTimeout(() => { this._orientBusy = false }, 500)
-      } else if (!isLandscape && inFs) {
+      } else if (!isLandscape && this.isFullscreen) {
         this._orientBusy = true
         this.aliToggleFullscreen && this.aliToggleFullscreen()
         setTimeout(() => { this._orientBusy = false }, 500)
       }
     }
     window.addEventListener('orientationchange', this._onOrientationChange)
-    // ไม่ผูก resize event บน Android — จะยิงถี่ ๆ ตอน enter fullscreen → เด้งกลับ
-    // iPad iOS 13+ ก็ใช้ orientationchange พอ (ทำงานปกติแล้ว)
+    window.addEventListener('resize', this._onOrientationChange)
     // Resize → update wmModeKey (rotate / resize) + counter zoom ลายน้ำ
     // ═══ Zoom detection — periodic innerWidth check (จับ Safari + ทุก browser) ═══
     this._wmBaseDpr = window.devicePixelRatio || 1
@@ -2896,14 +2888,16 @@ export default {
     aliToggleFullscreen () {
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
-      const isIos = detectIOS() || detectMacSafari()
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
-      if (isIos) {
-        // ⭐ iOS: ใช้ CSS fake fullscreen เท่านั้น (native จะเปิด iOS video player → watermark หาย)
+      if (isMobile) {
+        // ⭐ Mobile (iOS+Android): CSS fake fullscreen
+        //  - iOS: native เปิด iOS video player → watermark หาย
+        //  - Android: auto-rotate ไม่ใช่ user gesture → requestFullscreen ถูก block
         this.isFullscreen = !this.isFullscreen
         document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
       } else {
-        // Android/Desktop: native fullscreen ปกติ
+        // Desktop: native fullscreen
         if (document.fullscreenElement) {
           document.exitFullscreen()
         } else {

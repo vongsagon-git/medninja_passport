@@ -877,34 +877,32 @@ export default {
       }, 5000)
     }
 
-    // ═══ Fullscreen detection ═══
+    // ═══ Fullscreen detection (Desktop native เท่านั้น — Mobile ใช้ Vue state) ═══
     this._onFsChange = () => {
-      // iOS ใช้ Vue state (fake) — Android ใช้ document.fullscreenElement (native)
-      const isIos = detectIOS() || detectMacSafari()
-      if (!isIos) this.isFullscreen = !!document.fullscreenElement
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      if (!isMobile) this.isFullscreen = !!document.fullscreenElement
     }
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
-    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only)
+    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only — iOS+Android ใช้ CSS fake)
     this._onOrientationChange = () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       if (!isMobile) return
-      const isIos = detectIOS() || detectMacSafari()
       const isLandscape = window.innerWidth > window.innerHeight
-      const inFs = isIos ? this.isFullscreen : !!document.fullscreenElement
       if (this._orientBusy) return
-      if (isLandscape && !inFs) {
+      if (isLandscape && !this.isFullscreen) {
         this._orientBusy = true
         this.toggleFullscreen && this.toggleFullscreen()
         setTimeout(() => { this._orientBusy = false }, 500)
-      } else if (!isLandscape && inFs) {
+      } else if (!isLandscape && this.isFullscreen) {
         this._orientBusy = true
         this.toggleFullscreen && this.toggleFullscreen()
         setTimeout(() => { this._orientBusy = false }, 500)
       }
     }
     window.addEventListener('orientationchange', this._onOrientationChange)
+    window.addEventListener('resize', this._onOrientationChange)
 
     // Resize → update wmModeKey (rotate / resize) + counter zoom ลายน้ำ
     // ═══ Zoom detection — periodic innerWidth check (จับ Safari + ทุก browser) ═══
@@ -1068,7 +1066,10 @@ export default {
     if (this._lineLinkPoll) clearInterval(this._lineLinkPoll)
     document.removeEventListener('fullscreenchange', this._onFsChange)
     document.removeEventListener('webkitfullscreenchange', this._onFsChange)
-    if (this._onOrientationChange) window.removeEventListener('orientationchange', this._onOrientationChange)
+    if (this._onOrientationChange) {
+      window.removeEventListener('orientationchange', this._onOrientationChange)
+      window.removeEventListener('resize', this._onOrientationChange)
+    }
     if (this._onWmResize) window.removeEventListener('resize', this._onWmResize)
     if (this._onBunnyMessage) window.removeEventListener('message', this._onBunnyMessage)
     if (this.$el) this.$el.style.zoom = ''
@@ -1856,28 +1857,34 @@ export default {
       const url = base + '/api/beacon/heartbeat-clear'
       try { navigator.sendBeacon(url, new Blob([JSON.stringify({ token })], { type: 'application/json' })) } catch {}
     },
-    toggleFullscreen() {
+    toggleFullscreen(opts) {
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
       const isIos = detectIOS() || detectMacSafari()
+      const isAndroid = /Android/i.test(navigator.userAgent)
+      const isMobile = isIos || isAndroid
+      const forceFake = opts && opts.fake === true
 
-      if (isIos) {
-        // ⭐ iOS: CSS fake fullscreen (native จะเปิด iOS video player → watermark หาย)
+      // Mobile (iOS+Android) หรือ forceFake → CSS fake fullscreen
+      //  - iOS: native เปิด iOS video player → watermark หาย
+      //  - Android: auto-rotate ไม่ใช่ user gesture → requestFullscreen ถูก block
+      if (isMobile || forceFake) {
         this.isFullscreen = !this.isFullscreen
         document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
+        return
+      }
+
+      // Desktop: native fullscreen
+      if (document.fullscreenElement) {
+        document.exitFullscreen()
       } else {
-        // Android/Desktop: native fullscreen
-        if (document.fullscreenElement) {
-          document.exitFullscreen()
-        } else {
-          box.requestFullscreen().catch(() => {})
-          if (!box._fsProtected) {
-            box._fsProtected = true
-            box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
-            box.addEventListener('keydown', (e) => {
-              if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault()
-            })
-          }
+        box.requestFullscreen().catch(() => {})
+        if (!box._fsProtected) {
+          box._fsProtected = true
+          box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
+          box.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault()
+          })
         }
       }
     },
