@@ -58,6 +58,10 @@ app.use((req, res, next) => {
 })
 // /nlex → redirect ไป miniapp
 app.get('/nlex', (req, res) => res.redirect(301, 'https://nlex.medninja.academy'))
+// /china-serve → standalone HTML test page (player-serve concept)
+app.get('/china-serve', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../frontend/dist/china-serve.html'))
+})
 // /diag-no-token = admin only standalone (ไม่ต้อง login)
 app.get('/diag-no-token', (req, res) => {
   res.sendFile(path.join(__dirname, 'pages/diag-no-token.html'))

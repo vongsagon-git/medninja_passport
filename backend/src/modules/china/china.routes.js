@@ -20,7 +20,7 @@ router.get('/playauth/:videoId', originCheck, chromeOnly, auth, getPlayAuth)
 // ⭐ Landing page playauth — public (no auth, no chrome guard) สำหรับหน้าขาย /china
 // Whitelist เฉพาะ video ID ที่ตั้งไว้ (แสดง demo เท่านั้น)
 const LANDING_ALLOWED_VIDEOS = new Set([
-  'f0a10c4f79dc71f1a46bf6f7f45a0102' // Alibaba Encrypt demo video (Singapore bucket)
+  '00bef48a7d1071f18224e6f6c55a0102' // Introduce.mov — DRM + Ali Prop dual encryption
 ])
 router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   if (!LANDING_ALLOWED_VIDEOS.has(req.params.videoId)) {
@@ -28,6 +28,57 @@ router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   }
   next()
 }, getPlayAuth)
+
+// ⭐ Player-serve endpoint (test) — backend ตัดสินใจ encryption ตาม User-Agent
+// Return: { playAuth, encryptType, deviceServed, uaSample }
+// - iOS/Safari    → encryptType 1 (Ali Prop) — เพราะ FairPlay cert หาย
+// - Chrome/Android/PC → encryptType 3 (Widevine DRM)
+router.get('/landing-serve/:videoId', originCheck, async (req, res) => {
+  const { videoId } = req.params
+  if (!LANDING_ALLOWED_VIDEOS.has(videoId)) {
+    return res.status(403).json({ code: 'VIDEO_NOT_WHITELISTED' })
+  }
+
+  const ua = req.headers['user-agent'] || ''
+  const isIOS = /iPad|iPhone|iPod/.test(ua)
+  const isSafariDesktop = /Safari\//.test(ua) && !/Chrome\/|Chromium\//.test(ua) && !/Edg\//.test(ua)
+  const shouldUseAliProp = isIOS || isSafariDesktop
+
+  const encryptType = shouldUseAliProp ? 1 : 3
+  const deviceServed = isIOS ? 'iOS' : isSafariDesktop ? 'Safari Desktop' : 'Chrome/Android/PC'
+
+  // Fetch PlayAuth (ต้องมี PlayAuth ก่อนไม่ว่าจะ Ali Prop หรือ DRM)
+  try {
+    const RPCClient = require('@alicloud/pop-core').RPCClient
+    const client = new RPCClient({
+      accessKeyId: process.env.ALIBABA_ACCESS_KEY_ID,
+      accessKeySecret: process.env.ALIBABA_ACCESS_KEY_SECRET,
+      endpoint: `https://vod.${process.env.ALIBABA_VOD_REGION || 'ap-southeast-1'}.aliyuncs.com`,
+      apiVersion: '2017-03-21'
+    })
+    const result = await client.request('GetVideoPlayAuth', {
+      VideoId: videoId,
+      AuthInfoTimeout: 3000
+    }, { method: 'POST' })
+
+    return res.json({
+      playAuth: result.PlayAuth,
+      videoMeta: result.VideoMeta,
+      encryptType,
+      deviceServed,
+      reason: shouldUseAliProp
+        ? 'iOS/Safari → Ali Prop (FairPlay cert not available)'
+        : 'Chrome/Android/PC → Widevine DRM (encryptType 3)',
+      uaSample: ua.substring(0, 120),
+      requestId: result.RequestId
+    })
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message,
+      code: err.code || 'UNKNOWN'
+    })
+  }
+})
 
 // GET /api/china/sts/:videoId — สำหรับ Widevine/FairPlay DRM video
 router.get('/sts/:videoId', originCheck, chromeOnly, auth, getStsToken)

@@ -370,6 +370,7 @@ const routes = [
     component: () => import('../views/ChinaTestPage.vue'),
     meta: { immersive: true }
   },
+  // /china-serve → เสิร์ฟ standalone HTML จาก backend (bypass Vue) — test player-serve
   // 404 catch-all
   {
     path: '/:pathMatch(.*)*',

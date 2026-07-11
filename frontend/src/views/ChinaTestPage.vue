@@ -171,12 +171,36 @@ function contactLine() {
   window.open('https://lin.ee/nEEK4Kv', '_blank')
 }
 
+// ⭐ WeChat MVP — QR ส่วนตัว + WeChat ID (แก้ 2 ค่านี้เมื่อได้ข้อมูลจริง)
+const WECHAT_ID = 'medninja_official' // เปลี่ยนเป็น ID จริง
+const WECHAT_QR_URL = '/img/wechat-qr.png' // upload QR image ที่ path นี้
+
 const wechatModalOpen = ref(false)
+const wechatId = ref(WECHAT_ID)
+const qrFailed = ref(false)
+
 function openWechat() {
   wechatModalOpen.value = true
+  qrFailed.value = false
 }
 function closeWechat() {
   wechatModalOpen.value = false
+}
+function onQrError() {
+  // QR ยังไม่ upload → fallback ไป placeholder
+  qrFailed.value = true
+}
+function addWechatFriend() {
+  // Copy WeChat ID ไป clipboard + toast
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(WECHAT_ID).then(() => {
+      alert(`Copy WeChat ID แล้ว: ${WECHAT_ID}\n\nเปิด WeChat แล้ววาง ID ในช่องค้นหาเพื่อเพิ่มเพื่อน`)
+    }).catch(() => {
+      alert(`WeChat ID: ${WECHAT_ID}\n\nคัดลอกไปเพิ่มเพื่อนใน WeChat ได้เลย`)
+    })
+  } else {
+    alert(`WeChat ID: ${WECHAT_ID}\n\nคัดลอกไปเพิ่มเพื่อนใน WeChat ได้เลย`)
+  }
 }
 
 onMounted(() => {
@@ -311,16 +335,38 @@ onUnmounted(() => {
         <div class="wechat-modal">
           <button class="modal-close wechat-close" @click="closeWechat" aria-label="ปิด">✕</button>
           <div class="wechat-body">
-            <div class="wechat-title">เพิ่มเราใน WeChat</div>
-            <div class="wechat-sub">สแกน QR ด้านล่างเพื่อเพิ่มเพื่อน</div>
+            <div class="wechat-brand">
+              <div class="wc-logo">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                  <path d="M8.5 3C4.36 3 1 5.91 1 9.5c0 2.07 1.13 3.9 2.88 5.1L3 17l2.5-1.5c.87.32 1.87.5 3 .5.24 0 .48-.02.72-.04-.15-.48-.22-.96-.22-1.46 0-3.31 3.36-6 7.5-6 .35 0 .69.02 1.03.06C17.2 5.36 13.24 3 8.5 3zM6.5 8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm4 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+                  <path d="M23 14.5c0-2.9-2.87-5.25-6.5-5.25S10 11.6 10 14.5c0 2.9 2.87 5.25 6.5 5.25.72 0 1.42-.11 2.06-.28L20.5 20l-.5-1.6c1.79-.93 3-2.55 3-3.9zm-8.5-1c-.41 0-.75-.34-.75-.75s.34-.75.75-.75.75.34.75.75-.34.75-.75.75zm4 0c-.41 0-.75-.34-.75-.75s.34-.75.75-.75.75.34.75.75-.34.75-.75.75z"/>
+                </svg>
+              </div>
+              <div class="wechat-title">เพิ่มเพื่อนใน WeChat</div>
+              <div class="wechat-sub">สแกน QR หรือกดปุ่มเพิ่มเพื่อน</div>
+            </div>
+
             <div class="wechat-qr-slot">
-              <div class="qr-placeholder">
+              <img
+                v-if="!qrFailed"
+                :src="WECHAT_QR_URL"
+                alt="WeChat QR"
+                class="wechat-qr-img"
+                @error="onQrError"
+              />
+              <div v-else class="qr-placeholder">
                 <div class="qr-icon">📱</div>
                 <div class="qr-text">QR Code<br>เร็ว ๆ นี้</div>
               </div>
             </div>
+
+            <button class="wechat-add-btn" @click="addWechatFriend">
+              <span class="wc-add-icon">+</span>
+              <span>เพิ่มเพื่อน WeChat</span>
+            </button>
+
             <div class="wechat-hint">
-              💡 หรือค้นหา WeChat ID: <b>medninja_official</b>
+              💡 หรือค้นหา WeChat ID: <b>{{ wechatId }}</b>
             </div>
           </div>
         </div>
