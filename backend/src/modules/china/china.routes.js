@@ -29,26 +29,13 @@ router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   next()
 }, getPlayAuth)
 
-// ⭐ Player-serve endpoint (test) — backend ตัดสินใจ encryption ตาม User-Agent
-// Return: { playAuth, encryptType, deviceServed, uaSample }
-// - iOS/Safari    → encryptType 1 (Ali Prop) — เพราะ FairPlay cert หาย
-// - Chrome/Android/PC → encryptType 3 (Widevine DRM)
-router.get('/landing-serve/:videoId', originCheck, async (req, res) => {
+// ⭐ Test PlayAuth — return playAuth ตรง ๆ (frontend ตัดสิน encryptType เอง)
+router.get('/test-playauth/:videoId', originCheck, async (req, res) => {
   const { videoId } = req.params
   if (!LANDING_ALLOWED_VIDEOS.has(videoId)) {
     return res.status(403).json({ code: 'VIDEO_NOT_WHITELISTED' })
   }
 
-  const ua = req.headers['user-agent'] || ''
-  // เฉพาะ iOS (iPad/iPhone/iPod) → Ali Prop เพราะไม่รองรับ Widevine
-  // อื่น ๆ ทั้งหมด (Chrome/Safari Mac/Android/PC/จีน) → Widevine DRM
-  const isIOS = /iPad|iPhone|iPod/.test(ua)
-  const shouldUseAliProp = isIOS
-
-  const encryptType = shouldUseAliProp ? 1 : 3
-  const deviceServed = isIOS ? 'iOS' : 'Widevine-compatible (Chrome/Safari Mac/Android/PC)'
-
-  // Fetch PlayAuth (ต้องมี PlayAuth ก่อนไม่ว่าจะ Ali Prop หรือ DRM)
   try {
     const RPCClient = require('@alicloud/pop-core').RPCClient
     const client = new RPCClient({
@@ -65,12 +52,6 @@ router.get('/landing-serve/:videoId', originCheck, async (req, res) => {
     return res.json({
       playAuth: result.PlayAuth,
       videoMeta: result.VideoMeta,
-      encryptType,
-      deviceServed,
-      reason: shouldUseAliProp
-        ? 'iOS → Ali Prop (encryptType 1) เพราะไม่รองรับ Widevine'
-        : 'อื่น ๆ → Widevine DRM (encryptType 3)',
-      uaSample: ua.substring(0, 120),
       requestId: result.RequestId
     })
   } catch (err) {
