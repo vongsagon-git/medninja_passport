@@ -172,6 +172,16 @@
                 📤 {{ betaLogSending ? 'ส่ง...' : (betaLogSent ? '✅' : 'Log') }}
               </button>
 
+              <!-- ⛶ Fullscreen button (top-right ข้างซ้ายของ Log) -->
+              <button
+                v-if="hasAliVideo && !replaced && !recorderBlocked && playerReady"
+                class="beta-fs-btn"
+                @click="aliToggleFullscreen"
+                :title="isFullscreen ? 'ออกจากเต็มจอ' : 'เต็มจอ'"
+              >
+                {{ isFullscreen ? '↙' : '⛶' }}
+              </button>
+
               <!-- Loading overlay — บังจน Ali player ready -->
               <div v-if="hasAliVideo && !replaced && !recorderBlocked && !playerReady" class="player-loading-overlay">
                 <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
@@ -4483,7 +4493,7 @@ kbd {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 50;
+  z-index: 9999;
   background: rgba(167, 139, 250, 0.85);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -4501,6 +4511,52 @@ kbd {
   transform: scale(1.05);
 }
 .beta-send-log:active { transform: scale(0.95); }
+
+/* ⛶ Custom Fullscreen button — top-right (ข้างซ้ายของ Log) — ทับ native fullscreen ของ Aliplayer */
+.beta-fs-btn {
+  position: absolute;
+  top: 10px;
+  right: 78px;    /* ห่างจาก Log button */
+  z-index: 9999;
+  width: 36px;
+  height: 30px;
+  background: rgba(30, 41, 59, 0.85);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  line-height: 1;
+}
+.beta-fs-btn:hover {
+  background: rgba(51, 65, 85, 0.95);
+  transform: scale(1.05);
+}
+.beta-fs-btn:active { transform: scale(0.95); }
+
+/* ⭐ บังปุ่ม native ของ Aliplayer — ครอบทั้งหมด (ทั้ง prism-* + player-* + tl-* skins) */
+.ali-player-box .prism-controlbar,
+.ali-player-box .prism-big-play-btn,
+.ali-player-box .prism-fullscreen-btn,
+.ali-player-box .prism-cc-btn,
+.ali-player-box .prism-setting-btn,
+.ali-player-box .prism-info-display,
+.ali-player-box .prism-cover,
+.ali-player-box .player-controlbar,
+.ali-player-box [class*="fullscreen"],
+.ali-player-box [class*="controlbar"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
 
 /* ⭐ Custom Aliplayer Controls (เขียนเอง) — ซ้อนทับ native Aliplayer controls */
 .ali-ctl-layer {
