@@ -288,10 +288,10 @@
                     {{ video.duration }}
                   </span>
                   <span class="w-video-idx">วีดีโอที่ {{ videoIndex + 1 }} จาก {{ totalVideos }}</span>
-                  <!-- ⭐ CN: Ali serve badge — บอก variant + ID ตัวท้าย + serve ถูกไหม -->
-                  <span v-if="!isDemo" class="w-drm-badge" :class="aliServeCheck.ok ? 'drm-widevine' : 'drm-protection'" :title="aliServeCheck.ok ? 'Serve ถูก' : 'Serve ผิด'">
+                  <!-- ⭐ CN: Ali serve badge — บอก encryption path จริงตาม device (1 ID dual encryption) -->
+                  <span v-if="!isDemo" class="w-drm-badge" :class="aliServeCheck.variant === 'widevine' ? 'drm-widevine' : 'drm-protection'" :title="aliServeCheck.variant === 'widevine' ? 'Widevine DRM (STS + permissive)' : 'Ali Prop Encryption (PlayAuth + filter)'">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
-                    {{ aliServeCheck.variant === 'drm' ? 'CHINA WIDEVINE' : 'CHINA PROTECTION' }}
+                    {{ aliServeCheck.variant === 'widevine' ? 'CN WIDEVINE' : 'CN PROTECTION' }}
                     <span v-if="aliServeCheck.idTail"> · …{{ aliServeCheck.idTail }}</span>
                     <span :style="{ color: aliServeCheck.ok ? '#4ade80' : '#f87171', marginLeft: '4px' }">{{ aliServeCheck.ok ? '✓' : '✗' }}</span>
                   </span>
@@ -806,13 +806,16 @@ export default {
       return !!v.aliVideoId
     },
     aliServeCheck() {
-      // ⭐ 1 ID dual encryption — server ส่ง aliVideoId เดียว ไม่มี variant
+      // ⭐ 1 ID dual encryption — frontend เลือก path ตาม device
+      // iOS/Mac Safari → Ali Prop (PROTECTION)
+      // Other (Chrome/Android/PC/Edge) → Widevine DRM (WIDEVINE)
       const v = this.video
       const empty = { ok: false, variant: '', idTail: '' }
       if (!v) return empty
       const chosen = (this.aliVideoIdToPlay || '').trim()
       const idTail = chosen ? chosen.slice(-6) : ''
-      const variant = detectIOS() ? 'ali-prop' : 'widevine'
+      const isIosOrSafari = detectIOS() || detectMacSafari()
+      const variant = isIosOrSafari ? 'ali-prop' : 'widevine'
       return { ok: !!chosen, variant, idTail }
     },
     aliVideoIdToPlay() {
