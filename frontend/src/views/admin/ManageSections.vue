@@ -211,6 +211,7 @@
                                   </div>
                                 </div>
                               </div>
+                              <span v-if="vid.ref.contentId" class="link-badge" :title="'🔗 Link Library: ' + (vid.ref._linkedContentTitle || 'Library content') + ' (คลิกเพื่อ unlink)'" @click="unlinkContent(vid.ref)">🔗 Library</span>
                               <span v-if="vid.ref._locked" class="lock-badge" @click="unlockVideo(vid.flatIdx)">🔒</span>
                               <select v-model.number="vid.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (vid.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                                 <option :value="1">ระดับ 1</option>
@@ -329,6 +330,7 @@
                               </button>
                             </div>
                           </div>
+                          <span v-if="child.ref.contentId" class="link-badge" :title="'🔗 Link Library: ' + (child.ref._linkedContentTitle || 'Library content') + ' (คลิกเพื่อ unlink)'" @click="unlinkContent(child.ref)">🔗 Library</span>
                           <span v-if="child.ref._locked" class="lock-badge" @click="unlockVideo(child.flatIdx)">🔒</span>
                           <select v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                             <option :value="1">ระดับ 1</option>
@@ -447,6 +449,7 @@
                         </button>
                       </div>
                     </div>
+                    <span v-if="node.ref.contentId" class="link-badge" :title="'🔗 Link Library: ' + (node.ref._linkedContentTitle || 'Library content') + ' (คลิกเพื่อ unlink)'" @click="unlinkContent(node.ref)">🔗 Library</span>
                     <span v-if="node.ref._locked" class="lock-badge" @click="unlockVideo(node.flatIdx)">🔒</span>
                     <select v-model.number="node.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (node.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                       <option :value="1">ระดับ 1</option>
@@ -979,27 +982,35 @@ export default {
     selectLibContent(content) {
       const video = this.loadContentModal._videoRef
       if (!video) return
-      // Check if any existing videoId would be overwritten
-      const hasExisting = video.bunnyVideoId || video.bunnyDrmVideoId || video.aliVideoId || video.aliDrmVideoId
+      const hasExisting = video.bunnyVideoId || video.bunnyDrmVideoId || video.aliVideoId || video.aliDrmVideoId || video.contentId
       if (hasExisting) {
-        const proceed = confirm(`⚠️ VDO นี้มี ID อยู่แล้ว\n\nต้องการเขียนทับด้วย "${content.title}"?`)
+        const proceed = confirm(`⚠️ VDO นี้มีข้อมูลอยู่แล้ว\n\nต้องการเปลี่ยนเป็น "${content.title}"?`)
         if (!proceed) return
       }
-      // Fill 4 fields + title + duration
+      // ⭐ Link mode: save contentId only + snapshot for offline display
+      // Backend จะ override 4 videoIds จาก Library ตอน serve
+      video.contentId = content._id
       video.title = content.title
       video.bunnyVideoId = content.bunnyVideoId
       video.bunnyDrmVideoId = content.bunnyDrmVideoId
       video.aliVideoId = content.aliVideoId
       video.aliDrmVideoId = content.aliDrmVideoId
       if (content.duration) video.duration = content.duration
-      video._fromLibrary = true
-      // Mark all as verified (skip re-verify since Library data is trusted)
+      video._linkedContentTitle = content.title
       video._verified = true
       video._drmVerified = true
       video._aliVerified = true
       video._aliDrmVerified = true
       this.$forceUpdate()
       this.closeLoadContentModal()
+    },
+    unlinkContent(video) {
+      if (!video.contentId) return
+      const proceed = confirm(`ปลด link จาก Content Library?\n\nID จะยังอยู่ในฟิลด์ แต่จะไม่ sync กับ Library แล้ว\n(ยกเลิกไม่ได้จนกว่าจะ Load ใหม่)`)
+      if (!proceed) return
+      video.contentId = null
+      video._linkedContentTitle = ''
+      this.$forceUpdate()
     },
     async submitSaveContent() {
       const m = this.saveContentModal
@@ -3057,6 +3068,23 @@ export default {
 .btn-load-lib:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 6px rgba(245, 158, 11, 0.4);
+}
+.link-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.35);
+  margin-left: 4px;
+}
+.link-badge:hover {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
 }
 .modal-card-wide {
   max-width: 780px;

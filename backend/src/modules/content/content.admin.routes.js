@@ -16,10 +16,11 @@ const {
 } = require('./content.admin.controller')
 // Admin: VideoContent Library (reusable 4-field video presets)
 const {
-  saveContent, listContents, getTags, deleteContent
+  saveContent, listContents, getTags, deleteContent, getUsage
 } = require('./video-content.controller')
 router.get('/video-contents', auth, admin, listContents)
 router.get('/video-contents/tags', auth, admin, getTags)
+router.get('/video-contents/:id/usage', auth, admin, getUsage)
 router.post('/video-contents', auth, admin, saveContent)
 router.delete('/video-contents/:id', auth, admin, deleteContent)
 

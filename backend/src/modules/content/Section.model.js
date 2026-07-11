@@ -3,6 +3,8 @@ const { lmsConn } = require('../../shared/config/db')
 
 const videoSchema = new mongoose.Schema({
   title: { type: String, default: '' },
+  // ⭐ Link to Content Library — ถ้ามี → 4 videoIds ด้านล่างจะถูก override ตอน serve
+  contentId: { type: mongoose.Schema.Types.ObjectId, ref: 'VideoContent', default: null, index: true },
   bunnyVideoId: { type: String, default: '' },
   bunnyDrmVideoId: { type: String, default: '' },
   bunnyLibraryId: { type: String, default: '' },

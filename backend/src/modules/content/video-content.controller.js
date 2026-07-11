@@ -77,6 +77,35 @@ exports.getTags = async (req, res) => {
   }
 }
 
+// GET /api/admin/video-contents/:id/usage
+// Returns sections + video indices that link to this content
+exports.getUsage = async (req, res) => {
+  try {
+    const Section = require('./Section.model')
+    const sections = await Section.find(
+      { 'videos.contentId': req.params.id },
+      { code: 1, name: 1, videos: 1 }
+    ).lean()
+
+    const usage = []
+    for (const s of sections) {
+      const matches = []
+      for (let i = 0; i < (s.videos || []).length; i++) {
+        const v = s.videos[i]
+        if (v.contentId && v.contentId.toString() === req.params.id) {
+          matches.push({ index: i, title: v.title, topic: v.topic, subtopic: v.subtopic })
+        }
+      }
+      if (matches.length > 0) {
+        usage.push({ _id: s._id, code: s.code, name: s.name, videos: matches })
+      }
+    }
+    res.json({ ok: true, usage, count: usage.length })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
 // DELETE /api/admin/video-contents/:id
 exports.deleteContent = async (req, res) => {
   try {

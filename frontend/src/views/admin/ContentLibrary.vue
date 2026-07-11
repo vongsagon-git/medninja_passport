@@ -46,6 +46,7 @@
             <th>Tag Lv3</th>
             <th>ระยะเวลา</th>
             <th>Video IDs</th>
+            <th>ใช้ใน</th>
             <th>Updated</th>
             <th>จัดการ</th>
           </tr>
@@ -68,6 +69,11 @@
                 <span class="id-badge ali drm" :title="'Ali Widevine: ' + c.aliDrmVideoId">🇨🇳 AD</span>
               </div>
             </td>
+            <td>
+              <button class="usage-btn" @click="openUsageModal(c)" :title="'ดูว่าใช้ในกี่ section'">
+                📎 {{ usageCounts[c._id] != null ? usageCounts[c._id] : '?' }}
+              </button>
+            </td>
             <td class="date">{{ formatDate(c.updatedAt) }}</td>
             <td>
               <button class="btn btn-sm btn-outline" @click="openEditModal(c)">แก้ไข</button>
@@ -80,6 +86,44 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Usage Modal -->
+    <div v-if="usageModal.show" class="modal-overlay" @click.self="usageModal.show = false">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>📎 ใช้ใน Section</h3>
+          <button class="modal-close" @click="usageModal.show = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="usage-title">"{{ usageModal.contentTitle }}"</div>
+          <div v-if="usageModal.loading" class="empty-state">กำลังโหลด...</div>
+          <div v-else-if="usageModal.usage.length === 0" class="empty-state">
+            <div class="empty-icon">📭</div>
+            <div>Content นี้ยังไม่ถูกใช้ที่ไหน</div>
+          </div>
+          <div v-else class="usage-list">
+            <div v-for="s in usageModal.usage" :key="s._id" class="usage-item">
+              <div class="usage-item-head">
+                <router-link :to="'/admin/sections?edit=' + s._id" class="section-link">
+                  <b>{{ s.code }}</b> — {{ s.name }}
+                </router-link>
+                <span class="usage-count">{{ s.videos.length }} วีดีโอ</span>
+              </div>
+              <div class="usage-videos">
+                <div v-for="v in s.videos" :key="v.index" class="usage-video">
+                  <span class="usage-idx">#{{ v.index + 1 }}</span>
+                  <span class="usage-vtitle">{{ v.title || '(ไม่มีชื่อ)' }}</span>
+                  <span v-if="v.topic" class="usage-topic">📂 {{ v.topic }}<span v-if="v.subtopic"> › {{ v.subtopic }}</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="usageModal.show = false">ปิด</button>
+        </div>
+      </div>
     </div>
 
     <!-- Add / Edit Modal -->
@@ -166,6 +210,13 @@ export default {
       filters: { search: '', tagLv1: '', tagLv2: '', tagLv3: '' },
       deletingId: null,
       _debounceTimer: null,
+      usageCounts: {},  // { contentId: count }
+      usageModal: {
+        show: false,
+        loading: false,
+        contentTitle: '',
+        usage: []
+      },
       modal: {
         show: false,
         editId: null,
@@ -197,10 +248,42 @@ export default {
         if (this.filters.tagLv3) params.tagLv3 = this.filters.tagLv3
         const res = await api.get('/admin/video-contents', { params })
         this.contents = res.contents || []
+        // Fetch usage counts in parallel (best-effort, non-blocking)
+        this.fetchUsageCounts()
       } catch (err) {
         console.error(err)
       } finally {
         this.loading = false
+      }
+    },
+    async fetchUsageCounts() {
+      const counts = {}
+      await Promise.all(
+        this.contents.map(async (c) => {
+          try {
+            const r = await api.get(`/admin/video-contents/${c._id}/usage`)
+            counts[c._id] = r.count || 0
+          } catch (e) {
+            counts[c._id] = 0
+          }
+        })
+      )
+      this.usageCounts = counts
+    },
+    async openUsageModal(content) {
+      this.usageModal = {
+        show: true,
+        loading: true,
+        contentTitle: content.title,
+        usage: []
+      }
+      try {
+        const r = await api.get(`/admin/video-contents/${content._id}/usage`)
+        this.usageModal.usage = r.usage || []
+      } catch (e) {
+        this.usageModal.usage = []
+      } finally {
+        this.usageModal.loading = false
       }
     },
     async loadTags() {
@@ -488,6 +571,77 @@ export default {
 .form-row .required { color: #ef4444; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+.usage-btn {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+}
+.usage-btn:hover { transform: translateY(-1px); }
+
+.usage-title {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #9a3412;
+  margin-bottom: 14px;
+}
+.usage-list { display: flex; flex-direction: column; gap: 10px; }
+.usage-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.usage-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+.section-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 13px;
+}
+.section-link:hover { text-decoration: underline; }
+.usage-count {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.usage-videos { padding: 6px 12px; }
+.usage-video {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+  color: #475569;
+}
+.usage-idx {
+  background: #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 10px;
+  color: #64748b;
+}
+.usage-vtitle { flex: 1; font-weight: 500; color: #1e293b; }
+.usage-topic { font-size: 10px; color: #94a3b8; }
 
 @media (max-width: 640px) {
   .filter-bar { grid-template-columns: 1fr; }
