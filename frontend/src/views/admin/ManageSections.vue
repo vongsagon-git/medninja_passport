@@ -158,6 +158,7 @@
                               <span class="tree-video-num">{{ vid.flatIdx + 1 }}</span>
                               <input v-model="vid.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="vid.ref._locked" />
                               <button v-if="vid.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(vid.ref)" :disabled="vid.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ vid.ref._renaming ? '...' : '✏️' }}</button>
+                              <button type="button" class="btn-load-lib" @click="openLoadContentModal(vid.ref)" title="โหลดจาก Content Library">📚</button>
                               <!-- ⭐ 4 video IDs — 2 labeled rows: GLOBAL / CHINA -->
                               <div class="video-ids-grid-v2">
                                 <div class="platform-row global">
@@ -277,6 +278,7 @@
                           <span class="tree-video-num">{{ child.flatIdx + 1 }}</span>
                           <input v-model="child.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="child.ref._locked" />
                           <button v-if="child.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(child.ref)" :disabled="child.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ child.ref._renaming ? '...' : '✏️' }}</button>
+                          <button type="button" class="btn-load-lib" @click="openLoadContentModal(child.ref)" title="โหลดจาก Content Library">📚</button>
                           <div class="video-ids-grid-v2">
                             <div class="platform-row global">
                               <span class="platform-label">🌐 GLOBAL</span>
@@ -394,6 +396,7 @@
                     <span class="tree-video-num">{{ node.flatIdx + 1 }}</span>
                     <input v-model="node.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="node.ref._locked" />
                     <button v-if="node.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(node.ref)" :disabled="node.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ node.ref._renaming ? '...' : '✏️' }}</button>
+                    <button type="button" class="btn-load-lib" @click="openLoadContentModal(node.ref)" title="โหลดจาก Content Library">📚</button>
                     <div class="video-ids-grid-v2">
                       <div class="platform-row global">
                         <span class="platform-label">🌐 GLOBAL</span>
@@ -723,6 +726,59 @@
         </div>
       </div>
     </div>
+
+    <!-- 📚 Load from Content Library Modal -->
+    <div v-if="loadContentModal.show" class="modal-overlay" @click.self="closeLoadContentModal">
+      <div class="modal-card modal-card-wide">
+        <div class="modal-header">
+          <h3>📚 โหลดจาก Content Library</h3>
+          <button type="button" class="modal-close" @click="closeLoadContentModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="load-filter-bar">
+            <input v-model="loadContentModal.search" type="text" placeholder="🔍 ค้นหาชื่อ" class="form-control" @input="debouncedLoadContents" />
+            <select v-model="loadContentModal.tagLv1" class="form-control" @change="fetchLibContents">
+              <option value="">ทุก Lv1</option>
+              <option v-for="t in libTags.tagLv1" :key="t" :value="t">{{ t }}</option>
+            </select>
+            <select v-model="loadContentModal.tagLv2" class="form-control" @change="fetchLibContents">
+              <option value="">ทุก Lv2</option>
+              <option v-for="t in libTags.tagLv2" :key="t" :value="t">{{ t }}</option>
+            </select>
+            <select v-model="loadContentModal.tagLv3" class="form-control" @change="fetchLibContents">
+              <option value="">ทุก Lv3</option>
+              <option v-for="t in libTags.tagLv3" :key="t" :value="t">{{ t }}</option>
+            </select>
+          </div>
+          <div v-if="loadContentModal.loading" class="load-empty">กำลังโหลด...</div>
+          <div v-else-if="loadContentModal.contents.length === 0" class="load-empty">
+            <div style="font-size:32px;">📭</div>
+            <div>ไม่พบ Content — ลองปรับ filter หรือเพิ่ม content ที่ /admin/content-library</div>
+          </div>
+          <div v-else class="load-list">
+            <div v-for="c in loadContentModal.contents" :key="c._id" class="load-item" @click="selectLibContent(c)">
+              <div class="load-item-main">
+                <div class="load-item-title">{{ c.title }}</div>
+                <div class="load-item-tags">
+                  <span v-if="c.tagLv1" class="tag-chip lv1">{{ c.tagLv1 }}</span>
+                  <span v-if="c.tagLv2" class="tag-chip lv2">{{ c.tagLv2 }}</span>
+                  <span v-if="c.tagLv3" class="tag-chip lv3">{{ c.tagLv3 }}</span>
+                </div>
+                <div v-if="c.notes" class="load-item-notes">{{ c.notes }}</div>
+              </div>
+              <div class="load-item-meta">
+                <div class="load-item-dur">{{ c.duration || '--:--' }}</div>
+                <div class="load-item-check">✓ 4/4</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="load-count">{{ loadContentModal.contents.length }} contents</div>
+          <button type="button" class="btn btn-outline" @click="closeLoadContentModal">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -760,6 +816,16 @@ export default {
         _videoRef: null
       },
       libTags: { tagLv1: [], tagLv2: [], tagLv3: [] },
+      // 📚 Load from Content Library
+      loadContentModal: {
+        show: false,
+        loading: false,
+        search: '',
+        tagLv1: '', tagLv2: '', tagLv3: '',
+        contents: [],
+        _videoRef: null,
+        _debounceTimer: null
+      },
       form: {
         code: '',
         name: '',
@@ -868,6 +934,72 @@ export default {
     },
     closeSaveContentModal() {
       this.saveContentModal.show = false
+    },
+    // ═══ 📚 Load from Content Library ═══
+    async openLoadContentModal(video) {
+      this.loadContentModal = {
+        show: true,
+        loading: false,
+        search: '',
+        tagLv1: '', tagLv2: '', tagLv3: '',
+        contents: [],
+        _videoRef: video,
+        _debounceTimer: null
+      }
+      try {
+        const res = await api.get('/admin/video-contents/tags')
+        this.libTags = { tagLv1: res.tagLv1 || [], tagLv2: res.tagLv2 || [], tagLv3: res.tagLv3 || [] }
+      } catch (e) {}
+      await this.fetchLibContents()
+    },
+    closeLoadContentModal() {
+      this.loadContentModal.show = false
+    },
+    debouncedLoadContents() {
+      clearTimeout(this.loadContentModal._debounceTimer)
+      this.loadContentModal._debounceTimer = setTimeout(() => this.fetchLibContents(), 300)
+    },
+    async fetchLibContents() {
+      this.loadContentModal.loading = true
+      try {
+        const params = {}
+        const m = this.loadContentModal
+        if (m.search) params.search = m.search
+        if (m.tagLv1) params.tagLv1 = m.tagLv1
+        if (m.tagLv2) params.tagLv2 = m.tagLv2
+        if (m.tagLv3) params.tagLv3 = m.tagLv3
+        const res = await api.get('/admin/video-contents', { params })
+        this.loadContentModal.contents = res.contents || []
+      } catch (err) {
+        this.loadContentModal.contents = []
+      } finally {
+        this.loadContentModal.loading = false
+      }
+    },
+    selectLibContent(content) {
+      const video = this.loadContentModal._videoRef
+      if (!video) return
+      // Check if any existing videoId would be overwritten
+      const hasExisting = video.bunnyVideoId || video.bunnyDrmVideoId || video.aliVideoId || video.aliDrmVideoId
+      if (hasExisting) {
+        const proceed = confirm(`⚠️ VDO นี้มี ID อยู่แล้ว\n\nต้องการเขียนทับด้วย "${content.title}"?`)
+        if (!proceed) return
+      }
+      // Fill 4 fields + title + duration
+      video.title = content.title
+      video.bunnyVideoId = content.bunnyVideoId
+      video.bunnyDrmVideoId = content.bunnyDrmVideoId
+      video.aliVideoId = content.aliVideoId
+      video.aliDrmVideoId = content.aliDrmVideoId
+      if (content.duration) video.duration = content.duration
+      video._fromLibrary = true
+      // Mark all as verified (skip re-verify since Library data is trusted)
+      video._verified = true
+      video._drmVerified = true
+      video._aliVerified = true
+      video._aliDrmVerified = true
+      this.$forceUpdate()
+      this.closeLoadContentModal()
     },
     async submitSaveContent() {
       const m = this.saveContentModal
@@ -2908,6 +3040,105 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ═══ 📚 Load from Content Library ═══ */
+.btn-load-lib {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+  border: none;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.3);
+}
+.btn-load-lib:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(245, 158, 11, 0.4);
+}
+.modal-card-wide {
+  max-width: 780px;
+}
+.load-filter-bar {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.load-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+.load-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.load-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.load-item:hover {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  transform: translateX(2px);
+}
+.load-item-main { flex: 1; min-width: 0; }
+.load-item-title {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.load-item-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 2px; }
+.tag-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.tag-chip.lv1 { background: #dbeafe; color: #1e40af; }
+.tag-chip.lv2 { background: #ede9fe; color: #6d28d9; }
+.tag-chip.lv3 { background: #fce7f3; color: #be185d; }
+.load-item-notes {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.load-item-meta {
+  text-align: right;
+  padding-left: 12px;
+}
+.load-item-dur {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  color: #64748b;
+}
+.load-item-check {
+  font-size: 10px;
+  color: #10b981;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.load-count {
+  flex: 1;
+  font-size: 11px;
+  color: #94a3b8;
 }
 
 </style>
