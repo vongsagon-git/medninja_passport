@@ -879,9 +879,33 @@ export default {
 
     // ═══ Fullscreen detection ═══
     this._onFsChange = () => {
-      this.isFullscreen = !!document.fullscreenElement
+      // iOS ใช้ Vue state (fake) — Android ใช้ document.fullscreenElement (native)
+      const isIos = detectIOS() || detectMacSafari()
+      if (!isIos) this.isFullscreen = !!document.fullscreenElement
     }
     document.addEventListener('fullscreenchange', this._onFsChange)
+    document.addEventListener('webkitfullscreenchange', this._onFsChange)
+
+    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only)
+    this._onOrientationChange = () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      if (!isMobile) return
+      const isIos = detectIOS() || detectMacSafari()
+      const isLandscape = window.innerWidth > window.innerHeight
+      const inFs = isIos ? this.isFullscreen : !!document.fullscreenElement
+      if (this._orientBusy) return
+      if (isLandscape && !inFs) {
+        this._orientBusy = true
+        this.toggleFullscreen && this.toggleFullscreen()
+        setTimeout(() => { this._orientBusy = false }, 500)
+      } else if (!isLandscape && inFs) {
+        this._orientBusy = true
+        this.toggleFullscreen && this.toggleFullscreen()
+        setTimeout(() => { this._orientBusy = false }, 500)
+      }
+    }
+    window.addEventListener('orientationchange', this._onOrientationChange)
+
     // Resize → update wmModeKey (rotate / resize) + counter zoom ลายน้ำ
     // ═══ Zoom detection — periodic innerWidth check (จับ Safari + ทุก browser) ═══
     this._wmBaseDpr = window.devicePixelRatio || 1
@@ -1043,6 +1067,8 @@ export default {
   beforeUnmount() {
     if (this._lineLinkPoll) clearInterval(this._lineLinkPoll)
     document.removeEventListener('fullscreenchange', this._onFsChange)
+    document.removeEventListener('webkitfullscreenchange', this._onFsChange)
+    if (this._onOrientationChange) window.removeEventListener('orientationchange', this._onOrientationChange)
     if (this._onWmResize) window.removeEventListener('resize', this._onWmResize)
     if (this._onBunnyMessage) window.removeEventListener('message', this._onBunnyMessage)
     if (this.$el) this.$el.style.zoom = ''
@@ -1833,17 +1859,25 @@ export default {
     toggleFullscreen() {
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
-      if (document.fullscreenElement) {
-        document.exitFullscreen()
+      const isIos = detectIOS() || detectMacSafari()
+
+      if (isIos) {
+        // ⭐ iOS: CSS fake fullscreen (native จะเปิด iOS video player → watermark หาย)
+        this.isFullscreen = !this.isFullscreen
+        document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
       } else {
-        box.requestFullscreen().catch(() => {})
-        // Fullscreen element ต้อง block scroll/zoom เอง (document level จับไม่ได้)
-        if (!box._fsProtected) {
-          box._fsProtected = true
-          box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
-          box.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault()
-          })
+        // Android/Desktop: native fullscreen
+        if (document.fullscreenElement) {
+          document.exitFullscreen()
+        } else {
+          box.requestFullscreen().catch(() => {})
+          if (!box._fsProtected) {
+            box._fsProtected = true
+            box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
+            box.addEventListener('keydown', (e) => {
+              if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault()
+            })
+          }
         }
       }
     },
@@ -2701,11 +2735,22 @@ kbd {
   aspect-ratio: auto;
   position: relative;
 }
+/* CSS fake fullscreen (iOS Safari — เพราะ native บล็อค) */
 .w-player-box.is-fullscreen {
-  width: 100vw;
-  height: 100vh;
-  aspect-ratio: auto;
-  position: relative;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  width: 100dvw !important;
+  height: 100dvh !important;
+  aspect-ratio: auto !important;
+  z-index: 999999 !important;
+  background: #000 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .w-player-box.is-fullscreen .wm-grid {
   top: -200%;

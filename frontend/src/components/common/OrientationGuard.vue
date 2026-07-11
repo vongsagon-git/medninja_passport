@@ -70,8 +70,8 @@ export default {
     showGuard() {
       if (!this.isMobile) return false
       if (!this.isLandscape) return false
-      // Video routes → ต้อง fullscreen ถึงจะปล่อยผ่าน
-      if (this.isVideoRoute && this.isFullscreen) return false
+      // Video routes → ปล่อยผ่านเลย (auto fullscreen ตอน landscape — iOS fake, Android native)
+      if (this.isVideoRoute) return false
       // Login/pages ที่ออกแบบให้ landscape ได้ → ปล่อยผ่านตรงๆ
       if (this.isLandscapeReadyRoute) return false
       return true
