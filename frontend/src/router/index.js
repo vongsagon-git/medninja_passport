@@ -134,6 +134,13 @@ const routes = [
     component: WatchCnPage,
     meta: { requiresAuth: true, requiresProfile: true, immersive: true }
   },
+  // ⭐ Beta test — 1 ID Universal pattern (auth required, hardcoded test video)
+  {
+    path: '/watch-beta',
+    name: 'WatchBetaPage',
+    component: () => import('../views/WatchBetaPage.vue'),
+    meta: { requiresAuth: true, immersive: true }
+  },
   // ระบบเสริม — Synapse / DDx / OSCE (coming soon)
   {
     path: '/my/synapse',
