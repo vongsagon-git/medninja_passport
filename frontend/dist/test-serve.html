@@ -517,7 +517,37 @@
         currentPlayer = player
         startWatchdog()
 
+        // ⭐ Progress diagnostic — เช็ค video.currentTime + buffered ทุก 2 วิ
+        const diagTimer = setInterval(() => {
+          const vid = document.querySelector('#player video')
+          if (!vid) return
+          const ct = vid.currentTime.toFixed(2)
+          const dur = vid.duration ? vid.duration.toFixed(2) : '?'
+          const ns = vid.networkState
+          const rs = vid.readyState
+          let buf = ''
+          try {
+            for (let i = 0; i < vid.buffered.length; i++) {
+              buf += `[${vid.buffered.start(i).toFixed(1)}-${vid.buffered.end(i).toFixed(1)}]`
+            }
+          } catch {}
+          log(`📊 t=${ct}/${dur}s netState=${ns} readyState=${rs} buffered=${buf || 'empty'}`, 'info')
+          // stop diagnostic ถ้าเล่นจริงแล้ว
+          if (!vid.paused && rs >= 3) {
+            clearInterval(diagTimer)
+          }
+        }, 2000)
+
         player.on('ready', () => log('Event: ready', 'info'))
+        player.on('startBuffering', () => log('Event: startBuffering', 'warn'))
+        player.on('endBuffering', () => log('Event: endBuffering', 'success'))
+        player.on('firstFrameShow', () => log('Event: firstFrameShow', 'success'))
+        player.on('requestFullScreen', () => log('Event: requestFullScreen', 'info'))
+        player.on('cancelFullScreen', () => log('Event: cancelFullScreen', 'info'))
+        player.on('liveStreamStop', () => log('Event: liveStreamStop', 'warn'))
+        player.on('m3u8Retry', (e) => log(`Event: m3u8Retry ${JSON.stringify(e)}`, 'warn'))
+        player.on('hideBar', () => log('Event: hideBar', 'info'))
+        player.on('showBar', () => log('Event: showBar', 'info'))
         player.on('play', () => {
           log('Event: play', 'success')
           waitingSince = null
