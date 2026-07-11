@@ -152,6 +152,10 @@
     <div class="head">
       <h1>🎯 Player Serve — Auto Select</h1>
       <div class="tag">1 Video ID · Backend เลือก Ali Prop / Widevine ให้อัตโนมัติ</div>
+      <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button onclick="checkStatus()" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 Query Video Status</button>
+        <button onclick="reloadPlayer()" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reload Player</button>
+      </div>
     </div>
 
     <div class="cards">
@@ -186,6 +190,13 @@
   <script>
     const VIDEO_ID = '00bef48a7d1071f18224e6f6c55a0102'
     const SERVE_ENDPOINT = `/api/china/test-serve/${VIDEO_ID}`
+    const STATUS_ENDPOINT = `/api/china/test-status/${VIDEO_ID}`
+
+    let currentPlayer = null
+    let waitingSince = null
+    let watchdogTimer = null
+    let retryCount = 0
+    const MAX_RETRY = 3
 
     const logs = []
     function log(msg, type = 'info') {
@@ -284,6 +295,82 @@
       })
     }
 
+    // ⭐ Watchdog — waiting > 10s → auto-reload player
+    function startWatchdog() {
+      if (watchdogTimer) clearInterval(watchdogTimer)
+      watchdogTimer = setInterval(() => {
+        if (!waitingSince) return
+        const elapsed = Date.now() - waitingSince
+        if (elapsed > 10000 && retryCount < MAX_RETRY) {
+          log(`⚠️ Buffering ${Math.round(elapsed/1000)}s → auto-reload (retry ${retryCount + 1}/${MAX_RETRY})`, 'warn')
+          waitingSince = null
+          retryCount++
+          reloadPlayer()
+        } else if (elapsed > 10000 && retryCount >= MAX_RETRY) {
+          log(`❌ Buffering เกิน retry limit (${MAX_RETRY}) → หยุด — ลอง Query Video Status ดู`, 'error')
+          waitingSince = null
+        }
+      }, 2000)
+    }
+
+    async function reloadPlayer() {
+      log('🔄 Reloading player...', 'warn')
+      waitingSince = null
+      if (currentPlayer) {
+        try { currentPlayer.dispose() } catch {}
+        currentPlayer = null
+      }
+      // Clear DOM
+      const p = document.getElementById('player')
+      if (p) p.innerHTML = ''
+      document.getElementById('status').style.display = 'grid'
+      document.getElementById('status').innerHTML = `<div class="spinner"></div><div>กำลัง reload (retry ${retryCount})...</div>`
+      await init()
+    }
+
+    async function checkStatus() {
+      log('🔍 Query video status จาก Alibaba...', 'info')
+      try {
+        const res = await fetch(STATUS_ENDPOINT)
+        if (!res.ok) throw new Error(`Status fail ${res.status}: ${(await res.text()).substring(0,200)}`)
+        const data = await res.json()
+        log(`Video status: ${data.status} · duration: ${data.duration}s · streams: ${data.streamCount}`, 'success')
+        data.streams.forEach((s, i) => {
+          log(`  Stream ${i+1}: ${s.format} · ${s.definition} · encrypt=${s.encryptType || 'none'} · bitrate=${s.bitrate}`, 'info')
+          log(`    host=${s.playUrlHost} expire=${s.urlExpireHint || 'n/a'}`, 'info')
+        })
+      } catch (err) {
+        log(`Status ERROR: ${err.message}`, 'error')
+      }
+    }
+
+    // ⭐ Intercept fetch — log ทุก network call (segment URL detect)
+    const _origFetch = window.fetch
+    window.fetch = async function(url, opts) {
+      const urlStr = typeof url === 'string' ? url : url.url
+      const isSegment = /\.(ts|m4s|mp4|m3u8|mpd)($|\?)/i.test(urlStr)
+      const isAli = /aliyuncs|alicdn|medninja\.academy\/\w+\.(ts|m4s|m3u8|mp4|mpd)/i.test(urlStr)
+
+      if (isSegment || isAli) {
+        const startMs = Date.now()
+        try {
+          const r = await _origFetch(url, opts)
+          const ms = Date.now() - startMs
+          const kind = urlStr.includes('.m3u8') ? 'manifest' : urlStr.includes('.mpd') ? 'dash' : 'segment'
+          if (!r.ok) {
+            log(`❌ ${kind} ${r.status} (${ms}ms): ${urlStr.substring(urlStr.lastIndexOf('/')+1, urlStr.indexOf('?')<0?urlStr.length:urlStr.indexOf('?')).substring(0,40)}`, 'error')
+          } else if (kind === 'manifest') {
+            log(`✅ manifest ${r.status} (${ms}ms)`, 'success')
+          }
+          return r
+        } catch (e) {
+          log(`❌ ${urlStr.substring(urlStr.lastIndexOf('/')+1,30)}: ${e.message}`, 'error')
+          throw e
+        }
+      }
+      return _origFetch(url, opts)
+    }
+
     async function init() {
       try {
         renderDevice()
@@ -336,18 +423,40 @@
           log('Player instance สร้างสำเร็จ', 'success')
           hideStatus()
         })
+        currentPlayer = player
+        startWatchdog()
 
         player.on('ready', () => log('Event: ready', 'info'))
-        player.on('play', () => log('Event: play', 'success'))
-        player.on('playing', () => log('Event: playing (เล่นจริง!)', 'success'))
-        player.on('canplay', () => log('Event: canplay (พร้อมเล่น)', 'success'))
-        player.on('waiting', () => log('Event: waiting (buffering)', 'warn'))
+        player.on('play', () => {
+          log('Event: play', 'success')
+          waitingSince = null
+        })
+        player.on('playing', () => {
+          log('Event: playing (เล่นจริง!)', 'success')
+          waitingSince = null
+          retryCount = 0 // เล่นได้แล้ว reset retry
+        })
+        player.on('canplay', () => {
+          log('Event: canplay (พร้อมเล่น)', 'success')
+          waitingSince = null
+        })
+        player.on('waiting', () => {
+          log('Event: waiting (buffering) ⏳', 'warn')
+          waitingSince = Date.now()
+        })
         player.on('pause', () => log('Event: pause', 'warn'))
         player.on('ended', () => log('Event: ended', 'info'))
         player.on('error', (e) => {
           const d = e && e.paramData ? JSON.stringify(e.paramData) : (e && e.message) || 'unknown'
           log(`ERROR: ${d}`, 'error')
-          showError('เล่นวิดีโอไม่ได้', d)
+          waitingSince = null
+          if (retryCount < MAX_RETRY) {
+            log(`🔄 Auto-retry (${retryCount+1}/${MAX_RETRY}) ใน 2 วินาที...`, 'warn')
+            retryCount++
+            setTimeout(() => reloadPlayer(), 2000)
+          } else {
+            showError('เล่นวิดีโอไม่ได้ (retry limit)', d)
+          }
         })
       } catch (err) {
         log(`Init error: ${err.message}`, 'error')
