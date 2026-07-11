@@ -1512,20 +1512,17 @@ export default {
         video._aliSyncStatus = 'Loading Ali SDK'
         // Step 2: load Aliyun Upload SDK
         await this.loadAliUploadSdk()
-        video._aliSyncStatus = 'Uploading NoDRM'
-        // Step 3: upload NoDRM version
-        await this.aliUploadFile(file, authRes.noDrm, (progress) => {
-          video._aliSyncProgress = Math.round(progress * 100)
+        // Step 3+4: upload BOTH versions in parallel (same file, 2 uploads)
+        video._aliSyncStatus = 'Uploading (2 in parallel)'
+        let pNoDrm = 0, pDrm = 0
+        const updateProgress = () => {
+          video._aliSyncProgress = Math.round((pNoDrm + pDrm) / 2 * 100)
           this.$forceUpdate()
-        })
-        video._aliSyncStatus = 'Uploading Widevine'
-        video._aliSyncProgress = 0
-        this.$forceUpdate()
-        // Step 4: upload Widevine version (same file, second upload)
-        await this.aliUploadFile(file, authRes.drm, (progress) => {
-          video._aliSyncProgress = Math.round(progress * 100)
-          this.$forceUpdate()
-        })
+        }
+        await Promise.all([
+          this.aliUploadFile(file, authRes.noDrm, (r) => { pNoDrm = r; updateProgress() }),
+          this.aliUploadFile(file, authRes.drm, (r) => { pDrm = r; updateProgress() })
+        ])
         // Step 5: save both mediaIds
         video._aliSyncStatus = 'Saving'
         await api.post('/admin/ali-sync/save-ids', {
@@ -1569,8 +1566,9 @@ export default {
         const uploader = new window.AliyunUpload.Vod({
           userId: 'anonymous',
           region: 'ap-southeast-1',
-          partSize: 1024 * 1024,
-          parallel: 3,
+          // ⚡ Speed tuning (match Ali Console)
+          partSize: 5 * 1024 * 1024,   // 5MB per chunk (was 1MB) — fewer round-trips
+          parallel: 10,                 // 10 concurrent chunks (was 3) — max bandwidth
           retryCount: 3,
           retryDuration: 2,
           onUploadstarted: (info) => {
