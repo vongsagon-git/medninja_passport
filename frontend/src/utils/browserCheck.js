@@ -12,7 +12,7 @@
 //   MIUI/HeyTap/Vivo/Magic/Petal/Brave/Opera/Vivaldi = ตกไปที่ Other → block
 // ═══════════════════════════════════════════════════════════
 
-import { getBrowser as detectBrowserHelper, getOS as detectOSHelper, detectOSSlot } from './deviceDetect'
+import { getBrowser as detectBrowserHelper, getOS as detectOSHelper, detectOSSlot, isMobileEmulator, detectEmulatorCase } from './deviceDetect'
 
 export const EXCEPTION_SECTION_IDS = ['69d4bd730b7e480d9c5213a0']
 
@@ -86,6 +86,22 @@ export function checkBrowserSupport (allowedBrowsers, allowedOS, ua) {
   const slot   = detectBrowserSlot(ua)
   const osSlot = detectOSSlot(ua)
   const isMobile = /iPhone|iPod|iPad|Android|Windows Phone|IEMobile|webOS|BlackBerry|BB10|KAIOS|HarmonyOS|Opera Mini|Opera Mobi/i.test(ua)
+
+  // ─── Anti-hack: Chrome DevTools mobile emulator ───
+  const emuCase = detectEmulatorCase(ua)
+  if (emuCase) {
+    return {
+      supported: false, isMobile: false, slot, osSlot,
+      reason: 'emulator',
+      emulatorCase: emuCase,
+      allowedBrowsers: allowBr,
+      allowedOS: allowOS,
+      currentBrowser: slot,
+      currentOS: osSlot,
+      message: 'คุณเข้าใช้งานไม่ได้ — ตรวจพบ Device Emulator',
+      detail: 'ระบบไม่อนุญาตให้เข้าใช้งานจากเครื่องจำลอง\nกรุณาเปิดจากเครื่องจริง (iPhone / iPad / Android) หรือ Desktop mode ปกติ'
+    }
+  }
 
   // ─── In-App = hard block เสมอ (ก่อน allow check) ───
   if (slot === 'In-App') {

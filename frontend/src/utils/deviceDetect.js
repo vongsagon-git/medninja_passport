@@ -147,19 +147,38 @@ export function getDeviceCategory(ua = navigator.userAgent || '') {
 }
 
 // ─── Anti-hack (2026-07-12) ──────────────────────────────────
-// จับ Chrome DevTool device emulator: UA เป็น mobile แต่ platform เป็น desktop
+// จับ Chrome DevTool device emulator: 3 กรณี
+//   1) UA เป็น iPhone/iPod/Android + platform desktop (Win32/MacIntel/Linux x86)
+//   2) UA เป็น iPad + platform ไม่ใช่ MacIntel (คนเปิด DevTools บน Windows แล้ว emulate iPad)
+//   3) UA เป็น Mac (อาจเป็น iPad iOS 13+ หรือ Mac จริง) + platform Win32 = emulator บน Windows
 export function isMobileEmulator(ua = navigator.userAgent || '') {
-  const uaMobile = /iPhone|iPod|Android/i.test(ua)
-  if (!uaMobile) return false
-  // Real mobile: platform เป็น iPhone / iPod / Linux armv* / Linux aarch64
-  // Emulator: platform เป็น Win32 / MacIntel / Linux x86_64
+  return detectEmulatorCase(ua) !== ''
+}
+
+// ⭐ ตัวช่วย — return case code ('1'/'2'/'3'/'4') หรือ '' ถ้าไม่ใช่ emulator
+export function detectEmulatorCase(ua = navigator.userAgent || '') {
   const plat = (navigator.platform || '').toLowerCase()
+  const uaMobile = /iPhone|iPod|Android/i.test(ua)
+  const uaIPad   = /iPad/.test(ua)
+  const uaMac    = /Macintosh|Mac OS X/.test(ua)
   const isDesktopPlat = /win32|win64|macintel|linux x86|linux x86_64/.test(plat)
-  // navigator.userAgentData (Chrome/Edge modern) มี mobile flag ที่แม่นกว่า
-  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
-    if (!navigator.userAgentData.mobile && isDesktopPlat) return true
+
+  // Case 1: UA mobile phone + userAgentData.mobile = false + desktop platform
+  if (uaMobile) {
+    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+      if (!navigator.userAgentData.mobile && isDesktopPlat) return '1'
+    }
+    if (isDesktopPlat) return '1'
   }
-  return isDesktopPlat
+  // Case 2: UA iPad old + platform ไม่ใช่ Mac/iPad
+  if (uaIPad && !(/macintel|ipad/i.test(plat))) return '2'
+  // Case 3: UA Mac + platform = Win32/Linux (iPad DevTools emulator บน Windows)
+  if (uaMac && /win32|win64|linux/.test(plat)) return '3'
+  // Case 4: UA mobile/iPad + maxTouchPoints = 0 (mouse ไม่ใช่ touch)
+  if ((uaMobile || uaIPad) && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints === 0) {
+    return '4'
+  }
+  return ''
 }
 
 // Real mobile = UA mobile + platform ตรงกัน (ไม่ใช่ emulator)

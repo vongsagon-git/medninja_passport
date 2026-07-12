@@ -39,6 +39,37 @@
       </div>
     </div>
 
+    <!-- ⭐ Block overlay #1.5 — Emulator warning (Chrome DevTools mobile emulator) -->
+    <div v-else-if="!browserOk && emulatorDetected" class="line-blur-overlay">
+      <div class="line-blur-card block-card">
+        <div class="line-blur-play" style="cursor:default;background:linear-gradient(135deg,#ef4444,#b91c1c)">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="42" height="42"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+        </div>
+        <h2>คุณเข้าใช้งานไม่ได้</h2>
+        <p class="block-lead"><strong>ตรวจพบ Device Emulator</strong><br>ระบบไม่อนุญาตให้เข้าใช้งานจากเครื่องจำลอง<br>กรุณาเปิดจาก <strong>เครื่องจริง</strong> เท่านั้น (iPhone / iPad / Android จริง หรือ Desktop mode ปกติ)</p>
+
+        <!-- Error code + debug info (สำหรับ admin) -->
+        <div class="error-code-block">
+          <div class="error-code-label">ERROR CODE</div>
+          <div class="error-code-value">EMU-{{ emulatorCase }}</div>
+          <div class="error-debug">
+            <div class="dbg-row"><span class="dbg-k">UA</span><span class="dbg-v">{{ ua }}</span></div>
+            <div class="dbg-row"><span class="dbg-k">platform</span><span class="dbg-v">{{ realPlatform }}</span></div>
+            <div class="dbg-row"><span class="dbg-k">touch</span><span class="dbg-v">{{ realMaxTouch }}</span></div>
+            <div class="dbg-row"><span class="dbg-k">uaData.mobile</span><span class="dbg-v">{{ realUaDataMobile }}</span></div>
+            <div class="dbg-row"><span class="dbg-k">time</span><span class="dbg-v">{{ nowStamp }}</span></div>
+          </div>
+        </div>
+
+        <div class="line-blur-row">
+          <button class="line-blur-btn-outline" @click="_copyEmulatorInfo">
+            {{ linkCopied ? 'คัดลอกแล้ว!' : 'Copy Debug Info' }}
+          </button>
+          <a href="https://medninja.academy" class="line-blur-btn-outline">กลับหน้าหลัก</a>
+        </div>
+      </div>
+    </div>
+
     <!-- ⭐ Block overlay #2 — OS/Browser not allowed (รวมหน้าเดียว) -->
     <div v-else-if="!browserOk" class="line-blur-overlay">
       <div class="line-blur-card block-card">
@@ -772,6 +803,16 @@ export default {
       blockedAllowedBrowsers: this.initialBrowserCheck?.allowedBrowsers || ['Chrome', 'Safari', 'Edge'],
       currentOS: this.initialBrowserCheck?.currentOS || '',
       currentBrowser: this.initialBrowserCheck?.currentBrowser || '',
+      // ⭐ Emulator warning debug data
+      emulatorDetected: this.initialBrowserCheck?.reason === 'emulator',
+      emulatorCase: this.initialBrowserCheck?.emulatorCase || '',
+      ua: navigator.userAgent || '',
+      realPlatform: navigator.platform || 'unknown',
+      realMaxTouch: (typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 'n/a'),
+      realUaDataMobile: (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean')
+        ? String(navigator.userAgentData.mobile)
+        : 'n/a',
+      nowStamp: new Date().toISOString(),
       sidebarOpen: true,
       wmConfig: null,
       zoomDetected: false,
@@ -1151,6 +1192,8 @@ export default {
           this.blockedAllowedBrowsers = recheck.allowedBrowsers || []
           this.currentOS = recheck.currentOS || ''
           this.currentBrowser = recheck.currentBrowser || ''
+          this.emulatorDetected = recheck.reason === 'emulator'
+          this.emulatorCase = recheck.emulatorCase || ''
           return // HARD STOP — ไม่ init player, ไม่ load video
         }
       }
@@ -1572,6 +1615,29 @@ export default {
         const stripped = url.replace(/^https?:\/\//, '')
         window.location.href = `intent://${stripped}#Intent;scheme=https;package=com.android.chrome;end`
       }
+    },
+    _copyEmulatorInfo() {
+      const info = `--- Emulator Debug Info ---
+CODE:          EMU-${this.emulatorCase}
+UA:            ${this.ua}
+platform:      ${this.realPlatform}
+maxTouch:      ${this.realMaxTouch}
+uaData.mobile: ${this.realUaDataMobile}
+time:          ${this.nowStamp}
+url:           ${window.location.href}`
+      const doneFlag = () => {
+        this.linkCopied = true
+        setTimeout(() => { this.linkCopied = false }, 2000)
+      }
+      navigator.clipboard.writeText(info).then(doneFlag).catch(() => {
+        const ta = document.createElement('textarea')
+        ta.value = info
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        doneFlag()
+      })
     },
     copyLink() {
       navigator.clipboard.writeText(window.location.href).then(() => {
@@ -2795,6 +2861,15 @@ kbd {
 .cur-state { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 8px 12px; margin: 4px 0 16px; background: rgba(2, 12, 24, .5); border: 1px solid rgba(148, 163, 184, .2); border-radius: 999px; font-size: 12px; color: rgba(226, 232, 240, .78); }
 .cur-state .cur-lab { color: rgba(148, 163, 184, .8); font-weight: 500; }
 .cur-state .cur-val strong { color: #f59e0b; }
+
+/* Emulator error code + debug */
+.error-code-block { background: rgba(2, 12, 24, .55); border: 1px solid rgba(239, 68, 68, .3); border-radius: 12px; padding: 14px 16px; margin: 4px 0 14px; text-align: left; }
+.error-code-label { font-size: 10px; font-weight: 800; letter-spacing: .18em; color: #fca5a5; text-transform: uppercase; margin-bottom: 2px; }
+.error-code-value { font-family: 'Consolas', 'Monaco', monospace; font-size: 22px; font-weight: 900; color: #ef4444; letter-spacing: .04em; margin-bottom: 10px; text-shadow: 0 0 12px rgba(239,68,68,.5); }
+.error-debug { display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px dashed rgba(239, 68, 68, .2); font-family: 'Consolas', 'Monaco', monospace; font-size: 10.5px; }
+.dbg-row { display: flex; gap: 8px; }
+.dbg-k { color: rgba(148, 163, 184, .8); font-weight: 700; min-width: 90px; flex-shrink: 0; }
+.dbg-v { color: #e2e8f0; word-break: break-all; }
 .line-blur-play {
   width: 72px; height: 72px; border-radius: 50%; cursor: pointer;
   background: linear-gradient(135deg, #a855f7, #7c3aed);
