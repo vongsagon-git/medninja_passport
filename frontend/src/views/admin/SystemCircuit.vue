@@ -245,7 +245,7 @@ export default {
     async fetchMode() {
       this.loading = true
       try {
-        const { data } = await api.get('/system/video-mode')
+        const data = await api.get('/system/video-mode')
         this.currentMode = data.mode || 'bunny'
         this.updatedAt = data.updatedAt
       } catch (e) {
@@ -267,7 +267,7 @@ export default {
       if (!mode) return
       this.switching = true
       try {
-        const { data } = await api.patch('/admin/system/video-mode', { mode })
+        const data = await api.patch('/admin/system/video-mode', { mode })
         this.currentMode = data.mode
         this.updatedAt = data.updatedAt
         this.pendingMode = null
