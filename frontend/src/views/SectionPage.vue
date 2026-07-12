@@ -137,6 +137,8 @@
                     <div class="vr-meta">
                       <span class="vr-duration">{{ v.duration || '--:--' }}</span>
                       <span v-if="formatResume(v.index)" class="vr-resume">{{ formatResume(v.index) }}</span>
+                      <span class="serve-badge" :class="{ 'is-gray': !v.hasBunnyVideo }">A</span>
+                      <span class="serve-badge" :class="{ 'is-gray': !v.hasAliVideo }">B</span>
                     </div>
                   </div>
                   <button v-if="v.hasPdf && !isDemo" class="vr-pdf" :disabled="pdfLoading === v.index" @click.stop.prevent="showPdfModal(v.index)" title="เอกสาร">
@@ -165,6 +167,8 @@
                     <div class="vr-meta">
                       <span class="vr-duration">{{ v.bonusDuration || '--:--' }}</span>
                       <span class="vr-bonus-label">{{ v.bonusLabel || 'เสริม' }}</span>
+                      <span class="serve-badge" :class="{ 'is-gray': !v.hasBonusVideo }">A</span>
+                      <span class="serve-badge" :class="{ 'is-gray': !v.bonusAliVideoId }">B</span>
                     </div>
                   </div>
                   <button v-if="v.bonusHasPdf && !isDemo" class="vr-pdf" @click.stop.prevent="showPdfModal(v.index, true)" title="เอกสาร">
@@ -1043,6 +1047,19 @@ export default {
 .vr-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .vr-title { font-size: 14px; font-weight: 700; color: #0f172a; line-height: 1.3; word-break: break-word; }
 .vr-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.serve-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 18px; padding: 0 6px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-size: 10px; font-weight: 800;
+  border-radius: 4px;
+  letter-spacing: .04em;
+}
+.serve-badge.is-gray {
+  background: #e2e8f0;
+  color: #94a3b8;
+}
 .vr-duration {
   display: inline-flex; align-items: center; gap: 4px;
   background: #f1f5f9; color: #334155;

@@ -89,7 +89,13 @@ exports.getSection = async (req, res, next) => {
           pdfFile: (locked || !hasPdf) ? '' : v.pdfFile,
           pdfFileUrl: '',
           pdfFileName: (locked || !hasPdf) ? '' : (v.pdfFileName || v.pdfFile),
-          hasVideo: !!(v.bunnyVideoId || v.aliVideoId),
+          // hasVideo (legacy) = มีอย่างน้อย 1 serve
+          hasVideo: !!((v.bunnyVideoId && v.bunnyDrmVideoId) || v.aliVideoId),
+          // ⭐ serve-aware flags — frontend เอาไปเช็คตาม circuit
+          //    BUNNY = ต้องมี 2 IDs ครบ (NoDRM + Widevine)
+          //    ALI   = 1 ID พอ (dual encryption)
+          hasBunnyVideo: !!(v.bunnyVideoId && v.bunnyDrmVideoId),
+          hasAliVideo: !!v.aliVideoId,
           hasBonus: !!(v.bonusBunnyVideoId || v.bonusTitle || v.bonusLabel || v.bonusPdfFile),
           hasBonusVideo,
           bonusLocked,
