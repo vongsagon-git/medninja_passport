@@ -196,6 +196,57 @@ function openWechatApp() {
   window.location.href = WECHAT_DEEP_LINK
 }
 
+// ⭐ Trial modal — coming soon
+const trialModalOpen = ref(false)
+function openTrial() { trialModalOpen.value = true }
+function closeTrial() { trialModalOpen.value = false }
+
+// ⭐ PDF lead modal — เก็บ email/เบอร์/wechat แล้วส่ง PDF ทีหลัง
+const pdfModalOpen = ref(false)
+const pdfForm = ref({ name: '', email: '', phone: '', wechat: '' })
+const pdfSubmitting = ref(false)
+const pdfError = ref('')
+const pdfSuccess = ref(false)
+
+function openPdf() {
+  pdfModalOpen.value = true
+  pdfError.value = ''
+  pdfSuccess.value = false
+}
+function closePdf() {
+  pdfModalOpen.value = false
+  if (pdfSuccess.value) {
+    // reset หลังปิด modal สำเร็จ
+    pdfForm.value = { name: '', email: '', phone: '', wechat: '' }
+    pdfSuccess.value = false
+  }
+}
+async function submitPdfLead() {
+  pdfError.value = ''
+  const { name, email, phone, wechat } = pdfForm.value
+  if (!email.trim() && !phone.trim() && !wechat.trim()) {
+    pdfError.value = 'กรุณากรอก email, เบอร์โทร หรือ WeChat ID อย่างน้อย 1 ช่อง'
+    return
+  }
+  pdfSubmitting.value = true
+  try {
+    const res = await fetch('/api/china/pdf-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, phone, wechat })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || `ส่งไม่สำเร็จ (${res.status})`)
+    }
+    pdfSuccess.value = true
+  } catch (e) {
+    pdfError.value = e.message || 'ส่งไม่สำเร็จ ลองใหม่อีกครั้ง'
+  } finally {
+    pdfSubmitting.value = false
+  }
+}
+
 onMounted(() => {
   document.title = 'MedNinja LMS — ดูได้ทั่วโลก แม้ในประเทศจีน (ไม่ต้อง VPN)'
   // ⭐ Auto-open modal โฆษณาทันทีที่เข้าเว็บ
@@ -250,6 +301,12 @@ onUnmounted(() => {
           <div class="hero-cta">
             <button class="btn-primary" @click="scrollToVideo">
               <span>▶</span> ดูโฆษณาอีกครั้ง
+            </button>
+            <button class="btn-trial" @click="openTrial">
+              <span class="tr-icon">🎓</span> ทดลองเรียน
+            </button>
+            <button class="btn-pdf" @click="openPdf">
+              <span class="pdf-icon">📄</span> รับ PDF
             </button>
             <button class="btn-wechat" @click="openWechat">
               <span class="wc-icon">💬</span> WeChat
@@ -318,6 +375,84 @@ onUnmounted(() => {
             </div>
           </div>
 
+        </div>
+      </div>
+    </transition>
+
+    <!-- ═══════════════ TRIAL MODAL (Coming Soon) ═══════════════ -->
+    <transition name="fade">
+      <div v-if="trialModalOpen" class="modal-overlay wechat-overlay" @click.self="closeTrial">
+        <div class="wechat-modal trial-modal">
+          <button class="modal-close wechat-close" @click="closeTrial" aria-label="ปิด">✕</button>
+          <div class="wechat-body">
+            <div class="trial-icon">🎓</div>
+            <div class="wechat-title">ทดลองเรียน</div>
+            <div class="wechat-sub">เร็ว ๆ นี้! เรากำลังเตรียมบทเรียนตัวอย่างให้คุณ</div>
+
+            <div class="trial-soon-badge">✨ Coming Soon</div>
+
+            <div class="trial-desc">
+              ระหว่างนี้ ทักหาเราทาง <b>WeChat</b> เพื่อขอบทเรียนตัวอย่างได้เลย!
+            </div>
+
+            <button class="wechat-add-btn" @click="() => { closeTrial(); openWechat() }">
+              <span class="wc-add-icon">💬</span>
+              <span>ทัก WeChat ขอตัวอย่าง</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ═══════════════ PDF LEAD MODAL ═══════════════ -->
+    <transition name="fade">
+      <div v-if="pdfModalOpen" class="modal-overlay wechat-overlay" @click.self="closePdf">
+        <div class="wechat-modal pdf-modal">
+          <button class="modal-close wechat-close" @click="closePdf" aria-label="ปิด">✕</button>
+
+          <!-- Success state -->
+          <div v-if="pdfSuccess" class="wechat-body">
+            <div class="pdf-success-icon">✓</div>
+            <div class="wechat-title" style="color:#16a34a">ส่งข้อมูลสำเร็จ!</div>
+            <div class="wechat-sub">เราจะส่ง PDF ให้คุณเร็ว ๆ นี้ 💌</div>
+            <button class="wechat-add-btn" @click="closePdf" style="margin-top: 20px">
+              <span>ตกลง</span>
+            </button>
+          </div>
+
+          <!-- Form state -->
+          <div v-else class="wechat-body">
+            <div class="pdf-hero-icon">📄</div>
+            <div class="wechat-title">รับ PDF ฟรี</div>
+            <div class="wechat-sub">กรอกช่องทางติดต่อ เราจะส่ง PDF ให้คุณ</div>
+
+            <div class="pdf-form">
+              <div class="pdf-field">
+                <label>ชื่อ <span class="opt">(ไม่บังคับ)</span></label>
+                <input v-model="pdfForm.name" type="text" placeholder="ชื่อของคุณ" :disabled="pdfSubmitting" />
+              </div>
+              <div class="pdf-field">
+                <label>Email</label>
+                <input v-model="pdfForm.email" type="email" placeholder="you@example.com" :disabled="pdfSubmitting" />
+              </div>
+              <div class="pdf-field">
+                <label>เบอร์โทร <span class="opt">(หรือ)</span></label>
+                <input v-model="pdfForm.phone" type="tel" placeholder="080-xxx-xxxx" :disabled="pdfSubmitting" />
+              </div>
+              <div class="pdf-field">
+                <label>WeChat ID <span class="opt">(หรือ)</span></label>
+                <input v-model="pdfForm.wechat" type="text" placeholder="wechat-id" :disabled="pdfSubmitting" />
+              </div>
+              <div class="pdf-hint">💡 กรอกอย่างน้อย 1 ช่อง (Email, เบอร์โทร หรือ WeChat)</div>
+
+              <div v-if="pdfError" class="pdf-error">⚠ {{ pdfError }}</div>
+
+              <button class="wechat-add-btn pdf-submit" @click="submitPdfLead" :disabled="pdfSubmitting">
+                <span v-if="pdfSubmitting">กำลังส่ง...</span>
+                <span v-else>📩 ส่งข้อมูล รับ PDF</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </transition>
@@ -616,6 +751,180 @@ onUnmounted(() => {
   font-family: inherit;
 }
 .btn-secondary:hover { border-color: #1e3a8a; background: #f8fafc; }
+
+/* Trial button — สีม่วง (เรียน) */
+.btn-trial {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 24px rgba(139, 92, 246, 0.35);
+  transition: transform 0.15s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.btn-trial:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(139, 92, 246, 0.45);
+}
+.tr-icon { font-size: 16px; }
+
+/* PDF button — สีส้ม (เอกสาร) */
+.btn-pdf {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.35);
+  transition: transform 0.15s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.btn-pdf:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.45);
+}
+.pdf-icon { font-size: 16px; }
+
+/* Trial modal — accent สีม่วง */
+.trial-modal::before {
+  background: linear-gradient(90deg, #8b5cf6, #7c3aed) !important;
+}
+.trial-icon {
+  font-size: 56px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 6px 16px rgba(139, 92, 246, 0.35));
+}
+.trial-soon-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #f0abfc 0%, #a78bfa 100%);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin: 16px 0 14px;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+.trial-desc {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.7;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 12px;
+}
+.trial-desc b { color: #7c3aed; }
+
+/* PDF modal — accent สีส้ม */
+.pdf-modal::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706) !important;
+}
+.pdf-hero-icon {
+  font-size: 56px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 6px 16px rgba(245, 158, 11, 0.35));
+}
+.pdf-success-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  font-size: 40px;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 24px rgba(34, 197, 94, 0.4);
+}
+.pdf-form { text-align: left; margin-top: 18px; }
+.pdf-field { margin-bottom: 12px; }
+.pdf-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: #0b2b5b;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.pdf-field label .opt {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+.pdf-field input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.pdf-field input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+.pdf-field input:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+.pdf-hint {
+  font-size: 12px;
+  color: #64748b;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  margin: 14px 0 12px;
+  line-height: 1.5;
+}
+.pdf-error {
+  font-size: 13px;
+  color: #dc2626;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.pdf-submit {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.35) !important;
+}
+.pdf-submit:hover:not(:disabled) {
+  box-shadow: 0 12px 26px rgba(245, 158, 11, 0.45) !important;
+}
+.pdf-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
 
 /* WeChat button */
 .btn-wechat {
@@ -1358,12 +1667,22 @@ onUnmounted(() => {
   .feat-label { font-size: 10.5px; line-height: 1.3; }
   .feat-label strong { font-size: 11px; }
   .feat-label span { font-size: 10px; }
-  .hero-cta { justify-content: center; width: 100%; gap: 8px; }
-  .btn-primary, .btn-secondary, .btn-wechat {
-    padding: 11px 14px;
-    font-size: 13px;
-    flex: 1 1 0;
+  .hero-cta {
     justify-content: center;
+    width: 100%;
+    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .btn-primary, .btn-secondary, .btn-wechat, .btn-trial, .btn-pdf {
+    padding: 11px 10px;
+    font-size: 12.5px;
+    width: 100%;
+    justify-content: center;
+    gap: 5px;
+  }
+  .btn-primary span, .btn-wechat .wc-icon, .btn-trial .tr-icon, .btn-pdf .pdf-icon {
+    font-size: 13px;
   }
   .wechat-modal { max-width: 340px; }
   .wechat-body { padding: 26px 18px 20px; }

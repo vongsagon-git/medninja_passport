@@ -21,7 +21,8 @@ router.get('/playauth/:videoId', originCheck, chromeOnly, auth, getPlayAuth)
 // Whitelist เฉพาะ video ID ที่ตั้งไว้ (แสดง demo เท่านั้น)
 const LANDING_ALLOWED_VIDEOS = new Set([
   '00bef48a7d1071f18224e6f6c55a0102', // Introduce.mov — DRM + Ali Prop dual encryption
-  'c0e75fef7d3371f18224e6f6c55a0102'  // B1 Microbiology 1.mov — DRM + Ali Prop dual encryption
+  'c0e75fef7d3371f18224e6f6c55a0102', // B1 Microbiology 1.mov — DRM + Ali Prop dual encryption
+  '60985cb97db271f1976fe7c7690102'    // Introduce (48s) — ORIGINAL mp4 สำหรับ /china landing (ไม่ encrypt)
 ])
 router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   if (!LANDING_ALLOWED_VIDEOS.has(req.params.videoId)) {
@@ -542,6 +543,50 @@ router.get('/logs/sessions', (req, res) => {
 router.delete('/logs', (req, res) => {
   clearLogs()
   res.json({ ok: true })
+})
+
+// ═══════════════════════════════════════════════════════════
+// PDF Lead — เก็บ lead จากหน้า /china (email/เบอร์) เพื่อส่ง PDF ทีหลัง
+// ⭐ ยังไม่ integrate email service — เก็บใน memory + console log ก่อน
+// ═══════════════════════════════════════════════════════════
+const _pdfLeads = []
+router.post('/pdf-lead', (req, res) => {
+  const body = req.body || {}
+  const name = String(body.name || '').trim().substring(0, 100)
+  const email = String(body.email || '').trim().substring(0, 200)
+  const phone = String(body.phone || '').trim().substring(0, 30)
+  const wechat = String(body.wechat || '').trim().substring(0, 60)
+  const note = String(body.note || '').trim().substring(0, 500)
+
+  // ต้องมี email หรือ phone หรือ wechat อย่างน้อย 1 ช่อง
+  if (!email && !phone && !wechat) {
+    return res.status(400).json({ code: 'MISSING_CONTACT', message: 'กรุณากรอก email, เบอร์โทร หรือ WeChat ID อย่างน้อย 1 ช่อง' })
+  }
+  const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
+  const country = req.geo?.country || 'unknown'
+  const entry = {
+    ts: new Date().toISOString(),
+    name, email, phone, wechat, note,
+    ip, country,
+    ua: (req.headers['user-agent'] || '').substring(0, 200)
+  }
+  _pdfLeads.push(entry)
+  if (_pdfLeads.length > 500) _pdfLeads.shift()
+  console.log(`[pdf-lead] ${country} ${ip} name="${name}" email="${email}" phone="${phone}" wechat="${wechat}"`)
+  return res.json({ ok: true })
+})
+
+// GET admin ดู leads
+router.get('/pdf-leads', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store')
+  if (req.query.format === 'text') {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    const txt = _pdfLeads.map(l =>
+      `[${l.ts}] ${l.country} ${l.ip}\n  name: ${l.name}\n  email: ${l.email}\n  phone: ${l.phone}\n  wechat: ${l.wechat}\n  note: ${l.note}`
+    ).join('\n\n')
+    return res.send(txt || '(ยังไม่มี lead)')
+  }
+  res.json({ count: _pdfLeads.length, leads: _pdfLeads })
 })
 
 module.exports = router
