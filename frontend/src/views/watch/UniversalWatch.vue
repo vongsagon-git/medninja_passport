@@ -269,11 +269,6 @@
                   </span>
                   <span v-if="wmConfig" class="w-wm-badge">{{ wmCurrentStyle }} · {{ wmCurrentSize }}px · W:{{ _wmWidth }}px</span>
                   <span v-if="appVer" class="w-wm-badge" style="color:#10b981">{{ appVer }}</span>
-                  <!-- ⭐ Debug toggle badge (admin/dev) -->
-                  <button v-if="!isDemo" class="w-wm-badge w-debug-toggle" @click="showDebugPanel = !showDebugPanel" title="Debug info">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="10" height="10"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
-                    debug
-                  </button>
                 </div>
               </div>
 
@@ -873,11 +868,14 @@ export default {
       return this.encryption === 'widevine' ? 'widevine' : 'protection'
     },
     variantBadge () {
+      // ⭐ 2 label ต่อ variant:
+      //   label       → user เห็น (opaque — ไม่รู้ vendor)
+      //   warroomLabel → WS Warroom เห็น (มี BN/ALI prefix)
       const map = {
-        'global-widevine':   { label: 'GLOBAL WIDEVINE',   color: '#10b981' },
-        'global-protection': { label: 'GLOBAL PROTECTION', color: '#3b82f6' },
-        'widevine':          { label: 'WIDEVINE',          color: '#8b5cf6' },
-        'protection':        { label: 'PROTECTION',        color: '#ef4444' }
+        'global-widevine':   { label: 'GLOBAL WIDEVINE',   warroomLabel: 'BN GLOBAL WIDEVINE',   color: '#10b981' },
+        'global-protection': { label: 'GLOBAL PROTECTION', warroomLabel: 'BN GLOBAL PROTECTION', color: '#3b82f6' },
+        'widevine':          { label: 'WIDEVINE',          warroomLabel: 'ALI WIDEVINE',          color: '#8b5cf6' },
+        'protection':        { label: 'PROTECTION',        warroomLabel: 'ALI PROTECTION',        color: '#ef4444' }
       }
       return map[this.variant] || map['global-protection']
     },
@@ -1828,8 +1826,8 @@ export default {
             currentTime: Math.round(this._currentTime || 0),
             duration: Math.round(this._videoDuration || 0),
             isPlaying: this.isPlaying,
-            drm: this.variantBadge?.label || '',
-          drmMode: this.variantBadge?.label || ''
+            drm: this.variantBadge?.warroomLabel || '',
+          drmMode: this.variantBadge?.warroomLabel || ''
           }
           this._socket.emit('video:state', rd)
         }, 3000)
@@ -1854,9 +1852,9 @@ export default {
         duration: Math.round(this._videoDuration || 0),
         isPlaying: this.isPlaying,
         appVersion: _getAppVersion(),
-        drm: this.variantBadge?.label || 'PROTECTION',
+        drm: this.variantBadge?.warroomLabel || 'ALI PROTECTION',
         // Backward compat กับ WS server เดิม (drmMode field name)
-        drmMode: this.variantBadge?.label || 'PROTECTION',
+        drmMode: this.variantBadge?.warroomLabel || 'ALI PROTECTION',
         // ⭐ Region-aware warroom fields
         source: 'passport',
         bucket: this.regionConfig.bucket,
@@ -1892,8 +1890,8 @@ export default {
           currentTime: Math.round(this._currentTime || 0),
           duration: Math.round(this._videoDuration || 0),
           isPlaying: this.isPlaying,
-          drm: this.variantBadge?.label || '',
-          drmMode: this.variantBadge?.label || '',
+          drm: this.variantBadge?.warroomLabel || '',
+          drmMode: this.variantBadge?.warroomLabel || '',
           appVersion: _getAppVersion()
         }
         this._socket.emit('video:state', sd)
@@ -2518,8 +2516,8 @@ export default {
             currentTime: Math.round(currentTime || 0),
             duration: Math.round(this._videoDuration || 0),
             isPlaying: this.isPlaying,
-            drm: this.variantBadge?.label || '',
-          drmMode: this.variantBadge?.label || '',
+            drm: this.variantBadge?.warroomLabel || '',
+          drmMode: this.variantBadge?.warroomLabel || '',
             appVersion: _getAppVersion(),
             source: 'passport',
             bucket: this.regionConfig.bucket,
@@ -4269,7 +4267,7 @@ kbd {
    ═══════════════════════════════════════════════════════════ */
 .wm-stealth-log-btn {
   position: absolute;
-  bottom: 10px;
+  top: 10px;
   left: 10px;
   z-index: 9998;
   width: 22px;
@@ -4293,7 +4291,7 @@ kbd {
 }
 .wm-stealth-log-btn:active { transform: scale(0.9); }
 .w-player-box.is-fullscreen .wm-stealth-log-btn {
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
 }
 .wm-stealth-log-toast {
   position: absolute;

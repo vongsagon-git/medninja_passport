@@ -31,6 +31,16 @@
       ref="aliPlayerBox"
       class="ali-player-box"
     ></div>
+    <!-- ⭐ Custom play/pause button — มุมซ้ายล่าง -->
+    <button
+      v-if="playerReady"
+      class="ali-custom-play"
+      :title="_isPlaying ? 'หยุด' : 'เล่น'"
+      @click="_togglePlay"
+    >
+      <svg v-if="!_isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+      <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
+    </button>
     <!-- Loading overlay: thin top line only — ไม่บัง video canvas -->
     <div v-if="!playerReady" class="ali-player-loading" style="pointer-events:none">
       <div class="skeleton-thin"></div>
@@ -93,6 +103,13 @@ export default {
     }
   },
   methods: {
+    _togglePlay () {
+      if (!this._player) return
+      try {
+        if (this._isPlaying) this._player.pause()
+        else this._player.play()
+      } catch (e) { /* silent */ }
+    },
     _log (msg, type = 'info') {
       const time = new Date().toTimeString().slice(0, 8)
       this.$emit('beta-log', { time, msg, type })
@@ -208,25 +225,8 @@ export default {
             domain: 'passport.medninja.academy',
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           },
-          skinLayout: [
-            // ⭐ big play button อยู่ตรงกลางจอ (align cc = center-center)
-            { name: 'bigPlayButton', align: 'cc' },
-            { name: 'H5Loading', align: 'cc' },
-            { name: 'errorDisplay', align: 'tlabs', x: 0, y: 0 },
-            { name: 'infoDisplay' },
-            { name: 'tooltip', align: 'blabs', x: 0, y: 56 },
-            { name: 'thumbnail' },
-            {
-              name: 'controlBar', align: 'blabs', x: 0, y: 0,
-              children: [
-                { name: 'progress', align: 'blabs', x: 0, y: 44 },
-                { name: 'playButton', align: 'tl', x: 15, y: 12 },
-                { name: 'timeDisplay', align: 'tl', x: 10, y: 7 },
-                { name: 'volume', align: 'tr', x: 5, y: 10 },
-                { name: 'setting', align: 'tr', x: 15, y: 12 }
-              ]
-            }
-          ]
+          // ⭐ ไม่กำหนด skinLayout → ใช้ default ของ Aliplayer
+          //    (bigPlayButton กลางจอ, controlBar เต็ม, native ครบ)
         }
 
         let config
@@ -391,6 +391,28 @@ export default {
   inset: 0;
   pointer-events: none;
 }
+/* ⭐ Custom play/pause button — มุมซ้ายล่าง */
+.ali-custom-play {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 0.2s, background 0.2s, transform 0.15s;
+  backdrop-filter: blur(4px);
+}
+.ali-custom-play:hover { opacity: 1; background: rgba(0, 0, 0, 0.8); }
+.ali-custom-play:active { transform: scale(0.95); }
 /* Thin loading line at top — ไม่บัง video */
 .skeleton-thin {
   position: absolute;
