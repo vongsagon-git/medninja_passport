@@ -1828,7 +1828,8 @@ export default {
             currentTime: Math.round(this._currentTime || 0),
             duration: Math.round(this._videoDuration || 0),
             isPlaying: this.isPlaying,
-            drmMode: this.video?.drmMode || ''
+            drm: this.variantBadge?.label || '',
+          drmMode: this.variantBadge?.label || ''
           }
           this._socket.emit('video:state', rd)
         }, 3000)
@@ -1853,7 +1854,9 @@ export default {
         duration: Math.round(this._videoDuration || 0),
         isPlaying: this.isPlaying,
         appVersion: _getAppVersion(),
-        drmMode: this.video?.drmMode || 'protection',
+        drm: this.variantBadge?.label || 'PROTECTION',
+        // Backward compat กับ WS server เดิม (drmMode field name)
+        drmMode: this.variantBadge?.label || 'PROTECTION',
         // ⭐ Region-aware warroom fields
         source: 'passport',
         bucket: this.regionConfig.bucket,
@@ -1889,7 +1892,8 @@ export default {
           currentTime: Math.round(this._currentTime || 0),
           duration: Math.round(this._videoDuration || 0),
           isPlaying: this.isPlaying,
-          drmMode: this.video?.drmMode || '',
+          drm: this.variantBadge?.label || '',
+          drmMode: this.variantBadge?.label || '',
           appVersion: _getAppVersion()
         }
         this._socket.emit('video:state', sd)
@@ -2514,7 +2518,8 @@ export default {
             currentTime: Math.round(currentTime || 0),
             duration: Math.round(this._videoDuration || 0),
             isPlaying: this.isPlaying,
-            drmMode: this.video?.drmMode || '',
+            drm: this.variantBadge?.label || '',
+          drmMode: this.variantBadge?.label || '',
             appVersion: _getAppVersion(),
             source: 'passport',
             bucket: this.regionConfig.bucket,
