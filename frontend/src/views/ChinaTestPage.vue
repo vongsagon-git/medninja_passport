@@ -84,6 +84,9 @@ async function initPlayer() {
     //   → บังคับ encryptType: 1 (Ali Prop permissive — รับทั้ง 2 streams)
     //   → verified matrix: iOS+Chrome+Android+PC+จีน+ไทย = เล่นได้ทุก device
     //   ดู memory: feedback_drm_formula_v26 + project_alibaba_encryption_flexibility
+    // ⭐ iOS หมุนไม่หยุด root cause: ขาด playConfig.EncryptType
+    //   ตาม pattern AliPlayer.vue ที่ work จริง iOS/Safari ต้องบอก player ชัดว่า encryption ตัวไหน
+    //   → ไม่งั้น Aliplayer งงว่า decrypt ยังไง → hang ที่ loading spinner
     const playerConfig = {
       id: 'landing-player',
       vid: VIDEO_ID,
@@ -97,16 +100,27 @@ async function initPlayer() {
       preload: true,
       controlBarVisibility: 'hover',
       useH5Prism: true,
-      encryptType: 1,             // Alibaba Proprietary (permissive - รับทั้ง Ali Prop + Widevine)
+      disableAirplay: true,
+      disableChromecast: true,
+      encryptType: 1,
+      playConfig: { EncryptType: 'AliyunVoDEncryption' },   // ⭐ REQUIRED iOS/Safari
       license: {
         domain: 'passport.medninja.academy',
         key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
       }
     }
 
+    // ⭐ Timeout guard — iOS/Safari บางที Aliplayer hang รอ FairPlay license ไม่มา
+    //   ถ้าเกิน 15s ไม่ ready → แสดง error ให้ user ปิด modal แทน
+    const readyTimeout = setTimeout(() => {
+      if (!playerReady.value) {
+        errorMsg.value = 'โหลดวิดีโอนานเกินไป กรุณาลองใหม่ หรือใช้ Chrome/Safari รุ่นใหม่'
+      }
+    }, 15000)
+
     player = new window.Aliplayer(playerConfig, function () {
+      clearTimeout(readyTimeout)
       playerReady.value = true
-      // ⭐ ไม่ auto play — แสดงปุ่มกดเล่นสวยของเราแทน
       needsUserClick.value = true
     })
 
@@ -269,8 +283,8 @@ async function submitPdfLead() {
 
 onMounted(() => {
   document.title = 'MedNinja LMS — ดูได้ทั่วโลก แม้ในประเทศจีน (ไม่ต้อง VPN)'
-  // ⭐ Auto-open modal โฆษณาทันทีที่เข้าเว็บ
-  openVideo()
+  // ⭐ ไม่ auto-open modal — iOS ต้อง user gesture ไม่งั้น Aliplayer hang ตอนโหลดหน้า
+  //   user กดปุ่ม "ดูโฆษณา" เอง (มีปุ่มในหน้า)
 })
 
 onUnmounted(() => {
