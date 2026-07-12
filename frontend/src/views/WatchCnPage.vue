@@ -3521,7 +3521,7 @@ kbd {
   gap: 6px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
+  border-radius: 10px;
   color: #fff;
   cursor: pointer;
   display: inline-flex;
@@ -4281,7 +4281,7 @@ kbd {
 @media (max-width: 640px) {
   .wm-center { font-size: 19px; }
   .wm-play-btn { bottom: 8px; left: 8px; width: 32px; height: 32px; }
-  .wm-fs-btn { top: 8px; right: 8px; width: 32px; height: 32px; }
+  /* .wm-fs-btn: ใช้ style จาก .wm-fs-btn responsive ด้านบน (pill + label) */
 }
 /* Mobile landscape: ลายน้ำใหญ่ขึ้น */
 @media (max-height: 500px) and (orientation: landscape) {

@@ -2833,7 +2833,7 @@ kbd {
   gap: 6px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
+  border-radius: 10px;
   color: #fff;
   cursor: pointer;
   display: inline-flex;
