@@ -1954,11 +1954,7 @@ export default {
       } else {
         const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
         req.then(() => {
-          // Android: lock ตามทิศที่ user ถืออยู่ตอนกดปุ่ม
-          if (isAndroid && screen.orientation && screen.orientation.lock) {
-            const lockDir = isLandscape ? 'landscape' : 'portrait'
-            screen.orientation.lock(lockDir).catch(() => {})
-          }
+          // ไม่ lock orientation — user หมุนเครื่อง จอต้องหมุนตาม (portrait ↔ landscape ในโหมด FS)
           if (!box._fsProtected) {
             box._fsProtected = true
             box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
@@ -1975,16 +1971,13 @@ export default {
     },
     _acceptRotateFs() {
       // User tap prompt overlay (มาจากหมุน landscape) = user gesture → real FS
+      // ไม่ lock orientation — จอต้องหมุนตามเครื่อง
       this.showRotateFsPrompt = false
       this._userInitiatedFs = true
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
       const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
-      req.then(() => {
-        if (screen.orientation && screen.orientation.lock) {
-          screen.orientation.lock('landscape').catch(() => {})
-        }
-      }).catch(() => {
+      req.catch(() => {
         this.isFullscreen = true
         document.body.style.overflow = 'hidden'
       })
