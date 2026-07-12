@@ -2966,29 +2966,17 @@ export default {
       const v = parseFloat(e.target.value) || 0
       this.aliSetVolume(v)
     },
-    _sendStealthLog () {
-      // แอบ ๆ ส่ง log ให้ admin — user เห็นแค่ toast "ส่งรายงานแล้ว"
-      const v = this.videoIdToPlay || ''
+    async _sendStealthLog () {
+      // สรุปสถานะปัจจุบัน push เข้า betaLogs → ส่งไป test-logs-upload
       const isIos = detectIOS() || detectMacSafari()
       const path = isIos ? 'ali-prop' : 'ali-widevine'
-      const info = {
-        detail: [
-          `path=${path}`,
-          `videoId=${v}`,
-          `playerReady=${this.playerReady}`,
-          `hasAliVideo=${this.hasAliVideo}`,
-          `aliInitInFlight=${!!this._aliInitInFlight}`,
-          `playerError=${this._playerError || 'none'}`,
-          `isFullscreen=${this.isFullscreen}`,
-          `showRotateFsPrompt=${this.showRotateFsPrompt}`,
-          `route=${this.$route.path}`,
-          `mounted=${this._mountedAt ? Math.round((Date.now() - this._mountedAt) / 1000) + 's' : 'n/a'}`
-        ].join(' | ')
-      }
-      try {
-        sendLog('watch_cn_stealth_report', 'User tapped stealth report button', info)
-      } catch (e) {}
-      // Toast แบบ silent
+      this._betaLog(`═══ STEALTH REPORT (user-triggered) ═══`, 'info')
+      this._betaLog(`path=${path} videoId=${this.aliVideoIdToPlay || 'none'}`, 'info')
+      this._betaLog(`playerReady=${this.playerReady} hasAliVideo=${this.hasAliVideo}`, 'info')
+      this._betaLog(`aliInitInFlight=${!!this._aliInitInFlight} playerError=${this._playerError || 'none'}`, 'info')
+      this._betaLog(`isFullscreen=${this.isFullscreen} route=${this.$route.path}`, 'info')
+      this._betaLog(`mounted=${this._mountedAt ? Math.round((Date.now() - this._mountedAt) / 1000) + 's' : 'n/a'}`, 'info')
+      await this.sendBetaLogs()
       this._stealthLogSent = true
       setTimeout(() => { this._stealthLogSent = false }, 2500)
     },
