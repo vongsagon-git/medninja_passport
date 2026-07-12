@@ -120,7 +120,23 @@
                     <div class="vr-meta"><span class="vr-tier-badge">ระดับ {{ v.requiredTier }}</span></div>
                   </div>
                 </div>
-                <!-- วิดีโอปกติ (unlocked) -->
+                <!-- ⭐ วิดีโอปกติ ที่ active serve ขาด → placeholder เข้าไม่ได้ -->
+                <div v-else-if="!canPlay(v)" class="video-row placeholder-row is-noserve">
+                  <div class="vr-check">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd"/></svg>
+                  </div>
+                  <svg class="vr-video-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="color:var(--gray-2)"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+                  <div class="vr-info">
+                    <span class="vr-title" style="color:var(--gray)">{{ v.title }}</span>
+                    <div class="vr-meta">
+                      <span class="vr-duration">{{ v.duration || '--:--' }}</span>
+                      <span class="serve-badge" :class="{ 'is-gray': !v.hasBunnyVideo }">A</span>
+                      <span class="serve-badge" :class="{ 'is-gray': !v.hasAliVideo }">B</span>
+                      <span class="vr-placeholder-label">เตรียมเนื้อหา</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- วิดีโอปกติ (unlocked + มี serve พร้อม) -->
                 <router-link
                   v-else
                   :to="isDemo ? `/demo/watch/${v.index}` : `/my/watch/${section._id}/${v.index}`"
@@ -158,7 +174,22 @@
                     <div class="vr-meta"><span class="vr-tier-badge">ระดับ 6</span></div>
                   </div>
                 </div>
-                <!-- Bonus Video (มี VDO จริง — unlocked) -->
+                <!-- ⭐ Bonus ที่ active serve ขาด → placeholder -->
+                <div v-else-if="v.hasBonusVideo && !canPlayBonus(v)" class="video-row bonus-row placeholder-row is-noserve">
+                  <div class="vr-check bonus-star">&#11088;</div>
+                  <svg class="vr-video-icon" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="color:var(--gray-2)"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd"/></svg>
+                  <div class="vr-info">
+                    <span class="vr-title" style="color:var(--gray)">{{ v.bonusTitle || 'VDO เสริม' }}</span>
+                    <div class="vr-meta">
+                      <span class="vr-duration">{{ v.bonusDuration || '--:--' }}</span>
+                      <span class="vr-bonus-label">{{ v.bonusLabel || 'เสริม' }}</span>
+                      <span class="serve-badge" :class="{ 'is-gray': !v.hasBonusVideo }">A</span>
+                      <span class="serve-badge" :class="{ 'is-gray': !v.bonusAliVideoId }">B</span>
+                      <span class="vr-placeholder-label">เตรียมเนื้อหา</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Bonus Video (มี VDO จริง — unlocked + มี serve พร้อม) -->
                 <router-link v-else-if="v.hasBonusVideo" :to="isDemo ? `/demo/watch/${v.index}` : `/my/watch/${section._id}/${v.index}?bonus=1`" class="video-row bonus-row">
                   <div class="vr-check bonus-star">&#11088;</div>
                   <svg class="vr-video-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
@@ -265,7 +296,23 @@
                       <div class="vr-meta"><span class="vr-tier-badge">ระดับ {{ v.requiredTier }}</span></div>
                     </div>
                   </div>
-                  <!-- วิดีโอปกติ (unlocked, sub) -->
+                  <!-- ⭐ วิดีโอ sub ที่ active serve ขาด → placeholder -->
+                  <div v-else-if="!canPlay(v)" class="video-row in-subtopic placeholder-row is-noserve">
+                    <div class="vr-check">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd"/></svg>
+                    </div>
+                    <svg class="vr-video-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="color:var(--gray-2)"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+                    <div class="vr-info">
+                      <span class="vr-title" style="color:var(--gray)">{{ v.title }}</span>
+                      <div class="vr-meta">
+                        <span class="vr-duration">{{ v.duration || '--:--' }}</span>
+                        <span class="serve-badge" :class="{ 'is-gray': !v.hasBunnyVideo }">A</span>
+                        <span class="serve-badge" :class="{ 'is-gray': !v.hasAliVideo }">B</span>
+                        <span class="vr-placeholder-label">เตรียมเนื้อหา</span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- วิดีโอปกติ (unlocked, sub + มี serve พร้อม) -->
                   <router-link
                     v-else
                     :to="isDemo ? `/demo/watch/${v.index}` : `/my/watch/${section._id}/${v.index}`"
@@ -301,7 +348,22 @@
                       <div class="vr-meta"><span class="vr-tier-badge">ระดับ 6</span></div>
                     </div>
                   </div>
-                  <!-- Bonus Video (มี VDO จริง — unlocked, sub) -->
+                  <!-- ⭐ Bonus sub ที่ active serve ขาด → placeholder -->
+                  <div v-else-if="v.hasBonusVideo && !canPlayBonus(v)" class="video-row bonus-row in-subtopic placeholder-row is-noserve">
+                    <div class="vr-check bonus-star">&#11088;</div>
+                    <svg class="vr-video-icon" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="color:var(--gray-2)"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd"/></svg>
+                    <div class="vr-info">
+                      <span class="vr-title" style="color:var(--gray)">{{ v.bonusTitle || 'VDO เสริม' }}</span>
+                      <div class="vr-meta">
+                        <span class="vr-duration">{{ v.bonusDuration || '--:--' }}</span>
+                        <span class="vr-bonus-label">{{ v.bonusLabel || 'เสริม' }}</span>
+                        <span class="serve-badge" :class="{ 'is-gray': !v.hasBonusVideo }">A</span>
+                        <span class="serve-badge" :class="{ 'is-gray': !v.bonusAliVideoId }">B</span>
+                        <span class="vr-placeholder-label">เตรียมเนื้อหา</span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Bonus Video (มี VDO จริง — unlocked, sub + มี serve พร้อม) -->
                   <router-link v-else-if="v.hasBonusVideo" :to="isDemo ? `/demo/watch/${v.index}` : `/my/watch/${section._id}/${v.index}?bonus=1`" class="video-row bonus-row in-subtopic">
                     <div class="vr-check bonus-star">&#11088;</div>
                     <svg class="vr-video-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
@@ -310,6 +372,8 @@
                       <div class="vr-meta">
                         <span class="vr-duration">{{ v.bonusDuration || '--:--' }}</span>
                         <span class="vr-bonus-label">{{ v.bonusLabel || 'เสริม' }}</span>
+                        <span class="serve-badge" :class="{ 'is-gray': !v.hasBonusVideo }">A</span>
+                        <span class="serve-badge" :class="{ 'is-gray': !v.bonusAliVideoId }">B</span>
                       </div>
                     </div>
                     <button v-if="v.bonusHasPdf && !isDemo" class="vr-pdf" @click.stop.prevent="showPdfModal(v.index, true)" title="เอกสาร">
@@ -446,7 +510,10 @@ export default {
       pdfProgress: null,
       groupPdfLoading: null,
       groupPdfModal: null,
-      selfCheckSlug: null     // เปิด modal ของ Self Check (templateSlug)
+      selfCheckSlug: null,     // เปิด modal ของ Self Check (templateSlug)
+      // ⭐ Active serve ตาม IP BASE Circuit ('A' = Bunny / 'B' = Ali)
+      //   ถ้า video ขาด serve ที่ active → เข้าไม่ได้ = placeholder
+      activeServe: 'A'
     }
   },
   setup() {
@@ -571,7 +638,10 @@ export default {
       this._fetchProgress(sectionId)
     }
   },
-  mounted() {
+  async mounted() {
+    // ⭐ Fetch active serve ตาม IP BASE Circuit ก่อน (A/B)
+    //   ถ้า video ขาด serve ที่ active → placeholder (คลิกไม่ได้)
+    await this._loadActiveServe()
     // refresh progress when user navigates back to page (e.g. from watch page) — gives ✓ ติดเลย
     this._visHandler = () => {
       if (!document.hidden && !this.isDemo) {
@@ -591,6 +661,35 @@ export default {
     }
   },
   methods: {
+    // ⭐ Fetch active serve (A / B) จาก IP BASE Circuit ตาม country ของ user
+    async _loadActiveServe() {
+      try {
+        const [modeResp, geoResp] = await Promise.all([
+          fetch('/api/system/video-mode', { credentials: 'include', cache: 'no-store' })
+            .then(r => r.ok ? r.json() : {}).catch(() => ({})),
+          fetch('/api/geo/whoami', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : {}).catch(() => ({}))
+        ])
+        const country = (geoResp.country || '').toUpperCase()
+        let serv
+        if (country === 'CN')      serv = modeResp.ipBaseCnVideoMode
+        else if (country === 'TH') serv = modeResp.ipBaseThVideoMode
+        else                       serv = modeResp.ipBaseOtherVideoMode
+        // bunny → A, ali → B (opaque mapping — user ไม่รู้ vendor)
+        this.activeServe = serv === 'ali' ? 'B' : 'A'
+      } catch { /* fallback default 'A' */ }
+    },
+    // ⭐ video row นี้เล่นได้ไหม — ตาม active serve
+    canPlay(v) {
+      if (this.isDemo) return true
+      if (this.activeServe === 'B') return !!v.hasAliVideo
+      return !!v.hasBunnyVideo
+    },
+    // ⭐ bonus row เล่นได้ไหม
+    canPlayBonus(v) {
+      if (this.activeServe === 'B') return !!v.bonusAliVideoId
+      return !!v.hasBonusVideo   // hasBonusVideo = !!bonusBunnyVideoId
+    },
     // ─── Self Check ───
     topicSelfCheck(topic) {
       if (!this.section?.selfCheckMap || !topic?.topicId) return null
@@ -1060,6 +1159,8 @@ export default {
   background: #e2e8f0;
   color: #94a3b8;
 }
+.video-row.is-noserve { cursor: not-allowed; opacity: 0.7; }
+.video-row.is-noserve:hover { background: inherit; transform: none; }
 .vr-duration {
   display: inline-flex; align-items: center; gap: 4px;
   background: #f1f5f9; color: #334155;
