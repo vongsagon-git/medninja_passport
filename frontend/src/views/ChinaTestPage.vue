@@ -77,10 +77,10 @@ async function initPlayer() {
 
     const playAuth = await fetchPlayAuth()
 
-    // ⭐ FORCE Original stream (mov, unencrypted, 4K)
-    //   Video มี 3 streams: Original mov (ไม่ encrypt), HD m3u8 (Ali Private), HD m3u8 (DRM)
-    //   ต้อง force `format: 'mp4'` + `qualitySort: 'asc'` → Aliplayer เลือก Original ที่ไม่มี DRM
-    //   → เล่นได้ทุก browser/OS/device โดยไม่ติด encryption ใด ๆ
+    // ⭐ FORCE Original stream (mov, unencrypted, 4K) — เล่นได้ทุก device
+    //   Video มี 3 streams: Original mov (ไม่ encrypt) + HD m3u8 Ali Private + HD m3u8 DRM
+    //   Original = mov (ไม่ใช่ mp4!) → ห้าม set format: 'mp4' (จะได้ NoneStream error)
+    //   แค่ set definition: 'OD' + mediaType: 'video' → Aliplayer เลือก Original mov ให้เอง
     const playerConfig = {
       id: 'landing-player',
       vid: VIDEO_ID,
@@ -94,11 +94,8 @@ async function initPlayer() {
       preload: true,
       controlBarVisibility: 'hover',
       useH5Prism: true,
-      // ⭐ Force unencrypted mp4/mov
-      format: 'mp4',
       mediaType: 'video',
-      qualitySort: 'asc',
-      definition: 'OD',       // Original Definition = ตัวที่ไม่ encrypt
+      definition: 'OD',           // Original Definition (unencrypted)
       defaultDefinition: 'OD',
       license: {
         domain: 'passport.medninja.academy',
