@@ -1,12 +1,16 @@
 /**
- * System Controller — Circuit Breaker endpoints
+ * System Controller — IP BASE Circuit Breaker
  *
- * GET  /api/system/video-mode          (public) — user + admin poll
- * PATCH /api/admin/system/video-mode   (admin) — set mode + broadcast
+ * GET  /api/system/video-mode          (public)
+ * PATCH /api/admin/system/video-mode   (admin) — set mode
+ *
+ * ⭐ IP BASE (3 groups):
+ *   ipBaseTh    → country === 'TH'
+ *   ipBaseCn    → country === 'CN'
+ *   ipBaseOther → country ≠ TH, CN
  */
 const PassportSystemConfig = require('./PassportSystemConfig.model')
 
-// In-memory cache 5 นาที (ลด DB read สำหรับ endpoint ที่ user poll บ่อย)
 const CACHE_TTL_MS = 5 * 60 * 1000
 let _cache = { value: null, expiresAt: 0 }
 
@@ -17,17 +21,16 @@ async function _getConfig () {
   if (!doc) {
     doc = await PassportSystemConfig.create({
       _id: 'singleton',
-      globalVideoMode: 'bunny',
-      cnVideoMode: 'ali',
-      globalUiMode: 'global',
-      cnUiMode: 'cn'
+      ipBaseThVideoMode: 'bunny',
+      ipBaseCnVideoMode: 'ali',
+      ipBaseOtherVideoMode: 'bunny'
     })
     doc = doc.toObject()
   }
-  // Backfill สำหรับ record เก่า
-  if (!doc.cnVideoMode)  doc.cnVideoMode  = 'ali'
-  if (!doc.globalUiMode) doc.globalUiMode = 'global'
-  if (!doc.cnUiMode)     doc.cnUiMode     = 'cn'
+  // Backfill legacy → new
+  if (!doc.ipBaseThVideoMode)    doc.ipBaseThVideoMode    = doc.nonCnVideoMode || doc.globalVideoMode || 'bunny'
+  if (!doc.ipBaseCnVideoMode)    doc.ipBaseCnVideoMode    = doc.cnVideoMode || 'ali'
+  if (!doc.ipBaseOtherVideoMode) doc.ipBaseOtherVideoMode = doc.nonCnVideoMode || doc.globalVideoMode || 'bunny'
   _cache = { value: doc, expiresAt: now + CACHE_TTL_MS }
   return doc
 }
@@ -42,14 +45,19 @@ exports.getVideoMode = async (req, res, next) => {
     const doc = await _getConfig()
     res.setHeader('Cache-Control', 'no-store')
     return res.json({
-      // Serv mode (Bunny/Ali) แยกตาม route
-      globalMode: doc.globalVideoMode || 'bunny',
-      cnMode: doc.cnVideoMode || 'ali',
-      // UI mode (Thai/Chinese) แยกตาม route
-      globalUi: doc.globalUiMode || 'global',
-      cnUi: doc.cnUiMode || 'cn',
+      // ⭐ IP BASE (new — 3 groups with Serv + Browser Allow)
+      ipBaseThVideoMode:    doc.ipBaseThVideoMode    || 'bunny',
+      ipBaseCnVideoMode:    doc.ipBaseCnVideoMode    || 'ali',
+      ipBaseOtherVideoMode: doc.ipBaseOtherVideoMode || 'bunny',
+      ipBaseThAllowedBrowsers:    doc.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Firefox', 'Edge'],
+      ipBaseCnAllowedBrowsers:    doc.ipBaseCnAllowedBrowsers    || ['Chrome'],
+      ipBaseOtherAllowedBrowsers: doc.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Firefox', 'Edge'],
       // Backward compat
-      mode: doc.globalVideoMode || 'bunny',
+      nonCnVideoMode: doc.ipBaseThVideoMode || 'bunny',
+      cnVideoMode:    doc.ipBaseCnVideoMode || 'ali',
+      globalMode:     doc.ipBaseThVideoMode || 'bunny',
+      cnMode:         doc.ipBaseCnVideoMode || 'ali',
+      mode:           doc.ipBaseThVideoMode || 'bunny',
       updatedAt: doc.updatedAt
     })
   } catch (err) {
@@ -61,46 +69,70 @@ exports.getVideoMode = async (req, res, next) => {
 exports.setVideoMode = async (req, res, next) => {
   try {
     const { field, value } = req.body || {}
-    // ⭐ Generic setter — 4 fields สลับได้:
-    //    field='globalVideoMode' value='bunny'|'ali'   → Serv ที่ /my/*
-    //    field='cnVideoMode'     value='bunny'|'ali'   → Serv ที่ /my-cn/*
-    //    field='globalUiMode'    value='global'|'cn'   → UI ที่ /my/*
-    //    field='cnUiMode'        value='global'|'cn'   → UI ที่ /my-cn/*
-    const validFields = {
-      globalVideoMode: ['bunny', 'ali'],
+    // ⭐ VideoMode fields (single value)
+    const videoModeFields = {
+      ipBaseThVideoMode:    ['bunny', 'ali'],
+      ipBaseCnVideoMode:    ['bunny', 'ali'],
+      ipBaseOtherVideoMode: ['bunny', 'ali'],
+      nonCnVideoMode:  ['bunny', 'ali'],
       cnVideoMode:     ['bunny', 'ali'],
-      globalUiMode:    ['global', 'cn'],
-      cnUiMode:        ['global', 'cn']
+      globalVideoMode: ['bunny', 'ali']
     }
-    if (!validFields[field]) {
-      return res.status(400).json({ message: 'field ไม่ถูกต้อง (globalVideoMode|cnVideoMode|globalUiMode|cnUiMode)' })
+    // ⭐ Browser Allow fields (array value)
+    const browserAllowFields = ['ipBaseThAllowedBrowsers', 'ipBaseCnAllowedBrowsers', 'ipBaseOtherAllowedBrowsers']
+    const validBrowsers = ['Chrome', 'Safari', 'Firefox', 'Edge', 'In-App', 'Others']
+
+    if (!videoModeFields[field] && !browserAllowFields.includes(field)) {
+      return res.status(400).json({
+        message: 'field ไม่ถูกต้อง'
+      })
     }
-    if (!validFields[field].includes(value)) {
-      return res.status(400).json({ message: `value ต้องเป็น ${validFields[field].join('|')}` })
+    if (videoModeFields[field]) {
+      if (!videoModeFields[field].includes(value)) {
+        return res.status(400).json({ message: `value ต้องเป็น ${videoModeFields[field].join('|')}` })
+      }
+    } else if (browserAllowFields.includes(field)) {
+      // value ต้องเป็น array
+      if (!Array.isArray(value)) {
+        return res.status(400).json({ message: 'value ต้องเป็น array' })
+      }
+      const invalid = value.filter(b => !validBrowsers.includes(b))
+      if (invalid.length > 0) {
+        return res.status(400).json({ message: `browsers ไม่ถูกต้อง: ${invalid.join(',')}` })
+      }
     }
+
+    // Legacy field → new field mapping
+    const fieldMap = {
+      nonCnVideoMode:  'ipBaseThVideoMode',
+      globalVideoMode: 'ipBaseThVideoMode',
+      cnVideoMode:     'ipBaseCnVideoMode'
+    }
+    const targetField = fieldMap[field] || field
 
     const update = {
       updatedBy: req.user?._id || null,
       updatedAt: new Date()
     }
-    update[field] = value
+    update[targetField] = value
+    if (fieldMap[field]) update[field] = value  // sync ทั้ง 2
 
     const doc = await PassportSystemConfig.findByIdAndUpdate(
-      'singleton',
-      update,
-      { new: true, upsert: true }
+      'singleton', update, { new: true, upsert: true }
     ).lean()
     _invalidateCache()
 
     return res.json({
       ok: true,
-      field,
+      field: targetField,
       value,
       config: {
-        globalVideoMode: doc.globalVideoMode || 'bunny',
-        cnVideoMode: doc.cnVideoMode || 'ali',
-        globalUiMode: doc.globalUiMode || 'global',
-        cnUiMode: doc.cnUiMode || 'cn'
+        ipBaseThVideoMode:    doc.ipBaseThVideoMode    || 'bunny',
+        ipBaseCnVideoMode:    doc.ipBaseCnVideoMode    || 'ali',
+        ipBaseOtherVideoMode: doc.ipBaseOtherVideoMode || 'bunny',
+        ipBaseThAllowedBrowsers:    doc.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Firefox', 'Edge'],
+        ipBaseCnAllowedBrowsers:    doc.ipBaseCnAllowedBrowsers    || ['Chrome'],
+        ipBaseOtherAllowedBrowsers: doc.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Firefox', 'Edge']
       },
       updatedAt: doc.updatedAt
     })

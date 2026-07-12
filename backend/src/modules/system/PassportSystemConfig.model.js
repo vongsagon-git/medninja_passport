@@ -1,52 +1,55 @@
 /**
- * PassportSystemConfig — 1 singleton record ใน DB
+ * PassportSystemConfig — singleton record
  *
- * ใช้เป็น circuit breaker สำหรับ passport (ไม่กระทบ LMS)
- *   - globalVideoMode: 'bunny' (default) | 'ali'
- *     ตัดสินว่า /my/watch/* ให้ serve Bunny หรือ Alibaba VOD
+ * ⭐ IP BASE Circuit: 3 groups × 1 dimension (SERV only)
+ *   ipBaseTh    → country === 'TH'
+ *   ipBaseCn    → country === 'CN'
+ *   ipBaseOther → country ≠ TH, CN
  *
- * ⚠️ ใช้ชื่อ 'PassportSystemConfig' + collection = 'passport_system_config'
- *    เพื่อกัน conflict ถ้า LMS เพิ่ม SystemConfig ในอนาคต
+ *   SERV = Bunny หรือ Ali
+ *   UI = ไม่แยก (ภาษาไทยทั้งหมด + LINE)
  */
 const mongoose = require('mongoose')
 const { lmsConn } = require('../../shared/config/db')
 
 const passportSystemConfigSchema = new mongoose.Schema({
-  _id: { type: String, default: 'singleton' },  // fixed key
-  // ⭐ 2 มิติ × 2 route = 4 circuits (ยืดหยุ่นสุด)
-  //   Serv (player)  → Bunny หรือ Ali
-  //   UI (region)    → Thai (LINE) หรือ Chinese (WeChat)
-  //
-  //   /my/watch/*    → globalVideoMode + globalUiMode
-  //   /my-cn/watch/* → cnVideoMode + cnUiMode
+  _id: { type: String, default: 'singleton' },
 
-  // Serv mode (player/CDN)
-  globalVideoMode: {
-    type: String,
-    enum: ['bunny', 'ali'],
-    default: 'bunny'
+  // ⭐ IP BASE — 3 groups (Serv + Browser Allow ต่อ group)
+  ipBaseThVideoMode: {
+    type: String, enum: ['bunny', 'ali'], default: 'bunny'
   },
-  cnVideoMode: {
-    type: String,
-    enum: ['bunny', 'ali'],
-    default: 'ali'
+  ipBaseCnVideoMode: {
+    type: String, enum: ['bunny', 'ali'], default: 'ali'
   },
-  // UI mode (region config → LINE/WeChat, ภาษา, ข้อความ)
-  globalUiMode: {
-    type: String,
-    enum: ['global', 'cn'],
-    default: 'global'   // /my/* default → ไทย + LINE
+  ipBaseOtherVideoMode: {
+    type: String, enum: ['bunny', 'ali'], default: 'bunny'
   },
-  cnUiMode: {
-    type: String,
-    enum: ['global', 'cn'],
-    default: 'cn'       // /my-cn/* default → จีน + WeChat
+  // ⭐ Browser allow list per group
+  //    Values: 'Chrome', 'Safari', 'Firefox', 'Edge', 'Others'
+  ipBaseThAllowedBrowsers: {
+    type: [String], default: ['Chrome', 'Safari', 'Firefox', 'Edge']
   },
+  ipBaseCnAllowedBrowsers: {
+    type: [String], default: ['Chrome']  // จีน = Chrome only (Widevine)
+  },
+  ipBaseOtherAllowedBrowsers: {
+    type: [String], default: ['Chrome', 'Safari', 'Firefox', 'Edge']
+  },
+
+  // ⭐ Legacy fields (backward compat)
+  nonCnVideoMode: { type: String, enum: ['bunny', 'ali'], default: 'bunny' },
+  cnVideoMode:    { type: String, enum: ['bunny', 'ali'], default: 'ali' },
+  nonCnUiMode:    { type: String, enum: ['global', 'cn'], default: 'global' },
+  cnUiMode:       { type: String, enum: ['global', 'cn'], default: 'cn' },
+  globalVideoMode: { type: String, enum: ['bunny', 'ali'], default: 'bunny' },
+  globalUiMode:    { type: String, enum: ['global', 'cn'], default: 'global' },
+
   updatedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
   updatedAt: { type: Date, default: Date.now }
 }, {
   collection: 'passport_system_config',
-  _id: false,  // ใช้ String _id
+  _id: false,
   versionKey: false
 })
 

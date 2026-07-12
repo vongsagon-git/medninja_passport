@@ -18,9 +18,7 @@ const SectionPage = () => import('../views/SectionPage.vue')
 //   Region is chosen via route meta.region ('global' | 'cn')
 const UniversalWatch = () => import('../views/watch/UniversalWatch.vue')
 
-// ⭐ CN mirror — for Chinese students (Alibaba VOD)
-const MyCnDashboard = () => import('../views/MyCnDashboard.vue')
-const SectionCnPage = () => import('../views/SectionCnPage.vue')
+// ⭐ CN mirror ลบแล้ว — IP-based decision ใน UniversalWatch/Dashboard/Section แทน
 
 // DDx ย้ายไป ddx.medninja.academy แล้ว
 
@@ -117,25 +115,11 @@ const routes = [
     component: UniversalWatch,
     meta: { requiresAuth: true, requiresProfile: true, immersive: true, region: 'global' }
   },
-  // ⭐ CN mirror routes — for Chinese students
-  {
-    path: '/my-cn',
-    name: 'MyCnDashboard',
-    component: MyCnDashboard,
-    meta: { requiresAuth: true, requiresProfile: true, immersive: true }
-  },
-  {
-    path: '/my-cn/section/:id',
-    name: 'SectionCnPage',
-    component: SectionCnPage,
-    meta: { requiresAuth: true, requiresProfile: true }
-  },
-  {
-    path: '/my-cn/watch/:sectionId/:videoIndex',
-    name: 'WatchCnPage',
-    component: UniversalWatch,
-    meta: { requiresAuth: true, requiresProfile: true, immersive: true, region: 'cn' }
-  },
+  // ⭐ Legacy /my-cn/* redirects (IP-based decision — path เดียว /my/* พอ)
+  { path: '/my-cn', redirect: '/my' },
+  { path: '/my-cn/section/:id', redirect: to => `/my/section/${to.params.id}` },
+  { path: '/my-cn/watch/:sectionId/:videoIndex', redirect: to => `/my/watch/${to.params.sectionId}/${to.params.videoIndex}` },
+  { path: '/my-cn/:pathMatch(.*)*', redirect: to => `/my/${to.params.pathMatch}` },
   // ⭐ Beta test — 1 ID Universal pattern (auth required, hardcoded test video)
   {
     path: '/watch-beta',

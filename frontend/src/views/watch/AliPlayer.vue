@@ -413,7 +413,7 @@ export default {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 6;
+  z-index: 99;   /* สูงกว่า Aliplayer canvas (ป้องกัน video บัง) */
   width: 72px;
   height: 72px;
   padding: 0;
