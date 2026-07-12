@@ -6,7 +6,7 @@
         <div class="sc-header-icon">⚡</div>
         <div>
           <h1>System Circuit</h1>
-          <p>Video delivery circuit — switch source เผื่อ CDN ล้ม</p>
+          <p>Video delivery circuit — เลือก Serv (Bunny/Ali) + UI (Thai/Chinese) แยกอิสระ</p>
         </div>
       </div>
     </div>
@@ -20,122 +20,184 @@
 
       <template v-else>
         <!-- ═══════════════════════════════════════════ -->
-        <!-- CIRCUIT DIAGRAM — Electrical Style          -->
+        <!-- 4-BREAKER CIRCUIT PANEL                     -->
         <!-- ═══════════════════════════════════════════ -->
         <div class="circuit-panel">
           <div class="circuit-title">
-            <span class="live-dot" :class="{ active: !switching }"></span>
-            <span>Live Circuit Diagram</span>
-            <span class="mode-badge" :class="'mode-' + currentMode">
-              {{ currentMode === 'bunny' ? 'BN MODE' : 'ALI MODE' }}
+            <span class="live-dot" :class="{ active: !anySwitching }"></span>
+            <span>Circuit Board</span>
+            <span class="circuit-info">
+              4 breakers · 2 routes × (Serv + UI)
             </span>
           </div>
 
-          <div class="circuit-board">
-            <!-- Row 1: Input labels -->
-            <div class="node-row row-input">
-              <div class="node node-input">
-                <div class="node-icon">🌐</div>
-                <div class="node-label">Global User<br>(non-CN)</div>
+          <!-- 2 ROUTE COLUMNS -->
+          <div class="routes-grid">
+            <!-- ============ ROUTE: /my/* (Global) ============ -->
+            <div class="route-column">
+              <div class="route-header">
+                <div class="route-icon">🌐</div>
+                <div>
+                  <div class="route-label">/my/watch/*</div>
+                  <div class="route-sub">Global route</div>
+                </div>
               </div>
-              <div class="node node-input node-locked">
-                <div class="node-icon">🇨🇳</div>
-                <div class="node-label">China User<br>(locked)</div>
-              </div>
-            </div>
 
-            <!-- Wire down -->
-            <div class="wire-row">
-              <div class="wire-v" :class="{ 'wire-active': true }"></div>
-              <div class="wire-v" :class="{ 'wire-active': true }"></div>
-            </div>
-
-            <!-- Row 2: Circuit Breakers (SWITCH) -->
-            <div class="node-row row-switch">
-              <!-- Global switch — clickable -->
-              <div class="breaker" :class="'breaker-' + currentMode">
-                <div class="breaker-label">GLOBAL CIRCUIT</div>
-                <div class="breaker-body">
+              <!-- SERV breaker -->
+              <div class="breaker">
+                <div class="breaker-title">
+                  <span class="breaker-dot"></span>
+                  SERV (Player/CDN)
+                </div>
+                <div class="breaker-switches">
                   <button
-                    class="switch-btn"
-                    :class="{ 'switch-on-bunny': currentMode === 'bunny' }"
-                    :disabled="switching || currentMode === 'bunny'"
-                    @click="requestSwitch('bunny')"
-                    title="Route to Bunny CDN (default)"
+                    class="sw"
+                    :class="{ 'sw-on-bunny': config.globalVideoMode === 'bunny' }"
+                    :disabled="switching === 'globalVideoMode' || config.globalVideoMode === 'bunny'"
+                    @click="requestSwitch('globalVideoMode', 'bunny')"
                   >
-                    <div class="switch-tick"></div>
-                    <span>BN</span>
+                    <div class="sw-tick"></div>
+                    <span>BUNNY</span>
                   </button>
-                  <div class="switch-divider"></div>
                   <button
-                    class="switch-btn"
-                    :class="{ 'switch-on-ali': currentMode === 'ali' }"
-                    :disabled="switching || currentMode === 'ali'"
-                    @click="requestSwitch('ali')"
-                    title="Route to Alibaba VOD (fallback)"
+                    class="sw"
+                    :class="{ 'sw-on-ali': config.globalVideoMode === 'ali' }"
+                    :disabled="switching === 'globalVideoMode' || config.globalVideoMode === 'ali'"
+                    @click="requestSwitch('globalVideoMode', 'ali')"
                   >
-                    <div class="switch-tick"></div>
+                    <div class="sw-tick"></div>
                     <span>ALI</span>
                   </button>
                 </div>
                 <div class="breaker-caption">
-                  <span v-if="currentMode === 'bunny'">→ Bunny CDN</span>
-                  <span v-else>→ Alibaba VOD (fallback)</span>
+                  → {{ config.globalVideoMode === 'bunny' ? 'Bunny CDN' : 'Alibaba VOD' }}
                 </div>
               </div>
 
-              <!-- China locked switch -->
-              <div class="breaker breaker-locked">
-                <div class="breaker-label">CHINA CIRCUIT</div>
-                <div class="breaker-body">
-                  <div class="lock-badge">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                    <span>LOCKED</span>
-                  </div>
+              <!-- UI breaker -->
+              <div class="breaker">
+                <div class="breaker-title">
+                  <span class="breaker-dot ui-dot"></span>
+                  UI (Region)
                 </div>
-                <div class="breaker-caption">→ Alibaba VOD only</div>
-              </div>
-            </div>
-
-            <!-- Wire down -->
-            <div class="wire-row">
-              <div class="wire-v" :class="{ 'wire-active': currentMode === 'bunny' }"></div>
-              <div class="wire-v wire-active"></div>
-            </div>
-
-            <!-- Row 3: Ali wire from Global (alt path) -->
-            <div v-if="currentMode === 'ali'" class="wire-diagonal-container">
-              <svg class="wire-diagonal" viewBox="0 0 200 40" preserveAspectRatio="none">
-                <path d="M50 0 Q 100 20, 150 40" stroke="url(#gradAli)" stroke-width="3" fill="none" />
-                <defs>
-                  <linearGradient id="gradAli">
-                    <stop offset="0%" stop-color="#f59e0b" />
-                    <stop offset="100%" stop-color="#f59e0b" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-
-            <!-- Row 4: Output CDN -->
-            <div class="node-row row-output">
-              <div
-                class="node node-cdn node-bunny"
-                :class="{ 'node-active': currentMode === 'bunny', 'node-dim': currentMode === 'ali' }"
-              >
-                <div class="node-icon">🐰</div>
-                <div class="node-label">Bunny CDN<br><small>bunny-global</small></div>
-                <div class="node-status">
-                  <span v-if="currentMode === 'bunny'" class="status-badge active">ACTIVE</span>
-                  <span v-else class="status-badge idle">STANDBY</span>
+                <div class="breaker-switches">
+                  <button
+                    class="sw"
+                    :class="{ 'sw-on-th': config.globalUiMode === 'global' }"
+                    :disabled="switching === 'globalUiMode' || config.globalUiMode === 'global'"
+                    @click="requestSwitch('globalUiMode', 'global')"
+                  >
+                    <div class="sw-tick"></div>
+                    <span>🇹🇭 TH</span>
+                  </button>
+                  <button
+                    class="sw"
+                    :class="{ 'sw-on-cn': config.globalUiMode === 'cn' }"
+                    :disabled="switching === 'globalUiMode' || config.globalUiMode === 'cn'"
+                    @click="requestSwitch('globalUiMode', 'cn')"
+                  >
+                    <div class="sw-tick"></div>
+                    <span>🇨🇳 CN</span>
+                  </button>
+                </div>
+                <div class="breaker-caption">
+                  → {{ config.globalUiMode === 'global' ? 'Thai + LINE' : 'Chinese + WeChat' }}
                 </div>
               </div>
 
-              <div class="node node-cdn node-ali" :class="{ 'node-active': true }">
-                <div class="node-icon">🇨🇳</div>
-                <div class="node-label">Alibaba VOD<br><small>ali-sg</small></div>
-                <div class="node-status">
-                  <span class="status-badge active">ACTIVE</span>
+              <!-- Combined summary -->
+              <div class="route-summary">
+                <span class="badge-mini" :class="'badge-' + config.globalVideoMode">
+                  {{ config.globalVideoMode === 'bunny' ? '🐰 BUNNY' : '🇨🇳 ALI' }}
+                </span>
+                <span>+</span>
+                <span class="badge-mini" :class="'badge-ui-' + config.globalUiMode">
+                  {{ config.globalUiMode === 'global' ? '💚 LINE' : '💬 WeChat' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- ============ ROUTE: /my-cn/* (China) ============ -->
+            <div class="route-column">
+              <div class="route-header">
+                <div class="route-icon">🇨🇳</div>
+                <div>
+                  <div class="route-label">/my-cn/watch/*</div>
+                  <div class="route-sub">China route</div>
                 </div>
+              </div>
+
+              <!-- SERV breaker -->
+              <div class="breaker">
+                <div class="breaker-title">
+                  <span class="breaker-dot"></span>
+                  SERV (Player/CDN)
+                </div>
+                <div class="breaker-switches">
+                  <button
+                    class="sw"
+                    :class="{ 'sw-on-bunny': config.cnVideoMode === 'bunny' }"
+                    :disabled="switching === 'cnVideoMode' || config.cnVideoMode === 'bunny'"
+                    @click="requestSwitch('cnVideoMode', 'bunny')"
+                  >
+                    <div class="sw-tick"></div>
+                    <span>BUNNY</span>
+                  </button>
+                  <button
+                    class="sw"
+                    :class="{ 'sw-on-ali': config.cnVideoMode === 'ali' }"
+                    :disabled="switching === 'cnVideoMode' || config.cnVideoMode === 'ali'"
+                    @click="requestSwitch('cnVideoMode', 'ali')"
+                  >
+                    <div class="sw-tick"></div>
+                    <span>ALI</span>
+                  </button>
+                </div>
+                <div class="breaker-caption">
+                  → {{ config.cnVideoMode === 'bunny' ? 'Bunny CDN ⚠️' : 'Alibaba VOD' }}
+                </div>
+              </div>
+
+              <!-- UI breaker -->
+              <div class="breaker">
+                <div class="breaker-title">
+                  <span class="breaker-dot ui-dot"></span>
+                  UI (Region)
+                </div>
+                <div class="breaker-switches">
+                  <button
+                    class="sw"
+                    :class="{ 'sw-on-th': config.cnUiMode === 'global' }"
+                    :disabled="switching === 'cnUiMode' || config.cnUiMode === 'global'"
+                    @click="requestSwitch('cnUiMode', 'global')"
+                  >
+                    <div class="sw-tick"></div>
+                    <span>🇹🇭 TH</span>
+                  </button>
+                  <button
+                    class="sw"
+                    :class="{ 'sw-on-cn': config.cnUiMode === 'cn' }"
+                    :disabled="switching === 'cnUiMode' || config.cnUiMode === 'cn'"
+                    @click="requestSwitch('cnUiMode', 'cn')"
+                  >
+                    <div class="sw-tick"></div>
+                    <span>🇨🇳 CN</span>
+                  </button>
+                </div>
+                <div class="breaker-caption">
+                  → {{ config.cnUiMode === 'global' ? 'Thai + LINE' : 'Chinese + WeChat' }}
+                </div>
+              </div>
+
+              <!-- Combined summary -->
+              <div class="route-summary">
+                <span class="badge-mini" :class="'badge-' + config.cnVideoMode">
+                  {{ config.cnVideoMode === 'bunny' ? '🐰 BUNNY' : '🇨🇳 ALI' }}
+                </span>
+                <span>+</span>
+                <span class="badge-mini" :class="'badge-ui-' + config.cnUiMode">
+                  {{ config.cnUiMode === 'global' ? '💚 LINE' : '💬 WeChat' }}
+                </span>
               </div>
             </div>
           </div>
@@ -143,16 +205,12 @@
           <!-- Metadata -->
           <div class="meta-row">
             <div class="meta-item">
-              <span class="meta-label">Current Mode</span>
-              <span class="meta-value">{{ currentMode === 'bunny' ? 'BN (Bunny)' : 'ALI (Alibaba)' }}</span>
-            </div>
-            <div class="meta-item">
               <span class="meta-label">Last Updated</span>
               <span class="meta-value">{{ formatTime(updatedAt) }}</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label">Scope</span>
-              <span class="meta-value">/my/watch/* (Global only)</span>
+              <span class="meta-label">Total Circuits</span>
+              <span class="meta-value">4 breakers (2 routes × 2 dimensions)</span>
             </div>
           </div>
         </div>
@@ -165,7 +223,7 @@
           <p class="actions-hint">
             User ที่ดู video อยู่ตอนสลับ mode — จะยังใช้ mode เดิมจนกว่าจะออกจากหน้า
             <br>
-            ถ้าอยาก <strong>บังคับ apply ทันที</strong> → กด "Kick All Viewers" — user โดน logout → login ใหม่ → เข้า watch → mode ใหม่ทำงาน
+            ถ้าอยาก <strong>บังคับ apply ทันที</strong> → กด "Kick All Viewers"
           </p>
 
           <button class="btn btn-kick" :disabled="kicking" @click="kickAll">
@@ -185,12 +243,13 @@
         <!-- Help / Legend                                -->
         <!-- ═══════════════════════════════════════════ -->
         <div class="help-panel">
-          <h3>💡 เมื่อไหร่ควรกดสลับ?</h3>
+          <h3>💡 4-breaker system อธิบาย</h3>
           <ul>
-            <li><strong>BN MODE (default):</strong> Bunny CDN ทำงานปกติ — user Global เจอ Bunny video</li>
-            <li><strong>ALI MODE:</strong> Bunny ล้ม / เปลี่ยน policy / ปิด NoDRM tier → สลับให้ user Global ใช้ Alibaba (ต้อง upload aliVideoId ครบก่อน)</li>
-            <li>Video ไหนไม่มี <code>aliVideoId</code> → user เห็น "รออัพโหลด" placeholder</li>
-            <li>China route (<code>/my-cn/*</code>) ไม่กระทบ — บังคับ Alibaba ตลอด</li>
+            <li><strong>SERV = Player/CDN</strong> — เลือกว่าจะ serve ผ่าน Bunny หรือ Alibaba VOD</li>
+            <li><strong>UI = Region</strong> — เลือก UI: TH (Thai + LINE) หรือ CN (Chinese + WeChat)</li>
+            <li>แต่ละ route (/my/* กับ /my-cn/*) มี SERV + UI แยกกัน</li>
+            <li>Combine ได้ 4 แบบต่อ route → ยืดหยุ่นสุด (test / fallback / migration)</li>
+            <li>Video ไหนไม่มี ID สำหรับ mode ที่เลือก → user เจอ "รออัพโหลด" placeholder</li>
           </ul>
         </div>
       </template>
@@ -199,21 +258,21 @@
     <!-- ═══════════════════════════════════════════ -->
     <!-- Confirm Modal                                -->
     <!-- ═══════════════════════════════════════════ -->
-    <div v-if="pendingMode" class="modal-overlay" @click.self="cancelSwitch">
+    <div v-if="pendingChange" class="modal-overlay" @click.self="cancelSwitch">
       <div class="modal-card">
         <div class="modal-icon">⚡</div>
         <h2>ยืนยันสลับ Circuit?</h2>
         <p>
-          Global users ทั้งหมดจะ route ไปที่:
-          <strong>{{ pendingMode === 'bunny' ? 'Bunny CDN (BN MODE)' : 'Alibaba VOD (ALI MODE)' }}</strong>
+          <strong>{{ describeField(pendingChange.field) }}</strong>
+          → <strong>{{ describeValue(pendingChange.field, pendingChange.value) }}</strong>
         </p>
         <p class="modal-hint">
-          <strong>User ที่ดู video อยู่จะยังใช้ mode เดิม</strong> จนกว่าจะออกจากหน้า
+          User ที่ดู video อยู่จะยังใช้ mode เดิมจนกว่าจะออกจากหน้า
           <br>ต้องกด Kick All ถ้าอยาก force ทันที
         </p>
         <div class="modal-actions">
           <button class="btn btn-outline" @click="cancelSwitch">ยกเลิก</button>
-          <button class="btn btn-primary" :disabled="switching" @click="confirmSwitch">
+          <button class="btn btn-primary" :disabled="!!switching" @click="confirmSwitch">
             {{ switching ? 'กำลังสลับ...' : 'ยืนยัน' }}
           </button>
         </div>
@@ -230,23 +289,38 @@ export default {
   data() {
     return {
       loading: true,
-      switching: false,
+      switching: null,   // field name หรือ null
       kicking: false,
-      currentMode: 'bunny',
+      config: {
+        globalVideoMode: 'bunny',
+        cnVideoMode:     'ali',
+        globalUiMode:    'global',
+        cnUiMode:        'cn'
+      },
       updatedAt: null,
-      pendingMode: null,
+      pendingChange: null,   // { field, value }
       kickResult: null
     }
   },
+  computed: {
+    anySwitching() {
+      return !!this.switching
+    }
+  },
   async mounted() {
-    await this.fetchMode()
+    await this.fetchConfig()
   },
   methods: {
-    async fetchMode() {
+    async fetchConfig() {
       this.loading = true
       try {
         const data = await api.get('/system/video-mode')
-        this.currentMode = data.mode || 'bunny'
+        this.config = {
+          globalVideoMode: data.globalMode || 'bunny',
+          cnVideoMode:     data.cnMode || 'ali',
+          globalUiMode:    data.globalUi || 'global',
+          cnUiMode:        data.cnUi || 'cn'
+        }
         this.updatedAt = data.updatedAt
       } catch (e) {
         console.error('[SystemCircuit] fetch failed:', e.message)
@@ -254,35 +328,52 @@ export default {
         this.loading = false
       }
     },
-    requestSwitch(mode) {
-      if (mode === this.currentMode) return
-      this.pendingMode = mode
+    requestSwitch(field, value) {
+      if (this.config[field] === value) return
+      this.pendingChange = { field, value }
       this.kickResult = null
     },
     cancelSwitch() {
-      this.pendingMode = null
+      this.pendingChange = null
     },
     async confirmSwitch() {
-      const mode = this.pendingMode
-      if (!mode) return
-      this.switching = true
+      if (!this.pendingChange) return
+      const { field, value } = this.pendingChange
+      this.switching = field
       try {
-        const data = await api.patch('/admin/system/video-mode', { mode })
-        this.currentMode = data.mode
+        const data = await api.patch('/admin/system/video-mode', { field, value })
+        if (data.config) {
+          this.config = data.config
+        } else {
+          this.config[field] = value
+        }
         this.updatedAt = data.updatedAt
-        this.pendingMode = null
+        this.pendingChange = null
       } catch (e) {
         alert('สลับ Circuit ไม่สำเร็จ: ' + (e.response?.data?.message || e.message))
       } finally {
-        this.switching = false
+        this.switching = null
       }
+    },
+    describeField(field) {
+      const map = {
+        globalVideoMode: '/my/* SERV',
+        cnVideoMode:     '/my-cn/* SERV',
+        globalUiMode:    '/my/* UI',
+        cnUiMode:        '/my-cn/* UI'
+      }
+      return map[field] || field
+    },
+    describeValue(field, value) {
+      if (field.endsWith('VideoMode')) return value === 'bunny' ? 'Bunny CDN' : 'Alibaba VOD'
+      if (field.endsWith('UiMode'))    return value === 'global' ? 'Thai + LINE' : 'Chinese + WeChat'
+      return value
     },
     async kickAll() {
       if (!confirm('ยืนยัน kick user ทุกคน? — user ที่ดูอยู่จะโดน logout')) return
       this.kicking = true
       this.kickResult = null
       try {
-        // reuse existing kick-all endpoint (goes through ws.medninja.academy relay)
         const wsUrl = 'https://ws.medninja.academy/api/admin/viewers/kick-all'
         const token = localStorage.getItem('token')
         const res = await fetch(wsUrl, {
@@ -294,7 +385,7 @@ export default {
         })
         const data = await res.json().catch(() => ({}))
         if (res.ok) {
-          this.kickResult = { ok: true, msg: `✓ Kicked ${data.count || 'all'} viewers — พวกเขาจะโดน redirect ทันที` }
+          this.kickResult = { ok: true, msg: `✓ Kicked ${data.count || 'all'} viewers` }
         } else {
           this.kickResult = { ok: false, msg: '✗ ' + (data.message || 'Kick failed') }
         }
@@ -326,7 +417,7 @@ export default {
   padding: 32px 0;
 }
 .sc-header-inner {
-  max-width: 1080px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
@@ -350,7 +441,7 @@ export default {
 }
 
 .sc-container {
-  max-width: 1080px;
+  max-width: 1200px;
   margin: -20px auto 0;
   padding: 0 24px;
   position: relative;
@@ -374,13 +465,8 @@ export default {
   margin: 0 auto 16px;
   animation: spin 0.8s linear infinite;
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ══════════════════════════════════════════════════ */
-/*   Circuit Diagram Panel                            */
-/* ══════════════════════════════════════════════════ */
 .circuit-panel {
   background: #fff;
   border-radius: 16px;
@@ -410,227 +496,151 @@ export default {
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
   animation: pulse 2s ease-in-out infinite;
 }
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-.mode-badge {
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.circuit-info {
   margin-left: auto;
-  padding: 6px 14px;
-  border-radius: 999px;
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-.mode-badge.mode-bunny {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1.5px solid #93c5fd;
-}
-.mode-badge.mode-ali {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1.5px solid #fcd34d;
-}
-
-.circuit-board {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border-radius: 12px;
-  padding: 32px 24px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  position: relative;
-}
-
-.node-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  position: relative;
-}
-
-.node {
-  background: rgba(15, 23, 42, 0.6);
-  border: 2px solid rgba(148, 163, 184, 0.3);
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-  transition: all 0.3s;
-}
-.node-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
-}
-.node-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #cbd5e1;
-  letter-spacing: 0.03em;
-  line-height: 1.4;
-}
-.node-label small {
-  font-size: 10px;
+  color: #64748b;
   font-weight: 500;
-  color: rgba(148, 163, 184, 0.7);
+  text-transform: none;
   letter-spacing: 0;
 }
 
-.node-input {
-  background: rgba(30, 41, 59, 0.5);
-}
-
-.node-locked {
-  opacity: 0.6;
-}
-
-.node-cdn.node-active {
-  border-color: #10b981;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-}
-.node-cdn.node-active .node-label {
-  color: #d1fae5;
-}
-.node-cdn.node-dim {
-  opacity: 0.4;
-}
-
-.node-status {
-  margin-top: 8px;
-}
-.status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-.status-badge.active {
-  background: rgba(16, 185, 129, 0.2);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-}
-.status-badge.idle {
-  background: rgba(100, 116, 139, 0.2);
-  color: #94a3b8;
-  border: 1px solid rgba(100, 116, 139, 0.4);
-}
-
-/* Wire lines */
-.wire-row {
+/* 2-column layout — Global | CN */
+.routes-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  height: 40px;
-  margin: 8px 0;
-}
-.wire-v {
-  width: 3px;
-  margin: 0 auto;
-  background: rgba(100, 116, 139, 0.4);
-  height: 100%;
-  border-radius: 3px;
-}
-.wire-v.wire-active {
-  background: linear-gradient(180deg, #10b981, #34d399);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
-  animation: wireFlow 1.5s linear infinite;
-}
-@keyframes wireFlow {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 20px; }
+  gap: 20px;
 }
 
-.wire-diagonal-container {
-  height: 40px;
-  margin-top: -20px;
-  padding: 0 20px;
-}
-.wire-diagonal {
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.5));
+.route-column {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 14px;
+  padding: 20px;
 }
 
-/* Circuit Breakers (switches) */
+.route-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  margin-bottom: 16px;
+}
+.route-icon {
+  font-size: 32px;
+}
+.route-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: #f0f9ff;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+.route-sub {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.9);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Breaker (2 per route) */
 .breaker {
-  background: rgba(30, 41, 59, 0.7);
-  border: 2px solid rgba(148, 163, 184, 0.3);
-  border-radius: 12px;
-  padding: 20px 16px;
-  transition: all 0.3s;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
 }
-.breaker-label {
+.breaker-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 11px;
   font-weight: 800;
-  color: rgba(148, 163, 184, 0.9);
+  color: rgba(148, 163, 184, 0.95);
   letter-spacing: 0.08em;
-  margin-bottom: 12px;
-  text-align: center;
+  margin-bottom: 10px;
 }
-.breaker-body {
+.breaker-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+.breaker-dot.ui-dot {
+  background: #a855f7;
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.6);
+}
+
+.breaker-switches {
   display: flex;
-  align-items: stretch;
-  gap: 8px;
-  background: rgba(15, 23, 42, 0.5);
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.6);
   border-radius: 8px;
-  padding: 8px;
-  margin-bottom: 12px;
+  padding: 6px;
+  margin-bottom: 8px;
 }
-.switch-btn {
+.sw {
   flex: 1;
-  padding: 12px 8px;
-  background: rgba(30, 41, 59, 0.6);
-  border: 2px solid rgba(100, 116, 139, 0.3);
+  padding: 10px 6px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1.5px solid rgba(100, 116, 139, 0.25);
   border-radius: 6px;
   color: #94a3b8;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  position: relative;
+  gap: 4px;
 }
-.switch-btn:hover:not(:disabled) {
-  border-color: rgba(59, 130, 246, 0.5);
-  background: rgba(59, 130, 246, 0.1);
+.sw:hover:not(:disabled) {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.08);
   color: #dbeafe;
 }
-.switch-btn:disabled {
-  cursor: default;
-}
-.switch-tick {
-  width: 8px;
-  height: 8px;
+.sw:disabled { cursor: default; }
+.sw-tick {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: rgba(100, 116, 139, 0.4);
 }
-.switch-btn.switch-on-bunny {
-  background: linear-gradient(135deg, #3b82f6, #0284c7);
-  border-color: #60a5fa;
+.sw.sw-on-bunny {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #6ee7b7;
   color: #fff;
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
 }
-.switch-btn.switch-on-bunny .switch-tick {
-  background: #fff;
-  box-shadow: 0 0 6px #fff;
-}
-.switch-btn.switch-on-ali {
+.sw.sw-on-ali {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   border-color: #fbbf24;
   color: #fff;
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
 }
-.switch-btn.switch-on-ali .switch-tick {
+.sw.sw-on-th {
+  background: linear-gradient(135deg, #3b82f6, #0284c7);
+  border-color: #60a5fa;
+  color: #fff;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
+}
+.sw.sw-on-cn {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  border-color: #f87171;
+  color: #fff;
+  box-shadow: 0 0 14px rgba(220, 38, 38, 0.35);
+}
+.sw.sw-on-bunny .sw-tick,
+.sw.sw-on-ali .sw-tick,
+.sw.sw-on-th .sw-tick,
+.sw.sw-on-cn .sw-tick {
   background: #fff;
-  box-shadow: 0 0 6px #fff;
-}
-.switch-divider {
-  width: 2px;
-  background: rgba(100, 116, 139, 0.3);
-  align-self: stretch;
+  box-shadow: 0 0 4px #fff;
 }
 
 .breaker-caption {
@@ -640,25 +650,34 @@ export default {
   font-weight: 600;
 }
 
-.breaker-locked {
-  opacity: 0.7;
-}
-.lock-badge {
+/* Route summary — combined badges */
+.route-summary {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 16px;
-  color: #f59e0b;
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.9);
 }
+.badge-mini {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.badge-bunny { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+.badge-ali   { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+.badge-ui-global { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); }
+.badge-ui-cn     { background: rgba(220, 38, 38, 0.15); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.4); }
 
 /* Meta row */
 .meta-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-top: 24px;
   padding-top: 20px;
@@ -682,9 +701,7 @@ export default {
   font-weight: 600;
 }
 
-/* ══════════════════════════════════════════════════ */
-/*   Actions Panel                                    */
-/* ══════════════════════════════════════════════════ */
+/* Actions Panel */
 .actions-panel {
   background: #fff;
   border-radius: 16px;
@@ -723,10 +740,7 @@ export default {
   transform: translateY(-1px);
   box-shadow: 0 10px 28px rgba(239, 68, 68, 0.4);
 }
-.btn-kick:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
+.btn-kick:disabled { opacity: 0.6; cursor: default; }
 .kick-result {
   margin-top: 14px;
   padding: 10px 14px;
@@ -734,20 +748,10 @@ export default {
   font-size: 13px;
   font-weight: 600;
 }
-.kick-ok {
-  background: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-}
-.kick-fail {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
+.kick-ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.kick-fail { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
-/* ══════════════════════════════════════════════════ */
-/*   Help Panel                                       */
-/* ══════════════════════════════════════════════════ */
+/* Help Panel */
 .help-panel {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   border: 1px solid #bfdbfe;
@@ -767,18 +771,8 @@ export default {
   font-size: 13px;
   line-height: 1.8;
 }
-.help-panel code {
-  background: #fff;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
-}
 
-/* ══════════════════════════════════════════════════ */
-/*   Modal                                            */
-/* ══════════════════════════════════════════════════ */
+/* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -801,10 +795,7 @@ export default {
   text-align: center;
   animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .modal-icon {
   font-size: 42px;
   margin-bottom: 12px;
@@ -861,13 +852,13 @@ export default {
 .btn-outline:hover { background: #e2e8f0; }
 
 /* Responsive */
+@media (max-width: 900px) {
+  .routes-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 640px) {
   .sc-container { padding: 0 12px; }
   .circuit-panel { padding: 20px 16px; }
-  .circuit-board { padding: 20px 12px; }
-  .node-row { grid-template-columns: 1fr; gap: 20px; }
-  .wire-row { grid-template-columns: 1fr; }
   .meta-row { grid-template-columns: 1fr; }
-  .switch-btn { padding: 10px 6px; font-size: 12px; }
+  .sw { padding: 8px 4px; font-size: 11px; }
 }
 </style>

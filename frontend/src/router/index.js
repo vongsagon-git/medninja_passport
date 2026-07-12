@@ -14,12 +14,13 @@ const ReplyStudent = () => import('../views/ReplyStudent.vue')
 // v2: Section-based student pages
 const MyDashboard = () => import('../views/MyDashboard.vue')
 const SectionPage = () => import('../views/SectionPage.vue')
-const WatchPage = () => import('../views/WatchPage.vue')
+// ⭐ Watch = one UniversalWatch component for BOTH /my/watch (Global) + /my-cn/watch (CN)
+//   Region is chosen via route meta.region ('global' | 'cn')
+const UniversalWatch = () => import('../views/watch/UniversalWatch.vue')
 
 // ⭐ CN mirror — for Chinese students (Alibaba VOD)
 const MyCnDashboard = () => import('../views/MyCnDashboard.vue')
 const SectionCnPage = () => import('../views/SectionCnPage.vue')
-const WatchCnPage = () => import('../views/WatchCnPage.vue')
 
 // DDx ย้ายไป ddx.medninja.academy แล้ว
 
@@ -89,8 +90,8 @@ const routes = [
   {
     path: '/demo/watch/:videoIndex',
     name: 'DemoWatch',
-    component: WatchPage,
-    meta: { demo: true, immersive: true }
+    component: UniversalWatch,
+    meta: { demo: true, immersive: true, region: 'global' }
   },
   // v2: Section-based student routes (ต้องกรอก profile ก่อน)
   {
@@ -113,8 +114,8 @@ const routes = [
   {
     path: '/my/watch/:sectionId/:videoIndex',
     name: 'WatchPage',
-    component: WatchPage,
-    meta: { requiresAuth: true, requiresProfile: true, immersive: true }
+    component: UniversalWatch,
+    meta: { requiresAuth: true, requiresProfile: true, immersive: true, region: 'global' }
   },
   // ⭐ CN mirror routes — for Chinese students
   {
@@ -132,8 +133,8 @@ const routes = [
   {
     path: '/my-cn/watch/:sectionId/:videoIndex',
     name: 'WatchCnPage',
-    component: WatchCnPage,
-    meta: { requiresAuth: true, requiresProfile: true, immersive: true }
+    component: UniversalWatch,
+    meta: { requiresAuth: true, requiresProfile: true, immersive: true, region: 'cn' }
   },
   // ⭐ Beta test — 1 ID Universal pattern (auth required, hardcoded test video)
   {
@@ -177,8 +178,8 @@ const routes = [
   {
     path: '/admin/preview/section/:sectionId/:videoIndex?',
     name: 'AdminPreviewSection',
-    component: WatchPage,
-    meta: { requiresAuth: true, requiresAdmin: true, immersive: true, adminPreview: true }
+    component: UniversalWatch,
+    meta: { requiresAuth: true, requiresAdmin: true, immersive: true, adminPreview: true, region: 'global' }
   },
   // Admin routes
   {

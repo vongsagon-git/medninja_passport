@@ -13,10 +13,34 @@ const { lmsConn } = require('../../shared/config/db')
 
 const passportSystemConfigSchema = new mongoose.Schema({
   _id: { type: String, default: 'singleton' },  // fixed key
+  // ⭐ 2 มิติ × 2 route = 4 circuits (ยืดหยุ่นสุด)
+  //   Serv (player)  → Bunny หรือ Ali
+  //   UI (region)    → Thai (LINE) หรือ Chinese (WeChat)
+  //
+  //   /my/watch/*    → globalVideoMode + globalUiMode
+  //   /my-cn/watch/* → cnVideoMode + cnUiMode
+
+  // Serv mode (player/CDN)
   globalVideoMode: {
     type: String,
     enum: ['bunny', 'ali'],
     default: 'bunny'
+  },
+  cnVideoMode: {
+    type: String,
+    enum: ['bunny', 'ali'],
+    default: 'ali'
+  },
+  // UI mode (region config → LINE/WeChat, ภาษา, ข้อความ)
+  globalUiMode: {
+    type: String,
+    enum: ['global', 'cn'],
+    default: 'global'   // /my/* default → ไทย + LINE
+  },
+  cnUiMode: {
+    type: String,
+    enum: ['global', 'cn'],
+    default: 'cn'       // /my-cn/* default → จีน + WeChat
   },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
   updatedAt: { type: Date, default: Date.now }
