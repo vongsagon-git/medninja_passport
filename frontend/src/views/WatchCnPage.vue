@@ -117,7 +117,7 @@
           <div v-else-if="video" class="w-player-area" @contextmenu.prevent>
             <div class="w-player-box" :class="{ 'is-fullscreen': isFullscreen }">
               <!-- ⭐ ปุ่ม FS ระดับบนสุด — โผล่แม้ WV DRM ยังไม่ ready (fallback ไม่ให้ stuck) -->
-              <button v-if="hasAliVideo" class="wm-fs-btn" :class="{ 'is-active': isFullscreen }" @click="aliToggleFullscreen" :title="isFullscreen ? 'ย่อ' : 'เต็มจอ'">
+              <button v-if="hasAliVideo && showFsBtn" class="wm-fs-btn" :class="{ 'is-active': isFullscreen }" @click="aliToggleFullscreen" :title="isFullscreen ? 'ย่อ' : 'เต็มจอ'">
                 <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                 <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
                 <span class="wm-fs-label">{{ isFullscreen ? 'ย่อ' : 'เต็มจอ' }}</span>
@@ -733,6 +733,7 @@ export default {
       watchedMap: getWatchedMap(),
       isFullscreen: false,
       showRotateFsPrompt: false,
+      orientationLandscape: false,
       _stealthLogSent: false,
       tabHidden: false,
       showLineLinkPopup: false,
@@ -787,6 +788,12 @@ export default {
     }
   },
   computed: {
+    // ⭐ ซ่อนปุ่ม FS ตอน iOS + fake FS + landscape (กันคนใช้เว็บแนวนอน)
+    showFsBtn() {
+      const isIos = detectIOS() || detectMacSafari()
+      if (isIos && this.isFullscreen && this.orientationLandscape) return false
+      return true
+    },
     lineLinkUrl() {
       const token = localStorage.getItem('token') || ''
       return `https://liff.line.me/2009259048-jOiOezxi?token=${encodeURIComponent(token)}`
@@ -1054,11 +1061,13 @@ export default {
 
     // ⭐ Auto FS behavior แยกตาม device
     this._userInitiatedFs = false
+    this.orientationLandscape = window.innerWidth > window.innerHeight
     this._onOrientationChange = () => {
       const isIos = detectIOS() || detectMacSafari()
       const isAndroid = /Android/i.test(navigator.userAgent)
-      if (!isIos && !isAndroid) return
       const isLandscape = window.innerWidth > window.innerHeight
+      this.orientationLandscape = isLandscape
+      if (!isIos && !isAndroid) return
 
       if (isLandscape) {
         if (isIos) {
@@ -2990,15 +2999,6 @@ export default {
 
       // iOS: CSS fake FS
       if (isIos) {
-        // ⭐ ตอนอยู่ใน fake FS + landscape → กด "ย่อ" ไม่ให้ใช้เว็บแบบแนวนอน
-        //   → โผล่ rotate-fs-prompt (แตะเพื่อดูเต็มจอ) แทน
-        if (this.isFullscreen && isLandscape) {
-          this.isFullscreen = false
-          document.body.style.overflow = ''
-          this._userInitiatedFs = false
-          this.showRotateFsPrompt = true
-          return
-        }
         this.isFullscreen = !this.isFullscreen
         document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
         return
