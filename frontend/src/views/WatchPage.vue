@@ -154,22 +154,123 @@
                   <router-link :to="backUrl" style="color:#a78bfa;font-size:13px;text-decoration:underline;">กลับหน้าเรียนเลย</router-link>
                 </div>
               </div>
-              <iframe
-                v-if="video.embedUrl && !replaced && !recorderBlocked"
-                ref="videoIframe"
-                :src="video.embedUrl"
-                loading="lazy"
-                referrerpolicy="origin"
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture 'none'"
-                disableremoteplayback
-                disablepictureinpicture
-                x-webkit-airplay="deny"
-              ></iframe>
-              <!-- Loading overlay — บังจน player ready (pointer-events:none ให้กด play ได้) -->
-              <div v-if="video.embedUrl && !replaced && !recorderBlocked && !playerReady" class="player-loading-overlay">
-                <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
+              <!-- ═══════════════════════════════════════════════════════════
+                   ⭐ Circuit breaker — 3 branches (BN MODE / ALI MODE / Placeholder)
+                   ═══════════════════════════════════════════════════════════
+                   Branch 1: BN MODE + มี embedUrl → Bunny iframe (เดิม)
+                   Branch 2: ALI MODE + มี aliVideoId → Aliplayer inline (URL คงเดิม)
+                   Branch 3: มี video แต่ไม่มี field สำหรับ mode → placeholder "รออัพโหลด"
+                   ═══════════════════════════════════════════════════════════ -->
+
+              <!-- Branch 1: BN MODE — Bunny iframe (Global default) -->
+              <template v-if="activeVideoMode === 'bunny' && hasBunnyVideo && !replaced && !recorderBlocked">
+                <iframe
+                  ref="videoIframe"
+                  :src="video.embedUrl"
+                  loading="lazy"
+                  referrerpolicy="origin"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture 'none'"
+                  disableremoteplayback
+                  disablepictureinpicture
+                  x-webkit-airplay="deny"
+                ></iframe>
+                <!-- Loading overlay — บังจน player ready (pointer-events:none ให้กด play ได้) -->
+                <div v-if="!playerReady" class="player-loading-overlay">
+                  <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
+                </div>
+              </template>
+
+              <!-- Branch 2: ALI MODE — Alibaba VOD player inline -->
+              <template v-else-if="activeVideoMode === 'ali' && hasAliVideo && !replaced && !recorderBlocked">
+                <div
+                  id="J_prismPlayer"
+                  ref="aliPlayerBox"
+                  class="ali-player-box"
+                ></div>
+                <!-- Loading overlay — บังจน Ali player ready -->
+                <div v-if="!playerReady" class="player-loading-overlay">
+                  <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
+                </div>
+                <!-- ⭐ ปุ่มส่ง log แอบ ๆ (มุมล่างซ้าย) — user รายงานปัญหาได้ตอน player ขาว -->
+                <button class="wm-stealth-log-btn" @click="_sendStealthLog" title="รายงานปัญหา">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                  </svg>
+                </button>
+                <div v-if="_stealthLogSent" class="wm-stealth-log-toast">✓ ส่งรายงานแล้ว</div>
+                <!-- ⭐ Custom Aliplayer Controls Layer (seek + play + speed + volume) -->
+                <div v-if="playerReady" class="ali-ctl-layer" :class="{ hidden: !aliControlsVisible }" @click.self="aliOnPlayerTap">
+                  <!-- Big center play — hide ระหว่าง seek + 1.5 วิหลัง seek (กัน pause event แว๊บ) -->
+                  <button v-if="!isPlaying && !aliSeeking && !aliJustSeeked" class="ali-ctl-big-play" @click="aliTogglePlay" title="เล่น">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+                  </button>
+                  <div class="ali-ctl-bar">
+                    <div class="ali-ctl-timeline">
+                      <input
+                        type="range"
+                        class="ali-ctl-seek"
+                        :min="0"
+                        :max="aliDuration || 100"
+                        :step="0.1"
+                        :value="aliSeeking ? aliSeekValue : aliCurrentTime"
+                        :style="{ '--pct': (((aliSeeking ? aliSeekValue : aliCurrentTime) / (aliDuration || 1)) * 100) + '%' }"
+                        @mousedown="aliSeekStart"
+                        @touchstart="aliSeekStart"
+                        @input="aliSeekMove"
+                        @mouseup="aliSeekEnd"
+                        @touchend="aliSeekEnd"
+                      />
+                    </div>
+                    <div class="ali-ctl-row">
+                      <button class="ali-ctl-btn" @click="aliTogglePlay" :title="isPlaying ? 'หยุด' : 'เล่น'">
+                        <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
+                      </button>
+                      <button class="ali-ctl-btn" @click="aliSeek(Math.max(0, aliCurrentTime - 10))" title="ย้อน 10 วิ">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12.5 5.5v-3l-4 4 4 4v-3c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                      </button>
+                      <button class="ali-ctl-btn" @click="aliSeek(Math.min(aliDuration, aliCurrentTime + 10))" title="ข้าม 10 วิ">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M11.5 5.5v-3l4 4-4 4v-3c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+                      </button>
+                      <div class="ali-ctl-time">
+                        <span>{{ aliFmtTime(aliCurrentTime) }}</span>
+                        <span class="ali-ctl-time-sep">/</span>
+                        <span class="ali-ctl-time-total">{{ aliFmtTime(aliDuration) }}</span>
+                      </div>
+                      <div class="ali-ctl-spacer"></div>
+                      <div class="ali-ctl-volume hide-mobile">
+                        <button class="ali-ctl-btn" @click="aliToggleMute" :title="aliMuted ? 'เปิดเสียง' : 'ปิดเสียง'">
+                          <svg v-if="!aliMuted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                          <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.17v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                        </button>
+                        <input type="range" class="ali-ctl-vol" :min="0" :max="1" :step="0.05" :value="aliMuted ? 0 : aliVolume" @input="aliOnVolumeInput" />
+                      </div>
+                      <div class="ali-ctl-speed-wrap">
+                        <button class="ali-ctl-btn ali-ctl-speed-btn" @click="aliShowSpeedMenu = !aliShowSpeedMenu" title="ความเร็ว">{{ aliSpeed }}x</button>
+                        <div v-if="aliShowSpeedMenu" class="ali-ctl-speed-menu">
+                          <button v-for="s in [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]" :key="s" class="ali-ctl-speed-item" :class="{ active: aliSpeed === s }" @click="aliSetSpeed(s)">{{ s }}x</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Branch 3: Placeholder — video โหลดแต่ field สำหรับ mode ปัจจุบันไม่มี -->
+              <div v-else-if="showPlaceholder" class="player-placeholder soft-blue">
+                <div class="placeholder-content">
+                  <div class="placeholder-upload-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="42" height="42">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                    </svg>
+                  </div>
+                  <p class="placeholder-title">รออัพโหลด</p>
+                  <p class="placeholder-sub">วิดีโอนี้ยังไม่พร้อมให้บริการ<br>กรุณาลองใหม่ภายหลัง</p>
+                </div>
               </div>
-              <div v-if="!video.embedUrl || replaced || recorderBlocked" class="player-placeholder">
+
+              <!-- Loading state — replaced/recorder overlays อยู่ข้างบนแล้ว -->
+              <div v-else-if="replaced || recorderBlocked" class="player-placeholder">
                 <div class="placeholder-content">
                   <div class="placeholder-play">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
@@ -178,7 +279,8 @@
                   <p class="placeholder-sub">กำลังโหลดวีดีโอ...</p>
                 </div>
               </div>
-              <!-- Watermark layer — pointer-events:none ไม่บล็อก player -->
+
+              <!-- Watermark layer — pointer-events:none ไม่บล็อก player (ทั้ง BN + ALI) -->
               <div v-if="watermarkText" class="wm-overlay">
                 <!-- Grid เฉียง -->
                 <div v-if="wmCurrentStyle === 'grid'" class="wm-grid">
@@ -189,13 +291,13 @@
                   <span v-for="(line, idx) in wmParts" :key="idx">{{ line }}</span>
                 </div>
               </div>
-              <!-- Custom play/pause button — ควบคุม Bunny player ผ่าน player.js API -->
-              <button v-if="playerReady" class="wm-play-btn" @click="togglePlay" :title="isPlaying ? 'หยุด' : 'เล่น'">
+              <!-- Custom play/pause button (BN MODE only — Bunny player.js API) -->
+              <button v-if="activeVideoMode === 'bunny' && playerReady" class="wm-play-btn" @click="togglePlay" :title="isPlaying ? 'หยุด' : 'เล่น'">
                 <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
                 <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
               </button>
-              <!-- Custom fullscreen button — top-right, มี label "เต็มจอ" / "ย่อ" -->
-              <button v-if="showFsBtn" class="wm-fs-btn" :class="{ 'is-active': isFullscreen }" @click="toggleFullscreen" :title="isFullscreen ? 'ย่อ' : 'เต็มจอ'">
+              <!-- Custom fullscreen button — top-right, ทำงานทั้ง BN + ALI (target .w-player-box) -->
+              <button v-if="showFsBtn && hasActiveVideo" class="wm-fs-btn" :class="{ 'is-active': isFullscreen }" @click="toggleFullscreen" :title="isFullscreen ? 'ย่อ' : 'เต็มจอ'">
                 <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                 <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
                 <span class="wm-fs-label">{{ isFullscreen ? 'ย่อ' : 'เต็มจอ' }}</span>
@@ -656,10 +758,32 @@ export default {
       isFullscreen: false,
       showRotateFsPrompt: false,
       orientationLandscape: false,
+      _stealthLogSent: false,
       tabHidden: false,
       showLineLinkPopup: false,
       isPlaying: false,
       playerReady: false,
+      // ⭐ Circuit breaker — global video mode (fetched from /api/system/video-mode)
+      //    'bunny' = default (Bunny CDN iframe)
+      //    'ali'   = fallback (Alibaba VOD player, inline — URL คงเดิม /my/watch/*)
+      globalVideoMode: 'bunny',
+      // ⭐ Beta debug: log collector (Ali mode only)
+      betaLogs: [],
+      betaLogSending: false,
+      betaLogSent: false,
+      // ⭐ Custom Ali controls state (copy from WatchCnPage — ใช้ตอน ALI MODE)
+      aliCurrentTime: 0,
+      aliSeeking: false,      // ⭐ user กำลัง drag slider — หยุด sync จาก timeupdate
+      aliJustSeeked: false,   // ⭐ 1.5 วิหลัง seek → ซ่อนปุ่ม big-play (กัน pause event แว๊บ)
+      aliSeekValue: 0,        // ค่า slider ระหว่าง drag (independent จาก currentTime)
+      aliDuration: 0,
+      aliVolume: 1,
+      aliMuted: false,
+      aliSpeed: 1,
+      aliShowSpeedMenu: false,
+      aliShowVolumeSlider: false,
+      aliControlsVisible: true,
+      _aliHideControlsTimer: null,
       _debugTime: '',
       drmType: null,
       linkCopied: false,
@@ -729,6 +853,52 @@ export default {
       if (this.isDemo) return '/demo'
       if (this.isAdminPreview) return '/admin/sections'
       return `/my/section/${this.sectionId}`
+    },
+    // ═══════════════════════════════════════════════════════════
+    // ⭐ Circuit breaker — mode-driven video selection
+    // ═══════════════════════════════════════════════════════════
+    //   BN MODE (bunny — default): render Bunny iframe (embedUrl จาก activation store)
+    //   ALI MODE (ali — fallback): render Ali player inline (URL คงเดิม /my/watch/*)
+    //   ถ้า field วิดีโอสำหรับ mode ที่เลือกไม่มี → แสดง placeholder "รออัพโหลด"
+    // ═══════════════════════════════════════════════════════════
+    activeVideoMode () {
+      // Demo/AdminPreview → บังคับ bunny (ยังไม่มี ali sample)
+      if (this.isDemo || this.isAdminPreview) return 'bunny'
+      return this.globalVideoMode === 'ali' ? 'ali' : 'bunny'
+    },
+    hasBunnyVideo () {
+      // BN MODE: มีวิดีโอถ้า activation store คืน embedUrl มา
+      return !!(this.video && this.video.embedUrl)
+    },
+    hasAliVideo () {
+      // ALI MODE: เช็ค aliVideoId (หรือ bonus variant)
+      const v = this.video
+      if (!v) return false
+      if (this.isBonus) return !!v.bonusAliVideoId
+      return !!v.aliVideoId
+    },
+    activeVideoId () {
+      // ⭐ ค่า identifier ที่ watcher ใช้ trigger re-init (bunny=embedUrl, ali=aliVideoId)
+      if (!this.video) return ''
+      if (this.activeVideoMode === 'ali') {
+        return this.isBonus ? (this.video.bonusAliVideoId || '') : (this.video.aliVideoId || '')
+      }
+      return this.video.embedUrl || ''
+    },
+    hasActiveVideo () {
+      return !!this.activeVideoId
+    },
+    // ⭐ Placeholder เมื่อ video โหลดสำเร็จแต่ไม่มี field สำหรับ mode ปัจจุบัน
+    showPlaceholder () {
+      // อย่าโชว์ตอน replaced / recorderBlocked (มี overlay ของตัวเอง)
+      if (this.replaced || this.recorderBlocked) return false
+      return !!this.video && !this.hasActiveVideo
+    },
+    // Ali variant สำหรับ Warroom (สำหรับ heartbeat/socket state)
+    aliVideoIdToPlay () {
+      const v = this.video
+      if (!v) return ''
+      return this.isBonus ? (v.bonusAliVideoId || '') : (v.aliVideoId || '')
     },
     watchedCount() {
       const key = this.sectionId
@@ -888,8 +1058,19 @@ export default {
     // Auto-close sidebar on mobile
     if (window.innerWidth < 1024) this.sidebarOpen = false
   },
-  mounted() {
+  async mounted() {
     this._mountedAt = Date.now()
+    // ⭐ Circuit breaker — fetch global video mode ก่อนอย่างอื่น (safe default = 'bunny')
+    //   ถ้า backend ล่ม หรือ endpoint ไม่ตอบ → คงไว้ที่ 'bunny' (fail-safe, ห้ามพัง iframe)
+    try {
+      const res = await fetch('/api/system/video-mode', { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        this.globalVideoMode = data.mode === 'ali' ? 'ali' : 'bunny'
+      }
+    } catch (e) {
+      this.globalVideoMode = 'bunny' // fallback safe
+    }
     // ⭐ DevTool trap — Desktop เท่านั้น (real mobile skip อัตโนมัติใน util)
     this._devToolHandle = startDevToolTrap(() => {
       alert('ตรวจพบเครื่องมือ Developer Tools — กรุณาปิดแล้วเข้าใหม่')
@@ -1148,13 +1329,21 @@ export default {
     }
     window.addEventListener('message', this._onBunnyMessage)
 
-    // ═══ Load Bunny player.js API ═══
-    this._loadPlayerJs()
+    // ═══ Load Bunny player.js API — เฉพาะ BN MODE ═══
+    //    ALI MODE: init player ผ่าน watcher activeVideoId (โหลด Aliplayer SDK ทีหลัง)
+    if (this.activeVideoMode === 'bunny') {
+      this._loadPlayerJs()
+    } else if (this.activeVideoMode === 'ali' && this.hasAliVideo) {
+      // ALI MODE + มี aliVideoId → init ทันที (ไม่ต้องรอ watcher)
+      this.$nextTick(() => this._initAliPlayer())
+    }
 
     // ═══ Detect DRM support ═══
     this._detectDrm()
   },
   beforeUnmount() {
+    // ⭐ Cleanup Ali player (safe ถ้ายังไม่ถูก init)
+    if (this._disposeAliPlayer) this._disposeAliPlayer()
     stopDevToolTrap(this._devToolHandle)
     if (this._lineLinkPoll) clearInterval(this._lineLinkPoll)
     document.removeEventListener('fullscreenchange', this._onFsChange)
@@ -1203,9 +1392,10 @@ export default {
   },
   watch: {
     video(v) {
-      // เมื่อ video data โหลดเสร็จ → emit watch:start (socket) + init player
+      // เมื่อ video data โหลดเสร็จ → emit watch:start (socket) + init player (ตาม mode)
       if (v && this._socket?.connected) this._emitWatchStart()
-      if (v && v.embedUrl) {
+      // BN MODE — Bunny iframe load flow (เดิม)
+      if (this.activeVideoMode === 'bunny' && v && v.embedUrl) {
         // iframe ได้ src แล้ว → รอ iframe load แล้ว init player
         this._bunnyPlayer = null
         this.playerReady = false
@@ -1229,6 +1419,14 @@ export default {
         })
       }
     },
+    // ⭐ ALI MODE — watch activeVideoId → re-init Aliplayer เมื่อเปลี่ยน video
+    //    (ใช้ activeVideoId แทน video เพราะ activeVideoId เปลี่ยนตาม isBonus + mode ด้วย)
+    activeVideoId(newId, oldId) {
+      if (newId === oldId) return
+      if (this.activeVideoMode === 'ali' && newId) {
+        this.$nextTick(() => this._initAliPlayer())
+      }
+    },
     '$route.query.bonus'() {
       this.loadVideo()
       this._scrollToActive()
@@ -1237,6 +1435,8 @@ export default {
       this.isPlaying = false
       this._currentTime = 0
       this._videoDuration = 0
+      // ALI MODE: dispose player เก่าก่อน (จะ re-init จาก watcher activeVideoId)
+      if (this.activeVideoMode === 'ali' && this._disposeAliPlayer) this._disposeAliPlayer()
     },
     '$route.params.videoIndex'() {
       this.loadVideo()
@@ -1257,7 +1457,12 @@ export default {
         }
         this._socket.emit('video:change', changeData)
       }
-      this.$nextTick(() => this._initPlayer())
+      if (this.activeVideoMode === 'bunny') {
+        this.$nextTick(() => this._initPlayer())
+      } else {
+        // ALI MODE: dispose ให้ watcher activeVideoId re-init
+        if (this._disposeAliPlayer) this._disposeAliPlayer()
+      }
     }
   },
   methods: {
@@ -2370,6 +2575,507 @@ export default {
     _diagSet(n, st, d) {
       const s = this.diagSteps[n - 1]
       if (s) { s.status = st; if (d !== undefined) s.detail = d }
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // ⭐ ALI MODE — Aliplayer methods (copy from WatchCnPage)
+    // ═══════════════════════════════════════════════════════════
+    //   ใช้เฉพาะ globalVideoMode === 'ali' (circuit breaker)
+    //   Flow: _loadAliplayerSDK → _fetchAliStsToken/_fetchAliPlayAuth → _initAliPlayer
+    //   URL คงเดิม /my/watch/{sectionId}/{videoIndex} (ไม่ redirect ไป /my-cn)
+    // ═══════════════════════════════════════════════════════════
+    async _loadAliplayerSDK () {
+      if (window.Aliplayer && typeof window.Aliplayer === 'function') return true
+      return new Promise((resolve, reject) => {
+        // ⭐ v2.35.4 = bundle ครบในไฟล์เดียว (v2.15.4 fetch runtime dep จาก g.alicdn.com → GFW throttle)
+        const cssId = '_aliplayer_css_v2354'
+        if (!document.getElementById(cssId)) {
+          const css = document.createElement('link')
+          css.id = cssId
+          css.rel = 'stylesheet'
+          css.href = '/vendor/aliplayer/aliplayer-2.35.4.css'
+          document.head.appendChild(css)
+        }
+        const s = document.createElement('script')
+        s.src = '/vendor/aliplayer/aliplayer-2.35.4.js'
+        s.async = false
+        s.onload = () => {
+          setTimeout(() => {
+            resolve(typeof window.Aliplayer === 'function')
+          }, 200)
+        }
+        s.onerror = () => reject(new Error('Failed to load Aliplayer SDK v2.35.4'))
+        document.head.appendChild(s)
+      })
+    },
+    async _fetchAliStsToken () {
+      try {
+        const vid = this.aliVideoIdToPlay
+        if (!vid) throw new Error('No Ali videoId')
+        this._betaLog(`Fetch STS: /api/china/sts/${vid}`, 'info')
+        const res = await api.get(`/china/sts/${vid}`)
+        const d = (res && res.data) ? res.data : (res || {})
+        if (!d.accessKeyId) throw new Error('STS response missing accessKeyId')
+        this._betaLog(`STS ok (key=${d.accessKeyId?.substring(0, 10)}...)`, 'success')
+        return d
+      } catch (e) {
+        console.error('[Ali] STS fetch error:', e.message)
+        this._betaLog(`STS fetch error: ${e.message}`, 'error')
+        throw e
+      }
+    },
+    async _fetchAliPlayAuth () {
+      try {
+        const vid = this.aliVideoIdToPlay
+        if (!vid) throw new Error('No Ali videoId')
+        this._betaLog(`Fetch PlayAuth: /api/china/playauth/${vid}`, 'info')
+        const res = await api.get(`/china/playauth/${vid}`)
+        const d = (res && res.data) ? res.data : (res || {})
+        if (!d.playAuth) throw new Error('PlayAuth response missing playAuth')
+        this._betaLog(`PlayAuth ok (length=${d.playAuth.length})`, 'success')
+        return d
+      } catch (e) {
+        console.error('[Ali] PlayAuth fetch error:', e.message)
+        this._betaLog(`PlayAuth fetch error: ${e.message}`, 'error')
+        throw e
+      }
+    },
+    // ⭐ Beta debug log collector (ในหน่วยความจำ, ส่งไป /api/china/test-logs-upload)
+    _betaLog (msg, type = 'info') {
+      const time = new Date().toTimeString().slice(0, 8)
+      this.betaLogs.push({ time, msg, type })
+      if (this.betaLogs.length > 200) this.betaLogs.shift()
+      console.log(`[Beta ${time}] ${msg}`)
+    },
+    async sendBetaLogs () {
+      this.betaLogSending = true
+      try {
+        const device = {
+          ua: navigator.userAgent,
+          isIOS: detectIOS(),
+          isMacSafari: detectMacSafari(),
+          platform: navigator.platform,
+          touch: navigator.maxTouchPoints,
+          uaPlatform: navigator.userAgentData?.platform || null
+        }
+        const context = {
+          source: 'WatchPage-AliMode',
+          sectionId: this.sectionId,
+          videoIndex: this.videoIndex,
+          aliVideoId: this.aliVideoIdToPlay,
+          hasAliVideo: this.hasAliVideo,
+          globalVideoMode: this.globalVideoMode,
+          playerReady: this.playerReady,
+          replaced: this.replaced,
+          recorderBlocked: this.recorderBlocked,
+          user: this.authStore?.user?.email || 'unknown'
+        }
+        await fetch('/api/china/test-logs-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device, serveInfo: context, logs: this.betaLogs })
+        })
+        this.betaLogSent = true
+        setTimeout(() => { this.betaLogSent = false }, 3000)
+      } catch (err) {
+        console.error('[Beta] send log fail:', err.message)
+        alert('ส่ง log ไม่สำเร็จ: ' + err.message)
+      } finally {
+        this.betaLogSending = false
+      }
+    },
+    async _initAliPlayer () {
+      if (!this.hasAliVideo) {
+        console.log('[Ali] No aliVideoId — skip player init')
+        this._betaLog('SKIP: no aliVideoId', 'warn')
+        return
+      }
+      // ⭐ กัน double-init — ถ้ากำลัง init อยู่ให้ skip (STS race → Widevine 4022)
+      if (this._aliInitInFlight) {
+        console.log('[Ali] init in flight — skip')
+        this._betaLog('SKIP: init in flight', 'warn')
+        return
+      }
+      const videoId = this.aliVideoIdToPlay
+      console.log('[Ali] Initializing player with videoId:', videoId)
+      this._betaLog(`Init player: videoId=${videoId}`, 'info')
+      this._aliInitInFlight = true
+
+      try {
+        // 1. Load SDK
+        const sdkOk = await this._loadAliplayerSDK()
+        if (!sdkOk) throw new Error('Aliplayer SDK not loaded')
+
+        // 2. รอ DOM container ปรากฏ (v-if async render → #J_prismPlayer อาจยังไม่มี)
+        await this.$nextTick()
+        let waitTries = 0
+        while (!document.getElementById('J_prismPlayer') && waitTries < 20) {
+          await new Promise(r => setTimeout(r, 100))
+          waitTries++
+        }
+        if (!document.getElementById('J_prismPlayer')) {
+          throw new Error('Container #J_prismPlayer not found in DOM')
+        }
+
+        // 3. Cleanup previous ก่อน fetch token (กัน 2 requests ยิงซ้อน)
+        if (this._aliPlayer) {
+          try { this._aliPlayer.dispose() } catch {}
+          this._aliPlayer = null
+        }
+
+        // ⭐ 1 ID dual encryption — 2 paths ตาม device
+        // iOS/Mac Safari → PlayAuth + playConfig.EncryptType filter Ali Prop
+        // Other → STS + encryptType 1 (permissive Widevine)
+        const isIosOrSafari = detectIOS() || detectMacSafari()
+        this._betaLog(`Device path: ${isIosOrSafari ? 'iOS/Safari (PlayAuth)' : 'Other (STS)'}`, 'info')
+
+        // Base config — custom skinLayout ไม่มี fullScreenButton (ใช้ปุ่ม ⛶ ของเราแทน)
+        const baseConfig = {
+          id: 'J_prismPlayer',
+          vid: videoId,
+          width: '100%',
+          height: '100%',
+          autoplay: false,
+          isLive: false,
+          rePlay: false,
+          playsinline: true,
+          preload: true,
+          controlBarVisibility: 'hover',
+          useH5Prism: true,
+          disableAirplay: true,
+          disableChromecast: true,
+          license: {
+            domain: 'passport.medninja.academy',
+            key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
+          },
+          skinLayout: [
+            { name: 'bigPlayButton', align: 'blabs', x: 30, y: 80 },
+            { name: 'H5Loading', align: 'cc' },
+            { name: 'errorDisplay', align: 'tlabs', x: 0, y: 0 },
+            { name: 'infoDisplay' },
+            { name: 'tooltip', align: 'blabs', x: 0, y: 56 },
+            { name: 'thumbnail' },
+            {
+              name: 'controlBar', align: 'blabs', x: 0, y: 0,
+              children: [
+                { name: 'progress', align: 'blabs', x: 0, y: 44 },
+                { name: 'playButton', align: 'tl', x: 15, y: 12 },
+                { name: 'timeDisplay', align: 'tl', x: 10, y: 7 },
+                { name: 'volume', align: 'tr', x: 5, y: 10 },
+                { name: 'setting', align: 'tr', x: 15, y: 12 }
+              ]
+            }
+          ]
+        }
+
+        let config
+        if (isIosOrSafari) {
+          // PATH 1: iOS/Mac Safari — PlayAuth + filter Ali Prop stream
+          const { playAuth } = await this._fetchAliPlayAuth()
+          config = {
+            ...baseConfig,
+            playauth: playAuth,
+            encryptType: 1,
+            playConfig: { EncryptType: 'AliyunVoDEncryption' }
+          }
+          console.log('[Ali] Config: iOS PlayAuth + Ali Prop filter')
+        } else {
+          // PATH 2: Other (Chrome/Edge/Android/PC) — STS + permissive Widevine
+          const sts = await this._fetchAliStsToken()
+          config = {
+            ...baseConfig,
+            accessKeyId: sts.accessKeyId,
+            accessKeySecret: sts.accessKeySecret,
+            securityToken: sts.securityToken,
+            region: sts.region || 'ap-southeast-1',
+            encryptType: 1
+          }
+          console.log('[Ali] Config: Other STS + Widevine permissive')
+        }
+
+        // 5. Instantiate
+        this._betaLog('Creating Aliplayer instance...', 'info')
+        this._aliPlayer = new window.Aliplayer(config, () => {
+          console.log('[Ali] Player instance created')
+          this._betaLog('Player instance created ✅', 'success')
+        })
+
+        // 6. Events
+        this._aliPlayer.on('ready', () => {
+          console.log('[Ali] Player ready')
+          this._betaLog('Event: ready', 'success')
+          this.playerReady = true
+          this._playerReadyAt = Date.now()
+          try { this.aliDuration = this._aliPlayer.getDuration() || 0 } catch {}
+          // ⭐ Anti-piracy: set video element attribute
+          try {
+            const container = document.getElementById('J_prismPlayer')
+            const videoEl = container ? container.querySelector('video') : null
+            if (videoEl) {
+              videoEl.setAttribute('x-webkit-airplay', 'deny')
+              videoEl.setAttribute('disableRemotePlayback', '')
+              videoEl.disableRemotePlayback = true
+            }
+          } catch {}
+          this._startAliTimePolling()
+          this._diagLog('player_ready', 'Ali player ready', { detail: `msSinceMount=${this._mountedAt ? Date.now() - this._mountedAt : 0}` })
+        })
+        this._aliPlayer.on('canplay', () => {
+          console.log('[Ali] canplay — DRM decrypted OK')
+          try { this.aliDuration = this._aliPlayer.getDuration() || 0 } catch {}
+        })
+        // Resume — ถ้ามี watch progress เดิม → seek กลับ
+        if (!this.isDemo && !this._resumeAttempted) {
+          this._resumeAttempted = true
+          api.get(`/my/watch-progress/${this.sectionId}`).then(res => {
+            const prog = (res.progress || []).find(pr => pr.videoIndex === this.videoIndex)
+            if (prog && prog.currentTime > 10) {
+              const seekTo = Math.max(0, prog.currentTime - 3)
+              const doSeek = () => {
+                try { this._aliPlayer.seek(seekTo); console.log('[Ali Resume] seek to', seekTo) } catch {}
+              }
+              doSeek()
+              setTimeout(doSeek, 1000)
+              setTimeout(doSeek, 3000)
+            }
+          }).catch(() => {})
+        }
+
+        this._aliPlayer.on('play', () => {
+          this.isPlaying = true
+          this._playerError = ''
+          this._scheduleHideControls()
+          if (this._socket?.connected) this._socket.emit('video:play')
+          if (this._clearIdleTimer) this._clearIdleTimer()
+          this._diagLog('play_event', 'Ali play')
+        })
+        this._aliPlayer.on('pause', () => {
+          this.isPlaying = false
+          this._showControlsSticky()
+          if (this._socket?.connected) this._socket.emit('video:pause')
+          if (!this.isDemo && this._startIdleTimer) this._startIdleTimer()
+          this._diagLog('pause_event', 'Ali pause', { detail: `t=${Math.round(this._currentTime||0)}` })
+        })
+        this._aliPlayer.on('ended', () => {
+          this.isPlaying = false
+          this._showControlsSticky()
+          if (this._socket?.connected) this._socket.emit('video:ended')
+          if (!this.isDemo && !this.isWatched(this.videoIndex)) {
+            this.toggleWatched(this.videoIndex)
+          }
+        })
+        this._aliPlayer.on('timeupdate', () => {
+          try {
+            const t = this._aliPlayer.getCurrentTime() || 0
+            const d = this._aliPlayer.getDuration() || 0
+            this.aliCurrentTime = t
+            if (d > 0) this.aliDuration = d
+            // sync heartbeat vars (Warroom + kick check ใช้ตัวนี้)
+            this._currentTime = t
+            if (d > 0) this._videoDuration = d
+            // Auto mark watched ที่ 90%
+            if (!this.isDemo && this._videoDuration > 0 &&
+                t >= this._videoDuration * 0.9 && !this.isWatched(this.videoIndex)) {
+              this.toggleWatched(this.videoIndex)
+            }
+            // Socket state ทุก 3 วิ (Warroom)
+            const now = Date.now()
+            if (!this._lastSocketState || now - this._lastSocketState > 3000) {
+              this._lastSocketState = now
+              if (this._socket?.connected) {
+                let realIsPlaying = this.isPlaying
+                try {
+                  if (typeof this._aliPlayer.getStatus === 'function') {
+                    const s = this._aliPlayer.getStatus()
+                    realIsPlaying = s === 'play' || s === 'playing'
+                    this.isPlaying = realIsPlaying
+                  }
+                } catch {}
+                this._socket.emit('video:state', {
+                  currentTime: Math.round(t),
+                  duration: Math.round(d),
+                  isPlaying: realIsPlaying,
+                  appVersion: _getAppVersion()
+                })
+              }
+            }
+          } catch {}
+        })
+        this._aliPlayer.on('error', (e) => {
+          const details = e && e.paramData ? JSON.stringify(e.paramData) : JSON.stringify(e || {})
+          this._playerError = details
+          console.error('[Ali] Player error:', details)
+          this._betaLog(`Event: error — ${details}`, 'error')
+          if (this._socket?.connected) this._socket.emit('video:error', { detail: details })
+          this._diagLog('player_error', 'Ali error', { detail: details })
+        })
+        this._aliPlayer.on('waiting', () => {
+          this._betaLog('Event: waiting (buffering)', 'warn')
+          this._diagLog('waiting_event', 'buffering')
+        })
+      } catch (err) {
+        console.error('[Ali] Init failed:', err.message)
+        this._betaLog(`❌ INIT FAILED: ${err.message}`, 'error')
+        if (err.stack) this._betaLog(`Stack: ${err.stack.split('\n').slice(0, 3).join(' | ')}`, 'error')
+      } finally {
+        this._aliInitInFlight = false
+      }
+    },
+    _disposeAliPlayer () {
+      this._stopAliTimePolling()
+      if (this._aliPlayer) {
+        try { this._aliPlayer.dispose() } catch {}
+        this._aliPlayer = null
+      }
+      this.playerReady = false
+      this.aliCurrentTime = 0
+      this.aliDuration = 0
+      this.isPlaying = false
+    },
+    _startAliTimePolling () {
+      this._stopAliTimePolling()
+      this._aliTimePoll = setInterval(() => {
+        if (!this._aliPlayer) return
+        try {
+          this.aliCurrentTime = this._aliPlayer.getCurrentTime() || 0
+          if (!this.aliDuration) this.aliDuration = this._aliPlayer.getDuration() || 0
+        } catch {}
+      }, 500)
+    },
+    _stopAliTimePolling () {
+      if (this._aliTimePoll) { clearInterval(this._aliTimePoll); this._aliTimePoll = null }
+    },
+    _showControlsSticky () {
+      this.aliControlsVisible = true
+      if (this._aliHideControlsTimer) { clearTimeout(this._aliHideControlsTimer); this._aliHideControlsTimer = null }
+    },
+    _scheduleHideControls () {
+      this.aliControlsVisible = true
+      if (this._aliHideControlsTimer) clearTimeout(this._aliHideControlsTimer)
+      this._aliHideControlsTimer = setTimeout(() => {
+        if (this.isPlaying) this.aliControlsVisible = false
+      }, 3000)
+    },
+    aliTogglePlay () {
+      if (!this._aliPlayer) return
+      // Throttle 300ms → กัน rapid tap → race condition
+      const now = Date.now()
+      if (this._lastTogglePlay && now - this._lastTogglePlay < 300) return
+      this._lastTogglePlay = now
+      try {
+        // Optimistic UI — event play/pause sync ทีหลัง
+        if (this.isPlaying) {
+          this.isPlaying = false
+          this._aliPlayer.pause()
+          this._showControlsSticky()
+        } else {
+          this.isPlaying = true
+          this._aliPlayer.play()
+          this._scheduleHideControls()
+        }
+      } catch (e) {
+        console.warn('[Ali] toggle play failed', e)
+      }
+    },
+    aliSeek (sec) {
+      if (!this._aliPlayer) return
+      // Throttle 500ms — DRM session ทน seek รัวๆ ไม่ได้
+      const now = Date.now()
+      if (this._lastAliSeek && now - this._lastAliSeek < 500) return
+      this._lastAliSeek = now
+      const wasPlaying = this.isPlaying
+      if (wasPlaying) {
+        this.aliJustSeeked = true
+        clearTimeout(this._aliJustSeekedTimer)
+        this._aliJustSeekedTimer = setTimeout(() => { this.aliJustSeeked = false }, 1500)
+      }
+      try { this._aliPlayer.seek(sec) } catch {}
+      this.aliCurrentTime = sec
+      if (wasPlaying) {
+        setTimeout(() => { try { this._aliPlayer && this._aliPlayer.play() } catch {} }, 100)
+      }
+    },
+    // Smooth seek: drag update seekValue เท่านั้น (ไม่ยิง seek ทุก frame)
+    aliSeekStart () {
+      this.aliSeeking = true
+      this.aliSeekValue = this.aliCurrentTime
+      this._showControlsSticky()
+    },
+    aliSeekMove (e) {
+      // DRM video ต้อง fetch license + decrypt ใหม่ทุก seek → ไม่ยิงระหว่าง drag
+      const val = parseFloat(e.target.value) || 0
+      this.aliSeekValue = val
+    },
+    aliSeekEnd () {
+      if (!this.aliSeeking) return
+      const val = this.aliSeekValue
+      this.aliSeeking = false
+      this.aliCurrentTime = val
+      const wasPlaying = this.isPlaying
+      if (wasPlaying) {
+        this.aliJustSeeked = true
+        clearTimeout(this._aliJustSeekedTimer)
+        this._aliJustSeekedTimer = setTimeout(() => { this.aliJustSeeked = false }, 1500)
+      }
+      if (this._aliPlayer) { try { this._aliPlayer.seek(val) } catch {} }
+      if (wasPlaying) {
+        setTimeout(() => { try { this._aliPlayer && this._aliPlayer.play() } catch {} }, 100)
+      }
+      this._showControlsSticky()
+    },
+    aliSetSpeed (s) {
+      if (!this._aliPlayer) return
+      try { this._aliPlayer.setSpeed(s) } catch {}
+      this.aliSpeed = s
+      this.aliShowSpeedMenu = false
+    },
+    aliToggleMute () {
+      if (!this._aliPlayer) return
+      try {
+        if (this.aliMuted) { this._aliPlayer.unmute(); this.aliMuted = false }
+        else { this._aliPlayer.mute(); this.aliMuted = true }
+      } catch {}
+    },
+    aliSetVolume (v) {
+      if (!this._aliPlayer) return
+      try { this._aliPlayer.setVolume(v) } catch {}
+      this.aliVolume = v
+      if (v > 0 && this.aliMuted) this.aliMuted = false
+    },
+    aliOnVolumeInput (e) {
+      const v = parseFloat(e.target.value) || 0
+      this.aliSetVolume(v)
+    },
+    aliFmtTime (sec) {
+      const s = Math.max(0, Math.floor(sec || 0))
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
+      const ss = s % 60
+      const pad = n => (n < 10 ? '0' + n : '' + n)
+      return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${pad(m)}:${pad(ss)}`
+    },
+    aliOnPlayerTap () {
+      // แตะบน player → toggle controls (mobile)
+      if (this.aliControlsVisible) {
+        if (this.isPlaying) this.aliControlsVisible = false
+      } else {
+        this.aliControlsVisible = true
+        this._scheduleHideControls()
+      }
+    },
+    async _sendStealthLog () {
+      // สรุปสถานะปัจจุบัน push เข้า betaLogs → ส่งไป test-logs-upload
+      const isIos = detectIOS() || detectMacSafari()
+      const path = isIos ? 'ali-prop' : 'ali-widevine'
+      this._betaLog(`═══ STEALTH REPORT (user-triggered, WatchPage) ═══`, 'info')
+      this._betaLog(`mode=${this.globalVideoMode} path=${path} videoId=${this.aliVideoIdToPlay || 'none'}`, 'info')
+      this._betaLog(`playerReady=${this.playerReady} hasAliVideo=${this.hasAliVideo}`, 'info')
+      this._betaLog(`aliInitInFlight=${!!this._aliInitInFlight} playerError=${this._playerError || 'none'}`, 'info')
+      this._betaLog(`isFullscreen=${this.isFullscreen} route=${this.$route.path}`, 'info')
+      this._betaLog(`mounted=${this._mountedAt ? Math.round((Date.now() - this._mountedAt) / 1000) + 's' : 'n/a'}`, 'info')
+      await this.sendBetaLogs()
+      this._stealthLogSent = true
+      setTimeout(() => { this._stealthLogSent = false }, 2500)
     }
   }
 }
@@ -4023,6 +4729,262 @@ kbd {
 .watch-page:has(.w-player-box.is-fullscreen) .w-sidebar,
 .watch-page:has(.w-player-box.is-fullscreen) .w-video-info {
   display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ⭐ ALI MODE — Aliplayer container + custom controls layer
+   ═══════════════════════════════════════════════════════════ */
+.ali-player-box {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+.ali-player-box :deep(.prism-player) {
+  width: 100% !important;
+  height: 100% !important;
+}
+/* ซ่อน Aliplayer error dialog + native FS button (ใช้ overlay + ปุ่มเราแทน) */
+.ali-player-box :deep(.prism-ErrorMessage),
+.ali-player-box :deep(.prism-notice),
+.ali-player-box :deep(.prism-error),
+.ali-player-box :deep(.prism-info-display),
+.ali-player-box .prism-fullscreen-btn,
+.ali-player-box .prism-fullscreen,
+.ali-player-box [class*="fullscreen"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+.ali-player-box video {
+  touch-action: pan-x pan-y !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Custom Aliplayer Controls (เขียนเอง) — ซ้อนทับ native controls */
+.ali-ctl-layer {
+  position: absolute; inset: 0;
+  pointer-events: auto;
+  z-index: 100;
+  transition: opacity .2s;
+  display: flex; flex-direction: column;
+  background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0,0,0,0.7) 100%);
+}
+.ali-ctl-layer.hidden {
+  background: transparent;
+}
+.ali-ctl-layer.hidden .ali-ctl-big-play,
+.ali-ctl-layer.hidden .ali-ctl-bar {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.ali-ctl-big-play {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 68px; height: 68px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(6px);
+  border: none; color: #fff;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: transform .1s, background .15s;
+}
+.ali-ctl-big-play:hover { background: rgba(0, 0, 0, 0.75); transform: translate(-50%, -50%) scale(1.05); }
+.ali-ctl-big-play:active { transform: translate(-50%, -50%) scale(0.95); }
+
+.ali-ctl-bar {
+  margin-top: auto;
+  padding: 0 14px 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  color: #fff;
+}
+.ali-ctl-timeline { padding: 0 4px; }
+.ali-ctl-seek {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, #3b82f6 0%, #3b82f6 var(--pct, 0%), rgba(255,255,255,0.3) var(--pct, 0%), rgba(255,255,255,0.3) 100%);
+  outline: none;
+  cursor: pointer;
+}
+.ali-ctl-seek::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #3b82f6; border: none; cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+.ali-ctl-seek::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #3b82f6; border: none; cursor: pointer;
+}
+.ali-ctl-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.ali-ctl-btn {
+  background: transparent; border: none; color: #fff;
+  padding: 6px 8px; border-radius: 6px; cursor: pointer;
+  display: grid; place-items: center;
+  transition: background .12s;
+}
+.ali-ctl-btn:hover { background: rgba(255,255,255,0.15); }
+.ali-ctl-btn:active { transform: scale(0.95); }
+.ali-ctl-time {
+  font-size: 12px; font-family: 'SF Mono', ui-monospace, Consolas, monospace;
+  color: #fff; padding: 0 6px;
+  display: flex; align-items: center; gap: 4px;
+}
+.ali-ctl-time-sep { opacity: 0.5; }
+.ali-ctl-time-total { opacity: 0.75; }
+.ali-ctl-spacer { flex: 1; }
+
+.ali-ctl-volume {
+  display: flex; align-items: center; gap: 4px;
+}
+.ali-ctl-vol {
+  -webkit-appearance: none; appearance: none;
+  width: 70px; height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,0.3); outline: none; cursor: pointer;
+}
+.ali-ctl-vol::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #fff; border: none; cursor: pointer;
+}
+.ali-ctl-vol::-moz-range-thumb {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #fff; border: none; cursor: pointer;
+}
+
+.ali-ctl-speed-wrap { position: relative; }
+.ali-ctl-speed-btn {
+  min-width: 44px; font-weight: 700; font-size: 12.5px;
+  font-family: inherit;
+}
+.ali-ctl-speed-menu {
+  position: absolute; bottom: 100%; right: 0; margin-bottom: 6px;
+  background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(6px);
+  border-radius: 8px; padding: 4px;
+  min-width: 90px; display: flex; flex-direction: column;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+}
+.ali-ctl-speed-item {
+  background: transparent; border: none; color: #fff;
+  padding: 8px 12px; text-align: left;
+  font-size: 12.5px; font-family: inherit; cursor: pointer;
+  border-radius: 4px;
+}
+.ali-ctl-speed-item:hover { background: rgba(255,255,255,0.1); }
+.ali-ctl-speed-item.active { background: rgba(59, 130, 246, 0.8); font-weight: 700; }
+
+.ali-ctl-layer .hide-mobile {
+  display: none;
+}
+@media (min-width: 768px) {
+  .ali-ctl-layer .hide-mobile {
+    display: flex;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ⭐ Stealth log button (ALI MODE) — มุมล่างซ้าย, opacity ต่ำ
+   ═══════════════════════════════════════════════════════════ */
+.wm-stealth-log-btn {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 9998;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, color 0.2s, background 0.2s;
+  opacity: 0.4;
+}
+.wm-stealth-log-btn:hover {
+  opacity: 1;
+  color: #7dd3fc;
+  background: rgba(59, 130, 246, 0.2);
+}
+.wm-stealth-log-btn:active { transform: scale(0.9); }
+.w-player-box.is-fullscreen .wm-stealth-log-btn {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+.wm-stealth-log-toast {
+  position: absolute;
+  bottom: 42px;
+  left: 10px;
+  z-index: 9998;
+  padding: 8px 14px;
+  background: rgba(16, 185, 129, 0.95);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  animation: stealth-toast-in 0.2s ease-out;
+  pointer-events: none;
+}
+@keyframes stealth-toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ⭐ Placeholder (soft-blue) — รออัพโหลด สำหรับ mode ที่ field ไม่มี
+   ═══════════════════════════════════════════════════════════
+   ใช้เมื่อ ALI MODE + aliVideoId ยังไม่ถูก upload
+   (BN MODE + no embedUrl ใช้ .player-placeholder เดิม ที่โหลด "กำลังโหลด")
+   ═══════════════════════════════════════════════════════════ */
+.player-placeholder.soft-blue {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #1e40af 100%);
+  color: #e0f2fe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  position: absolute;
+  inset: 0;
+  min-height: 300px;
+}
+.player-placeholder.soft-blue .placeholder-content {
+  max-width: 340px;
+}
+.player-placeholder.soft-blue .placeholder-upload-icon {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(147, 197, 253, 0.35);
+  color: #7dd3fc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.18);
+}
+.player-placeholder.soft-blue .placeholder-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f0f9ff;
+  letter-spacing: 0.01em;
+  margin: 0 0 8px;
+}
+.player-placeholder.soft-blue .placeholder-sub {
+  font-size: 14px;
+  color: rgba(224, 242, 254, 0.72);
+  line-height: 1.6;
+  margin: 0;
 }
 
 </style>

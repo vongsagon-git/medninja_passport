@@ -292,6 +292,10 @@ app.use('/api/admin/approaches', require('./modules/approach/approach.admin.rout
 app.use('/api/admin/meq', require('./modules/meq/meq.admin.routes'))
 // Alibaba VOD admin utils (verify + rename)
 app.use('/api/admin/ali', require('./modules/china/china.admin.routes'))
+// System circuit breaker (BN/Ali switch)
+const systemRoutes = require('./modules/system/system.routes')
+app.use('/api/system', systemRoutes)
+app.use('/api/admin/system', auth, require('./shared/middleware/admin'), systemRoutes.adminRouter)
 // DDx/Arena/Flashcard ย้ายไป ddx.medninja.academy แล้ว — redirect API calls
 app.use('/api/flashcard', (req, res) => res.redirect(301, 'https://ddx.medninja.academy/api/flashcard' + req.url))
 app.use('/api/arena', (req, res) => res.redirect(301, 'https://ddx.medninja.academy/api/arena' + req.url))

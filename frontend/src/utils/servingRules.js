@@ -35,10 +35,11 @@
  * @param {string} browser - Chrome|Safari|Firefox|Edge|...
  * @returns {{player, bucket, drm, videoField, reason, notes}}
  */
-export function getExpectedServing(country, deviceType, browser) {
+export function getExpectedServing(country, deviceType, browser, globalVideoMode) {
   const c = (country || '').toUpperCase()
   const d = deviceType || ''
   const b = browser || ''
+  const mode = globalVideoMode || 'bunny'  // ⭐ circuit breaker mode
 
   // iOS/Mac Safari branch = No-DRM path (Proprietary or Bunny No-DRM)
   const isIosOrMacSafari = d === 'iPhone' || d === 'iPad' || (d === 'Mac' && b === 'Safari')
@@ -65,7 +66,29 @@ export function getExpectedServing(country, deviceType, browser) {
     }
   }
 
-  // Rule 2: TH/Other → Bunny CDN
+  // ⭐ Rule 1.5: Global + ALI MODE (circuit breaker) → Alibaba VOD (เผื่อ Bunny ล้ม)
+  if (mode === 'ali') {
+    if (isIosOrMacSafari) {
+      return {
+        player: 'ali',
+        bucket: 'ali-sg',
+        drm: 'proprietary',
+        videoField: 'aliVideoId',
+        reason: `GLOBAL ALI MODE + ${d} ${b} → Ali Prop (PlayAuth)`,
+        notes: 'Circuit breaker: Bunny → Ali fallback'
+      }
+    }
+    return {
+      player: 'ali',
+      bucket: 'ali-sg',
+      drm: 'widevine',
+      videoField: 'aliVideoId',
+      reason: `GLOBAL ALI MODE + ${d} ${b} → Widevine (STS)`,
+      notes: 'Circuit breaker: Bunny → Ali fallback'
+    }
+  }
+
+  // Rule 2: TH/Other → Bunny CDN (default BN MODE)
   if (isIosOrMacSafari) {
     return {
       player: 'bunny',

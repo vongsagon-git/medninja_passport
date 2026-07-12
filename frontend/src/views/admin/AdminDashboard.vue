@@ -163,6 +163,17 @@
             <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </router-link>
 
+          <router-link to="/admin/system-circuit" class="admin-nav-card">
+            <div class="nav-icon" style="background:linear-gradient(135deg,#3b82f6,#0284c7);color:#fff;">
+              <span style="font-size:22px;line-height:1;">⚡</span>
+            </div>
+            <div class="nav-content">
+              <h3>System Circuit</h3>
+              <p>Video source switch (BN ⇄ Ali) + Kick All — เผื่อ CDN ล้ม</p>
+            </div>
+            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </router-link>
+
           <router-link to="/admin/watch-debug" class="admin-nav-card">
             <div class="nav-icon" style="background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;">
               <span style="font-size:22px;line-height:1;">🔍</span>
