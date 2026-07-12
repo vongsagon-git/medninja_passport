@@ -1180,6 +1180,17 @@ export default {
     document.addEventListener('gesturechange', this._onGesture, { passive: false })
     document.addEventListener('gestureend', this._onGesture, { passive: false })
 
+    // Block iOS double-tap zoom + dblclick
+    let lastTouchEnd = 0
+    this._onTouchEnd = (e) => {
+      const now = Date.now()
+      if (now - lastTouchEnd < 300) e.preventDefault()
+      lastTouchEnd = now
+    }
+    this._onDblClick = (e) => e.preventDefault()
+    document.addEventListener('touchend', this._onTouchEnd, { passive: false })
+    document.addEventListener('dblclick', this._onDblClick, { passive: false })
+
     // ═══ Bunny iframe postMessage tracer — เก็บ event 30 อันสุดท้ายไว้ debug 'unknown error' ═══
     this._bunnyMsgRing = []
     this._onBunnyMessage = (ev) => {
@@ -1232,6 +1243,8 @@ export default {
       document.removeEventListener('gesturechange', this._onGesture)
       document.removeEventListener('gestureend', this._onGesture)
     }
+    if (this._onTouchEnd) document.removeEventListener('touchend', this._onTouchEnd)
+    if (this._onDblClick) document.removeEventListener('dblclick', this._onDblClick)
     clearInterval(this._devtoolsCheck)
     if (this._zoomCheckInterval) clearInterval(this._zoomCheckInterval)
     if (this._heartbeatInterval) clearInterval(this._heartbeatInterval)

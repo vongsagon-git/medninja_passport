@@ -1106,6 +1106,19 @@ export default {
     // Safari gesture events (pinch zoom)
     this._onGesture = (e) => e.preventDefault()
 
+    // Block iOS double-tap zoom (touchend ห่างกัน < 300ms = double-tap)
+    let lastTouchEnd = 0
+    this._onTouchEnd = (e) => {
+      const now = Date.now()
+      if (now - lastTouchEnd < 300) e.preventDefault()
+      lastTouchEnd = now
+    }
+    document.addEventListener('touchend', this._onTouchEnd, { passive: false })
+
+    // Block dblclick zoom (fallback)
+    this._onDblClick = (e) => e.preventDefault()
+    document.addEventListener('dblclick', this._onDblClick, { passive: false })
+
     document.addEventListener('touchstart', this._onTouchStart, { passive: false })
     document.addEventListener('touchmove', this._onTouchMove, { passive: false })
     document.addEventListener('gesturestart', this._onGesture, { passive: false })
@@ -1159,6 +1172,8 @@ export default {
       document.removeEventListener('gesturechange', this._onGesture)
       document.removeEventListener('gestureend', this._onGesture)
     }
+    if (this._onTouchEnd) document.removeEventListener('touchend', this._onTouchEnd)
+    if (this._onDblClick) document.removeEventListener('dblclick', this._onDblClick)
     clearInterval(this._devtoolsCheck)
     if (this._zoomCheckInterval) clearInterval(this._zoomCheckInterval)
     if (this._heartbeatInterval) clearInterval(this._heartbeatInterval)
