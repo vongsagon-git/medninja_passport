@@ -269,6 +269,35 @@
                   </span>
                   <span v-if="wmConfig" class="w-wm-badge">{{ wmCurrentStyle }} · {{ wmCurrentSize }}px · W:{{ _wmWidth }}px</span>
                   <span v-if="appVer" class="w-wm-badge" style="color:#10b981">{{ appVer }}</span>
+                  <!-- ⭐ Debug toggle badge (admin/dev) -->
+                  <button v-if="!isDemo" class="w-wm-badge w-debug-toggle" @click="showDebugPanel = !showDebugPanel" title="Debug info">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="10" height="10"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+                    debug
+                  </button>
+                </div>
+              </div>
+
+              <!-- ⭐ Debug Panel (toggle-able) -->
+              <div v-if="showDebugPanel && !isDemo" class="w-debug-panel">
+                <div class="w-debug-title">
+                  <span>🔧 Debug Info</span>
+                  <button class="w-debug-close" @click="showDebugPanel = false">✕</button>
+                </div>
+                <div class="w-debug-grid">
+                  <div class="w-debug-row"><span>Route</span><code>{{ $route.path }}</code></div>
+                  <div class="w-debug-row"><span>routeRegion</span><code>{{ routeRegion }}</code></div>
+                  <div class="w-debug-row"><span>UI region</span><code>{{ region }}</code></div>
+                  <div class="w-debug-row"><span>Country (IP)</span><code>{{ country || '—' }}</code></div>
+                  <div class="w-debug-row"><span>Circuit mode</span><code>{{ circuitMode }}</code></div>
+                  <div class="w-debug-row"><span>Provider</span><code>{{ provider }}</code></div>
+                  <div class="w-debug-row"><span>Encryption</span><code>{{ encryption }}</code></div>
+                  <div class="w-debug-row"><span>Variant</span><code>{{ variant }}</code></div>
+                  <div class="w-debug-row"><span>Player</span><code>{{ playerComponent }}</code></div>
+                  <div class="w-debug-row"><span>Active Video ID</span><code>{{ activeVideoId ? (activeVideoId.slice(0, 12) + '...') : '(missing)' }}</code></div>
+                  <div class="w-debug-row"><span>Has Bunny</span><code>{{ hasBunnyVideo }}</code></div>
+                  <div class="w-debug-row"><span>Has Ali</span><code>{{ hasAliVideo }}</code></div>
+                  <div class="w-debug-row"><span>Placeholder</span><code>{{ showPlaceholder }}</code></div>
+                  <div class="w-debug-row"><span>Region Config</span><code>{{ regionConfig?.region }} + {{ regionConfig?.chatApp?.name }}</code></div>
                 </div>
               </div>
               <div class="w-video-actions">
@@ -758,6 +787,7 @@ export default {
       askSent: false,
       // ── Mini Apps ──
       showMiniAppsModal: false,
+      showDebugPanel: false,
       // ── Fix modal ──
       showFixModal: false,
       // ── Diag modal ──
@@ -1041,7 +1071,7 @@ export default {
     //   Fail-safe: fallback to regionConfig.circuitDefault
     try {
       const [modeResp, geoResp] = await Promise.all([
-        fetch('/api/system/video-mode', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+        fetch('/api/system/video-mode', { credentials: 'include', cache: 'no-store' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
         fetch('/api/geo/whoami', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
       ])
       // ⭐ SERV (Bunny/Ali) — per-route
@@ -3199,6 +3229,29 @@ kbd {
 .w-drm-badge.drm-playready { color: #c084fc; background: rgba(192,132,252,0.1); }
 .w-drm-badge.drm-none { color: #f87171; background: rgba(248,113,113,0.1); }
 .w-wm-badge { color: #94a3b8; background: rgba(148,163,184,0.1); display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+/* Debug toggle + panel */
+.w-debug-toggle { border: none; cursor: pointer; color: #f59e0b !important; background: rgba(245,158,11,0.1) !important; }
+.w-debug-toggle:hover { background: rgba(245,158,11,0.2) !important; }
+.w-debug-panel {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+.w-debug-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #334155; font-weight: 700; color: #f59e0b; }
+.w-debug-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; padding: 0 4px; }
+.w-debug-close:hover { color: #ef4444; }
+.w-debug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+.w-debug-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px dashed rgba(148,163,184,0.15); }
+.w-debug-row span { color: #94a3b8; font-size: 11px; }
+.w-debug-row code { background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 3px; color: #7dd3fc; font-size: 11px; font-weight: 600; }
+@media (max-width: 640px) {
+  .w-debug-grid { grid-template-columns: 1fr; }
+}
 
 /* Device/Browser badge */
 .w-device-badge {
