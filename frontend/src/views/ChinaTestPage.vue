@@ -171,36 +171,38 @@ function contactLine() {
   window.open('https://lin.ee/nEEK4Kv', '_blank')
 }
 
-// ⭐ WeChat MVP — QR ส่วนตัว + WeChat ID (แก้ 2 ค่านี้เมื่อได้ข้อมูลจริง)
-const WECHAT_ID = 'medninja_official' // เปลี่ยนเป็น ID จริง
-const WECHAT_QR_URL = '/img/wechat-qr.png' // upload QR image ที่ path นี้
+// ⭐ WeChat — ID จริงของ tammy (หมอแตม)
+const WECHAT_ID = 'medninja'
+// weixin:// deep link → เปิดแอป WeChat ตรง ๆ (มือถือที่ติดตั้งแอปไว้)
+const WECHAT_DEEP_LINK = `weixin://dl/chat?${WECHAT_ID}`
 
 const wechatModalOpen = ref(false)
 const wechatId = ref(WECHAT_ID)
-const qrFailed = ref(false)
+const copied = ref(false)
 
 function openWechat() {
   wechatModalOpen.value = true
-  qrFailed.value = false
+  copied.value = false
 }
 function closeWechat() {
   wechatModalOpen.value = false
 }
-function onQrError() {
-  // QR ยังไม่ upload → fallback ไป placeholder
-  qrFailed.value = true
-}
-function addWechatFriend() {
-  // Copy WeChat ID ไป clipboard + toast
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(WECHAT_ID).then(() => {
-      alert(`Copy WeChat ID แล้ว: ${WECHAT_ID}\n\nเปิด WeChat แล้ววาง ID ในช่องค้นหาเพื่อเพิ่มเพื่อน`)
-    }).catch(() => {
-      alert(`WeChat ID: ${WECHAT_ID}\n\nคัดลอกไปเพิ่มเพื่อนใน WeChat ได้เลย`)
-    })
-  } else {
-    alert(`WeChat ID: ${WECHAT_ID}\n\nคัดลอกไปเพิ่มเพื่อนใน WeChat ได้เลย`)
+function copyWechatId() {
+  const doAlert = () => {
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2500)
   }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(WECHAT_ID)
+      .then(doAlert)
+      .catch(() => { doAlert() })
+  } else {
+    doAlert()
+  }
+}
+function openWechatApp() {
+  // ลอง deep link ก่อน — มือถือที่มีแอปจะกระโดดเข้า WeChat
+  window.location.href = WECHAT_DEEP_LINK
 }
 
 onMounted(() => {
@@ -346,27 +348,29 @@ onUnmounted(() => {
               <div class="wechat-sub">สแกน QR หรือกดปุ่มเพิ่มเพื่อน</div>
             </div>
 
-            <div class="wechat-qr-slot">
-              <img
-                v-if="!qrFailed"
-                :src="WECHAT_QR_URL"
-                alt="WeChat QR"
-                class="wechat-qr-img"
-                @error="onQrError"
-              />
-              <div v-else class="qr-placeholder">
-                <div class="qr-icon">📱</div>
-                <div class="qr-text">QR Code<br>เร็ว ๆ นี้</div>
+            <div class="wechat-id-card">
+              <div class="wc-id-label">WeChat ID</div>
+              <div class="wc-id-row">
+                <div class="wc-id-value">{{ wechatId }}</div>
+                <button class="wc-copy-btn" @click="copyWechatId" :class="{ copied }">
+                  <span v-if="!copied">📋 คัดลอก</span>
+                  <span v-else>✓ คัดลอกแล้ว</span>
+                </button>
               </div>
             </div>
 
-            <button class="wechat-add-btn" @click="addWechatFriend">
-              <span class="wc-add-icon">+</span>
-              <span>เพิ่มเพื่อน WeChat</span>
+            <button class="wechat-add-btn" @click="openWechatApp">
+              <span class="wc-add-icon">💬</span>
+              <span>เปิดแอป WeChat</span>
             </button>
 
-            <div class="wechat-hint">
-              💡 หรือค้นหา WeChat ID: <b>{{ wechatId }}</b>
+            <div class="wechat-steps">
+              <div class="wc-step-title">วิธีเพิ่มเพื่อน</div>
+              <ol class="wc-step-list">
+                <li>คัดลอก WeChat ID: <b>{{ wechatId }}</b></li>
+                <li>เปิดแอป WeChat → กด <b>+</b> มุมขวาบน → <b>Add Contacts</b></li>
+                <li>วาง ID ในช่องค้นหา → เพิ่ม <b>tammy</b> เป็นเพื่อน</li>
+              </ol>
             </div>
           </div>
         </div>
@@ -694,31 +698,112 @@ onUnmounted(() => {
   color: #64748b;
   margin-bottom: 20px;
 }
-.wechat-qr-slot {
-  width: 240px;
-  height: 240px;
-  margin: 0 auto 18px;
+/* WeChat ID card */
+.wechat-id-card {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1.5px solid #bbf7d0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  text-align: left;
+}
+.wc-id-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #16a34a;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+.wc-id-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.wc-id-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #0b2b5b;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  letter-spacing: 0.5px;
+}
+.wc-copy-btn {
+  background: white;
+  color: #16a34a;
+  border: 1.5px solid #bbf7d0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.wc-copy-btn:hover {
+  background: #f0fdf4;
+  border-color: #16a34a;
+  transform: translateY(-1px);
+}
+.wc-copy-btn.copied {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+/* Steps guide */
+.wechat-add-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border: none;
+  padding: 13px 18px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.35);
+  transition: transform 0.15s, box-shadow 0.2s;
+  font-family: inherit;
+  margin-bottom: 16px;
+}
+.wechat-add-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(34, 197, 94, 0.45);
+}
+.wc-add-icon { font-size: 18px; }
+
+.wechat-steps {
+  text-align: left;
   background: #f8fafc;
-  border: 2px dashed #cbd5e1;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
 }
-.qr-placeholder {
-  text-align: center;
-  color: #94a3b8;
+.wc-step-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0b2b5b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
-.qr-icon { font-size: 48px; margin-bottom: 8px; }
-.qr-text { font-size: 13px; font-weight: 700; line-height: 1.5; }
-.wechat-hint {
+.wc-step-list {
+  padding-left: 20px;
+  margin: 0;
+}
+.wc-step-list li {
   font-size: 13px;
   color: #475569;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  padding: 10px 14px;
-  border-radius: 10px;
+  line-height: 1.7;
+  margin-bottom: 4px;
 }
-.wechat-hint b {
+.wc-step-list li b {
   color: #16a34a;
   font-weight: 800;
 }
@@ -1289,10 +1374,13 @@ onUnmounted(() => {
     flex: 1 1 0;
     justify-content: center;
   }
-  .wechat-modal { max-width: 320px; }
-  .wechat-body { padding: 26px 20px 22px; }
-  .wechat-qr-slot { width: 200px; height: 200px; }
+  .wechat-modal { max-width: 340px; }
+  .wechat-body { padding: 26px 18px 20px; }
   .wechat-title { font-size: 18px; }
+  .wc-id-value { font-size: 18px; }
+  .wc-copy-btn { padding: 7px 10px; font-size: 12px; }
+  .wechat-add-btn { padding: 12px 14px; font-size: 14px; }
+  .wc-step-list li { font-size: 12px; }
   .hero-mascot { order: -1; }
   .hero-mascot img { max-width: 130px; margin-bottom: 4px; }
   .hero-globe { display: none; }
