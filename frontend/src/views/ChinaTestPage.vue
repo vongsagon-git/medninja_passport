@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
-// ⭐ Video สำหรับ landing page ขาย (encrypted — เล่นได้ทั้งไทย + จีน)
-const VIDEO_ID = 'f0a10c4f79dc71f1a46bf6f7f45a0102'
+// ⭐ Video สำหรับ landing page ขาย — ORIGINAL MP4 (ไม่ encrypt) เพื่อไม่ติด browser/OS ใด ๆ
+const VIDEO_ID = '60985cb97db271f1976fe7c7690102'
 // ⭐ Landing endpoint = public (no auth, no chrome guard) — สำหรับหน้าขาย
 const PLAYAUTH_ENDPOINT = `/api/china/landing-playauth/${VIDEO_ID}`
 
@@ -77,13 +77,8 @@ async function initPlayer() {
 
     const playAuth = await fetchPlayAuth()
 
-    // ⭐ Detect iOS/Safari → ไม่ force encryptType (ให้ Aliplayer เลือก original mp4)
-    // Device อื่น (Android/PC/Chrome/จีน) → encryptType 1 (Alibaba Proprietary)
-    const ua = navigator.userAgent
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-    const isSafari = /^((?!chrome|android).)*safari/i.test(ua)
-    const skipEncrypt = isIOS || isSafari
-
+    // ⭐ ORIGINAL MP4 — ไม่ set encryptType เพื่อให้ Aliplayer เสิร์ฟไฟล์ต้นฉบับ
+    //    เล่นได้ทุก browser/OS โดยไม่ต้อง detect iOS/Safari
     const playerConfig = {
       id: 'landing-player',
       vid: VIDEO_ID,
@@ -101,10 +96,6 @@ async function initPlayer() {
         domain: 'passport.medninja.academy',
         key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
       }
-    }
-    // เฉพาะเครื่องที่รองรับ Alibaba Proprietary
-    if (!skipEncrypt) {
-      playerConfig.encryptType = 1
     }
 
     player = new window.Aliplayer(playerConfig, function () {
