@@ -325,17 +325,32 @@ export default {
           } catch { /* geo fail — country = '' */ }
         }
 
-        // ⭐ Serving verification — เลือก actual ตาม country (CN=Ali, อื่นๆ=Bunny)
+        // ⭐ Fetch Circuit mode (2 breakers: globalVideoMode + cnVideoMode)
+        let globalVideoMode = 'bunny'
+        let cnVideoMode = 'ali'
+        try {
+          const modeRes = await fetch('/api/system/video-mode', { credentials: 'include' })
+          if (modeRes.ok) {
+            const md = await modeRes.json()
+            globalVideoMode = md.globalMode || md.mode || 'bunny'
+            cnVideoMode = md.cnMode || 'ali'
+          }
+        } catch { /* keep defaults */ }
+
+        // ⭐ Serving verification — respect Circuit mode
+        //    CN country → follow cnVideoMode (default: ali)
+        //    non-CN     → follow globalVideoMode (default: bunny)
         const { getExpectedServing, verifyServing } = await import('../utils/servingRules')
-        expected = getExpectedServing(country, deviceType, clientBrowser)
         const isCN = country === 'CN'
+        const activeVideoMode = isCN ? cnVideoMode : globalVideoMode
+        expected = getExpectedServing(country, deviceType, clientBrowser, activeVideoMode)
         const isNoDrmDevice = deviceType === 'iPhone' || deviceType === 'iPad' || (deviceType === 'Mac' && clientBrowser === 'Safari')
         const actual = {
-          player: isCN ? 'ali' : 'bunny',
+          player: activeVideoMode === 'ali' ? 'ali' : 'bunny',
           drm: isNoDrmDevice ? 'nodrm' : 'widevine',
-          bucket: isCN ? 'ali-sg' : 'bunny-global'
+          bucket: activeVideoMode === 'ali' ? 'ali-sg' : 'bunny-global'
         }
-        servingCheck = { ...verifyServing(expected, actual), expected, actual }
+        servingCheck = { ...verifyServing(expected, actual), expected, actual, circuitMode: activeVideoMode, globalVideoMode, cnVideoMode }
       } catch { deviceType = clientOS || 'Unknown' }
 
       // ส่ง LINE Flex + plain text ให้เติ้ล
@@ -350,10 +365,14 @@ export default {
             userEmail: this.userEmail,
             failCount: this.failCount,
             resultId: this._resultId || '',
-            player: country === 'CN' ? 'ali' : 'bunny',       // ⭐ CN=Ali, อื่นๆ=Bunny
+            // ⭐ อ่านจาก Circuit mode ที่ fetch มาแล้ว (ไม่ใช่ hardcode CN=Ali)
+            player: (servingCheck?.actual?.player) || 'bunny',
             deviceType,                                         // ⭐ iPad detection
             country,                                            // ⭐ CN ถ้ามาจาก /my-cn/ หรือ whoami
-            bucket: country === 'CN' ? 'ali-sg' : 'bunny-global',
+            bucket: (servingCheck?.actual?.bucket) || 'bunny-global',
+            circuitMode: servingCheck?.circuitMode || 'bunny',
+            globalVideoMode: servingCheck?.globalVideoMode || 'bunny',
+            cnVideoMode: servingCheck?.cnVideoMode || 'ali',
             routingReason: expected?.reason || '',   // ⭐ จากตารางกฎ
             servingCheck,                      // ⭐ expected vs actual
             videoTitle: this.videoTitle || 'Demo',

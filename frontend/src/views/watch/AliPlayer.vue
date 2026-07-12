@@ -209,7 +209,8 @@ export default {
             key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
           },
           skinLayout: [
-            { name: 'bigPlayButton', align: 'blabs', x: 30, y: 80 },
+            // ⭐ big play button อยู่ตรงกลางจอ (align cc = center-center)
+            { name: 'bigPlayButton', align: 'cc' },
             { name: 'H5Loading', align: 'cc' },
             { name: 'errorDisplay', align: 'tlabs', x: 0, y: 0 },
             { name: 'infoDisplay' },
