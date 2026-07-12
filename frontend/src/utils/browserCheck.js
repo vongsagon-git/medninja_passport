@@ -98,23 +98,31 @@ export function checkBrowserSupport (allowedBrowsers, allowedOS, ua) {
 
   // ─── OS check ก่อน (ครอบชั้นบน) ───
   if (!allowOS.includes(osSlot)) {
+    const curOs = osSlot === 'Other' ? 'ที่ไม่รู้จัก' : osSlot
     return {
       supported: false, isMobile, slot, osSlot,
-      message: `ระบบไม่รองรับอุปกรณ์ ${osSlot === 'Other' ? 'นี้' : osSlot}`,
-      detail: `กรุณาเข้าใช้งานจาก ${allowOS.join(' / ')} เพื่อดูวีดีโอ`
+      reason: 'os',
+      allowedBrowsers: allowBr,
+      allowedOS: allowOS,
+      currentBrowser: slot,
+      currentOS: curOs,
+      message: `อุปกรณ์ของคุณ (${curOs}) ไม่ได้รับอนุญาต`,
+      detail: `กรุณาเปิดด้วยอุปกรณ์: ${allowOS.join(' / ')}\n+ ใช้ browser: ${allowBr.join(' / ')}`
     }
   }
 
   // ─── Browser check ───
   if (!allowBr.includes(slot)) {
-    const brLabel = allowBr.map(b => {
-      if (b === 'Chrome') return 'Chrome (Google/Huawei/QQ/Samsung)'
-      return b
-    }).join(' / ')
+    const curBr = slot === 'Other' ? 'ที่ไม่รู้จัก' : slot
     return {
       supported: false, isMobile, slot, osSlot,
-      message: `กรุณาใช้ ${allowBr.join(' / ')} เพื่อดูวีดีโอ`,
-      detail: `ระบบรองรับ ${brLabel} เท่านั้น`
+      reason: 'browser',
+      allowedBrowsers: allowBr,
+      allowedOS: allowOS,
+      currentBrowser: curBr,
+      currentOS: osSlot,
+      message: `Browser ของคุณ (${curBr}) ไม่ได้รับอนุญาต`,
+      detail: `กรุณาเปิดด้วยอุปกรณ์: ${allowOS.join(' / ')}\n+ ใช้ browser: ${allowBr.join(' / ')}`
     }
   }
 

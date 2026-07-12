@@ -41,12 +41,37 @@
 
     <!-- ⭐ Block overlay #2 — OS/Browser not allowed (รวมหน้าเดียว) -->
     <div v-else-if="!browserOk" class="line-blur-overlay">
-      <div class="line-blur-card">
+      <div class="line-blur-card block-card">
         <div class="line-blur-play" style="cursor:default;background:linear-gradient(135deg,#f59e0b,#d97706)">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm2-4h-2V7h2v6z"/></svg>
         </div>
         <h2>{{ browserMsg || 'ระบบไม่รองรับอุปกรณ์นี้' }}</h2>
-        <p>{{ browserDetail || 'กรุณาเปลี่ยนอุปกรณ์หรือ Browser เพื่อดูวีดีโอ' }}</p>
+        <p class="block-lead">กรุณาเปิดด้วย <strong>อุปกรณ์</strong> + <strong>Browser</strong> ที่ระบบรองรับ</p>
+
+        <!-- ที่ allow — 2 list ครบทั้ง OS + Browser -->
+        <div class="allow-lists">
+          <div class="allow-block">
+            <div class="allow-label">อุปกรณ์ที่รองรับ</div>
+            <div class="allow-chips">
+              <span v-for="o in blockedAllowedOS" :key="'os-'+o" class="allow-chip">{{ o }}</span>
+              <span v-if="!blockedAllowedOS.length" class="allow-chip is-none">ไม่มี</span>
+            </div>
+          </div>
+          <div class="allow-block">
+            <div class="allow-label">Browser ที่รองรับ</div>
+            <div class="allow-chips">
+              <span v-for="b in blockedAllowedBrowsers" :key="'br-'+b" class="allow-chip">{{ b }}<span v-if="b === 'Chrome'" class="allow-chip-hint">Google / Huawei / QQ / Samsung</span></span>
+              <span v-if="!blockedAllowedBrowsers.length" class="allow-chip is-none">ไม่มี</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current state (บอกให้ user รู้ว่าตัวเองใช้อะไรอยู่) -->
+        <div class="cur-state">
+          <span class="cur-lab">คุณกำลังใช้:</span>
+          <span class="cur-val"><strong>{{ currentOS || '—' }}</strong> · <strong>{{ currentBrowser || '—' }}</strong></span>
+        </div>
+
         <div class="line-blur-row">
           <button class="line-blur-btn-outline" @click="copyLink">
             {{ linkCopied ? 'คัดลอกแล้ว!' : 'คัดลอกลิงก์' }}
@@ -56,7 +81,10 @@
       </div>
     </div>
 
-    <!-- Main layout -->
+    <!-- ⭐ Main layout — HARD STOP: render เฉพาะตอน browserOk = true
+         browser/OS ไม่ผ่าน → Main tree ไม่ถูก mount = ไม่มี video/token/embedUrl ใน DOM
+         (anti-hack: DevTools inspector ไม่เห็นค่าใด ๆ) -->
+    <template v-if="browserOk">
       <!-- ══ Top bar ══ -->
       <header class="w-topbar">
         <router-link v-if="!isDemo" :to="backUrl" class="w-back" title="กลับ">
@@ -664,6 +692,8 @@
         </button>
       </div>
     </div>
+    </template>
+    <!-- /Main layout template -->
   </div>
 </template>
 
@@ -737,6 +767,11 @@ export default {
       browserSupported: this.initialBrowserCheck?.supported ?? true,
       browserMsg: this.initialBrowserCheck?.message || '',
       browserDetail: this.initialBrowserCheck?.detail || '',
+      // ⭐ ตอน block: list ที่ allow (ต่อ country group) + current slot ที่ user ใช้
+      blockedAllowedOS: this.initialBrowserCheck?.allowedOS || ['Windows', 'macOS', 'iOS', 'Android', 'Harmony'],
+      blockedAllowedBrowsers: this.initialBrowserCheck?.allowedBrowsers || ['Chrome', 'Safari', 'Edge'],
+      currentOS: this.initialBrowserCheck?.currentOS || '',
+      currentBrowser: this.initialBrowserCheck?.currentBrowser || '',
       sidebarOpen: true,
       wmConfig: null,
       zoomDetected: false,
@@ -1112,6 +1147,10 @@ export default {
           this.browserSupported = false
           this.browserMsg = recheck.message
           this.browserDetail = recheck.detail
+          this.blockedAllowedOS = recheck.allowedOS || []
+          this.blockedAllowedBrowsers = recheck.allowedBrowsers || []
+          this.currentOS = recheck.currentOS || ''
+          this.currentBrowser = recheck.currentBrowser || ''
           return // HARD STOP — ไม่ init player, ไม่ load video
         }
       }
@@ -2743,6 +2782,19 @@ kbd {
   border: 1px solid rgba(168,85,247,0.25);
   box-shadow: 0 8px 40px rgba(0,0,0,0.5);
 }
+.line-blur-card.block-card { max-width: 420px; border-color: rgba(245, 158, 11, 0.35); }
+.block-lead { font-size: 13.5px; color: rgba(226,232,240,.85); margin: 4px 0 18px; line-height: 1.6; }
+.block-lead strong { color: #fbbf24; }
+.allow-lists { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; text-align: left; }
+.allow-block { background: rgba(2, 12, 24, .5); border: 1px solid rgba(245, 158, 11, .18); border-radius: 12px; padding: 12px 14px; }
+.allow-label { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #fbbf24; margin-bottom: 8px; }
+.allow-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.allow-chip { display: inline-flex; flex-direction: column; align-items: flex-start; padding: 6px 10px; background: rgba(16, 185, 129, .12); border: 1px solid rgba(16, 185, 129, .35); border-radius: 8px; font-size: 12.5px; font-weight: 700; color: #6ee7b7; }
+.allow-chip.is-none { background: rgba(239, 68, 68, .12); border-color: rgba(239, 68, 68, .35); color: #fca5a5; }
+.allow-chip-hint { display: block; margin-top: 2px; font-size: 9.5px; font-weight: 500; color: rgba(148, 163, 184, .8); letter-spacing: .02em; }
+.cur-state { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 8px 12px; margin: 4px 0 16px; background: rgba(2, 12, 24, .5); border: 1px solid rgba(148, 163, 184, .2); border-radius: 999px; font-size: 12px; color: rgba(226, 232, 240, .78); }
+.cur-state .cur-lab { color: rgba(148, 163, 184, .8); font-weight: 500; }
+.cur-state .cur-val strong { color: #f59e0b; }
 .line-blur-play {
   width: 72px; height: 72px; border-radius: 50%; cursor: pointer;
   background: linear-gradient(135deg, #a855f7, #7c3aed);

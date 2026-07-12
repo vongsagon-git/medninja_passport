@@ -23,7 +23,6 @@
       </router-view>
     </main>
     <OrientationGuard />
-    <BrowserGate />
     <!-- ⭐ Version badge — บอก version + status (มุมล่าง) -->
     <div v-if="!isImmersive && appVerShort" class="version-badge" :class="{ 'is-stale': showUpdateBanner }">
       <span class="version-dot" :class="{ stale: showUpdateBanner }"></span>
@@ -55,7 +54,6 @@
 <script>
 import Navbar from './components/layout/Navbar.vue'
 import OrientationGuard from './components/common/OrientationGuard.vue'
-import BrowserGate from './components/common/BrowserGate.vue'
 import CountryBanner from './components/common/CountryBanner.vue'
 import { onVersionChange, getVersion } from './services/versionCheck'
 // Device fingerprint — ปิดชั่วคราว
@@ -65,7 +63,6 @@ export default {
   components: {
     Navbar,
     OrientationGuard,
-    BrowserGate,
     CountryBanner
   },
   data() {
