@@ -127,3 +127,35 @@ export function getDeviceCategory(ua = navigator.userAgent || '') {
   if (isTablet(ua)) return 'tablet'
   return 'desktop'
 }
+
+// ─── Anti-hack (2026-07-12) ──────────────────────────────────
+// จับ Chrome DevTool device emulator: UA เป็น mobile แต่ platform เป็น desktop
+export function isMobileEmulator(ua = navigator.userAgent || '') {
+  const uaMobile = /iPhone|iPod|Android/i.test(ua)
+  if (!uaMobile) return false
+  // Real mobile: platform เป็น iPhone / iPod / Linux armv* / Linux aarch64
+  // Emulator: platform เป็น Win32 / MacIntel / Linux x86_64
+  const plat = (navigator.platform || '').toLowerCase()
+  const isDesktopPlat = /win32|win64|macintel|linux x86|linux x86_64/.test(plat)
+  // navigator.userAgentData (Chrome/Edge modern) มี mobile flag ที่แม่นกว่า
+  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+    if (!navigator.userAgentData.mobile && isDesktopPlat) return true
+  }
+  return isDesktopPlat
+}
+
+// Real mobile = UA mobile + platform ตรงกัน (ไม่ใช่ emulator)
+export function isRealMobile(ua = navigator.userAgent || '') {
+  if (!isMobilePhone(ua) && !isTablet(ua)) return false
+  return !isMobileEmulator(ua)
+}
+
+// DevTool detect: window มี gap ใหญ่ระหว่าง outer/inner (docked panel)
+// note: undocked DevTool จับไม่ได้ — ป้องกันด้วย layer อื่น (console detector)
+export function isDevToolOpen() {
+  if (typeof window === 'undefined') return false
+  const heightGap = window.outerHeight - window.innerHeight
+  const widthGap = window.outerWidth - window.innerWidth
+  // Threshold 160 px = safe (chrome address bar ~90 px, DevTool panel > 200 px)
+  return heightGap > 160 || widthGap > 160
+}

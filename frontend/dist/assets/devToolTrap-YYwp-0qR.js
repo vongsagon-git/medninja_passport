@@ -1,0 +1,1 @@
+import{G as n}from"./index-BWNK6p_t.js";const o=100,s=500;function i(e){if(n())return null;let r=!1;const t=setInterval(()=>{if(r)return;const a=performance.now();debugger;if(performance.now()-a>o){r=!0,clearInterval(t);try{e&&e()}catch{}}},s);return t}function p(e){e&&clearInterval(e)}export{i as a,p as s};

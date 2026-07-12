@@ -680,7 +680,8 @@ import api from '../services/api'
 import { useActivationStore } from '../stores/activation'
 import { useAuthStore } from '../stores/auth'
 import { checkBrowserSupport, getDeviceInfo, isExceptionPath } from '../utils/browserCheck'
-import { isIOS as detectIOS, isMacSafari as detectMacSafari, getOS as detectOS, getBrowser as detectBrowser } from '../utils/deviceDetect'
+import { isIOS as detectIOS, isMacSafari as detectMacSafari, getOS as detectOS, getBrowser as detectBrowser, isRealMobile, isDevToolOpen } from '../utils/deviceDetect'
+import { startDevToolTrap, stopDevToolTrap } from '../utils/devToolTrap'
 import { getDeviceContext, sendLog, watchDevTools, watchRecorderExtensions, probeRecorderExtensions } from '../services/clientLogger'
 import { getVersion as _getAppVersion } from '../services/versionCheck'
 import { useCountryGuard } from '../composables/useCountryGuard'
@@ -994,6 +995,11 @@ export default {
   },
   mounted() {
     this._mountedAt = Date.now()
+    // ⭐ DevTool trap — Desktop เท่านั้น (real mobile skip อัตโนมัติใน util)
+    this._devToolHandle = startDevToolTrap(() => {
+      alert('ตรวจพบเครื่องมือ Developer Tools — กรุณาปิดแล้วเข้าใหม่')
+      this.$router.push('/')
+    })
     // ⭐ CN: init Aliplayer ครั้งแรก — ถ้า video โหลดเสร็จก่อน mount
     // ถ้ายังไม่มี video → รอ watcher aliVideoIdToPlay ให้ยิง init เอง (กัน double-init → 4022)
     this.$nextTick(() => {
@@ -1075,15 +1081,19 @@ export default {
       this._wmWidth = window.innerWidth
     }
     window.addEventListener('resize', this._onWmResize)
-    // เช็คทุก 2 วิ — แยก resize กับ zoom ด้วย outerWidth
-    // Mobile ข้าม zoom check: มือถือไม่มี Ctrl+Zoom + หมุนจอ/FS ทำให้ innerWidth เปลี่ยนตลอด
-    this._isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    // Zoom + DevTool check — Real mobile skip / Desktop+Emulator block
+    this._isRealMobile = isRealMobile()
     this._zoomCheckInterval = setInterval(() => {
-      if (this._isMobileDevice) return
+      if (this._isRealMobile) return
       if (this.isFullscreen || document.fullscreenElement || this.showRotateFsPrompt) {
         this._zoomBaseOuterW = window.outerWidth
         this._zoomBaseInnerW = window.innerWidth
         this._wmBaseDpr = window.devicePixelRatio || 1
+        return
+      }
+      if (isDevToolOpen()) {
+        alert('ตรวจพบเครื่องมือ Developer Tools — กรุณาปิดแล้วเข้าใหม่')
+        this.$router.push('/')
         return
       }
       const curOuterW = window.outerWidth
@@ -1190,6 +1200,7 @@ export default {
     this._detectDrm()
   },
   beforeUnmount() {
+    stopDevToolTrap(this._devToolHandle)
     // ⭐ Dispose Aliplayer
     if (this._aliPlayer) {
       try { this._aliPlayer.dispose() } catch {}

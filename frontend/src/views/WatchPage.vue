@@ -611,7 +611,8 @@ import api from '../services/api'
 import { useActivationStore } from '../stores/activation'
 import { useAuthStore } from '../stores/auth'
 import { checkBrowserSupport, getDeviceInfo, isExceptionPath } from '../utils/browserCheck'
-import { isIOS as detectIOS, isMacSafari as detectMacSafari, getOS as detectOS, getBrowser as detectBrowser } from '../utils/deviceDetect'
+import { isIOS as detectIOS, isMacSafari as detectMacSafari, getOS as detectOS, getBrowser as detectBrowser, isRealMobile, isDevToolOpen } from '../utils/deviceDetect'
+import { startDevToolTrap, stopDevToolTrap } from '../utils/devToolTrap'
 import { getDeviceContext, sendLog, watchDevTools, watchRecorderExtensions, probeRecorderExtensions } from '../services/clientLogger'
 import { getVersion as _getAppVersion } from '../services/versionCheck'
 import { useCountryGuard } from '../composables/useCountryGuard'
@@ -881,6 +882,11 @@ export default {
   },
   mounted() {
     this._mountedAt = Date.now()
+    // ⭐ DevTool trap — Desktop เท่านั้น (real mobile skip อัตโนมัติใน util)
+    this._devToolHandle = startDevToolTrap(() => {
+      alert('ตรวจพบเครื่องมือ Developer Tools — กรุณาปิดแล้วเข้าใหม่')
+      this.$router.push('/')
+    })
     // ═══ LINE Link Popup — ขึ้นทุก VDO ถ้ายังไม่เชื่อม ═══
     if (!this.isDemo && this.authStore.user && !this.authStore.user.lineUserId) {
       this.showLineLinkPopup = true
@@ -961,17 +967,23 @@ export default {
       this._wmWidth = window.innerWidth
     }
     window.addEventListener('resize', this._onWmResize)
-    // เช็คทุก 2 วิ — แยก resize กับ zoom ด้วย outerWidth
-    // Mobile ข้าม zoom check: มือถือไม่มี Ctrl+Zoom + หมุนจอ/FS ทำให้ innerWidth เปลี่ยนตลอด
-    this._isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    // Zoom + DevTool check — มือถือจริงยอมทุกอย่าง, เครื่องอื่น block
+    //   Real mobile (iPhone/iPad/Android จริง) → skip
+    //   Desktop / Emulator → เช็ค zoom + DevTool
+    this._isRealMobile = isRealMobile()
     this._zoomCheckInterval = setInterval(() => {
-      if (this._isMobileDevice) return
-      // Skip zoom check ตอน fullscreen/prompt (CSS fake FS + native FS เปลี่ยน innerWidth)
+      if (this._isRealMobile) return
+      // Skip ตอน fullscreen/prompt (real FS + fake FS เปลี่ยน innerWidth)
       if (this.isFullscreen || document.fullscreenElement || this.showRotateFsPrompt) {
-        // reset baseline ให้ตรงกับ FS state ตอน exit
         this._zoomBaseOuterW = window.outerWidth
         this._zoomBaseInnerW = window.innerWidth
         this._wmBaseDpr = window.devicePixelRatio || 1
+        return
+      }
+      // จับ DevTool เปิด (docked panel)
+      if (isDevToolOpen()) {
+        alert('ตรวจพบเครื่องมือ Developer Tools — กรุณาปิดแล้วเข้าใหม่')
+        this.$router.push('/')
         return
       }
       const curOuterW = window.outerWidth
@@ -992,7 +1004,6 @@ export default {
           return
         }
       }
-      // DPR baseline safety net (จับ Ctrl+scroll ที่หลุดจาก block)
       const dprRatio = (window.devicePixelRatio || 1) / this._wmBaseDpr
       if (dprRatio < 0.95 || dprRatio > 1.05) {
         alert('ตรวจพบการ Zoom — กรุณาตั้ง Zoom เป็น 100% (Ctrl+0) แล้วเข้าใหม่')
@@ -1121,6 +1132,7 @@ export default {
     this._detectDrm()
   },
   beforeUnmount() {
+    stopDevToolTrap(this._devToolHandle)
     if (this._lineLinkPoll) clearInterval(this._lineLinkPoll)
     document.removeEventListener('fullscreenchange', this._onFsChange)
     document.removeEventListener('webkitfullscreenchange', this._onFsChange)
