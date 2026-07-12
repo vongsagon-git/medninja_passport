@@ -31,7 +31,7 @@
       ref="aliPlayerBox"
       class="ali-player-box"
     ></div>
-    <!-- ⭐ Custom play/pause button — มุมซ้ายล่าง -->
+    <!-- ⭐ Custom play/pause button — มุมซ้ายล่าง (หลัง ready) -->
     <button
       v-if="playerReady"
       class="ali-custom-play"
@@ -40,6 +40,15 @@
     >
       <svg v-if="!_isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
       <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
+    </button>
+    <!-- ⭐ ปุ่ม play กลางจอ (ก่อน ready) — สีส้ม -->
+    <button
+      v-if="!playerReady"
+      class="ali-big-play-loading"
+      title="กำลังโหลด..."
+      @click="_bigPlayClick"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
     </button>
     <!-- Loading overlay: thin top line only — ไม่บัง video canvas -->
     <div v-if="!playerReady" class="ali-player-loading" style="pointer-events:none">
@@ -109,6 +118,13 @@ export default {
         if (this._isPlaying) this._player.pause()
         else this._player.play()
       } catch (e) { /* silent */ }
+    },
+    _bigPlayClick () {
+      // ตอนโหลด — user tap เพื่อ trigger play ถ้า player พร้อมแล้ว
+      // (บาง iOS ต้อง user gesture ก่อน play)
+      if (this._player) {
+        try { this._player.play() } catch (e) { /* silent */ }
+      }
     },
     _log (msg, type = 'info') {
       const time = new Date().toTimeString().slice(0, 8)
@@ -390,6 +406,35 @@ export default {
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+/* ⭐ Big play button ตอนโหลด — สีส้ม กลางจอ (user เห็นชัด) */
+.ali-big-play-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  padding-left: 4px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 3px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.6), 0 0 0 8px rgba(245, 158, 11, 0.15);
+  animation: ali-big-play-pulse 1.8s ease-in-out infinite;
+  transition: transform 0.15s;
+}
+.ali-big-play-loading:hover { transform: translate(-50%, -50%) scale(1.05); }
+.ali-big-play-loading:active { transform: translate(-50%, -50%) scale(0.95); }
+@keyframes ali-big-play-pulse {
+  0%, 100% { box-shadow: 0 8px 30px rgba(245, 158, 11, 0.6), 0 0 0 8px rgba(245, 158, 11, 0.15); }
+  50% { box-shadow: 0 8px 30px rgba(245, 158, 11, 0.8), 0 0 0 16px rgba(245, 158, 11, 0.05); }
 }
 /* ⭐ Custom play/pause button — มุมซ้ายล่าง */
 .ali-custom-play {
