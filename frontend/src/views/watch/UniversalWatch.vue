@@ -250,7 +250,8 @@
                 @beta-log="_onPlayerBetaLog"
                 @player-ref="_onPlayerRef"
               />
-              <!-- ⭐ Placeholder — video loaded but no field for current provider -->
+              <!-- ⭐ Placeholder — video loaded but no field for current provider
+                   (active serve ที่ circuit กำหนดขาด id) -->
               <div v-else-if="showPlaceholder" class="player-placeholder soft-blue">
                 <div class="placeholder-content">
                   <div class="placeholder-upload-icon">
@@ -260,6 +261,10 @@
                   </div>
                   <p class="placeholder-title">{{ msg.placeholderTitle }}</p>
                   <p class="placeholder-sub" v-html="msg.placeholderSub"></p>
+                  <router-link v-if="!isDemo && !isAdminPreview" :to="backUrl" class="placeholder-back-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="vertical-align:-2px;margin-right:6px"><path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd"/></svg>
+                    กลับไปเลือกบทเรียนอื่น
+                  </router-link>
                 </div>
               </div>
               <!-- Loading state — replaced/recorder overlays อยู่ข้างบนแล้ว -->
@@ -4528,5 +4533,19 @@ kbd {
   line-height: 1.6;
   margin: 0;
 }
+.placeholder-back-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-top: 20px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #3b82f6, #0284c7);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 13.5px; font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
+  transition: transform .15s, box-shadow .15s, filter .15s;
+}
+.placeholder-back-btn:hover { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0 8px 22px rgba(59, 130, 246, 0.45); }
+.placeholder-back-btn:active { transform: translateY(0); }
 
 </style>
