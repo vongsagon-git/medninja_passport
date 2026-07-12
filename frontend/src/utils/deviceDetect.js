@@ -55,6 +55,24 @@ export function getOS(ua = navigator.userAgent || '') {
   return 'Other'
 }
 
+// ⭐ 5 OS slots ที่ SystemCircuit ใช้: Windows / macOS / iOS / Android / Harmony
+//   Harmony ต้องเช็คก่อน Android เพราะ HarmonyOS 4.x UA มี "Android" tag ด้วย
+//   ('Linux; Android 12; ... HarmonyOS/4.2.0')
+export function detectOSSlot(ua = navigator.userAgent || '') {
+  // 1) iOS ก่อน (รวม iPad iOS 13+ ที่ UA=Mac แต่มี touch)
+  if (isIPhone(ua) || isIPad(ua)) return 'iOS'
+  // 2) Harmony ก่อน Android — HarmonyOS/OpenHarmony มี Android tag ปนอยู่
+  if (/HarmonyOS|OpenHarmony/i.test(ua)) return 'Harmony'
+  // 3) Android (Xiaomi/OPPO/Vivo/Samsung/Pixel)
+  if (isAndroid(ua)) return 'Android'
+  // 4) macOS (Mac จริง — ไม่มี touch)
+  if (/Macintosh|Mac OS X/.test(ua)) return 'macOS'
+  // 5) Windows
+  if (/Windows/i.test(ua)) return 'Windows'
+  // 6) Chromebook / Linux / อื่น ๆ = block
+  return 'Other'
+}
+
 // Browser detection — ลำดับสำคัญ (เฉพาะเจาะจงก่อน)
 export function getBrowser(ua = navigator.userAgent || '') {
   // in-app browsers ก่อน (UA มี Chrome/Safari ปนด้วย)

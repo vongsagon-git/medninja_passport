@@ -25,16 +25,29 @@ const passportSystemConfigSchema = new mongoose.Schema({
   ipBaseOtherVideoMode: {
     type: String, enum: ['bunny', 'ali'], default: 'bunny'
   },
-  // ⭐ Browser allow list per group
-  //    Values: 'Chrome', 'Safari', 'Firefox', 'Edge', 'Others'
+  // ⭐ Browser allow list per group (3 slots: Chrome / Safari / Edge)
+  //    In-App = block ตายตัวใน code — ไม่มี toggle
+  //    Chrome slot ครอบ Google + Huawei + QQ + Samsung เท่านั้น (4-whitelist)
   ipBaseThAllowedBrowsers: {
-    type: [String], default: ['Chrome', 'Safari', 'Firefox', 'Edge']
+    type: [String], default: ['Chrome', 'Safari', 'Edge']
   },
   ipBaseCnAllowedBrowsers: {
     type: [String], default: ['Chrome']  // จีน = Chrome only (Widevine)
   },
   ipBaseOtherAllowedBrowsers: {
-    type: [String], default: ['Chrome', 'Safari', 'Firefox', 'Edge']
+    type: [String], default: ['Chrome', 'Safari', 'Edge']
+  },
+  // ⭐ OS allow list per group (5 slots)
+  //    Windows / macOS / iOS / Android / Harmony
+  //    Harmony = HarmonyOS + OpenHarmony (Huawei) — detect ก่อน Android
+  ipBaseThAllowedOS: {
+    type: [String], default: ['Windows', 'macOS', 'iOS', 'Android', 'Harmony']
+  },
+  ipBaseCnAllowedOS: {
+    type: [String], default: ['Android', 'Harmony']  // จีน = mobile (Huawei/Xiaomi/OPPO)
+  },
+  ipBaseOtherAllowedOS: {
+    type: [String], default: ['Windows', 'macOS', 'iOS', 'Android', 'Harmony']
   },
 
   // ⭐ Legacy fields (backward compat)

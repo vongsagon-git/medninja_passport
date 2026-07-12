@@ -159,8 +159,9 @@
                    ═══════════════════════════════════════════════════════════ -->
 
               <!-- ⭐ Provider adapters — 1 shell, 2 renderers (Bunny / Ali) -->
+              <!--    browserOk = false → ไม่ mount player + ไม่ serve อะไรทั้งสิ้น -->
               <BunnyPlayer
-                v-if="provider === 'bunny' && hasBunnyVideo && !replaced && !recorderBlocked"
+                v-if="browserOk && provider === 'bunny' && hasBunnyVideo && !replaced && !recorderBlocked"
                 :embed-url="video.embedUrl"
                 :video-id="activeVideoId"
                 :encryption="encryption"
@@ -176,7 +177,7 @@
                 @player-ref="_onPlayerRef"
               />
               <AliPlayer
-                v-else-if="provider === 'ali' && hasAliVideo && !replaced && !recorderBlocked"
+                v-else-if="browserOk && provider === 'ali' && hasAliVideo && !replaced && !recorderBlocked"
                 :video-id="activeVideoId"
                 :encryption="encryption"
                 :variant="variant"
@@ -721,9 +722,9 @@ export default {
       regionConfig: REGION_MAP[routeRegion],
       activationStore,
       authStore,
-      browserSupported: browserCheck.supported,
-      browserMsg: browserCheck.message,
-      browserDetail: browserCheck.detail,
+      // ⭐ initialBrowserCheck: fallback list (Chrome+Safari+Edge) — ก่อน fetch config จริง
+      //   mounted() จะ re-check ด้วย allowedBrowsers จาก /api/system/video-mode
+      initialBrowserCheck: browserCheck,
       isMobile: browserCheck.isMobile || false,
       isDesktopModeInMobile: false,
       deviceInfo: getDeviceInfo()
@@ -731,6 +732,11 @@ export default {
   },
   data() {
     return {
+      // ⭐ Browser check — เริ่มจาก initialBrowserCheck (fallback list) แล้ว
+      //   mounted() re-check ด้วย allowedBrowsers จริง → mutate ที่นี่
+      browserSupported: this.initialBrowserCheck?.supported ?? true,
+      browserMsg: this.initialBrowserCheck?.message || '',
+      browserDetail: this.initialBrowserCheck?.detail || '',
       sidebarOpen: true,
       wmConfig: null,
       zoomDetected: false,
@@ -1065,16 +1071,47 @@ export default {
   },
   async mounted() {
     this._mountedAt = Date.now()
+    // ⭐ Anti-hack — browser ที่ไม่อยู่ใน fallback list = HARD STOP ทันที
+    //   ไม่ยิง /api/system/video-mode, /api/geo/whoami, activationStore ใด ๆ
+    //   ไม่ mount player, ไม่โหลด serve/token/aliVideoId/embedUrl อะไรทั้งสิ้น
+    //   overlay ค้างอย่างเดียว — Network tab ต้องว่างเปล่า
+    if (!this.browserOk) return
     // ⭐ Circuit breaker + geo — fetch in parallel (safe defaults from regionConfig)
     //   Global route reads `globalMode` (default 'bunny')
     //   CN route reads `cnMode` (default 'ali')
     //   Fail-safe: fallback to regionConfig.circuitDefault
+    let modeResp = {}
     try {
-      const [modeResp, geoResp] = await Promise.all([
+      const geoResp = await Promise.all([
         fetch('/api/system/video-mode', { credentials: 'include', cache: 'no-store' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
         fetch('/api/geo/whoami', { credentials: 'include' }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
-      ])
+      ]).then(([m, g]) => { modeResp = m; return g })
       this.country = geoResp.country || ''
+
+      // ⭐ Anti-hack layer 2 — เช็ค allowedBrowsers + allowedOS ตาม country
+      //   ถ้าไม่อยู่ใน list ที่ admin กำหนด → HARD STOP
+      //   BrowserGate จะครอบ overlay ทับพร้อมกัน
+      let brList, osList
+      if (this.country === 'CN') {
+        brList = modeResp.ipBaseCnAllowedBrowsers
+        osList = modeResp.ipBaseCnAllowedOS
+      } else if (this.country === 'TH') {
+        brList = modeResp.ipBaseThAllowedBrowsers
+        osList = modeResp.ipBaseThAllowedOS
+      } else {
+        brList = modeResp.ipBaseOtherAllowedBrowsers
+        osList = modeResp.ipBaseOtherAllowedOS
+      }
+      if ((Array.isArray(brList) && brList.length) || (Array.isArray(osList) && osList.length)) {
+        const { checkBrowserSupport } = await import('../../utils/browserCheck')
+        const recheck = checkBrowserSupport(brList, osList)
+        if (!recheck.supported) {
+          this.browserSupported = false
+          this.browserMsg = recheck.message
+          this.browserDetail = recheck.detail
+          return // HARD STOP — ไม่ init player, ไม่ load video
+        }
+      }
 
       // ⭐ IP BASE — 3 groups lookup ตาม country
       let wantedServ = 'bunny'
@@ -1658,6 +1695,9 @@ export default {
       this.isDesktopModeInMobile = !this.isMobile && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
     },
     async loadVideo() {
+      // ⭐ Anti-hack — browser ที่ไม่ allow = ไม่ serve video ใด ๆ
+      //   ไม่ fetch section/video info + ไม่ trigger activationStore + ไม่ probe recorder
+      if (!this.browserOk) return
       // ── Probe recorder extension ก่อนโหลด video (ไม่ใช้กับ demo) ──
       if (!this.isDemo) {
         const probe = await probeRecorderExtensions()

@@ -49,9 +49,13 @@ exports.getVideoMode = async (req, res, next) => {
       ipBaseThVideoMode:    doc.ipBaseThVideoMode    || 'bunny',
       ipBaseCnVideoMode:    doc.ipBaseCnVideoMode    || 'ali',
       ipBaseOtherVideoMode: doc.ipBaseOtherVideoMode || 'bunny',
-      ipBaseThAllowedBrowsers:    doc.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Firefox', 'Edge'],
+      ipBaseThAllowedBrowsers:    doc.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Edge'],
       ipBaseCnAllowedBrowsers:    doc.ipBaseCnAllowedBrowsers    || ['Chrome'],
-      ipBaseOtherAllowedBrowsers: doc.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Firefox', 'Edge'],
+      ipBaseOtherAllowedBrowsers: doc.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Edge'],
+      // ⭐ OS Allow (5 slots)
+      ipBaseThAllowedOS:    doc.ipBaseThAllowedOS    || ['Windows', 'macOS', 'iOS', 'Android', 'Harmony'],
+      ipBaseCnAllowedOS:    doc.ipBaseCnAllowedOS    || ['Android', 'Harmony'],
+      ipBaseOtherAllowedOS: doc.ipBaseOtherAllowedOS || ['Windows', 'macOS', 'iOS', 'Android', 'Harmony'],
       // Backward compat
       nonCnVideoMode: doc.ipBaseThVideoMode || 'bunny',
       cnVideoMode:    doc.ipBaseCnVideoMode || 'ali',
@@ -78,11 +82,14 @@ exports.setVideoMode = async (req, res, next) => {
       cnVideoMode:     ['bunny', 'ali'],
       globalVideoMode: ['bunny', 'ali']
     }
-    // ⭐ Browser Allow fields (array value)
+    // ⭐ Browser Allow fields (3 slots: Chrome / Safari / Edge — In-App hard-block)
     const browserAllowFields = ['ipBaseThAllowedBrowsers', 'ipBaseCnAllowedBrowsers', 'ipBaseOtherAllowedBrowsers']
-    const validBrowsers = ['Chrome', 'Safari', 'Edge', 'In-App']
+    const validBrowsers = ['Chrome', 'Safari', 'Edge']
+    // ⭐ OS Allow fields (5 slots)
+    const osAllowFields = ['ipBaseThAllowedOS', 'ipBaseCnAllowedOS', 'ipBaseOtherAllowedOS']
+    const validOS = ['Windows', 'macOS', 'iOS', 'Android', 'Harmony']
 
-    if (!videoModeFields[field] && !browserAllowFields.includes(field)) {
+    if (!videoModeFields[field] && !browserAllowFields.includes(field) && !osAllowFields.includes(field)) {
       return res.status(400).json({
         message: 'field ไม่ถูกต้อง'
       })
@@ -92,13 +99,20 @@ exports.setVideoMode = async (req, res, next) => {
         return res.status(400).json({ message: `value ต้องเป็น ${videoModeFields[field].join('|')}` })
       }
     } else if (browserAllowFields.includes(field)) {
-      // value ต้องเป็น array
       if (!Array.isArray(value)) {
         return res.status(400).json({ message: 'value ต้องเป็น array' })
       }
       const invalid = value.filter(b => !validBrowsers.includes(b))
       if (invalid.length > 0) {
-        return res.status(400).json({ message: `browsers ไม่ถูกต้อง: ${invalid.join(',')}` })
+        return res.status(400).json({ message: `browsers ไม่ถูกต้อง: ${invalid.join(',')} (allow: ${validBrowsers.join('|')})` })
+      }
+    } else if (osAllowFields.includes(field)) {
+      if (!Array.isArray(value)) {
+        return res.status(400).json({ message: 'value ต้องเป็น array' })
+      }
+      const invalid = value.filter(o => !validOS.includes(o))
+      if (invalid.length > 0) {
+        return res.status(400).json({ message: `OS ไม่ถูกต้อง: ${invalid.join(',')} (allow: ${validOS.join('|')})` })
       }
     }
 
@@ -130,9 +144,12 @@ exports.setVideoMode = async (req, res, next) => {
         ipBaseThVideoMode:    doc.ipBaseThVideoMode    || 'bunny',
         ipBaseCnVideoMode:    doc.ipBaseCnVideoMode    || 'ali',
         ipBaseOtherVideoMode: doc.ipBaseOtherVideoMode || 'bunny',
-        ipBaseThAllowedBrowsers:    doc.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Firefox', 'Edge'],
+        ipBaseThAllowedBrowsers:    doc.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Edge'],
         ipBaseCnAllowedBrowsers:    doc.ipBaseCnAllowedBrowsers    || ['Chrome'],
-        ipBaseOtherAllowedBrowsers: doc.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Firefox', 'Edge']
+        ipBaseOtherAllowedBrowsers: doc.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Edge'],
+        ipBaseThAllowedOS:    doc.ipBaseThAllowedOS    || ['Windows', 'macOS', 'iOS', 'Android', 'Harmony'],
+        ipBaseCnAllowedOS:    doc.ipBaseCnAllowedOS    || ['Android', 'Harmony'],
+        ipBaseOtherAllowedOS: doc.ipBaseOtherAllowedOS || ['Windows', 'macOS', 'iOS', 'Android', 'Harmony']
       },
       updatedAt: doc.updatedAt
     })

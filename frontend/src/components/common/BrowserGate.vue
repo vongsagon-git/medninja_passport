@@ -62,6 +62,7 @@ export default {
       deviceInfo: '',
       debugUA: '',
       allowedBrowsers: null,   // ⭐ จาก /api/system/video-mode ตาม country
+      allowedOS: null,         // ⭐ 5 slot: Windows/macOS/iOS/Android/Harmony
       _visHandler: null
     }
   },
@@ -113,16 +114,24 @@ export default {
             .then(r => r.ok ? r.json() : {}).catch(() => ({}))
         ])
         const country = (geoResp.country || '').toUpperCase()
-        let list
-        if (country === 'CN')      list = modeResp.ipBaseCnAllowedBrowsers
-        else if (country === 'TH') list = modeResp.ipBaseThAllowedBrowsers
-        else                       list = modeResp.ipBaseOtherAllowedBrowsers
-        if (Array.isArray(list) && list.length) this.allowedBrowsers = list
+        let brList, osList
+        if (country === 'CN') {
+          brList = modeResp.ipBaseCnAllowedBrowsers
+          osList = modeResp.ipBaseCnAllowedOS
+        } else if (country === 'TH') {
+          brList = modeResp.ipBaseThAllowedBrowsers
+          osList = modeResp.ipBaseThAllowedOS
+        } else {
+          brList = modeResp.ipBaseOtherAllowedBrowsers
+          osList = modeResp.ipBaseOtherAllowedOS
+        }
+        if (Array.isArray(brList) && brList.length) this.allowedBrowsers = brList
+        if (Array.isArray(osList) && osList.length) this.allowedOS = osList
       } catch { /* fail-open */ }
     },
     _runCheck() {
       try {
-        this.result = checkBrowserSupport(this.allowedBrowsers)
+        this.result = checkBrowserSupport(this.allowedBrowsers, this.allowedOS)
         this.deviceInfo = getDeviceInfo()
         this.debugUA = navigator.userAgent || ''
       } catch (err) {

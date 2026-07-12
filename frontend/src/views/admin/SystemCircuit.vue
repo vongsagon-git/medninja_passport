@@ -69,11 +69,30 @@
                       :checked="(config.ipBaseThAllowedBrowsers || []).includes(b)"
                       :disabled="switching === 'ipBaseThAllowedBrowsers'"
                       @change="toggleBrowser('ipBaseThAllowedBrowsers', b, $event.target.checked)" />
-                    <span>{{ b }}</span>
+                    <span><strong>{{ b }}</strong> <em class="hint">{{ browserHints[b] }}</em></span>
                   </label>
                 </div>
                 <div class="breaker-caption">
-                  → {{ (config.ipBaseThAllowedBrowsers || []).length }}/4 browsers
+                  → {{ (config.ipBaseThAllowedBrowsers || []).length }}/3 browsers
+                </div>
+              </div>
+
+              <!-- OS Allow -->
+              <div class="breaker">
+                <div class="breaker-title">
+                  <span class="breaker-dot os-dot"></span> OS Allow
+                </div>
+                <div class="browser-checks">
+                  <label v-for="o in osOptions" :key="'th-os-'+o" class="browser-check">
+                    <input type="checkbox"
+                      :checked="(config.ipBaseThAllowedOS || []).includes(o)"
+                      :disabled="switching === 'ipBaseThAllowedOS'"
+                      @change="toggleOS('ipBaseThAllowedOS', o, $event.target.checked)" />
+                    <span><strong>{{ o }}</strong> <em class="hint">{{ osHints[o] }}</em></span>
+                  </label>
+                </div>
+                <div class="breaker-caption">
+                  → {{ (config.ipBaseThAllowedOS || []).length }}/5 OS
                 </div>
               </div>
             </div>
@@ -119,11 +138,30 @@
                       :checked="(config.ipBaseCnAllowedBrowsers || []).includes(b)"
                       :disabled="switching === 'ipBaseCnAllowedBrowsers'"
                       @change="toggleBrowser('ipBaseCnAllowedBrowsers', b, $event.target.checked)" />
-                    <span>{{ b }}</span>
+                    <span><strong>{{ b }}</strong> <em class="hint">{{ browserHints[b] }}</em></span>
                   </label>
                 </div>
                 <div class="breaker-caption">
-                  → {{ (config.ipBaseCnAllowedBrowsers || []).length }}/4 browsers
+                  → {{ (config.ipBaseCnAllowedBrowsers || []).length }}/3 browsers
+                </div>
+              </div>
+
+              <!-- OS Allow -->
+              <div class="breaker">
+                <div class="breaker-title">
+                  <span class="breaker-dot os-dot"></span> OS Allow
+                </div>
+                <div class="browser-checks">
+                  <label v-for="o in osOptions" :key="'cn-os-'+o" class="browser-check">
+                    <input type="checkbox"
+                      :checked="(config.ipBaseCnAllowedOS || []).includes(o)"
+                      :disabled="switching === 'ipBaseCnAllowedOS'"
+                      @change="toggleOS('ipBaseCnAllowedOS', o, $event.target.checked)" />
+                    <span><strong>{{ o }}</strong> <em class="hint">{{ osHints[o] }}</em></span>
+                  </label>
+                </div>
+                <div class="breaker-caption">
+                  → {{ (config.ipBaseCnAllowedOS || []).length }}/5 OS
                 </div>
               </div>
             </div>
@@ -169,11 +207,30 @@
                       :checked="(config.ipBaseOtherAllowedBrowsers || []).includes(b)"
                       :disabled="switching === 'ipBaseOtherAllowedBrowsers'"
                       @change="toggleBrowser('ipBaseOtherAllowedBrowsers', b, $event.target.checked)" />
-                    <span>{{ b }}</span>
+                    <span><strong>{{ b }}</strong> <em class="hint">{{ browserHints[b] }}</em></span>
                   </label>
                 </div>
                 <div class="breaker-caption">
-                  → {{ (config.ipBaseOtherAllowedBrowsers || []).length }}/4 browsers
+                  → {{ (config.ipBaseOtherAllowedBrowsers || []).length }}/3 browsers
+                </div>
+              </div>
+
+              <!-- OS Allow -->
+              <div class="breaker">
+                <div class="breaker-title">
+                  <span class="breaker-dot os-dot"></span> OS Allow
+                </div>
+                <div class="browser-checks">
+                  <label v-for="o in osOptions" :key="'ot-os-'+o" class="browser-check">
+                    <input type="checkbox"
+                      :checked="(config.ipBaseOtherAllowedOS || []).includes(o)"
+                      :disabled="switching === 'ipBaseOtherAllowedOS'"
+                      @change="toggleOS('ipBaseOtherAllowedOS', o, $event.target.checked)" />
+                    <span><strong>{{ o }}</strong> <em class="hint">{{ osHints[o] }}</em></span>
+                  </label>
+                </div>
+                <div class="breaker-caption">
+                  → {{ (config.ipBaseOtherAllowedOS || []).length }}/5 OS
                 </div>
               </div>
             </div>
@@ -186,7 +243,7 @@
             </div>
             <div class="meta-item">
               <span class="meta-label">Total Controls</span>
-              <span class="meta-value">3 groups × (1 SERV + 4 browsers)</span>
+              <span class="meta-value">3 groups × (SERV + 3 browsers + 5 OS)</span>
             </div>
           </div>
         </div>
@@ -211,10 +268,12 @@
           <h3>💡 IP BASE Circuit อธิบาย</h3>
           <ul>
             <li><strong>SERV</strong> — เลือก Player/CDN (Bunny หรือ Ali) แยกต่อกลุ่ม IP</li>
-            <li><strong>Browser Allow</strong> — เลือก browser ที่อนุญาตให้เล่น (ถ้าไม่อนุญาต → block screen)</li>
-            <li>User ในไทย (IP=TH) → ใช้ config <code>IP BASE TH</code></li>
-            <li>User ในจีน (IP=CN) → ใช้ config <code>IP BASE CN</code></li>
-            <li>User ต่างประเทศ (US/JP/EU/...) → ใช้ config <code>IP BASE OTHER</code></li>
+            <li><strong>Browser Allow</strong> — 3 slot: Chrome (Google/Huawei/QQ/Samsung) / Safari / Edge — In-App (LINE/FB/IG/WeChat/TikTok) block ตายตัวไม่ต้องเลือก</li>
+            <li><strong>OS Allow</strong> — 5 slot: Windows / macOS / iOS / Android / <strong>Harmony ⭐</strong> (Huawei รับอนาคต Pure Harmony)</li>
+            <li>Serve VDO = Browser <strong>AND</strong> OS ต้องผ่านทั้งคู่</li>
+            <li>User ในไทย (IP=TH) → ใช้ <code>IP BASE TH</code></li>
+            <li>User ในจีน (IP=CN) → ใช้ <code>IP BASE CN</code></li>
+            <li>User ต่างประเทศ → ใช้ <code>IP BASE OTHER</code></li>
           </ul>
         </div>
       </template>
@@ -253,14 +312,30 @@ export default {
       loading: true,
       switching: null,
       kicking: false,
-      browserOptions: ['Chrome', 'Safari', 'Edge', 'In-App'],
+      browserOptions: ['Chrome', 'Safari', 'Edge'],
+      browserHints: {
+        Chrome: '(Google, Huawei, QQ, Samsung)',
+        Safari: '(iPhone / iPad / Mac)',
+        Edge:   '(Windows + Edge iOS/Android)'
+      },
+      osOptions: ['Windows', 'macOS', 'iOS', 'Android', 'Harmony'],
+      osHints: {
+        Windows: '(Win 7/10/11)',
+        macOS:   '(Mac desktop)',
+        iOS:     '(iPhone + iPad)',
+        Android: '(Xiaomi, OPPO, Vivo, Samsung, Pixel)',
+        Harmony: '(Huawei — Harmony/OpenHarmony)'
+      },
       config: {
         ipBaseThVideoMode:    'bunny',
         ipBaseCnVideoMode:    'ali',
         ipBaseOtherVideoMode: 'bunny',
         ipBaseThAllowedBrowsers:    ['Chrome', 'Safari', 'Edge'],
         ipBaseCnAllowedBrowsers:    ['Chrome'],
-        ipBaseOtherAllowedBrowsers: ['Chrome', 'Safari', 'Edge']
+        ipBaseOtherAllowedBrowsers: ['Chrome', 'Safari', 'Edge'],
+        ipBaseThAllowedOS:    ['Windows', 'macOS', 'iOS', 'Android', 'Harmony'],
+        ipBaseCnAllowedOS:    ['Android', 'Harmony'],
+        ipBaseOtherAllowedOS: ['Windows', 'macOS', 'iOS', 'Android', 'Harmony']
       },
       updatedAt: null,
       pendingChange: null,
@@ -282,7 +357,10 @@ export default {
           ipBaseOtherVideoMode: data.ipBaseOtherVideoMode || 'bunny',
           ipBaseThAllowedBrowsers:    data.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Edge'],
           ipBaseCnAllowedBrowsers:    data.ipBaseCnAllowedBrowsers    || ['Chrome'],
-          ipBaseOtherAllowedBrowsers: data.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Edge']
+          ipBaseOtherAllowedBrowsers: data.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Edge'],
+          ipBaseThAllowedOS:    data.ipBaseThAllowedOS    || ['Windows', 'macOS', 'iOS', 'Android', 'Harmony'],
+          ipBaseCnAllowedOS:    data.ipBaseCnAllowedOS    || ['Android', 'Harmony'],
+          ipBaseOtherAllowedOS: data.ipBaseOtherAllowedOS || ['Windows', 'macOS', 'iOS', 'Android', 'Harmony']
         }
         this.updatedAt = data.updatedAt
       } catch (e) {
@@ -313,14 +391,14 @@ export default {
         this.switching = null
       }
     },
-    // ⭐ Browser toggle — instant apply (ไม่ต้อง confirm)
-    async toggleBrowser(field, browser, checked) {
+    // ⭐ Browser / OS toggle — instant apply (ไม่ต้อง confirm)
+    async toggleList(field, item, checked, kind) {
       const current = this.config[field] || []
       const updated = checked
-        ? [...current, browser]
-        : current.filter(b => b !== browser)
+        ? [...current, item]
+        : current.filter(b => b !== item)
       if (updated.length === 0) {
-        alert('ต้องเลือกอย่างน้อย 1 browser')
+        alert(`ต้องเลือกอย่างน้อย 1 ${kind}`)
         return
       }
       this.switching = field
@@ -330,11 +408,13 @@ export default {
         else this.config[field] = updated
         this.updatedAt = data.updatedAt
       } catch (e) {
-        alert('อัพเดท browser allow ไม่สำเร็จ: ' + (e.response?.data?.message || e.message))
+        alert(`อัพเดท ${kind} allow ไม่สำเร็จ: ` + (e.response?.data?.message || e.message))
       } finally {
         this.switching = null
       }
     },
+    toggleBrowser(field, browser, checked) { return this.toggleList(field, browser, checked, 'browser') },
+    toggleOS(field, os, checked) { return this.toggleList(field, os, checked, 'OS') },
     describeField(field) {
       const map = {
         ipBaseThVideoMode:    'IP BASE TH SERV',
@@ -410,6 +490,7 @@ export default {
 .breaker-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; color: rgba(148, 163, 184, 0.95); letter-spacing: 0.08em; margin-bottom: 10px; }
 .breaker-dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.6); }
 .breaker-dot.browser-dot { background: #a855f7; box-shadow: 0 0 6px rgba(168, 85, 247, 0.6); }
+.breaker-dot.os-dot { background: #06b6d4; box-shadow: 0 0 6px rgba(6, 182, 212, 0.6); }
 
 .breaker-switches { display: flex; gap: 6px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 6px; margin-bottom: 8px; }
 .sw { flex: 1; padding: 8px 6px; background: rgba(30, 41, 59, 0.5); border: 1.5px solid rgba(100, 116, 139, 0.25); border-radius: 6px; color: #94a3b8; font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -427,7 +508,8 @@ export default {
 .browser-check { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; cursor: pointer; transition: background 0.15s; }
 .browser-check:hover { background: rgba(59, 130, 246, 0.1); }
 .browser-check input { cursor: pointer; accent-color: #3b82f6; }
-.browser-check span { font-size: 12px; color: #cbd5e1; font-weight: 600; }
+.browser-check span { font-size: 12px; color: #cbd5e1; font-weight: 600; display: flex; flex-direction: column; gap: 1px; }
+.browser-check .hint { font-size: 10px; color: rgba(148, 163, 184, 0.75); font-weight: 500; font-style: normal; letter-spacing: 0.02em; }
 
 .meta-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
 .meta-item { display: flex; flex-direction: column; gap: 4px; }
