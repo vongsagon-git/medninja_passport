@@ -77,10 +77,13 @@ async function initPlayer() {
 
     const playAuth = await fetchPlayAuth()
 
-    // ⭐ FORCE Original stream (mov, unencrypted, 4K) — เล่นได้ทุก device
-    //   Video มี 3 streams: Original mov (ไม่ encrypt) + HD m3u8 Ali Private + HD m3u8 DRM
-    //   Original = mov (ไม่ใช่ mp4!) → ห้าม set format: 'mp4' (จะได้ NoneStream error)
-    //   แค่ set definition: 'OD' + mediaType: 'video' → Aliplayer เลือก Original mov ให้เอง
+    // ⭐ Verified 2026-07-13 กับ /api/china/test-status/:vid:
+    //   Alibaba serve เฉพาะ 2 streams (Original mov ที่เห็นใน console ไม่มีใน GetPlayInfo API):
+    //   1. m3u8 SD encrypt=1 encryptType=AliyunVoDEncryption (Ali Proprietary)
+    //   2. m3u8 SD encrypt=1 encryptType=Widevine-FairPlay (DRM)
+    //   → บังคับ encryptType: 1 (Ali Prop permissive — รับทั้ง 2 streams)
+    //   → verified matrix: iOS+Chrome+Android+PC+จีน+ไทย = เล่นได้ทุก device
+    //   ดู memory: feedback_drm_formula_v26 + project_alibaba_encryption_flexibility
     const playerConfig = {
       id: 'landing-player',
       vid: VIDEO_ID,
@@ -94,9 +97,7 @@ async function initPlayer() {
       preload: true,
       controlBarVisibility: 'hover',
       useH5Prism: true,
-      mediaType: 'video',
-      definition: 'OD',           // Original Definition (unencrypted)
-      defaultDefinition: 'OD',
+      encryptType: 1,             // Alibaba Proprietary (permissive - รับทั้ง Ali Prop + Widevine)
       license: {
         domain: 'passport.medninja.academy',
         key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'
