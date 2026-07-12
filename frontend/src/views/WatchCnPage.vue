@@ -2991,6 +2991,15 @@ export default {
 
       // iOS: CSS fake FS
       if (isIos) {
+        // ⭐ ตอนอยู่ใน fake FS + landscape → กด "ย่อ" ไม่ให้ใช้เว็บแบบแนวนอน
+        //   → โผล่ rotate-fs-prompt (แตะเพื่อดูเต็มจอ) แทน
+        if (this.isFullscreen && isLandscape) {
+          this.isFullscreen = false
+          document.body.style.overflow = ''
+          this._userInitiatedFs = false
+          this.showRotateFsPrompt = true
+          return
+        }
         this.isFullscreen = !this.isFullscreen
         document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
         return
