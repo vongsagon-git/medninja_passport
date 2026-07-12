@@ -1,5 +1,11 @@
 <template>
   <div class="sc-page">
+    <!-- ⭐ Instant apply toast -->
+    <Transition name="sc-toast-fade">
+      <div v-if="toast" class="sc-toast" :class="'sc-toast-'+toast.kind">
+        {{ toast.msg }}
+      </div>
+    </Transition>
     <!-- Header -->
     <div class="sc-header">
       <div class="sc-header-inner">
@@ -64,10 +70,11 @@
                   <span class="breaker-dot browser-dot"></span> Browser Allow
                 </div>
                 <div class="browser-checks">
-                  <label v-for="b in browserOptions" :key="'th-'+b" class="browser-check">
+                  <label v-for="b in browserOptions" :key="'th-'+b" class="browser-check"
+                         :class="{ 'is-locked': isLastOne('ipBaseThAllowedBrowsers', b) }">
                     <input type="checkbox"
                       :checked="(config.ipBaseThAllowedBrowsers || []).includes(b)"
-                      :disabled="switching === 'ipBaseThAllowedBrowsers'"
+                      :disabled="switching === 'ipBaseThAllowedBrowsers' || isLastOne('ipBaseThAllowedBrowsers', b)"
                       @change="toggleBrowser('ipBaseThAllowedBrowsers', b, $event.target.checked)" />
                     <span><strong>{{ b }}</strong> <em class="hint">{{ browserHints[b] }}</em></span>
                   </label>
@@ -83,10 +90,11 @@
                   <span class="breaker-dot os-dot"></span> OS Allow
                 </div>
                 <div class="browser-checks">
-                  <label v-for="o in osOptions" :key="'th-os-'+o" class="browser-check">
+                  <label v-for="o in osOptions" :key="'th-os-'+o" class="browser-check"
+                         :class="{ 'is-locked': isLastOne('ipBaseThAllowedOS', o) }">
                     <input type="checkbox"
                       :checked="(config.ipBaseThAllowedOS || []).includes(o)"
-                      :disabled="switching === 'ipBaseThAllowedOS'"
+                      :disabled="switching === 'ipBaseThAllowedOS' || isLastOne('ipBaseThAllowedOS', o)"
                       @change="toggleOS('ipBaseThAllowedOS', o, $event.target.checked)" />
                     <span><strong>{{ o }}</strong> <em class="hint">{{ osHints[o] }}</em></span>
                   </label>
@@ -133,10 +141,11 @@
                   <span class="breaker-dot browser-dot"></span> Browser Allow
                 </div>
                 <div class="browser-checks">
-                  <label v-for="b in browserOptions" :key="'cn-'+b" class="browser-check">
+                  <label v-for="b in browserOptions" :key="'cn-'+b" class="browser-check"
+                         :class="{ 'is-locked': isLastOne('ipBaseCnAllowedBrowsers', b) }">
                     <input type="checkbox"
                       :checked="(config.ipBaseCnAllowedBrowsers || []).includes(b)"
-                      :disabled="switching === 'ipBaseCnAllowedBrowsers'"
+                      :disabled="switching === 'ipBaseCnAllowedBrowsers' || isLastOne('ipBaseCnAllowedBrowsers', b)"
                       @change="toggleBrowser('ipBaseCnAllowedBrowsers', b, $event.target.checked)" />
                     <span><strong>{{ b }}</strong> <em class="hint">{{ browserHints[b] }}</em></span>
                   </label>
@@ -152,10 +161,11 @@
                   <span class="breaker-dot os-dot"></span> OS Allow
                 </div>
                 <div class="browser-checks">
-                  <label v-for="o in osOptions" :key="'cn-os-'+o" class="browser-check">
+                  <label v-for="o in osOptions" :key="'cn-os-'+o" class="browser-check"
+                         :class="{ 'is-locked': isLastOne('ipBaseCnAllowedOS', o) }">
                     <input type="checkbox"
                       :checked="(config.ipBaseCnAllowedOS || []).includes(o)"
-                      :disabled="switching === 'ipBaseCnAllowedOS'"
+                      :disabled="switching === 'ipBaseCnAllowedOS' || isLastOne('ipBaseCnAllowedOS', o)"
                       @change="toggleOS('ipBaseCnAllowedOS', o, $event.target.checked)" />
                     <span><strong>{{ o }}</strong> <em class="hint">{{ osHints[o] }}</em></span>
                   </label>
@@ -202,10 +212,11 @@
                   <span class="breaker-dot browser-dot"></span> Browser Allow
                 </div>
                 <div class="browser-checks">
-                  <label v-for="b in browserOptions" :key="'ot-'+b" class="browser-check">
+                  <label v-for="b in browserOptions" :key="'ot-'+b" class="browser-check"
+                         :class="{ 'is-locked': isLastOne('ipBaseOtherAllowedBrowsers', b) }">
                     <input type="checkbox"
                       :checked="(config.ipBaseOtherAllowedBrowsers || []).includes(b)"
-                      :disabled="switching === 'ipBaseOtherAllowedBrowsers'"
+                      :disabled="switching === 'ipBaseOtherAllowedBrowsers' || isLastOne('ipBaseOtherAllowedBrowsers', b)"
                       @change="toggleBrowser('ipBaseOtherAllowedBrowsers', b, $event.target.checked)" />
                     <span><strong>{{ b }}</strong> <em class="hint">{{ browserHints[b] }}</em></span>
                   </label>
@@ -221,10 +232,11 @@
                   <span class="breaker-dot os-dot"></span> OS Allow
                 </div>
                 <div class="browser-checks">
-                  <label v-for="o in osOptions" :key="'ot-os-'+o" class="browser-check">
+                  <label v-for="o in osOptions" :key="'ot-os-'+o" class="browser-check"
+                         :class="{ 'is-locked': isLastOne('ipBaseOtherAllowedOS', o) }">
                     <input type="checkbox"
                       :checked="(config.ipBaseOtherAllowedOS || []).includes(o)"
-                      :disabled="switching === 'ipBaseOtherAllowedOS'"
+                      :disabled="switching === 'ipBaseOtherAllowedOS' || isLastOne('ipBaseOtherAllowedOS', o)"
                       @change="toggleOS('ipBaseOtherAllowedOS', o, $event.target.checked)" />
                     <span><strong>{{ o }}</strong> <em class="hint">{{ osHints[o] }}</em></span>
                   </label>
@@ -339,7 +351,12 @@ export default {
       },
       updatedAt: null,
       pendingChange: null,
-      kickResult: null
+      kickResult: null,
+      // ⭐ Instant apply feedback
+      toast: null,       // { msg: string, kind: 'ok'|'err' }
+      _toastTimer: null,
+      lastAppliedField: null,   // สำหรับ animate checkbox ที่เพิ่ง apply
+      _appliedTimer: null
     }
   },
   computed: {
@@ -392,26 +409,49 @@ export default {
       }
     },
     // ⭐ Browser / OS toggle — instant apply (ไม่ต้อง confirm)
+    // ⭐ Instant apply — คลิก checkbox ปุ๊บ apply ปั๊บ
+    //   ⚠️ ตัวสุดท้ายที่เหลือ 1 = uncheck ไม่ได้ (กัน block ทั้งกลุ่ม)
     async toggleList(field, item, checked, kind) {
       const current = this.config[field] || []
+      // ─── กัน uncheck ตัวสุดท้าย ───
+      if (!checked && current.length <= 1 && current.includes(item)) {
+        // silent skip — UI มี disabled แสดงอยู่แล้ว
+        return
+      }
       const updated = checked
         ? [...current, item]
         : current.filter(b => b !== item)
-      if (updated.length === 0) {
-        alert(`ต้องเลือกอย่างน้อย 1 ${kind}`)
-        return
-      }
+      // Optimistic UI — เปลี่ยน UI ทันที
+      this.config = { ...this.config, [field]: updated }
       this.switching = field
       try {
         const data = await api.patch('/admin/system/video-mode', { field, value: updated })
         if (data.config) this.config = { ...this.config, ...data.config }
-        else this.config[field] = updated
         this.updatedAt = data.updatedAt
+        this._showToast(`✓ อัพเดท ${kind} — ${updated.join(', ')}`, 'ok')
+        this._flashApplied(field)
       } catch (e) {
-        alert(`อัพเดท ${kind} allow ไม่สำเร็จ: ` + (e.response?.data?.message || e.message))
+        // Rollback + error toast
+        this.config = { ...this.config, [field]: current }
+        this._showToast(`✗ อัพเดท ${kind} ล้มเหลว: ${e.response?.data?.message || e.message}`, 'err')
       } finally {
         this.switching = null
       }
+    },
+    // ⭐ helper: ตัวนี้ = ตัวสุดท้ายที่เหลือใน list หรือเปล่า?
+    isLastOne(field, item) {
+      const list = this.config[field] || []
+      return list.length === 1 && list.includes(item)
+    },
+    _showToast(msg, kind = 'ok') {
+      this.toast = { msg, kind }
+      if (this._toastTimer) clearTimeout(this._toastTimer)
+      this._toastTimer = setTimeout(() => { this.toast = null }, 2600)
+    },
+    _flashApplied(field) {
+      this.lastAppliedField = field
+      if (this._appliedTimer) clearTimeout(this._appliedTimer)
+      this._appliedTimer = setTimeout(() => { this.lastAppliedField = null }, 900)
     },
     toggleBrowser(field, browser, checked) { return this.toggleList(field, browser, checked, 'browser') },
     toggleOS(field, os, checked) { return this.toggleList(field, os, checked, 'OS') },
@@ -510,6 +550,28 @@ export default {
 .browser-check input { cursor: pointer; accent-color: #3b82f6; }
 .browser-check span { font-size: 12px; color: #cbd5e1; font-weight: 600; display: flex; flex-direction: column; gap: 1px; }
 .browser-check .hint { font-size: 10px; color: rgba(148, 163, 184, 0.75); font-weight: 500; font-style: normal; letter-spacing: 0.02em; }
+/* ⭐ ตัวสุดท้ายที่เหลือ = uncheck ไม่ได้ (เทา + ล็อค) */
+.browser-check.is-locked { cursor: not-allowed; opacity: 0.72; background: rgba(148, 163, 184, 0.08); }
+.browser-check.is-locked input { accent-color: #94a3b8; cursor: not-allowed; }
+.browser-check.is-locked strong { color: #94a3b8; }
+.browser-check.is-locked span::after { content: ' 🔒'; font-size: 10px; opacity: .8; }
+
+/* ⭐ Instant apply toast */
+.sc-toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  z-index: 100000;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  max-width: 420px;
+}
+.sc-toast-ok  { background: linear-gradient(135deg,#10b981,#059669); color: #fff; }
+.sc-toast-err { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; }
+.sc-toast-fade-enter-active, .sc-toast-fade-leave-active { transition: opacity .2s, transform .2s; }
+.sc-toast-fade-enter-from, .sc-toast-fade-leave-to { opacity: 0; transform: translateY(10px); }
 
 .meta-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
 .meta-item { display: flex; flex-direction: column; gap: 4px; }

@@ -74,7 +74,8 @@ export function detectBrowserSlot (ua = navigator.userAgent || '') {
  */
 export function checkBrowserSupport (allowedBrowsers, allowedOS, ua) {
   ua = ua || navigator.userAgent || ''
-  // fallback lists — ใช้ตอน config ยังไม่โหลด (safety net)
+  // ⭐ Fallback safety net ⇢ ตอน config ยังไม่โหลด (null/undefined หรือ empty)
+  //   UI กันปิดหมดไม่ให้เกิด → array ควรมีอย่างน้อย 1 เสมอ
   const allowBr = Array.isArray(allowedBrowsers) && allowedBrowsers.length
     ? allowedBrowsers
     : ['Chrome', 'Safari', 'Edge']
