@@ -73,7 +73,7 @@
                   </label>
                 </div>
                 <div class="breaker-caption">
-                  → {{ (config.ipBaseThAllowedBrowsers || []).length }}/6 browsers
+                  → {{ (config.ipBaseThAllowedBrowsers || []).length }}/4 browsers
                 </div>
               </div>
             </div>
@@ -123,7 +123,7 @@
                   </label>
                 </div>
                 <div class="breaker-caption">
-                  → {{ (config.ipBaseCnAllowedBrowsers || []).length }}/6 browsers
+                  → {{ (config.ipBaseCnAllowedBrowsers || []).length }}/4 browsers
                 </div>
               </div>
             </div>
@@ -173,7 +173,7 @@
                   </label>
                 </div>
                 <div class="breaker-caption">
-                  → {{ (config.ipBaseOtherAllowedBrowsers || []).length }}/6 browsers
+                  → {{ (config.ipBaseOtherAllowedBrowsers || []).length }}/4 browsers
                 </div>
               </div>
             </div>
@@ -186,7 +186,7 @@
             </div>
             <div class="meta-item">
               <span class="meta-label">Total Controls</span>
-              <span class="meta-value">3 groups × (1 SERV + 6 browsers)</span>
+              <span class="meta-value">3 groups × (1 SERV + 4 browsers)</span>
             </div>
           </div>
         </div>
@@ -253,14 +253,14 @@ export default {
       loading: true,
       switching: null,
       kicking: false,
-      browserOptions: ['Chrome', 'Safari', 'Firefox', 'Edge', 'In-App', 'Others'],
+      browserOptions: ['Chrome', 'Safari', 'Edge', 'In-App'],
       config: {
         ipBaseThVideoMode:    'bunny',
         ipBaseCnVideoMode:    'ali',
         ipBaseOtherVideoMode: 'bunny',
-        ipBaseThAllowedBrowsers:    ['Chrome', 'Safari', 'Firefox', 'Edge'],
+        ipBaseThAllowedBrowsers:    ['Chrome', 'Safari', 'Edge'],
         ipBaseCnAllowedBrowsers:    ['Chrome'],
-        ipBaseOtherAllowedBrowsers: ['Chrome', 'Safari', 'Firefox', 'Edge']
+        ipBaseOtherAllowedBrowsers: ['Chrome', 'Safari', 'Edge']
       },
       updatedAt: null,
       pendingChange: null,
@@ -280,9 +280,9 @@ export default {
           ipBaseThVideoMode:    data.ipBaseThVideoMode    || 'bunny',
           ipBaseCnVideoMode:    data.ipBaseCnVideoMode    || 'ali',
           ipBaseOtherVideoMode: data.ipBaseOtherVideoMode || 'bunny',
-          ipBaseThAllowedBrowsers:    data.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Firefox', 'Edge'],
+          ipBaseThAllowedBrowsers:    data.ipBaseThAllowedBrowsers    || ['Chrome', 'Safari', 'Edge'],
           ipBaseCnAllowedBrowsers:    data.ipBaseCnAllowedBrowsers    || ['Chrome'],
-          ipBaseOtherAllowedBrowsers: data.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Firefox', 'Edge']
+          ipBaseOtherAllowedBrowsers: data.ipBaseOtherAllowedBrowsers || ['Chrome', 'Safari', 'Edge']
         }
         this.updatedAt = data.updatedAt
       } catch (e) {

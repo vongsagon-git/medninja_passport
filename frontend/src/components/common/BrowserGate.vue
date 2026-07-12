@@ -61,6 +61,7 @@ export default {
       result: { supported: true, isMobile: false },
       deviceInfo: '',
       debugUA: '',
+      allowedBrowsers: null,   // ⭐ จาก /api/system/video-mode ตาม country
       _visHandler: null
     }
   },
@@ -86,11 +87,15 @@ export default {
       return this.result.supported === false
     }
   },
-  mounted() {
+  async mounted() {
+    await this._loadAllowedBrowsers()
     this._runCheck()
     // Re-check when tab visible (user may switch browsers via deep link etc.)
-    this._visHandler = () => {
-      if (document.visibilityState === 'visible') this._runCheck()
+    this._visHandler = async () => {
+      if (document.visibilityState === 'visible') {
+        await this._loadAllowedBrowsers()
+        this._runCheck()
+      }
     }
     document.addEventListener('visibilitychange', this._visHandler)
   },
@@ -98,9 +103,26 @@ export default {
     if (this._visHandler) document.removeEventListener('visibilitychange', this._visHandler)
   },
   methods: {
+    async _loadAllowedBrowsers() {
+      // ดึง country + config พร้อมกัน → เลือก list ตาม IP group
+      try {
+        const [modeResp, geoResp] = await Promise.all([
+          fetch('/api/system/video-mode', { credentials: 'include', cache: 'no-store' })
+            .then(r => r.ok ? r.json() : {}).catch(() => ({})),
+          fetch('/api/geo/whoami', { credentials: 'include', cache: 'no-store' })
+            .then(r => r.ok ? r.json() : {}).catch(() => ({}))
+        ])
+        const country = (geoResp.country || '').toUpperCase()
+        let list
+        if (country === 'CN')      list = modeResp.ipBaseCnAllowedBrowsers
+        else if (country === 'TH') list = modeResp.ipBaseThAllowedBrowsers
+        else                       list = modeResp.ipBaseOtherAllowedBrowsers
+        if (Array.isArray(list) && list.length) this.allowedBrowsers = list
+      } catch { /* fail-open */ }
+    },
     _runCheck() {
       try {
-        this.result = checkBrowserSupport()
+        this.result = checkBrowserSupport(this.allowedBrowsers)
         this.deviceInfo = getDeviceInfo()
         this.debugUA = navigator.userAgent || ''
       } catch (err) {
@@ -108,7 +130,8 @@ export default {
         this.result = { supported: true, isMobile: false }
       }
     },
-    checkAgain() {
+    async checkAgain() {
+      await this._loadAllowedBrowsers()
       this._runCheck()
     }
   }

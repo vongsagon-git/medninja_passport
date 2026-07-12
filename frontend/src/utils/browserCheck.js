@@ -1,148 +1,83 @@
-// Browser & Device detection — ตามกฎ docs/RULES.md
-// iPhone/iPad → No-DRM, Chrome iOS (CriOS/) เท่านั้น
-// Android → Widevine DRM, Chrome เท่านั้น
-// Desktop → Widevine DRM, Chrome เท่านั้น
-// Exception path → ดู isExceptionPath() ใน views
+// ═══════════════════════════════════════════════════════════
+// Browser & Device Detection — driven by IP BASE config
+// ═══════════════════════════════════════════════════════════
+// Circuit Breaker (SystemCircuit.vue) เก็บ list "Browser Allow"
+// ต่อกลุ่ม IP (TH / CN / Other) → checkBrowserSupport() รับ
+// list มา แล้ว allow เฉพาะที่อยู่ใน list. นอกนั้น block หมด.
+//
+// 4 browser slots เท่านั้น:
+//   Chrome  — Chrome desktop + Chrome iOS (CriOS) + Chrome Android
+//   Safari  — Safari desktop + Safari iOS
+//   Edge    — Edge desktop + Edge iOS (EdgiOS) + Edge Android
+//   In-App  — LINE / Facebook / Instagram / WeChat / TikTok / etc.
+// ═══════════════════════════════════════════════════════════
 
-import { isIOS as detectIOS, isAndroid as detectAndroid, getOS as detectOSHelper, getBrowser as detectBrowserHelper } from './deviceDetect'
+import { getBrowser as detectBrowserHelper, getOS as detectOSHelper } from './deviceDetect'
 
 export const EXCEPTION_SECTION_IDS = ['69d4bd730b7e480d9c5213a0']
 
-export function isExceptionPath(path) {
+export function isExceptionPath (path) {
   if (!path) return false
-  // /demo/watch/* → ผ่านทุก browser (วิดีโอตัวอย่างก่อนสมัคร)
   if (path.startsWith('/demo/watch')) return true
-  // section พิเศษ → ผ่านทุก browser
   return EXCEPTION_SECTION_IDS.some(id => path.includes(`/my/watch/${id}`))
 }
 
-export function checkBrowserSupport() {
-  const ua = navigator.userAgent || ''
+// ─── Detect current browser as one of 4 slots (or 'Other') ───
+export function detectBrowserSlot (ua = navigator.userAgent || '') {
+  // In-app browsers ครอบทับก่อน (UA มี Chrome/Safari ปนด้วย)
+  if (/Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|KAKAOTALK|Discord|Messenger|Twitter|TwitterAndroid|Snapchat|Telegram|Slack|Pinterest|musical_ly|BytedanceWebview|TikTok|ZoomWebKit|GSA\/|YahooMobile|DuckDuckGo/i.test(ua)) {
+    return 'In-App'
+  }
+  // Edge (มี Chrome/Safari ปนใน UA — ต้องเช็คก่อน)
+  if (/EdgiOS|EdgA|Edg\//.test(ua)) return 'Edge'
+  // Chrome (รวม CriOS = Chrome iOS)
+  if (/CriOS|Chrome\//.test(ua)) return 'Chrome'
+  // Safari (desktop + iOS)
+  if (/Safari\//.test(ua)) return 'Safari'
+  return 'Other'
+}
 
-  // ═══ 1. Device detection (มาตรฐานเดียวจาก deviceDetect.js) ═══
-  const isIOS = detectIOS(ua)
-  const isAndroid = detectAndroid(ua)
-  const isMobile = isIOS || isAndroid
-    || /Windows Phone|IEMobile/i.test(ua)
-    || /webOS|BlackBerry|BB10|KAIOS|HarmonyOS/i.test(ua)
-    || /Opera Mini|Opera Mobi/i.test(ua)
+/**
+ * checkBrowserSupport
+ * @param {string[]} [allowedBrowsers]  ← จาก ipBase*AllowedBrowsers config
+ *                                       ถ้าไม่ส่ง (fail-open) = allow เฉพาะ Chrome+Safari+Edge
+ * @param {string}   [ua]
+ * @returns {{supported: boolean, isMobile: boolean, message?: string, detail?: string, slot?: string}}
+ */
+export function checkBrowserSupport (allowedBrowsers, ua) {
+  ua = ua || navigator.userAgent || ''
+  // fallback list — ใช้ตอน config ยังไม่โหลด (safety net)
+  const allow = Array.isArray(allowedBrowsers) && allowedBrowsers.length
+    ? allowedBrowsers
+    : ['Chrome', 'Safari', 'Edge']
 
-  // ═══ 2. In-app browser → block ก่อน (ครอบคลุมทุก major app) ═══
-  // Social + messenger apps in-app browsers ห้ามใช้ทั้งหมด
-  // (เพราะเปิด browser พิเศษที่จำกัด API + ไม่มี Widevine + ไม่มี fullscreen)
-  const inApp = new RegExp([
-    'Line/',                          // LINE
-    'FBAN', 'FBAV', 'FB_IAB',         // Facebook
-    'Instagram',                       // Instagram
-    'musical_ly', 'BytedanceWebview', 'TikTok',  // TikTok
-    'MicroMessenger',                  // WeChat
-    'KAKAOTALK',                       // KakaoTalk
-    'Discord',                         // Discord
-    'ZoomWebKit',                      // Zoom
-    'Twitter', 'TwitterAndroid',       // Twitter / X
-    'Snapchat',                        // Snapchat
-    'Telegram',                        // Telegram in-app
-    'Slack',                           // Slack
-    'Messenger',                       // Meta Messenger (แยกจาก FB main)
-    'Pinterest',                       // Pinterest
-    'GSA/',                            // Google Search App
-    'YahooMobile',                     // Yahoo app
-    'DuckDuckGo',                      // (browser จริง แต่ block ไว้เพราะไม่ทดสอบ)
-  ].join('|'), 'i')
-  if (inApp.test(ua)) {
+  const slot = detectBrowserSlot(ua)
+  const isMobile = /iPhone|iPod|iPad|Android|Windows Phone|IEMobile|webOS|BlackBerry|BB10|KAIOS|HarmonyOS|Opera Mini|Opera Mobi/i.test(ua)
+
+  // อยู่ใน allow list → ผ่าน
+  if (allow.includes(slot)) {
+    return { supported: true, isMobile, slot }
+  }
+
+  // นอก allow list → block พร้อมข้อความที่เหมาะสม
+  if (slot === 'In-App') {
     return {
-      supported: false, isMobile: true,
+      supported: false, isMobile: true, slot,
       message: 'กรุณาเปิดใน Chrome หรือ Safari',
       detail: 'Browser ที่อยู่ในแอป (LINE / Facebook / Instagram / TikTok / etc.) ไม่รองรับ กดปุ่ม ⋮ หรือ ⋯ แล้วเลือก "เปิดใน Browser"'
     }
   }
 
-  // ═══ 3. iPhone / iPad — Safari + Chrome iOS + Firefox iOS + Edge iOS ═══
-  //   iOS ทุก browser = WebKit engine เดียวกัน (Apple บังคับ) → capability เท่ากัน
-  //   1 ID dual encryption pattern: iOS ใช้ PlayAuth + playConfig filter Ali Prop → work ทุก browser
-  //   ยัง block: In-app browser (Line/FB/IG/WeChat) — เช็คไปแล้วใน step 2
-  if (isIOS) {
-    const isRealBrowser = /Safari\//.test(ua)
-      || /CriOS\//.test(ua)
-      || /FxiOS\//.test(ua)
-      || /EdgiOS\//.test(ua)
-    if (isRealBrowser) {
-      return { supported: true, isMobile: true }
-    }
-    return {
-      supported: false, isMobile: true,
-      message: 'iPhone/iPad รองรับเฉพาะ Safari, Chrome, Firefox, Edge',
-      detail: 'กรุณาเปิดใน Safari หรือ Chrome เพื่อดูวีดีโอ'
-    }
-  }
-
-  // ═══ 4. Android — Chrome เท่านั้น ═══
-  if (isAndroid) {
-    const isChromeAndroid = /Chrome\//.test(ua)
-      && !/Edg\//.test(ua)
-      && !/OPR\//.test(ua)
-      && !/SamsungBrowser/i.test(ua)
-      && !/UCBrowser/i.test(ua)
-    if (isChromeAndroid) {
-      return { supported: true, isMobile: true }
-    }
-    return {
-      supported: false, isMobile: true,
-      message: 'Android รองรับเฉพาะ Google Chrome',
-      detail: 'กรุณาเปิดลิงก์นี้ใน Chrome เพื่อดูวีดีโอ'
-    }
-  }
-
-  // Mobile อื่นๆ (Windows Phone, BlackBerry, etc.) — ไม่ support
-  if (isMobile) {
-    return {
-      supported: false, isMobile: true,
-      message: 'อุปกรณ์นี้ไม่รองรับ',
-      detail: 'ระบบรองรับ iPhone, iPad, Android, Windows, macOS, Linux เท่านั้น'
-    }
-  }
-
-  // ═══ 2. Desktop — Chrome เท่านั้น ═══
-  // เหตุผล: ระบบใช้ Widevine DRM ซึ่งทำงานเสถียรกับ Chrome
-  // Safari = FairPlay (ไม่รองรับ Widevine)
-  // Edge/Firefox/Brave/อื่นๆ = Widevine ไม่เสถียร หรือมีปัญหา anti-share
-
-  // Block Brave (ตรวจก่อน Chrome เพราะ UA เหมือนกัน)
-  if (navigator.brave !== undefined) {
-    return {
-      supported: false, isMobile: false,
-      message: 'กรุณาใช้ Google Chrome เพื่อดูวีดีโอ',
-      detail: 'ระบบรองรับเฉพาะ Google Chrome บน Desktop เพื่อความปลอดภัยและการเล่นวีดีโอที่เสถียร'
-    }
-  }
-
-  // Chrome เท่านั้น — exclude Edg (Edge) + อื่นๆ ทั้งหมด
-  const isChrome = /Chrome\//.test(ua)
-    && !/Edg\//.test(ua)
-    && !/OPR\//.test(ua)
-    && !/Vivaldi/i.test(ua)
-    && !/YaBrowser/i.test(ua)
-    && !/UCBrowser/i.test(ua)
-    && !/QQBrowser/i.test(ua)
-    && !/Maxthon/i.test(ua)
-    && !/whale/i.test(ua)
-    && !/Chromium\//.test(ua)
-    && !/Electron/i.test(ua)
-    && !/SamsungBrowser/i.test(ua)
-
-  if (isChrome) {
-    return { supported: true, isMobile: false }
-  }
-
-  // Block ทุก browser ที่ไม่ใช่ Chrome
+  // Other = ไม่รู้จัก หรือถูก admin ตัดออก
+  const allowText = allow.filter(b => b !== 'In-App').join(' / ') || 'Chrome'
   return {
-    supported: false, isMobile: false,
-    message: 'กรุณาใช้ Google Chrome เพื่อดูวีดีโอ',
-    detail: 'ระบบรองรับเฉพาะ Google Chrome บน Desktop (Windows / macOS / Linux) — กรุณาเปิดลิงก์นี้ใน Chrome เพื่อดูวีดีโอ'
+    supported: false, isMobile, slot,
+    message: `กรุณาใช้ ${allowText} เพื่อดูวีดีโอ`,
+    detail: `ระบบรองรับ ${allowText} เท่านั้น กรุณาเปิดลิงก์นี้ใน browser ที่รองรับ`
   }
 }
 
-export function getDeviceInfo() {
+export function getDeviceInfo () {
   const ua = navigator.userAgent || ''
   return `${detectOSHelper(ua)} · ${detectBrowserHelper(ua)}`
 }

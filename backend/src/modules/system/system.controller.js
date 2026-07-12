@@ -80,7 +80,7 @@ exports.setVideoMode = async (req, res, next) => {
     }
     // ⭐ Browser Allow fields (array value)
     const browserAllowFields = ['ipBaseThAllowedBrowsers', 'ipBaseCnAllowedBrowsers', 'ipBaseOtherAllowedBrowsers']
-    const validBrowsers = ['Chrome', 'Safari', 'Firefox', 'Edge', 'In-App', 'Others']
+    const validBrowsers = ['Chrome', 'Safari', 'Edge', 'In-App']
 
     if (!videoModeFields[field] && !browserAllowFields.includes(field)) {
       return res.status(400).json({
