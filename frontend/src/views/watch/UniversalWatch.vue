@@ -838,7 +838,13 @@ export default {
     backUrl() {
       if (this.isDemo) return '/demo'
       if (this.isAdminPreview) return '/admin/sections'
-      return `${this.regionConfig.sectionPathPrefix}${this.sectionId}`
+      // ⭐ ใช้ routeRegion (จาก path) ไม่ใช่ region (uiMode) — กัน redirect loop
+      const prefix = this.routeRegion === 'cn' ? '/my-cn/section/' : '/my/section/'
+      return `${prefix}${this.sectionId}`
+    },
+    // ⭐ Dashboard path ตาม routeRegion (path) ไม่ใช่ uiMode
+    routeDashboardPath() {
+      return this.routeRegion === 'cn' ? '/my-cn' : '/my'
     },
     // ═══════════════════════════════════════════════════════════
     // ⭐ Circuit breaker + Region — provider + variant
@@ -1549,7 +1555,7 @@ export default {
         if (data.kicked) {
           // admin เตะ → redirect ออก (region-aware)
           clearInterval(this._heartbeatInterval)
-          this.$router.push(this.regionConfig.dashboardPath)
+          this.$router.push(this.routeDashboardPath)
           return
         }
         if (!data.replaced) {
@@ -1926,7 +1932,7 @@ export default {
       // Admin kick → ออกทันที (region-aware)
       this._socket.on('kicked', () => {
         if (this._heartbeatInterval) clearInterval(this._heartbeatInterval)
-        this.$router.push(this.regionConfig.dashboardPath)
+        this.$router.push(this.routeDashboardPath)
       })
     },
     _beaconClear() {

@@ -31,9 +31,9 @@
       ref="aliPlayerBox"
       class="ali-player-box"
     ></div>
-    <!-- Loading overlay — บังจน Ali player ready -->
-    <div v-if="!playerReady" class="ali-player-loading">
-      <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
+    <!-- Loading overlay: thin top line only — ไม่บัง video canvas -->
+    <div v-if="!playerReady" class="ali-player-loading" style="pointer-events:none">
+      <div class="skeleton-thin"></div>
     </div>
   </div>
 </template>
@@ -391,8 +391,12 @@ export default {
   inset: 0;
   pointer-events: none;
 }
-.skeleton {
-  background: linear-gradient(90deg, #1f2937 0%, #374151 50%, #1f2937 100%);
+/* Thin loading line at top — ไม่บัง video */
+.skeleton-thin {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #f59e0b 50%, transparent 100%);
   background-size: 200% 100%;
   animation: ali-skel 1.4s ease-in-out infinite;
 }
