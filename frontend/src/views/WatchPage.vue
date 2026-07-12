@@ -584,6 +584,23 @@
         </div>
       </div>
     </div>
+
+    <!-- ⭐ Rotate FS Prompt — โผล่ตอนหมุนจอ landscape, tap เพื่อ real FS -->
+    <div v-if="showRotateFsPrompt" class="rotate-fs-prompt" @click="_acceptRotateFs">
+      <div class="rotate-fs-card">
+        <div class="rotate-fs-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+          </svg>
+        </div>
+        <div class="rotate-fs-title">แตะเพื่อดูเต็มจอ</div>
+        <div class="rotate-fs-sub">พร้อมลายน้ำติดตามป้องกันคัดลอก</div>
+        <button class="rotate-fs-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
+          เต็มจอเลย
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -636,6 +653,7 @@ export default {
       _wmWidth: window.innerWidth,
       watchedMap: getWatchedMap(),
       isFullscreen: false,
+      showRotateFsPrompt: false,
       tabHidden: false,
       showLineLinkPopup: false,
       isPlaying: false,
@@ -894,20 +912,39 @@ export default {
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
-    // ⭐ Auto fullscreen ตอน rotate เป็น landscape (mobile only)
+    // ⭐ Auto FS behavior แยกตาม device:
+    //   iOS: หมุน landscape → CSS fake FS ทันที (native เปิด iOS video player → ลายน้ำหาย)
+    //   Android: หมุน landscape → แสดง prompt overlay รอ user tap (บังคับได้ 100%)
+    //   Portrait: exit FS + hide prompt
     this._onOrientationChange = () => {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      if (!isMobile) return
+      const isIos = detectIOS() || detectMacSafari()
+      const isAndroid = /Android/i.test(navigator.userAgent)
+      if (!isIos && !isAndroid) return
       const isLandscape = window.innerWidth > window.innerHeight
-      if (this._orientBusy) return
-      if (isLandscape && !this.isFullscreen) {
-        this._orientBusy = true
-        this.toggleFullscreen && this.toggleFullscreen()
-        setTimeout(() => { this._orientBusy = false }, 500)
-      } else if (!isLandscape && this.isFullscreen) {
-        this._orientBusy = true
-        this.toggleFullscreen && this.toggleFullscreen()
-        setTimeout(() => { this._orientBusy = false }, 500)
+
+      if (isLandscape) {
+        if (isIos) {
+          // iOS: force CSS fake FS
+          if (!this.isFullscreen) {
+            this.isFullscreen = true
+            document.body.style.overflow = 'hidden'
+          }
+        } else {
+          // Android: ถ้ายังไม่ FS → โผล่ prompt
+          if (!document.fullscreenElement && !this.isFullscreen) {
+            this.showRotateFsPrompt = true
+          }
+        }
+      } else {
+        // Portrait: exit FS + hide prompt
+        this.showRotateFsPrompt = false
+        if (isIos && this.isFullscreen) {
+          this.isFullscreen = false
+          document.body.style.overflow = ''
+        }
+        if (isAndroid && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {})
+        }
       }
     }
     window.addEventListener('orientationchange', this._onOrientationChange)
@@ -1871,21 +1908,16 @@ export default {
       if (!box) return
       const isIos = detectIOS() || detectMacSafari()
 
-      // iOS: CSS fake เท่านั้น (native = เปิด iOS video player → watermark หาย)
+      // iOS: CSS fake FS (native = เปิด iOS video player ลายน้ำหาย)
       if (isIos) {
         this.isFullscreen = !this.isFullscreen
         document.body.style.overflow = this.isFullscreen ? 'hidden' : ''
         return
       }
 
-      // Android + Desktop: native fullscreen บน .w-player-box
-      //  - .w-player-box ครอบทั้ง iframe + watermark overlay → FS ครอบทั้งหมด ลายน้ำติดไป
-      //  - ถ้า requestFullscreen reject (auto-rotate ไม่ใช่ gesture) → fallback CSS fake
+      // Android + Desktop: real native FS (ลายน้ำใน .w-player-box ติดไปด้วย)
       if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {
-          this.isFullscreen = false
-          document.body.style.overflow = ''
-        })
+        document.exitFullscreen().catch(() => {})
       } else {
         const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
         req.then(() => {
@@ -1897,11 +1929,28 @@ export default {
             })
           }
         }).catch(() => {
-          // Fallback: CSS fake (Android auto-rotate ไม่ใช่ user gesture)
+          // Reject → fallback CSS fake
           this.isFullscreen = true
           document.body.style.overflow = 'hidden'
         })
       }
+    },
+    _acceptRotateFs() {
+      // User tap overlay = user gesture ชัดเจน → requestFullscreen ผ่านแน่
+      this.showRotateFsPrompt = false
+      const box = this.$el.querySelector('.w-player-box')
+      if (!box) return
+      const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
+      req.then(() => {
+        // Bonus: lock orientation landscape
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {})
+        }
+      }).catch(() => {
+        // Fallback: CSS fake
+        this.isFullscreen = true
+        document.body.style.overflow = 'hidden'
+      })
     },
     _startIdleTimer() {
       this._clearIdleTimer()
@@ -3813,5 +3862,94 @@ kbd {
 .w-pl-bonus { padding-left: 36px; background: rgba(251,191,36,0.05); }
 .w-pl-bonus.active { background: rgba(251,191,36,0.15); }
 .w-pl-bonus-star { font-size: 12px; border: none !important; }
+
+/* ══════════════════════════════════════════════════════════ */
+/*   Rotate FS Prompt (Android landscape → tap เพื่อ real FS)    */
+/* ══════════════════════════════════════════════════════════ */
+.rotate-fs-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 999998;
+  background: linear-gradient(135deg, rgba(6, 20, 40, 0.96), rgba(12, 46, 82, 0.96));
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  cursor: pointer;
+  animation: rfs-fade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+@keyframes rfs-fade {
+  from { opacity: 0; backdrop-filter: blur(0); }
+  to { opacity: 1; backdrop-filter: blur(12px); }
+}
+.rotate-fs-card {
+  text-align: center;
+  max-width: 340px;
+  color: #e0f2fe;
+  animation: rfs-scale 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes rfs-scale {
+  from { transform: scale(0.85) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.rotate-fs-icon {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 20px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 20px 40px rgba(59, 130, 246, 0.35);
+  animation: rfs-pulse 2s ease-in-out infinite;
+}
+@keyframes rfs-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 20px 40px rgba(59, 130, 246, 0.35); }
+  50% { transform: scale(1.05); box-shadow: 0 24px 50px rgba(59, 130, 246, 0.55); }
+}
+.rotate-fs-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f0f9ff;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+.rotate-fs-sub {
+  font-size: 13px;
+  color: rgba(224, 242, 254, 0.72);
+  margin-bottom: 24px;
+  line-height: 1.55;
+}
+.rotate-fs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3b82f6, #0284c7);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.4);
+  transition: transform 0.15s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.rotate-fs-btn:active {
+  transform: scale(0.96);
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.3);
+}
+
+/* iOS fake FS — ซ่อน topbar + sidebar เหลือแค่ player frame */
+.watch-page:has(.w-player-box.is-fullscreen) .w-topbar,
+.watch-page:has(.w-player-box.is-fullscreen) .w-sidebar,
+.watch-page:has(.w-player-box.is-fullscreen) .w-video-info {
+  display: none !important;
+}
 
 </style>
