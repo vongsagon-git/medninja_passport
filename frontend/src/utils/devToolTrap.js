@@ -10,30 +10,13 @@
 // เรียก startDevToolTrap() ตอน mounted → เก็บ handle → stopDevToolTrap(handle) ตอน unmount
 // ═══════════════════════════════════════════════════════════
 
-import { isRealMobile } from './deviceDetect'
-
-const THRESHOLD_MS = 100
-const INTERVAL_MS = 500
+// ⚠️ ปิดชั่วคราว 2026-07-12 — debugger statement รบกวน Aliplayer WV DRM handshake
+//   → ทำให้ WV player ขาว (SDK init/license request timeout)
+//   ใช้ DevTool panel-gap detection แทน (จับ docked panel ได้)
+//   ยังต้อง test แล้วค่อยกลับมาเปิด
 
 export function startDevToolTrap(onDetect) {
-  // Real mobile ไม่มี DevTool → skip เลย ไม่กิน CPU
-  if (isRealMobile()) return null
-
-  let triggered = false
-  const handle = setInterval(() => {
-    if (triggered) return
-    const start = performance.now()
-    // ถ้า DevTool เปิด → หยุดที่ debugger นี้ (ต้อง "pause on debugger" default เปิด)
-    // eslint-disable-next-line no-debugger
-    debugger
-    const elapsed = performance.now() - start
-    if (elapsed > THRESHOLD_MS) {
-      triggered = true
-      clearInterval(handle)
-      try { onDetect && onDetect() } catch (e) {}
-    }
-  }, INTERVAL_MS)
-  return handle
+  return null
 }
 
 export function stopDevToolTrap(handle) {

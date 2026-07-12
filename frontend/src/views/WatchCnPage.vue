@@ -116,6 +116,20 @@
           <!-- Player -->
           <div v-else-if="video" class="w-player-area" @contextmenu.prevent>
             <div class="w-player-box" :class="{ 'is-fullscreen': isFullscreen }">
+              <!-- ⭐ ปุ่ม FS ระดับบนสุด — โผล่แม้ WV DRM ยังไม่ ready (fallback ไม่ให้ stuck) -->
+              <button v-if="hasAliVideo" class="wm-fs-btn" :class="{ 'is-active': isFullscreen }" @click="aliToggleFullscreen" :title="isFullscreen ? 'ย่อ' : 'เต็มจอ'">
+                <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+                <span class="wm-fs-label">{{ isFullscreen ? 'ย่อ' : 'เต็มจอ' }}</span>
+              </button>
+              <!-- ⭐ ปุ่มส่ง log แอบ ๆ (ซ่อนตรงมุมล่างซ้าย opacity ต่ำ — user กดได้ตอนขาว) -->
+              <button v-if="hasAliVideo" class="wm-stealth-log-btn" @click="_sendStealthLog" title="รายงานปัญหา">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                </svg>
+              </button>
+              <!-- ⭐ Toast แจ้งส่ง log แล้ว -->
+              <div v-if="_stealthLogSent" class="wm-stealth-log-toast">✓ ส่งรายงานแล้ว</div>
               <!-- Replaced overlay — มี tab อื่นกำลังดูอยู่ -->
               <!-- Recorder blocked -->
               <div v-if="recorderBlocked" class="replaced-overlay" style="z-index:100">
@@ -254,12 +268,7 @@
                         <button v-for="s in [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]" :key="s" class="ali-ctl-speed-item" :class="{ active: aliSpeed === s }" @click="aliSetSpeed(s)">{{ s }}x</button>
                       </div>
                     </div>
-                    <!-- Fullscreen -->
-                    <button class="ali-ctl-btn ali-ctl-fs" :class="{ 'is-active': isFullscreen }" @click="aliToggleFullscreen" :title="isFullscreen ? 'ย่อ' : 'เต็มจอ'">
-                      <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-                      <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
-                      <span class="ali-ctl-fs-label">{{ isFullscreen ? 'ย่อ' : 'เต็มจอ' }}</span>
-                    </button>
+                    <!-- Fullscreen: ย้ายไปมุมบนขวาระดับ player-box แล้ว (โผล่แม้ WV ยังไม่ ready) -->
                   </div>
                 </div>
               </div>
@@ -725,6 +734,7 @@ export default {
       watchedMap: getWatchedMap(),
       isFullscreen: false,
       showRotateFsPrompt: false,
+      _stealthLogSent: false,
       tabHidden: false,
       showLineLinkPopup: false,
       isPlaying: false,
@@ -2956,6 +2966,32 @@ export default {
       const v = parseFloat(e.target.value) || 0
       this.aliSetVolume(v)
     },
+    _sendStealthLog () {
+      // แอบ ๆ ส่ง log ให้ admin — user เห็นแค่ toast "ส่งรายงานแล้ว"
+      const v = this.videoIdToPlay || ''
+      const isIos = detectIOS() || detectMacSafari()
+      const path = isIos ? 'ali-prop' : 'ali-widevine'
+      const info = {
+        detail: [
+          `path=${path}`,
+          `videoId=${v}`,
+          `playerReady=${this.playerReady}`,
+          `hasAliVideo=${this.hasAliVideo}`,
+          `aliInitInFlight=${!!this._aliInitInFlight}`,
+          `playerError=${this._playerError || 'none'}`,
+          `isFullscreen=${this.isFullscreen}`,
+          `showRotateFsPrompt=${this.showRotateFsPrompt}`,
+          `route=${this.$route.path}`,
+          `mounted=${this._mountedAt ? Math.round((Date.now() - this._mountedAt) / 1000) + 's' : 'n/a'}`
+        ].join(' | ')
+      }
+      try {
+        sendLog('watch_cn_stealth_report', 'User tapped stealth report button', info)
+      } catch (e) {}
+      // Toast แบบ silent
+      this._stealthLogSent = true
+      setTimeout(() => { this._stealthLogSent = false }, 2500)
+    },
     aliToggleFullscreen () {
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
@@ -3509,8 +3545,74 @@ kbd {
   font-family: inherit;
 }
 .wm-fs-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.wm-fs-label {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
 .wm-fs-btn:hover { background: rgba(0, 0, 0, 0.85); transform: scale(1.03); }
 .wm-fs-btn:active { transform: scale(0.96); }
+.wm-fs-btn.is-active {
+  background: rgba(59, 130, 246, 0.85);
+  border-color: rgba(147, 197, 253, 0.6);
+}
+.w-player-box.is-fullscreen .wm-fs-btn {
+  top: calc(var(--country-banner-h, 28px) + env(safe-area-inset-top, 0px) + 10px);
+}
+@media (max-width: 640px) {
+  .wm-fs-btn { top: 8px; right: 8px; height: 30px; padding: 0 10px 0 8px; }
+  .wm-fs-btn svg { width: 16px; height: 16px; }
+  .wm-fs-label { font-size: 12px; }
+}
+/* ⭐ ปุ่มส่ง log แอบ ๆ (มุมล่างซ้าย, opacity ต่ำ, แค่ user ที่รู้จัก) */
+.wm-stealth-log-btn {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 9998;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, color 0.2s, background 0.2s;
+  opacity: 0.4;
+}
+.wm-stealth-log-btn:hover {
+  opacity: 1;
+  color: #7dd3fc;
+  background: rgba(59, 130, 246, 0.2);
+}
+.wm-stealth-log-btn:active { transform: scale(0.9); }
+.w-player-box.is-fullscreen .wm-stealth-log-btn {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+.wm-stealth-log-toast {
+  position: absolute;
+  bottom: 42px;
+  left: 10px;
+  z-index: 9998;
+  padding: 8px 14px;
+  background: rgba(16, 185, 129, 0.95);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  animation: stealth-toast-in 0.2s ease-out;
+  pointer-events: none;
+}
+@keyframes stealth-toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 /* Ali control bar Fullscreen button — label + is-active */
 .ali-ctl-fs {
   gap: 6px !important;
