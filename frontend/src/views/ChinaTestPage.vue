@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 // ⭐ Video สำหรับ landing page ขาย — ORIGINAL MP4 (ไม่ encrypt) เพื่อไม่ติด browser/OS ใด ๆ
-const VIDEO_ID = '60985cb97db271f1976fe7c7690102'
+const VIDEO_ID = '60985cb97db271f1976fe7e7c7690102'
 // ⭐ Landing endpoint = public (no auth, no chrome guard) — สำหรับหน้าขาย
 const PLAYAUTH_ENDPOINT = `/api/china/landing-playauth/${VIDEO_ID}`
 
@@ -77,21 +77,29 @@ async function initPlayer() {
 
     const playAuth = await fetchPlayAuth()
 
-    // ⭐ ORIGINAL MP4 — ไม่ set encryptType เพื่อให้ Aliplayer เสิร์ฟไฟล์ต้นฉบับ
-    //    เล่นได้ทุก browser/OS โดยไม่ต้อง detect iOS/Safari
+    // ⭐ FORCE Original stream (mov, unencrypted, 4K)
+    //   Video มี 3 streams: Original mov (ไม่ encrypt), HD m3u8 (Ali Private), HD m3u8 (DRM)
+    //   ต้อง force `format: 'mp4'` + `qualitySort: 'asc'` → Aliplayer เลือก Original ที่ไม่มี DRM
+    //   → เล่นได้ทุก browser/OS/device โดยไม่ติด encryption ใด ๆ
     const playerConfig = {
       id: 'landing-player',
       vid: VIDEO_ID,
       playauth: playAuth,
       width: '100%',
       height: '100%',
-      autoplay: false,      // ⭐ ไม่ auto — ให้ user กดปุ่ม (มีเสียงเต็ม)
+      autoplay: false,
       isLive: false,
       rePlay: false,
       playsinline: true,
       preload: true,
       controlBarVisibility: 'hover',
       useH5Prism: true,
+      // ⭐ Force unencrypted mp4/mov
+      format: 'mp4',
+      mediaType: 'video',
+      qualitySort: 'asc',
+      definition: 'OD',       // Original Definition = ตัวที่ไม่ encrypt
+      defaultDefinition: 'OD',
       license: {
         domain: 'passport.medninja.academy',
         key: 'vPC0n17ZWmwsoyeP9659f501b25944c10903c73d068157faa'

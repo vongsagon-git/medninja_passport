@@ -22,7 +22,7 @@ router.get('/playauth/:videoId', originCheck, chromeOnly, auth, getPlayAuth)
 const LANDING_ALLOWED_VIDEOS = new Set([
   '00bef48a7d1071f18224e6f6c55a0102', // Introduce.mov — DRM + Ali Prop dual encryption
   'c0e75fef7d3371f18224e6f6c55a0102', // B1 Microbiology 1.mov — DRM + Ali Prop dual encryption
-  '60985cb97db271f1976fe7c7690102'    // Introduce (48s) — ORIGINAL mp4 สำหรับ /china landing (ไม่ encrypt)
+  '60985cb97db271f1976fe7e7c7690102'  // Introduce (48s, 4K mov) — ORIGINAL สำหรับ /china landing (ไม่ encrypt, มี HD m3u8 backup Ali Private + DRM)
 ])
 router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   if (!LANDING_ALLOWED_VIDEOS.has(req.params.videoId)) {
