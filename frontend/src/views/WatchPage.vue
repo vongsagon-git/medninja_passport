@@ -896,26 +896,30 @@ export default {
     }
 
     // ═══ Fullscreen detection ═══
-    // - iOS: ใช้ Vue state (CSS fake, native ยิงไม่ได้)
-    // - Android/Desktop: sync ตาม document.fullscreenElement (native)
-    //   Android fallback CSS fake ตอน reject → toggleFullscreen ตั้ง state เอง
     this._onFsChange = () => {
       const isIos = detectIOS() || detectMacSafari()
       if (isIos) return
       const nativeFs = !!document.fullscreenElement
-      // sync เฉพาะตอน state ไม่ตรงกับ native (กัน override ตอน fallback fake ทำงาน)
-      if (nativeFs !== this.isFullscreen && !this._fakeFsActive) {
+      if (nativeFs !== this.isFullscreen) {
         this.isFullscreen = nativeFs
         document.body.style.overflow = nativeFs ? 'hidden' : ''
+      }
+      // Reset flag ตอน exit FS จริง (ไม่ว่าจาก user หรือ browser)
+      if (!nativeFs) {
+        this._userInitiatedFs = false
+        if (screen.orientation && screen.orientation.unlock) {
+          try { screen.orientation.unlock() } catch (e) {}
+        }
       }
     }
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
     // ⭐ Auto FS behavior แยกตาม device:
-    //   iOS: หมุน landscape → CSS fake FS ทันที (native เปิด iOS video player → ลายน้ำหาย)
-    //   Android: หมุน landscape → แสดง prompt overlay รอ user tap (บังคับได้ 100%)
-    //   Portrait: exit FS + hide prompt
+    //   iOS: หมุน landscape → CSS fake FS ทันที
+    //   Android: หมุน landscape → แสดง prompt overlay รอ user tap
+    //   Portrait: hide prompt (แต่ **ไม่** auto exit FS — เพื่อให้ user กดปุ่ม FS แนวตั้งได้)
+    this._userInitiatedFs = false  // flag: FS มาจาก user tap ปุ่ม (ไม่ใช่ auto rotate)
     this._onOrientationChange = () => {
       const isIos = detectIOS() || detectMacSafari()
       const isAndroid = /Android/i.test(navigator.userAgent)
@@ -924,26 +928,23 @@ export default {
 
       if (isLandscape) {
         if (isIos) {
-          // iOS: force CSS fake FS
           if (!this.isFullscreen) {
             this.isFullscreen = true
             document.body.style.overflow = 'hidden'
           }
         } else {
-          // Android: ถ้ายังไม่ FS → โผล่ prompt
-          if (!document.fullscreenElement && !this.isFullscreen) {
+          // Android: ถ้ายังไม่ FS + ไม่ได้กดปุ่มเอง → โผล่ prompt
+          if (!document.fullscreenElement && !this.isFullscreen && !this._userInitiatedFs) {
             this.showRotateFsPrompt = true
           }
         }
       } else {
-        // Portrait: exit FS + hide prompt
+        // Portrait: hide prompt (แต่ไม่ auto exit FS — user อาจกดปุ่ม FS ตอนถือแนวตั้ง)
         this.showRotateFsPrompt = false
-        if (isIos && this.isFullscreen) {
+        // iOS: exit fake FS เฉพาะตอน auto rotate (ไม่ใช่ user กดปุ่ม)
+        if (isIos && this.isFullscreen && !this._userInitiatedFs) {
           this.isFullscreen = false
           document.body.style.overflow = ''
-        }
-        if (isAndroid && document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {})
         }
       }
     }
@@ -961,7 +962,18 @@ export default {
     }
     window.addEventListener('resize', this._onWmResize)
     // เช็คทุก 2 วิ — แยก resize กับ zoom ด้วย outerWidth
+    // Mobile ข้าม zoom check: มือถือไม่มี Ctrl+Zoom + หมุนจอ/FS ทำให้ innerWidth เปลี่ยนตลอด
+    this._isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     this._zoomCheckInterval = setInterval(() => {
+      if (this._isMobileDevice) return
+      // Skip zoom check ตอน fullscreen/prompt (CSS fake FS + native FS เปลี่ยน innerWidth)
+      if (this.isFullscreen || document.fullscreenElement || this.showRotateFsPrompt) {
+        // reset baseline ให้ตรงกับ FS state ตอน exit
+        this._zoomBaseOuterW = window.outerWidth
+        this._zoomBaseInnerW = window.innerWidth
+        this._wmBaseDpr = window.devicePixelRatio || 1
+        return
+      }
       const curOuterW = window.outerWidth
       const curInnerW = window.innerWidth
       // outerWidth เปลี่ยน = resize window → อัปเดต baseline
@@ -1907,6 +1919,11 @@ export default {
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
       const isIos = detectIOS() || detectMacSafari()
+      const isAndroid = /Android/i.test(navigator.userAgent)
+      const isLandscape = window.innerWidth > window.innerHeight
+
+      // ตั้ง flag: FS นี้มาจาก user tap ปุ่ม (กัน orientationchange auto exit)
+      this._userInitiatedFs = true
 
       // iOS: CSS fake FS (native = เปิด iOS video player ลายน้ำหาย)
       if (isIos) {
@@ -1915,12 +1932,21 @@ export default {
         return
       }
 
-      // Android + Desktop: real native FS (ลายน้ำใน .w-player-box ติดไปด้วย)
+      // Android + Desktop: real native FS
       if (document.fullscreenElement) {
+        this._userInitiatedFs = false
         document.exitFullscreen().catch(() => {})
+        if (screen.orientation && screen.orientation.unlock) {
+          try { screen.orientation.unlock() } catch (e) {}
+        }
       } else {
         const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
         req.then(() => {
+          // Android: lock ตามทิศที่ user ถืออยู่ตอนกดปุ่ม
+          if (isAndroid && screen.orientation && screen.orientation.lock) {
+            const lockDir = isLandscape ? 'landscape' : 'portrait'
+            screen.orientation.lock(lockDir).catch(() => {})
+          }
           if (!box._fsProtected) {
             box._fsProtected = true
             box.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
@@ -1936,18 +1962,17 @@ export default {
       }
     },
     _acceptRotateFs() {
-      // User tap overlay = user gesture ชัดเจน → requestFullscreen ผ่านแน่
+      // User tap prompt overlay (มาจากหมุน landscape) = user gesture → real FS
       this.showRotateFsPrompt = false
+      this._userInitiatedFs = true
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
       const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
       req.then(() => {
-        // Bonus: lock orientation landscape
         if (screen.orientation && screen.orientation.lock) {
           screen.orientation.lock('landscape').catch(() => {})
         }
       }).catch(() => {
-        // Fallback: CSS fake
         this.isFullscreen = true
         document.body.style.overflow = 'hidden'
       })

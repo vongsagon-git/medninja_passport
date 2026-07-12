@@ -1018,8 +1018,6 @@ export default {
     }
 
     // ═══ Fullscreen detection ═══
-    // - iOS: ใช้ Vue state (CSS fake, native ยิงไม่ได้)
-    // - Android/Desktop: sync ตาม document.fullscreenElement (native)
     this._onFsChange = () => {
       const isIos = detectIOS() || detectMacSafari()
       if (isIos) return
@@ -1028,13 +1026,18 @@ export default {
         this.isFullscreen = nativeFs
         document.body.style.overflow = nativeFs ? 'hidden' : ''
       }
+      if (!nativeFs) {
+        this._userInitiatedFs = false
+        if (screen.orientation && screen.orientation.unlock) {
+          try { screen.orientation.unlock() } catch (e) {}
+        }
+      }
     }
     document.addEventListener('fullscreenchange', this._onFsChange)
     document.addEventListener('webkitfullscreenchange', this._onFsChange)
 
-    // ⭐ Auto FS behavior แยกตาม device:
-    //   iOS: หมุน landscape → CSS fake FS (native เปิด iOS video player → ลายน้ำหาย)
-    //   Android: หมุน landscape → แสดง prompt overlay รอ user tap (บังคับได้ 100%)
+    // ⭐ Auto FS behavior แยกตาม device
+    this._userInitiatedFs = false
     this._onOrientationChange = () => {
       const isIos = detectIOS() || detectMacSafari()
       const isAndroid = /Android/i.test(navigator.userAgent)
@@ -1048,18 +1051,15 @@ export default {
             document.body.style.overflow = 'hidden'
           }
         } else {
-          if (!document.fullscreenElement && !this.isFullscreen) {
+          if (!document.fullscreenElement && !this.isFullscreen && !this._userInitiatedFs) {
             this.showRotateFsPrompt = true
           }
         }
       } else {
         this.showRotateFsPrompt = false
-        if (isIos && this.isFullscreen) {
+        if (isIos && this.isFullscreen && !this._userInitiatedFs) {
           this.isFullscreen = false
           document.body.style.overflow = ''
-        }
-        if (isAndroid && document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {})
         }
       }
     }
@@ -1076,17 +1076,24 @@ export default {
     }
     window.addEventListener('resize', this._onWmResize)
     // เช็คทุก 2 วิ — แยก resize กับ zoom ด้วย outerWidth
+    // Mobile ข้าม zoom check: มือถือไม่มี Ctrl+Zoom + หมุนจอ/FS ทำให้ innerWidth เปลี่ยนตลอด
+    this._isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     this._zoomCheckInterval = setInterval(() => {
+      if (this._isMobileDevice) return
+      if (this.isFullscreen || document.fullscreenElement || this.showRotateFsPrompt) {
+        this._zoomBaseOuterW = window.outerWidth
+        this._zoomBaseInnerW = window.innerWidth
+        this._wmBaseDpr = window.devicePixelRatio || 1
+        return
+      }
       const curOuterW = window.outerWidth
       const curInnerW = window.innerWidth
-      // outerWidth เปลี่ยน = resize window → อัปเดต baseline
       if (Math.abs(curOuterW - this._zoomBaseOuterW) > 10) {
         this._zoomBaseOuterW = curOuterW
         this._zoomBaseInnerW = curInnerW
         this._wmBaseDpr = window.devicePixelRatio || 1
         return
       }
-      // outerWidth เท่าเดิม แต่ innerWidth เปลี่ยน = ZOOM!
       if (this._zoomBaseInnerW > 0) {
         const ratio = curInnerW / this._zoomBaseInnerW
         if (ratio < 0.97 || ratio > 1.03) {
@@ -1095,7 +1102,6 @@ export default {
           return
         }
       }
-      // DPR baseline safety net (จับ Ctrl+scroll ที่หลุดจาก block)
       const dprRatio = (window.devicePixelRatio || 1) / this._wmBaseDpr
       if (dprRatio < 0.95 || dprRatio > 1.05) {
         alert('ตรวจพบการ Zoom — กรุณาตั้ง Zoom เป็น 100% (Ctrl+0) แล้วเข้าใหม่')
@@ -2929,6 +2935,10 @@ export default {
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
       const isIos = detectIOS() || detectMacSafari()
+      const isAndroid = /Android/i.test(navigator.userAgent)
+      const isLandscape = window.innerWidth > window.innerHeight
+
+      this._userInitiatedFs = true
 
       // iOS: CSS fake FS
       if (isIos) {
@@ -2937,20 +2947,31 @@ export default {
         return
       }
 
-      // Android + Desktop: real native FS (ลายน้ำใน .w-player-box ติดไปด้วย)
+      // Android + Desktop: real native FS
       if (document.fullscreenElement) {
+        this._userInitiatedFs = false
         document.exitFullscreen().catch(() => {})
+        if (screen.orientation && screen.orientation.unlock) {
+          try { screen.orientation.unlock() } catch (e) {}
+        }
       } else {
         const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
-        req.catch(() => {
+        req.then(() => {
+          // Android: lock ตามทิศที่ user ถืออยู่ตอนกดปุ่ม
+          if (isAndroid && screen.orientation && screen.orientation.lock) {
+            const lockDir = isLandscape ? 'landscape' : 'portrait'
+            screen.orientation.lock(lockDir).catch(() => {})
+          }
+        }).catch(() => {
           this.isFullscreen = true
           document.body.style.overflow = 'hidden'
         })
       }
     },
     _acceptRotateFs () {
-      // User tap overlay = user gesture ชัดเจน → requestFullscreen ผ่านแน่
+      // User tap prompt overlay (จากหมุน landscape) → real FS
       this.showRotateFsPrompt = false
+      this._userInitiatedFs = true
       const box = this.$el.querySelector('.w-player-box')
       if (!box) return
       const req = box.requestFullscreen ? box.requestFullscreen() : Promise.reject()
