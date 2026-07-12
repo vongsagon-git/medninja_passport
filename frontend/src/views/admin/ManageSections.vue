@@ -240,23 +240,31 @@
                                 <div class="bonus-subform-row">
                                   <input v-model="vid.ref.bonusTitle" type="text" class="form-control form-control-sm" placeholder="ชื่อ VDO เสริม" style="flex:1;min-width:100px;" :disabled="vid.ref._bonusLocked" />
                                   <span v-if="vid.ref._bonusLocked" class="lock-badge" @click="vid.ref._bonusLocked = false" title="ปลดล็อก">🔒</span>
-                                  <div style="min-width:160px;">
+                                  <span class="bonus-serve-label bonus-serve-a">A</span>
+                                  <div style="min-width:150px;">
                                     <div style="display:flex;gap:3px;align-items:center;">
-                                      <input v-model="vid.ref.bonusBunnyVideoId" type="text" class="form-control form-control-sm" placeholder="GLOBAL NoDRM UUID" :disabled="vid.ref._bonusLocked" @input="scheduleBonusVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.bonusBunnyVideoId" type="text" class="form-control form-control-sm" placeholder="A · NoDRM UUID" :disabled="vid.ref._bonusLocked" @input="scheduleBonusVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._bonusVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._bonusVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._bonusVerified === false" class="verify-status fail">✗</span>
                                     </div>
                                     <div v-if="vid.ref._bonusBunnyName" class="bunny-filename" :title="vid.ref._bonusBunnyName">{{ vid.ref._bonusBunnyName }}</div>
                                   </div>
-                                  <div style="min-width:160px;">
+                                  <div style="min-width:150px;">
                                     <div style="display:flex;gap:3px;align-items:center;">
-                                      <input v-model="vid.ref.bonusBunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="GLOBAL DRM UUID" :disabled="vid.ref._bonusLocked" @input="scheduleBonusDrmVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.bonusBunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="A · DRM UUID" :disabled="vid.ref._bonusLocked" @input="scheduleBonusDrmVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._bonusDrmVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._bonusDrmVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._bonusDrmVerified === false" class="verify-status fail">✗</span>
                                     </div>
                                     <div v-if="vid.ref._bonusDrmName" class="bunny-filename drm" :title="vid.ref._bonusDrmName">{{ vid.ref._bonusDrmName }}</div>
+                                  </div>
+                                  <span class="bonus-serve-label bonus-serve-b">B</span>
+                                  <div style="min-width:150px;">
+                                    <div style="display:flex;gap:3px;align-items:center;">
+                                      <input v-model="vid.ref.bonusAliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="B · Ali VID" :disabled="vid.ref._bonusLocked" />
+                                      <span v-if="vid.ref.bonusAliVideoId" class="verify-status ok">✓</span>
+                                    </div>
                                   </div>
                                   <span class="tree-video-dur">{{ vid.ref.bonusDuration && vid.ref.bonusDuration !== '--:--' ? vid.ref.bonusDuration : '--:--' }}</span>
                                 </div>
@@ -2602,6 +2610,23 @@ export default {
 .platform-row.china .platform-label {
   background: linear-gradient(135deg, #dc2626, #ef4444);
 }
+/* Bonus serve label A / B — compact แสดงติด input */
+.bonus-serve-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.bonus-serve-label.bonus-serve-a { background: linear-gradient(135deg, #059669, #10b981); }
+.bonus-serve-label.bonus-serve-b { background: linear-gradient(135deg, #dc2626, #ef4444); }
 .vid-slot {
   min-width: 0;
 }
