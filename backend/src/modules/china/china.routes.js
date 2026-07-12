@@ -31,6 +31,15 @@ router.get('/landing-playauth/:videoId', originCheck, (req, res, next) => {
   next()
 }, getPlayAuth)
 
+// ⭐ Landing STS — public สำหรับ iOS/Safari (FairPlay DRM stream)
+//   iOS ไม่รองรับ Ali Prop (AliyunVoDEncryption) → ต้องใช้ FairPlay + STS
+router.get('/landing-sts/:videoId', originCheck, (req, res, next) => {
+  if (!LANDING_ALLOWED_VIDEOS.has(req.params.videoId)) {
+    return res.status(403).json({ code: 'VIDEO_NOT_WHITELISTED', message: 'Video ID นี้ไม่อยู่ในรายการ landing demo' })
+  }
+  next()
+}, getStsToken)
+
 // ⭐ Upload logs from mobile test client — เก็บใน memory 30 นาที
 // ให้ dev fetch ดู log จาก /api/china/test-logs โดยตรง
 const _testLogsCache = { latest: null, all: [] }
