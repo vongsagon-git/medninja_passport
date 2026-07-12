@@ -194,10 +194,11 @@
                 <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
                 <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd"/></svg>
               </button>
-              <!-- Custom fullscreen button (ทำให้ทั้ง box fullscreen รวมลายน้ำ) -->
-              <button class="wm-fs-btn" @click="toggleFullscreen" :title="isFullscreen ? 'ออกจากเต็มจอ' : 'เต็มจอ'">
+              <!-- Custom fullscreen button — top-right, มี label "เต็มจอ" / "ย่อ" -->
+              <button class="wm-fs-btn" :class="{ 'is-active': isFullscreen }" @click="toggleFullscreen" :title="isFullscreen ? 'ย่อ' : 'เต็มจอ'">
                 <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                 <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+                <span class="wm-fs-label">{{ isFullscreen ? 'ย่อ' : 'เต็มจอ' }}</span>
               </button>
             </div>
 
@@ -2812,23 +2813,39 @@ kbd {
   top: 10px;
   right: 10px;
   z-index: 9999;
-  width: 36px;
-  height: 36px;
-  background: rgba(0, 0, 0, 0.55);
+  height: 34px;
+  padding: 0 12px 0 10px;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
+  border-radius: 999px;
   color: #fff;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   opacity: 1;
   backdrop-filter: blur(4px);
   transition: background 0.2s, transform 0.15s;
+  font-family: inherit;
 }
-.wm-fs-btn svg { width: 20px; height: 20px; }
-.wm-fs-btn:hover { background: rgba(0, 0, 0, 0.8); transform: scale(1.05); }
-.wm-fs-btn:active { transform: scale(0.95); }
+.wm-fs-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.wm-fs-label {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.wm-fs-btn:hover { background: rgba(0, 0, 0, 0.85); transform: scale(1.03); }
+.wm-fs-btn:active { transform: scale(0.96); }
+.wm-fs-btn.is-active {
+  background: rgba(59, 130, 246, 0.85);
+  border-color: rgba(147, 197, 253, 0.6);
+}
+/* CSS fake FS: ปุ่มขยับลงให้พ้น CountryBanner + safe-area */
+.w-player-box.is-fullscreen .wm-fs-btn {
+  top: calc(var(--country-banner-h, 28px) + env(safe-area-inset-top, 0px) + 10px);
+}
 /* Fullscreen mode: player box fills screen */
 .w-player-box:fullscreen {
   width: 100vw;
@@ -3479,7 +3496,9 @@ kbd {
 @media (max-width: 640px) {
   .wm-center { font-size: 19px; }
   .wm-play-btn { bottom: 8px; left: 8px; width: 32px; height: 32px; }
-  .wm-fs-btn { top: 8px; right: 8px; width: 32px; height: 32px; }
+  .wm-fs-btn { top: 8px; right: 8px; height: 30px; padding: 0 10px 0 8px; }
+  .wm-fs-btn svg { width: 16px; height: 16px; }
+  .wm-fs-label { font-size: 12px; }
 }
 /* Mobile landscape: ลายน้ำใหญ่ขึ้น */
 @media (max-height: 500px) and (orientation: landscape) {

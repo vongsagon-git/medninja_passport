@@ -255,9 +255,10 @@
                       </div>
                     </div>
                     <!-- Fullscreen -->
-                    <button class="ali-ctl-btn" @click="aliToggleFullscreen" :title="isFullscreen ? 'ออกจากเต็มจอ' : 'เต็มจอ'">
+                    <button class="ali-ctl-btn ali-ctl-fs" :class="{ 'is-active': isFullscreen }" @click="aliToggleFullscreen" :title="isFullscreen ? 'ย่อ' : 'เต็มจอ'">
                       <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                       <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+                      <span class="ali-ctl-fs-label">{{ isFullscreen ? 'ย่อ' : 'เต็มจอ' }}</span>
                     </button>
                   </div>
                 </div>
@@ -3472,29 +3473,53 @@ kbd {
 .wm-play-btn svg { width: 20px; height: 20px; }
 .w-player-box:hover .wm-play-btn { opacity: 1; }
 .wm-play-btn:hover { background: rgba(0, 0, 0, 0.8); }
-/* Custom fullscreen button — top-right */
+/* Custom fullscreen button — top-right (CN wm-fs-btn เผื่อ future) */
 .wm-fs-btn {
   position: absolute;
   top: 10px;
   right: 10px;
   z-index: 9999;
-  width: 36px;
-  height: 36px;
-  background: rgba(0, 0, 0, 0.55);
+  height: 34px;
+  padding: 0 12px 0 10px;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
+  border-radius: 999px;
   color: #fff;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   opacity: 1;
   backdrop-filter: blur(4px);
   transition: background 0.2s, transform 0.15s;
+  font-family: inherit;
 }
-.wm-fs-btn svg { width: 20px; height: 20px; }
-.wm-fs-btn:hover { background: rgba(0, 0, 0, 0.8); transform: scale(1.05); }
-.wm-fs-btn:active { transform: scale(0.95); }
+.wm-fs-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.wm-fs-btn:hover { background: rgba(0, 0, 0, 0.85); transform: scale(1.03); }
+.wm-fs-btn:active { transform: scale(0.96); }
+/* Ali control bar Fullscreen button — label + is-active */
+.ali-ctl-fs {
+  gap: 6px !important;
+  padding: 0 12px 0 8px !important;
+  border-radius: 999px !important;
+  width: auto !important;
+}
+.ali-ctl-fs-label {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.ali-ctl-fs.is-active {
+  background: rgba(59, 130, 246, 0.85) !important;
+  border-color: rgba(147, 197, 253, 0.6) !important;
+}
+@media (max-width: 640px) {
+  .ali-ctl-fs { padding: 0 10px 0 6px !important; }
+  .ali-ctl-fs svg { width: 16px; height: 16px; }
+  .ali-ctl-fs-label { font-size: 12px; }
+}
 /* Fullscreen mode: player box fills screen */
 .w-player-box:fullscreen {
   width: 100vw;
