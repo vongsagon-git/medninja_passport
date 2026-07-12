@@ -18,14 +18,14 @@
       </div>
     </div>
 
-    <!-- Mobile in-app (LINE/FB/IG) → blur overlay บังคับเปิดข้างนอก -->
-    <div v-if="!browserOk && isMobile" class="line-blur-overlay">
+    <!-- ⭐ Block overlay #1 — In-App (LINE / FB / IG / TikTok / WeChat) เช็คก่อนสุด -->
+    <div v-if="!browserOk && inAppLine" class="line-blur-overlay">
       <div class="line-blur-card">
         <div class="line-blur-play" @click="openInBrowser">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd"/></svg>
         </div>
         <h2>เปิดใน Browser เพื่อดูวีดีโอ</h2>
-        <p>วีดีโอไม่สามารถเล่นใน LINE ได้</p>
+        <p>วีดีโอไม่สามารถเล่นในแอปนี้ได้<br>กรุณากดปุ่มด้านล่างเพื่อเปิดใน Chrome / Safari</p>
         <button class="line-blur-btn-primary" @click="openInBrowser">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18" style="vertical-align:-3px;margin-right:8px"><path fill-rule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z" clip-rule="evenodd"/></svg>
           กดเล่นเลย
@@ -39,19 +39,19 @@
       </div>
     </div>
 
-    <!-- Desktop ไม่ใช่ Chrome → บอกให้ใช้ Chrome -->
-    <div v-else-if="!browserOk && !isMobile" class="line-blur-overlay">
+    <!-- ⭐ Block overlay #2 — OS/Browser not allowed (รวมหน้าเดียว) -->
+    <div v-else-if="!browserOk" class="line-blur-overlay">
       <div class="line-blur-card">
-        <div class="line-blur-play" style="cursor:default">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3a7 7 0 016.32 4H12a3 3 0 00-2.83 4H6.34A7 7 0 0112 5zM5 12c0-.94.2-1.83.55-2.64l3.83 6.64A7.001 7.001 0 015 12zm7 7c-.34 0-.67-.03-1-.08l3.5-6.06A2.99 2.99 0 0015 12c0-.49-.12-.95-.32-1.36h4.27A7 7 0 0112 19z"/></svg>
+        <div class="line-blur-play" style="cursor:default;background:linear-gradient(135deg,#f59e0b,#d97706)">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm2-4h-2V7h2v6z"/></svg>
         </div>
-        <h2>กรุณาใช้ Google Chrome เพื่อดูวีดีโอ</h2>
-        <p>ระบบรองรับเฉพาะ Google Chrome บน Desktop (Windows / macOS / Linux)<br>กรุณาเปิดลิงก์นี้ใน Chrome เพื่อดูวีดีโอ</p>
+        <h2>{{ browserMsg || 'ระบบไม่รองรับอุปกรณ์นี้' }}</h2>
+        <p>{{ browserDetail || 'กรุณาเปลี่ยนอุปกรณ์หรือ Browser เพื่อดูวีดีโอ' }}</p>
         <div class="line-blur-row">
           <button class="line-blur-btn-outline" @click="copyLink">
             {{ linkCopied ? 'คัดลอกแล้ว!' : 'คัดลอกลิงก์' }}
           </button>
-          <a href="https://www.google.com/chrome/" target="_blank" class="line-blur-btn-outline">ดาวน์โหลด Chrome</a>
+          <a href="https://medninja.academy" class="line-blur-btn-outline">กลับหน้าหลัก</a>
         </div>
       </div>
     </div>
@@ -817,11 +817,14 @@ export default {
     isAdminPreview() { return this.$route.meta.adminPreview === true },
     sectionId() { return this.isDemo ? 'sec_demo' : this.$route.params.sectionId },
     videoIndex() { return parseInt(this.$route.params.videoIndex) || 0 },
-    browserOk() {
-      // ── LINE in-app browser → block เสมอ (แม้ exception path) ──
-      // เพราะ LINE in-app เล่นวีดีโอไม่ได้ — ต้องเปิดข้างนอก
+    // ⭐ In-App (LINE/FB/IG/TikTok/WeChat) → overlay "เปิดใน Browser" (ก่อนสุด)
+    inAppLine() {
       const ua = navigator.userAgent || ''
-      if (/Line\/|FBAN|FBAV|Instagram/i.test(ua)) return false
+      return /Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|KAKAOTALK|TikTok|musical_ly|BytedanceWebview/i.test(ua)
+    },
+    browserOk() {
+      // ── In-App → block เสมอ (แม้ exception path)
+      if (this.inAppLine) return false
       // section พิเศษ + /demo/watch → ผ่านได้แม้ไม่ใช่ Chrome
       if (isExceptionPath(this.$route.path)) return true
       return this.browserSupported
