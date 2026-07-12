@@ -138,9 +138,17 @@ async function initPlayer() {
 function openVideo() {
   modalOpen.value = true
   errorMsg.value = ''
-  // รอ DOM render ก่อน init player
-  setTimeout(() => { if (!player) initPlayer() }, 50)
+  playerReady.value = false
+  isPlaying.value = false
+  needsUserClick.value = false
   document.body.style.overflow = 'hidden'
+  // ⭐ dispose player เก่าก่อน แล้วสร้างใหม่ทุกครั้ง (กัน state stuck จอดำ)
+  if (player) {
+    try { player.dispose() } catch {}
+    player = null
+  }
+  // รอ DOM render + Aliplayer container ว่างสะอาด ก่อน init player ใหม่
+  setTimeout(() => initPlayer(), 100)
 }
 
 function closeVideo() {
@@ -148,8 +156,11 @@ function closeVideo() {
   document.body.style.overflow = ''
   needsUserClick.value = false
   isPlaying.value = false
+  playerReady.value = false
+  // ⭐ dispose ทันที (ไม่ pause) เพื่อ reset state ทั้งหมด
   if (player) {
-    try { player.pause() } catch {}
+    try { player.dispose() } catch {}
+    player = null
   }
 }
 
@@ -157,7 +168,10 @@ function closeVideo() {
 function handlePlayClick() {
   needsUserClick.value = false
   if (!player) return
-  try { player.play() } catch {}
+  try {
+    player.play()
+    isPlaying.value = true    // optimistic — ให้ overlay หายทันที
+  } catch {}
 }
 
 function scrollToVideo() {
@@ -353,11 +367,11 @@ onUnmounted(() => {
           <div class="modal-player-wrap">
             <div id="landing-player" class="modal-player"></div>
 
-            <!-- Custom Play Button Overlay — แสดงเมื่อ browser block autoplay -->
+            <!-- Custom Play Button Overlay — แสดงตลอดจนกว่าจะเล่นจริง -->
             <transition name="fade">
-              <div v-if="needsUserClick && !errorMsg" class="play-overlay" @click="handlePlayClick">
+              <div v-if="playerReady && !isPlaying && !errorMsg" class="play-overlay" @click="handlePlayClick">
                 <div class="play-btn-glow"></div>
-                <button class="play-btn" aria-label="เล่นโฆษณา">
+                <button class="play-btn" aria-label="เล่นโฆษณา" @click.stop="handlePlayClick">
                   <svg viewBox="0 0 32 32" class="play-svg">
                     <path d="M11 8 L24 16 L11 24 Z" fill="currentColor"/>
                   </svg>
@@ -1487,7 +1501,7 @@ onUnmounted(() => {
 .play-overlay {
   position: absolute;
   inset: 0;
-  z-index: 10;
+  z-index: 999;     /* สูงกว่า Aliplayer UI ทุกชั้น */
   display: grid;
   place-items: center;
   align-content: center;
