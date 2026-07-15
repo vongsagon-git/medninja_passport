@@ -781,9 +781,14 @@ onUnmounted(() => {
   font-weight: 800;
 }
 .hero-cta {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
-  flex-wrap: wrap;
+  max-width: 440px;
+}
+.hero-cta > button {
+  width: 100%;
+  justify-content: center;
 }
 .btn-primary {
   background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
