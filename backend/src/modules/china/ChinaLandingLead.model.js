@@ -30,6 +30,16 @@ const chinaLandingLeadSchema = new mongoose.Schema({
   },
   scoreBand: { type: String, enum: ['0-20', '21-35', '36-48', '49-60', 'skipped'], default: 'skipped' },
 
+  // ─── Interests (user กด service อะไรบ้าง) ───
+  //   ค่า: 'pdf' (โหลด PDF), 'wechat' (ทัก WeChat), 'vdocall' (นัด VDO Call), 'discount' (ใช้ส่วนลด)
+  interests: [{ type: String }],
+  interestClicks: {                   // นับจำนวนคลิกแต่ละ interest
+    pdf: { type: Number, default: 0 },
+    wechat: { type: Number, default: 0 },
+    vdocall: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 }
+  },
+
   // ─── สถานะการติดต่อ (admin ใช้ track) ───
   contactStatus: {
     type: String,

@@ -707,6 +707,49 @@ router.get('/landing-leads', async (req, res) => {
   }
 })
 
+// ⭐ PATCH /landing-lead/:id/answers — user ทำ assessment เสร็จ → update answers + scores
+router.patch('/landing-lead/:id/answers', async (req, res) => {
+  const { id } = req.params
+  const answers = Array.isArray(req.body?.answers) ? req.body.answers : []
+  const scores = computeScores(answers)
+  try {
+    const lead = await ChinaLandingLead.findByIdAndUpdate(
+      id,
+      { answers, ...scores },
+      { new: true }
+    ).lean()
+    if (!lead) return res.status(404).json({ code: 'NOT_FOUND' })
+    console.log(`[china-landing-lead] UPDATE answers id=${id} score=${scores.totalScore}/60 band=${scores.scoreBand}`)
+    return res.json({ ok: true, score: scores.totalScore, scoreBand: scores.scoreBand })
+  } catch (err) {
+    return res.status(500).json({ code: 'UPDATE_FAILED', message: err.message })
+  }
+})
+
+// ⭐ PATCH /landing-lead/:id/interest — user กด service → mark intent
+//    kind: 'pdf' | 'wechat' | 'vdocall' | 'discount'
+router.patch('/landing-lead/:id/interest', async (req, res) => {
+  const { id } = req.params
+  const kind = String(req.body?.kind || '').toLowerCase()
+  const allowedKinds = ['pdf', 'wechat', 'vdocall', 'discount']
+  if (!allowedKinds.includes(kind)) {
+    return res.status(400).json({ code: 'INVALID_KIND' })
+  }
+  try {
+    // ใช้ $addToSet กันซ้ำ + $inc นับจำนวนคลิก
+    const update = {
+      $addToSet: { interests: kind },
+      $inc: { [`interestClicks.${kind}`]: 1 }
+    }
+    const lead = await ChinaLandingLead.findByIdAndUpdate(id, update, { new: true }).lean()
+    if (!lead) return res.status(404).json({ code: 'NOT_FOUND' })
+    console.log(`[china-landing-lead] INTEREST id=${id} kind=${kind} total-interests=${lead.interests?.length || 0}`)
+    return res.json({ ok: true, interests: lead.interests || [] })
+  } catch (err) {
+    return res.status(500).json({ code: 'UPDATE_FAILED', message: err.message })
+  }
+})
+
 // PATCH admin เปลี่ยน status / note
 router.patch('/landing-leads/:id', async (req, res) => {
   const { id } = req.params

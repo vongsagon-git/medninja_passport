@@ -107,10 +107,13 @@ const YEAR_OPTIONS = [
 const PDF_URL = '/pdf/MedNinja_Thai_Return_Checklist.docx'
 
 // ─── State ───
-// flow: landing → assess (30 ข้อ) → result-form (รวมหน้าเดียว) → thanks (PDF download)
-const step = ref('landing')  // landing | assess | result-form | thanks
+// ⭐ Flow ใหม่ (เก็บ lead ก่อน) — เน้น conversion สัมมนา
+//    landing → gate (form 3 fields ก่อน) → assess (30 ข้อ) → result (PDF + 3 services)
+const step = ref('landing')  // landing | gate | assess | result | thanks
 const currentQ = ref(0)      // 0-29
 const answers = ref(Array(30).fill(null))
+const gateSubmitting = ref(false)
+const gateError = ref('')
 
 const form = ref({
   fullName: '',
@@ -238,10 +241,52 @@ const canSubmitForm = computed(() => {
 })
 
 // ─── Actions ───
+// ⭐ Landing "เริ่มทำแบบประเมิน" → เปิด gate form ก่อน (บังคับเก็บ lead)
 function startAssessment() {
-  step.value = 'assess'
-  currentQ.value = 0
+  step.value = 'gate'
   scrollTop()
+}
+
+// ⭐ Gate form submit → save lead → เข้า assessment
+async function submitGate() {
+  gateError.value = ''
+  if (!canSubmitForm.value) {
+    gateError.value = 'กรุณากรอก ชื่อ + มหาลัย + WeChat ID ให้ครบก่อน'
+    return
+  }
+  gateSubmitting.value = true
+  try {
+    const payload = {
+      fullName: form.value.fullName.trim(),
+      year: form.value.year,
+      university: resolvedUniversity.value,
+      email: form.value.email.trim(),
+      phoneTh: form.value.phoneTh.trim(),
+      lineId: form.value.lineId.trim(),
+      wechatId: form.value.wechatId.trim(),
+      answers: [],                                  // ยังไม่ได้ทำ assessment
+      seminarBatch: SEMINAR_BATCH
+    }
+    const res = await fetch('/api/china/landing-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.message || 'บันทึกไม่สำเร็จ')
+    // เก็บ leadId + pdfUrl ไว้ใช้ตอน result
+    currentLeadId.value = data.leadId || ''
+    pdfDownloadUrl.value = data.pdfUrl || ''
+    try { localStorage.setItem('mn_china_lead_id', currentLeadId.value) } catch {}
+    // ไปทำ assessment
+    step.value = 'assess'
+    currentQ.value = 0
+    scrollTop()
+  } catch (e) {
+    gateError.value = e.message
+  } finally {
+    gateSubmitting.value = false
+  }
 }
 
 function selectAnswer(val) {
@@ -261,15 +306,34 @@ function prevQuestion() {
   }
 }
 
-function finishAssessment() {
+async function finishAssessment() {
   resultScore.value = {
     totalScore: totalScore.value,
     scoresByCategory: scoresByCategory.value,
     scoreBand: scoreBand.value.band
   }
-  // ⭐ ไป Result+Form รวมหน้าเดียว (ลด friction 1 click)
-  step.value = 'result-form'
+  resultUnlocked.value = true
+  step.value = 'result'
   scrollTop()
+
+  // ⭐ Fire-and-forget: PATCH answers ไปที่ lead เดิม (ไม่ block UX)
+  if (currentLeadId.value) {
+    fetch(`/api/china/landing-lead/${currentLeadId.value}/answers`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: answers.value.map(v => v || 0) })
+    }).catch(() => {})
+  }
+}
+
+// ⭐ Track ตอน user กด service (WeChat / VDO Call / Discount)
+async function trackInterest(kind) {
+  if (!currentLeadId.value) return
+  fetch(`/api/china/landing-lead/${currentLeadId.value}/interest`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind })
+  }).catch(() => {})
 }
 
 function downloadPdf() {
@@ -495,6 +559,94 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- ═══════════════ STEP 1.5: GATE FORM (บังคับกรอกก่อน) ═══════════════ -->
+    <section v-if="step === 'gate'" class="gate">
+      <div class="gate-inner">
+        <div class="gate-header">
+          <div class="gate-badge">🔒 บันทึกข้อมูลก่อนเริ่ม</div>
+          <h2 class="gate-title">
+            กรอกข้อมูลเพื่อรับ<br />
+            <span class="gate-highlight">4 สิทธิ์พิเศษ</span> ฟรี
+          </h2>
+          <p class="gate-sub">ใช้เวลาแค่ 30 วินาที · ทีมงานจะติดต่อคุณทาง WeChat</p>
+        </div>
+
+        <div class="gate-perks">
+          <div class="perk-item"><span class="perk-dot">1</span> PDF Checklist การเตรียมความพร้อม</div>
+          <div class="perk-item"><span class="perk-dot">2</span> ทัก WeChat หมอแตม รับคำแนะนำ</div>
+          <div class="perk-item"><span class="perk-dot">3</span> นัด VDO Call ปรึกษา 30 นาที ฟรี</div>
+          <div class="perk-item highlight"><span class="perk-dot">4</span> <b>ส่วนลด 10% ทุกคอร์ส</b></div>
+        </div>
+
+        <div class="gate-form">
+          <div class="lf-field">
+            <label>ชื่อจริง <span class="req">*</span></label>
+            <input v-model="form.fullName" type="text" placeholder="ชื่อ-นามสกุล" :disabled="gateSubmitting" />
+          </div>
+          <div class="lf-field">
+            <label>มหาลัยที่กำลังเรียน <span class="req">*</span></label>
+            <select v-model="form.universitySelect" :disabled="gateSubmitting">
+              <option value="">— เลือกมหาลัย —</option>
+              <option v-for="u in UNIVERSITIES_CHINA" :key="u.id" :value="u.name">
+                {{ u.name }} ({{ u.city }})
+              </option>
+              <option value="__OTHER__">— อื่น ๆ (กรอกเอง) —</option>
+            </select>
+            <input
+              v-if="form.universitySelect === '__OTHER__'"
+              v-model="form.universityOther"
+              type="text"
+              placeholder="ชื่อมหาลัย + เมือง"
+              class="lf-other-input"
+              :disabled="gateSubmitting"
+            />
+          </div>
+          <div class="lf-field">
+            <label>ปีที่เรียน</label>
+            <select v-model="form.year" :disabled="gateSubmitting">
+              <option value="">— เลือก —</option>
+              <option v-for="y in YEAR_OPTIONS" :key="y" :value="y">{{ y }}</option>
+            </select>
+          </div>
+          <div class="lf-field lf-primary">
+            <label>💬 WeChat ID <span class="req">*</span> <span class="tag main">ช่องทางหลัก</span></label>
+            <input v-model="form.wechatId" type="text" placeholder="wechat-id" :disabled="gateSubmitting" />
+            <div class="lf-hint-inline">ทีมงานจะติดต่อคุณผ่าน WeChat</div>
+          </div>
+
+          <details class="lf-more">
+            <summary>+ เพิ่มช่องทางสำรอง (ถ้าต้องการ)</summary>
+            <div class="lf-more-body">
+              <div class="lf-field lf-line">
+                <label>💚 LINE ID</label>
+                <input v-model="form.lineId" type="text" placeholder="line-id" :disabled="gateSubmitting" />
+              </div>
+              <div class="lf-field">
+                <label>📱 เบอร์ไทย</label>
+                <input v-model="form.phoneTh" type="tel" placeholder="08x-xxx-xxxx" :disabled="gateSubmitting" />
+              </div>
+              <div class="lf-field">
+                <label>📧 Email</label>
+                <input v-model="form.email" type="email" placeholder="you@example.com" :disabled="gateSubmitting" />
+              </div>
+            </div>
+          </details>
+
+          <div v-if="gateError" class="lf-error">⚠ {{ gateError }}</div>
+
+          <button class="cta-primary" :disabled="!canSubmitForm || gateSubmitting" @click="submitGate">
+            <span v-if="gateSubmitting">กำลังบันทึก...</span>
+            <span v-else-if="!canSubmitForm">🔒 กรอก ชื่อ + มหาลัย + WeChat ให้ครบ</span>
+            <span v-else>🚀 เริ่มทำแบบประเมิน 30 ข้อ</span>
+          </button>
+
+          <button class="q-back gate-back" @click="step = 'landing'; scrollTop()">← ย้อนกลับ</button>
+
+          <p class="gate-privacy">🔒 ข้อมูลใช้สำหรับติดต่อทีมงานเท่านั้น</p>
+        </div>
+      </div>
+    </section>
+
     <!-- ═══════════════ STEP 2: ASSESSMENT ═══════════════ -->
     <section v-if="step === 'assess'" class="assess">
       <div class="assess-header">
@@ -550,144 +702,113 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- ═══════════════ STEP 3: RESULT + FORM (รวมหน้าเดียว) ═══════════════ -->
-    <section v-if="step === 'result-form'" class="result">
-      <!-- ⭐ STEP 1: กรอกฟอร์มก่อน — ต้องกรอกครบถึงจะเห็นผล + โหลด PDF -->
-      <div class="lf-inline">
-        <div class="lf-inline-badge">
-          <span class="lf-badge-num">✓</span>
-          <span>ทำแบบประเมินเสร็จแล้ว 30/30</span>
-        </div>
-        <h3 class="lf-inline-title">📮 กรอกข้อมูลเพื่อดูผล + รับ PDF</h3>
-        <p class="lf-inline-sub">ทีมงานจะส่งคำแนะนำเพิ่มเติมทาง WeChat</p>
-
-        <div class="lf-field">
-          <label>ชื่อจริง <span class="req">*</span></label>
-          <input v-model="form.fullName" type="text" placeholder="ชื่อ-นามสกุล" :disabled="submitting" />
-        </div>
-
-        <div class="lf-field">
-          <label>มหาลัยที่กำลังเรียน <span class="req">*</span></label>
-          <select v-model="form.universitySelect" :disabled="submitting">
-            <option value="">— เลือกมหาลัย —</option>
-            <option v-for="u in UNIVERSITIES_CHINA" :key="u.id" :value="u.name">
-              {{ u.name }} ({{ u.city }})
-            </option>
-            <option value="__OTHER__">— อื่น ๆ (กรอกเอง) —</option>
-          </select>
-          <input
-            v-if="form.universitySelect === '__OTHER__'"
-            v-model="form.universityOther"
-            type="text"
-            placeholder="ชื่อมหาลัย + เมือง"
-            class="lf-other-input"
-            :disabled="submitting"
-          />
-        </div>
-
-        <div class="lf-field">
-          <label>ปีที่เรียน</label>
-          <select v-model="form.year" :disabled="submitting">
-            <option value="">— เลือก —</option>
-            <option v-for="y in YEAR_OPTIONS" :key="y" :value="y">{{ y }}</option>
-          </select>
-        </div>
-
-        <div class="lf-field lf-wechat lf-primary">
-          <label>💬 WeChat ID <span class="req">*</span> <span class="tag main">ช่องทางหลัก</span></label>
-          <input v-model="form.wechatId" type="text" placeholder="wechat-id" :disabled="submitting" />
-          <div class="lf-hint-inline">ทีมงานจะส่ง PDF + นัดปรึกษาให้ทาง WeChat</div>
-        </div>
-
-        <details class="lf-more">
-          <summary>+ เพิ่มช่องทางสำรอง (ถ้าต้องการ)</summary>
-          <div class="lf-more-body">
-            <div class="lf-field lf-line">
-              <label>💚 LINE ID</label>
-              <input v-model="form.lineId" type="text" placeholder="line-id" :disabled="submitting" />
-            </div>
-            <div class="lf-field">
-              <label>📱 เบอร์ไทย</label>
-              <input v-model="form.phoneTh" type="tel" placeholder="08x-xxx-xxxx" :disabled="submitting" />
-            </div>
-            <div class="lf-field">
-              <label>📧 Email</label>
-              <input v-model="form.email" type="email" placeholder="you@example.com" :disabled="submitting" />
-            </div>
+    <!-- ═══════════════ STEP 3: RESULT — คะแนน + 4 สิทธิ์ ═══════════════ -->
+    <section v-if="step === 'result'" class="result">
+      <div class="result-hero" :style="{ '--band-color': scoreBand.color }">
+        <div class="r-hi">🎉 ทำเสร็จแล้ว, {{ form.fullName || 'คุณ' }}!</div>
+        <div class="r-score-circle">
+          <svg viewBox="0 0 120 120" class="r-ring">
+            <circle cx="60" cy="60" r="52" class="r-track" />
+            <circle cx="60" cy="60" r="52" class="r-fill"
+              :style="{ strokeDasharray: 326.7, strokeDashoffset: 326.7 - (326.7 * totalScore / 60), stroke: scoreBand.color }" />
+          </svg>
+          <div class="r-score-num">
+            <div class="r-num">{{ totalScore }}</div>
+            <div class="r-max">/ 60</div>
           </div>
-        </details>
-
-        <div v-if="submitError" class="lf-error">⚠ {{ submitError }}</div>
-
-        <button class="cta-primary lf-submit" :disabled="!canSubmitForm || submitting" @click="submitAndDownload">
-          <span v-if="submitting">กำลังส่ง...</span>
-          <span v-else-if="!canSubmitForm">🔒 กรอก ชื่อ + มหาลัย + WeChat ให้ครบ</span>
-          <span v-else>🔓 ดูผลคะแนน + โหลด PDF</span>
-        </button>
-
-        <p class="lf-privacy">🔒 ใช้สำหรับส่ง PDF + นัดปรึกษาเท่านั้น</p>
+        </div>
+        <div class="r-band" :style="{ background: scoreBand.color }">{{ scoreBand.label }}</div>
+        <p class="r-desc">{{ scoreBand.desc }}</p>
       </div>
 
-      <!-- ⭐ STEP 2: ผลคะแนน — ล็อคจนกว่าจะกรอกฟอร์มเสร็จ -->
-      <div class="result-preview" :class="{ locked: !resultUnlocked }">
-        <div v-if="!resultUnlocked" class="rp-lock">
-          <div class="rp-lock-icon">🔒</div>
-          <div class="rp-lock-title">ผลคะแนนของคุณถูกล็อคอยู่</div>
-          <div class="rp-lock-desc">กรอกฟอร์มด้านบน → ปลดล็อคผล + PDF</div>
-        </div>
-
-        <div class="result-hero" :style="{ '--band-color': scoreBand.color }">
-          <div class="r-score-circle">
-            <svg viewBox="0 0 120 120" class="r-ring">
-              <circle cx="60" cy="60" r="52" class="r-track" />
-              <circle cx="60" cy="60" r="52" class="r-fill"
-                :style="{ strokeDasharray: 326.7, strokeDashoffset: 326.7 - (326.7 * totalScore / 60), stroke: scoreBand.color }" />
-            </svg>
-            <div class="r-score-num">
-              <div class="r-num">{{ totalScore }}</div>
-              <div class="r-max">/ 60</div>
-            </div>
+      <div class="r-cats">
+        <div class="r-cats-title">คะแนนแยกหมวด</div>
+        <div v-for="cat in CATEGORIES" :key="cat.key" class="r-cat">
+          <div class="r-cat-head">
+            <span class="r-cat-name">{{ cat.name }}</span>
+            <span class="r-cat-score">{{ scoresByCategory[cat.key] }}<span class="r-cat-max">/10</span></span>
           </div>
-
-          <div class="r-band" :style="{ background: scoreBand.color }">
-            {{ scoreBand.label }}
-          </div>
-          <p class="r-desc">{{ scoreBand.desc }}</p>
-        </div>
-
-        <div class="r-cats">
-          <div class="r-cats-title">คะแนนแยกหมวด</div>
-          <div v-for="cat in CATEGORIES" :key="cat.key" class="r-cat">
-            <div class="r-cat-head">
-              <span class="r-cat-name">{{ cat.name }}</span>
-              <span class="r-cat-score">{{ scoresByCategory[cat.key] }}<span class="r-cat-max">/10</span></span>
-            </div>
-            <div class="r-cat-bar">
-              <div class="r-cat-bar-fill" :style="{ width: `${(scoresByCategory[cat.key] / 10) * 100}%` }"></div>
-            </div>
+          <div class="r-cat-bar">
+            <div class="r-cat-bar-fill" :style="{ width: `${(scoresByCategory[cat.key] / 10) * 100}%` }"></div>
           </div>
         </div>
+      </div>
 
-        <div class="r-recommend">
-          <div class="r-rec-title">คำแนะนำจากหมอแตม</div>
-          <div class="r-rec-sub">3 หมวดแรกที่ควรเริ่ม</div>
-          <div v-for="(cat, i) in weakCategories" :key="cat.key" class="r-rec-item">
-            <div class="r-rec-rank">{{ String(i + 1).padStart(2, '0') }}</div>
-            <div class="r-rec-body">
-              <div class="r-rec-name">{{ cat.name }}</div>
-              <div class="r-rec-score">{{ cat.score }} / 10 คะแนน</div>
-            </div>
+      <div class="r-recommend">
+        <div class="r-rec-title">คำแนะนำจากหมอแตม</div>
+        <div class="r-rec-sub">3 หมวดแรกที่ควรเริ่ม</div>
+        <div v-for="(cat, i) in weakCategories" :key="cat.key" class="r-rec-item">
+          <div class="r-rec-rank">{{ String(i + 1).padStart(2, '0') }}</div>
+          <div class="r-rec-body">
+            <div class="r-rec-name">{{ cat.name }}</div>
+            <div class="r-rec-score">{{ cat.score }} / 10 คะแนน</div>
           </div>
         </div>
+      </div>
 
-        <div v-if="resultUnlocked" class="r-next-cta">
-          <button v-if="pdfDownloadUrl" class="cta-primary" @click="downloadPdf">
-            โหลด PDF อีกครั้ง
-          </button>
-          <button class="cta-outline" @click="step = 'thanks'; scrollTop()">
-            ต่อไปที่ ติดต่อ / นัดปรึกษา →
+      <!-- 4 สิทธิ์พิเศษ -->
+      <div class="rights-section">
+        <div class="rights-title">🎁 4 สิทธิ์พิเศษของคุณ</div>
+        <div class="rights-sub">
+          ทัก WeChat หมอแตม <b class="wc-highlight">medninja</b> แล้วแจ้ง
+          <b>ชื่อ "{{ form.fullName }}"</b> เพื่อรับสิทธิ์
+        </div>
+
+        <div class="right-card">
+          <div class="rc-num">1</div>
+          <div class="rc-body">
+            <div class="rc-title">📥 PDF Checklist การเตรียมความพร้อม</div>
+            <div class="rc-desc">ดาวน์โหลดได้เลย · Full version รับทาง WeChat</div>
+          </div>
+          <button class="rc-btn" @click="downloadPdf(); trackInterest('pdf')">
+            โหลด
           </button>
         </div>
+
+        <div class="right-card">
+          <div class="rc-num">2</div>
+          <div class="rc-body">
+            <div class="rc-title">💬 ทัก WeChat หมอแตม</div>
+            <div class="rc-desc">ปรึกษา 1-on-1 · คำแนะนำเฉพาะคุณ</div>
+          </div>
+          <button class="rc-btn primary" @click="trackInterest('wechat')">
+            WeChat
+          </button>
+        </div>
+
+        <div class="right-card">
+          <div class="rc-num">3</div>
+          <div class="rc-body">
+            <div class="rc-title">📹 นัด VDO Call 30 นาที ฟรี</div>
+            <div class="rc-desc">คุยกับหมอแตมส่วนตัว · วางแผนเรียน</div>
+          </div>
+          <button class="rc-btn primary" @click="trackInterest('vdocall')">
+            นัด
+          </button>
+        </div>
+
+        <div class="right-card highlight">
+          <div class="rc-num">4</div>
+          <div class="rc-body">
+            <div class="rc-title">🎁 ส่วนลด 10% ทุกคอร์ส</div>
+            <div class="rc-desc">NL 1+2 · MEQ · OSCE · ใช้ได้ตลอด</div>
+          </div>
+          <button class="rc-btn primary" @click="trackInterest('discount')">
+            ใช้
+          </button>
+        </div>
+
+        <div class="rights-guide">
+          <b>วิธีใช้สิทธิ์:</b><br />
+          1. เปิด WeChat แล้วค้นหา ID: <b class="wc-highlight">medninja</b><br />
+          2. Add friend<br />
+          3. ทักไปแจ้ง <b>"ชื่อ {{ form.fullName }} มาจากแบบทดสอบ"</b><br />
+          4. ทีมงานจะจัดการสิทธิ์ให้คุณทันที
+        </div>
+
+        <button class="cta-outline" @click="step = 'thanks'; scrollTop()">
+          ดูสรุปสิทธิ์ทั้งหมด →
+        </button>
       </div>
     </section>
 
@@ -1461,6 +1582,216 @@ onMounted(() => {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+/* ═══════════════ GATE (Form-first) ═══════════════ */
+.gate {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 14px 40px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.gate-inner { width: 100%; }
+.gate-header { text-align: center; margin-bottom: 18px; }
+.gate-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid #f59e0b;
+  margin-bottom: 10px;
+}
+.gate-title {
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 900;
+  color: #0a1e3d;
+  line-height: 1.2;
+  margin: 0 0 8px;
+}
+.gate-highlight {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  padding: 2px 10px;
+  border-radius: 8px;
+  display: inline-block;
+}
+.gate-sub { font-size: 13.5px; color: #64748b; margin: 0; }
+
+.gate-perks {
+  background: white;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  display: grid;
+  gap: 8px;
+}
+.perk-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #334155;
+}
+.perk-item.highlight { color: #dc2626; font-weight: 800; }
+.perk-dot {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #0a1e3d;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+}
+.perk-item.highlight .perk-dot { background: #dc2626; }
+
+.gate-form {
+  background: white;
+  border-radius: 16px;
+  padding: 18px 16px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+.gate-back {
+  width: 100%;
+  margin-top: 8px;
+}
+.gate-privacy {
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 10px 0 0;
+}
+
+/* ═══════════════ RIGHTS SECTION (Result step) ═══════════════ */
+.r-hi {
+  font-size: 15px;
+  font-weight: 800;
+  color: #16a34a;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.rights-section {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #fef3c7 0%, #ffffff 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 18px;
+  padding: 18px 14px;
+  box-shadow: 0 12px 28px rgba(245, 158, 11, 0.15);
+}
+.rights-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #92400e;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.rights-sub {
+  font-size: 13px;
+  color: #78350f;
+  text-align: center;
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+.wc-highlight {
+  background: #22c55e;
+  color: white;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-weight: 900;
+}
+
+.right-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  transition: all 0.15s;
+}
+.right-card:hover {
+  border-color: #0a1e3d;
+  transform: translateY(-1px);
+}
+.right-card.highlight {
+  background: linear-gradient(135deg, #fef2f2, #ffffff);
+  border-color: #dc2626;
+}
+.rc-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0a1e3d;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 900;
+}
+.right-card.highlight .rc-num { background: #dc2626; }
+.rc-body { flex: 1; min-width: 0; }
+.rc-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0a1e3d;
+  line-height: 1.25;
+}
+.rc-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.rc-btn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  background: white;
+  color: #0a1e3d;
+  border: 1.5px solid #0a1e3d;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.rc-btn:hover { background: #0a1e3d; color: white; }
+.rc-btn.primary {
+  background: #0a1e3d;
+  color: white;
+}
+.rc-btn.primary:hover { background: #050f28; }
+.right-card.highlight .rc-btn.primary {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+.right-card.highlight .rc-btn.primary:hover { background: #b91c1c; }
+
+.rights-guide {
+  background: white;
+  border: 1px dashed #f59e0b;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 14px 0 12px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #78350f;
+}
+.rights-guide b { color: #92400e; }
+
 .result-hero {
   text-align: center;
   padding: 16px 14px 14px;
