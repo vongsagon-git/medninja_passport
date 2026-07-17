@@ -93,9 +93,9 @@ const CATEGORIES = [
 ]
 
 const SCORE_OPTIONS = [
-  { value: 0, label: 'ยังไม่ได้เริ่ม', emoji: '🔴' },
-  { value: 1, label: 'พอทำได้บ้าง', emoji: '🟡' },
-  { value: 2, label: 'ทำได้มั่นใจ', emoji: '🟢' }
+  { value: 0, label: 'ยังไม่ได้เริ่ม', sub: 'Not yet', level: 'low' },
+  { value: 1, label: 'พอทำได้บ้าง', sub: 'Some knowledge', level: 'mid' },
+  { value: 2, label: 'ทำได้มั่นใจ', sub: 'Confident', level: 'high' }
 ]
 
 const YEAR_OPTIONS = [
@@ -510,11 +510,19 @@ onMounted(() => {
             v-for="opt in SCORE_OPTIONS"
             :key="opt.value"
             class="q-opt"
-            :class="{ selected: answers[currentQ] === opt.value }"
+            :class="[`level-${opt.level}`, { selected: answers[currentQ] === opt.value }]"
             @click="selectAnswer(opt.value)"
           >
-            <span class="q-opt-emoji">{{ opt.emoji }}</span>
-            <span class="q-opt-label">{{ opt.label }}</span>
+            <span class="q-opt-num">{{ opt.value }}</span>
+            <span class="q-opt-body">
+              <span class="q-opt-label">{{ opt.label }}</span>
+              <span class="q-opt-sub">{{ opt.sub }}</span>
+            </span>
+            <span class="q-opt-check">
+              <svg viewBox="0 0 20 20" width="18" height="18" v-if="answers[currentQ] === opt.value">
+                <path d="M4 10 L8 14 L16 5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
           </button>
         </div>
 
@@ -1276,38 +1284,106 @@ onMounted(() => {
 
 .q-options {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 14px;
   flex-shrink: 0;
 }
 .q-opt {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 14px;
+  padding: 14px 16px;
   background: white;
-  border: 2px solid #e2e8f0;
+  border: 1.5px solid #e2e8f0;
   border-radius: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
   text-align: left;
+  overflow: hidden;
 }
+.q-opt::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.2s;
+}
+.q-opt.level-low::before   { background: linear-gradient(180deg, #64748b, #475569); }
+.q-opt.level-mid::before   { background: linear-gradient(180deg, #3b82f6, #2563eb); }
+.q-opt.level-high::before  { background: linear-gradient(180deg, #0a1e3d, #050f28); }
+
 .q-opt:hover {
-  border-color: #3b82f6;
+  border-color: #94a3b8;
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 6px 16px rgba(10, 30, 61, 0.08);
 }
 .q-opt.selected {
-  border-color: #3b82f6;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
+  border-color: #0a1e3d;
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  box-shadow: 0 8px 20px rgba(10, 30, 61, 0.12);
 }
-.q-opt-emoji { font-size: 24px; }
-.q-opt-label { flex: 1; }
+
+.q-opt-num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  transition: all 0.2s;
+}
+.q-opt.level-low .q-opt-num  { background: #f1f5f9; color: #475569; }
+.q-opt.level-mid .q-opt-num  { background: #dbeafe; color: #1e40af; }
+.q-opt.level-high .q-opt-num { background: #0a1e3d; color: #ffffff; }
+.q-opt.selected .q-opt-num {
+  transform: scale(1.05);
+}
+
+.q-opt-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.q-opt-label {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0a1e3d;
+  line-height: 1.2;
+}
+.q-opt-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.q-opt-check {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0a1e3d;
+  color: white;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.q-opt.selected .q-opt-check {
+  opacity: 1;
+  transform: scale(1);
+}
 
 .q-nav {
   display: flex;
