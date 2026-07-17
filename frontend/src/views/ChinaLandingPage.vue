@@ -217,12 +217,13 @@ const scoresByCategory = computed(() => {
 })
 
 const scoreBand = computed(() => {
-  const t = totalScore.value
-  // ⭐ Monochromatic navy palette — ไม่ใช้สีสด (traffic light) เพื่อดูมืออาชีพ
-  if (t >= 49) return { band: '49-60', label: 'มีระบบดีเยี่ยม', desc: 'พร้อมมาก เน้นแบบทดสอบจำลอง และปรับจุดเล็ก ๆ', color: '#0a1e3d' }
-  if (t >= 36) return { band: '36-48', label: 'เริ่มพร้อมแล้ว', desc: 'ยังต้องปิดช่องว่างเฉพาะด้าน ทำ mock quiz และฝึก present case', color: '#1e3a8a' }
-  if (t >= 21) return { band: '21-35', label: 'มีความรู้บางส่วน', desc: 'ยังไม่รู้จุดอ่อนชัด ทำแผน 30 วัน + MCQ + บันทึกข้อผิด', color: '#334155' }
-  return { band: '0-20', label: 'ยังไม่มีระบบชัดเจน', desc: 'เริ่มจากเส้นทางทางการ วิชาที่สำคัญ และประเมินตัวเองซ้ำใน 30 วัน', color: '#475569' }
+  const pct = (totalScore.value / 60) * 100
+  // ⭐ Band ตาม % ความพร้อม — สีสื่อสาร (progress semantics)
+  if (pct >= 80) return { band: '80-100%', label: '💎 พร้อมสอบระดับดีเยี่ยม', desc: 'คุณอยู่ในระดับ Top — เน้นแบบทดสอบจำลองและปรับ fine detail', color: '#16a34a' }
+  if (pct >= 60) return { band: '60-79%', label: '✨ พร้อมมาก', desc: 'ยังต้องปิดช่องว่างเฉพาะด้าน ทำ mock quiz + ฝึก present case', color: '#2563eb' }
+  if (pct >= 40) return { band: '40-59%', label: '🎯 เริ่มพร้อม', desc: 'มีพื้นฐานดี ต้องเสริมจุดอ่อนและวางแผนอ่านต่อ 30 วัน', color: '#f59e0b' }
+  if (pct >= 20) return { band: '20-39%', label: '📚 เริ่มเตรียมตัว', desc: 'ยังไม่รู้จุดอ่อนชัด ทำแผนอ่าน + MCQ + บันทึกข้อผิด', color: '#f97316' }
+  return { band: '0-19%', label: '🚀 เริ่มต้นจากศูนย์', desc: 'ยังต้องเริ่มจากรากฐาน — เส้นทางทางการ วิชาที่สำคัญ ประเมินซ้ำใน 30 วัน', color: '#dc2626' }
 })
 
 const weakCategories = computed(() => {
@@ -574,7 +575,7 @@ onMounted(() => {
         <div class="gate-perks">
           <div class="perk-item"><span class="perk-dot">1</span> PDF Checklist การเตรียมความพร้อม</div>
           <div class="perk-item"><span class="perk-dot">2</span> ทัก WeChat หมอแตม รับคำแนะนำ</div>
-          <div class="perk-item"><span class="perk-dot">3</span> นัด VDO Call ปรึกษา 30 นาที ฟรี</div>
+          <div class="perk-item"><span class="perk-dot">3</span> นัด Zoom ปรึกษา 30 นาที ฟรี</div>
           <div class="perk-item highlight"><span class="perk-dot">4</span> <b>ส่วนลด 10% ทุกคอร์ส</b></div>
         </div>
 
@@ -702,31 +703,52 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- ═══════════════ STEP 3: RESULT — คะแนน + 4 สิทธิ์ ═══════════════ -->
+    <!-- ═══════════════ STEP 3: RESULT — % ความพร้อม + insights + 4 สิทธิ์ ═══════════════ -->
     <section v-if="step === 'result'" class="result">
-      <div class="result-hero" :style="{ '--band-color': scoreBand.color }">
-        <div class="r-hi">🎉 ทำเสร็จแล้ว, {{ form.fullName || 'คุณ' }}!</div>
-        <div class="r-score-circle">
-          <svg viewBox="0 0 120 120" class="r-ring">
-            <circle cx="60" cy="60" r="52" class="r-track" />
-            <circle cx="60" cy="60" r="52" class="r-fill"
-              :style="{ strokeDasharray: 326.7, strokeDashoffset: 326.7 - (326.7 * totalScore / 60), stroke: scoreBand.color }" />
-          </svg>
-          <div class="r-score-num">
-            <div class="r-num">{{ totalScore }}</div>
-            <div class="r-max">/ 60</div>
+      <div class="result-hero-v2" :style="{ '--band-color': scoreBand.color }">
+        <div class="rh-hi">🎉 ทำเสร็จแล้ว, {{ form.fullName || 'คุณ' }}!</div>
+
+        <div class="rh-percent-block">
+          <div class="rh-percent-label">ความพร้อมของคุณ</div>
+          <div class="rh-percent-num" :style="{ color: scoreBand.color }">
+            <span class="rh-p-value">{{ Math.round((totalScore / 60) * 100) }}</span>
+            <span class="rh-p-sign">%</span>
+          </div>
+          <div class="rh-band-chip" :style="{ background: scoreBand.color }">
+            {{ scoreBand.label }}
           </div>
         </div>
-        <div class="r-band" :style="{ background: scoreBand.color }">{{ scoreBand.label }}</div>
-        <p class="r-desc">{{ scoreBand.desc }}</p>
+
+        <!-- Progress bar % -->
+        <div class="rh-progress">
+          <div class="rh-progress-track">
+            <div class="rh-progress-fill"
+                 :style="{ width: `${(totalScore / 60) * 100}%`, background: scoreBand.color }">
+              <div class="rh-progress-shine"></div>
+            </div>
+          </div>
+          <div class="rh-progress-markers">
+            <span :class="{ passed: (totalScore/60)*100 >= 25 }">25%</span>
+            <span :class="{ passed: (totalScore/60)*100 >= 50 }">50%</span>
+            <span :class="{ passed: (totalScore/60)*100 >= 75 }">75%</span>
+            <span :class="{ passed: (totalScore/60)*100 >= 100 }">100%</span>
+          </div>
+        </div>
+
+        <p class="rh-desc">{{ scoreBand.desc }}</p>
+
+        <div class="rh-raw">คะแนนดิบ: <b>{{ totalScore }}/60</b></div>
       </div>
 
       <div class="r-cats">
-        <div class="r-cats-title">คะแนนแยกหมวด</div>
+        <div class="r-cats-title">📊 ความพร้อมแต่ละหมวด</div>
         <div v-for="cat in CATEGORIES" :key="cat.key" class="r-cat">
           <div class="r-cat-head">
             <span class="r-cat-name">{{ cat.name }}</span>
-            <span class="r-cat-score">{{ scoresByCategory[cat.key] }}<span class="r-cat-max">/10</span></span>
+            <span class="r-cat-score">
+              <b>{{ Math.round((scoresByCategory[cat.key] / 10) * 100) }}%</b>
+              <span class="r-cat-max">({{ scoresByCategory[cat.key] }}/10)</span>
+            </span>
           </div>
           <div class="r-cat-bar">
             <div class="r-cat-bar-fill" :style="{ width: `${(scoresByCategory[cat.key] / 10) * 100}%` }"></div>
@@ -735,13 +757,16 @@ onMounted(() => {
       </div>
 
       <div class="r-recommend">
-        <div class="r-rec-title">คำแนะนำจากหมอแตม</div>
-        <div class="r-rec-sub">3 หมวดแรกที่ควรเริ่ม</div>
+        <div class="r-rec-title">🎯 คำแนะนำจากหมอแตม</div>
+        <div class="r-rec-sub">3 หมวดที่ควรเริ่มพัฒนาก่อน</div>
         <div v-for="(cat, i) in weakCategories" :key="cat.key" class="r-rec-item">
           <div class="r-rec-rank">{{ String(i + 1).padStart(2, '0') }}</div>
           <div class="r-rec-body">
             <div class="r-rec-name">{{ cat.name }}</div>
-            <div class="r-rec-score">{{ cat.score }} / 10 คะแนน</div>
+            <div class="r-rec-score">
+              ความพร้อม <b>{{ Math.round((cat.score / 10) * 100) }}%</b>
+              <span class="r-rec-gap">· ต้องปิดช่องว่างอีก {{ 100 - Math.round((cat.score / 10) * 100) }}%</span>
+            </div>
           </div>
         </div>
       </div>
@@ -779,11 +804,14 @@ onMounted(() => {
         <div class="right-card">
           <div class="rc-num">3</div>
           <div class="rc-body">
-            <div class="rc-title">📹 นัด VDO Call 30 นาที ฟรี</div>
-            <div class="rc-desc">คุยกับหมอแตมส่วนตัว · วางแผนเรียน</div>
+            <div class="rc-title">📹 นัด Zoom ปรึกษา 30 นาที ฟรี</div>
+            <div class="rc-desc">
+              คุยกับหมอแตมส่วนตัว · วางแผนเรียน<br />
+              <b>ทัก WeChat เพื่อขอนัดวันเวลา</b>
+            </div>
           </div>
           <button class="rc-btn primary" @click="trackInterest('vdocall')">
-            นัด
+            ขอนัด
           </button>
         </div>
 
@@ -791,7 +819,10 @@ onMounted(() => {
           <div class="rc-num">4</div>
           <div class="rc-body">
             <div class="rc-title">🎁 ส่วนลด 10% ทุกคอร์ส</div>
-            <div class="rc-desc">NL 1+2 · MEQ · OSCE · ใช้ได้ตลอด</div>
+            <div class="rc-desc">
+              NL 1+2 · MEQ · OSCE<br />
+              <b>ใช้ง่าย เพียงแจ้งชื่อที่เคยทำแบบสอบถาม</b>
+            </div>
           </div>
           <button class="rc-btn primary" @click="trackInterest('discount')">
             ใช้
@@ -1793,6 +1824,151 @@ onMounted(() => {
   color: #78350f;
 }
 .rights-guide b { color: #92400e; }
+
+/* ═══════════════ Result Hero V2 — % Ready + Progress Bar ═══════════════ */
+.result-hero-v2 {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  padding: 24px 18px;
+  margin-bottom: 14px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+.result-hero-v2::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--band-color);
+}
+.rh-hi {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #16a34a;
+  margin-bottom: 16px;
+}
+.rh-percent-block {
+  margin-bottom: 20px;
+}
+.rh-percent-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 4px;
+}
+.rh-percent-num {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  line-height: 1;
+  font-weight: 900;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+.rh-p-value {
+  font-size: clamp(64px, 15vw, 96px);
+  letter-spacing: -3px;
+  font-family: 'SF Pro Display', system-ui, sans-serif;
+}
+.rh-p-sign {
+  font-size: clamp(28px, 6vw, 40px);
+  margin-left: 4px;
+}
+.rh-band-chip {
+  display: inline-block;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 12px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+/* Progress bar */
+.rh-progress {
+  margin: 20px auto 14px;
+  max-width: 340px;
+}
+.rh-progress-track {
+  position: relative;
+  height: 14px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+.rh-progress-fill {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fillPulse 0.6s ease-out 1.2s both;
+  overflow: hidden;
+}
+@keyframes fillPulse {
+  0% { transform: scaleY(1); }
+  50% { transform: scaleY(1.15); }
+  100% { transform: scaleY(1); }
+}
+.rh-progress-shine {
+  position: absolute;
+  top: 0; left: -50%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shine 2.5s ease-in-out 1.5s infinite;
+}
+@keyframes shine {
+  0% { left: -50%; }
+  100% { left: 150%; }
+}
+.rh-progress-markers {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+.rh-progress-markers .passed {
+  color: #0a1e3d;
+}
+
+.rh-desc {
+  font-size: 13.5px;
+  color: #475569;
+  line-height: 1.6;
+  margin: 8px 0 6px;
+  max-width: 340px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.rh-raw {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+.rh-raw b { color: #64748b; }
+
+/* Category rows show % + raw score */
+.r-cat-max {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* Recommendation gap indicator */
+.r-rec-gap {
+  color: #dc2626;
+  font-weight: 700;
+}
 
 .result-hero {
   text-align: center;
