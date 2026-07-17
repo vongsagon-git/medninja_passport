@@ -93,9 +93,9 @@ const CATEGORIES = [
 ]
 
 const SCORE_OPTIONS = [
-  { value: 0, label: 'ยังไม่ได้เริ่ม', sub: 'Not yet', level: 'low' },
-  { value: 1, label: 'พอทำได้บ้าง', sub: 'Some knowledge', level: 'mid' },
-  { value: 2, label: 'ทำได้มั่นใจ', sub: 'Confident', level: 'high' }
+  { value: 0, label: 'ยังไม่ได้เริ่ม', sub: 'ต้องเริ่มจากศูนย์', icon: '😔', level: 'low' },
+  { value: 1, label: 'พอทำได้บ้าง', sub: 'รู้บางส่วน ไม่แน่นพอ', icon: '🤔', level: 'mid' },
+  { value: 2, label: 'ทำได้มั่นใจ', sub: 'พร้อมเจอข้อสอบ', icon: '💪', level: 'high' }
 ]
 
 const YEAR_OPTIONS = [
@@ -128,6 +128,7 @@ const submitError = ref('')
 const resultScore = ref(null)   // { totalScore, scoresByCategory, scoreBand }
 const pdfDownloadUrl = ref('')  // signed URL จาก backend หลัง save lead สำเร็จ
 const currentLeadId = ref('')   // เก็บ leadId เพื่อใช้ตอนฝากเบอร์ผู้ปกครอง
+const resultUnlocked = ref(false)  // ⭐ ปลดล็อคผลคะแนน + PDF หลังกรอกฟอร์ม
 
 // ⭐ ผู้ปกครองฝากเบอร์ให้หมอโทรกลับ
 const parentPhone = ref('')
@@ -308,12 +309,16 @@ async function submitAndDownload() {
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.message || 'ส่งไม่สำเร็จ')
 
-    // ⭐ ได้ pdfUrl signed จาก backend → download + ไป thanks
+    // ⭐ ได้ pdfUrl signed จาก backend → unlock ผล + download PDF
     pdfDownloadUrl.value = data.pdfUrl || ''
     currentLeadId.value = data.leadId || ''
+    resultUnlocked.value = true
     if (pdfDownloadUrl.value) downloadPdf()
-    step.value = 'thanks'
-    scrollTop()
+    // scroll ไปที่ผลคะแนนที่เพิ่งปลดล็อค
+    setTimeout(() => {
+      const el = document.querySelector('.result-preview')
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 200)
   } catch (e) {
     submitError.value = e.message
   } finally {
@@ -513,16 +518,12 @@ onMounted(() => {
             :class="[`level-${opt.level}`, { selected: answers[currentQ] === opt.value }]"
             @click="selectAnswer(opt.value)"
           >
-            <span class="q-opt-num">{{ opt.value }}</span>
+            <span class="q-opt-icon">{{ opt.icon }}</span>
             <span class="q-opt-body">
               <span class="q-opt-label">{{ opt.label }}</span>
               <span class="q-opt-sub">{{ opt.sub }}</span>
             </span>
-            <span class="q-opt-check">
-              <svg viewBox="0 0 20 20" width="18" height="18" v-if="answers[currentQ] === opt.value">
-                <path d="M4 10 L8 14 L16 5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
+            <span class="q-opt-arrow">→</span>
           </button>
         </div>
 
@@ -539,54 +540,14 @@ onMounted(() => {
 
     <!-- ═══════════════ STEP 3: RESULT + FORM (รวมหน้าเดียว) ═══════════════ -->
     <section v-if="step === 'result-form'" class="result">
-      <div class="result-hero" :style="{ '--band-color': scoreBand.color }">
-        <div class="r-score-circle">
-          <svg viewBox="0 0 120 120" class="r-ring">
-            <circle cx="60" cy="60" r="52" class="r-track" />
-            <circle cx="60" cy="60" r="52" class="r-fill"
-              :style="{ strokeDasharray: 326.7, strokeDashoffset: 326.7 - (326.7 * totalScore / 60), stroke: scoreBand.color }" />
-          </svg>
-          <div class="r-score-num">
-            <div class="r-num">{{ totalScore }}</div>
-            <div class="r-max">/ 60</div>
-          </div>
-        </div>
-
-        <div class="r-band" :style="{ background: scoreBand.color }">
-          {{ scoreBand.label }}
-        </div>
-        <p class="r-desc">{{ scoreBand.desc }}</p>
-      </div>
-
-      <div class="r-cats">
-        <div class="r-cats-title">📊 คะแนนแยกหมวด</div>
-        <div v-for="cat in CATEGORIES" :key="cat.key" class="r-cat">
-          <div class="r-cat-head">
-            <span class="r-cat-icon">{{ cat.icon }}</span>
-            <span class="r-cat-name">{{ cat.name }}</span>
-            <span class="r-cat-score">{{ scoresByCategory[cat.key] }}/10</span>
-          </div>
-          <div class="r-cat-bar">
-            <div class="r-cat-bar-fill" :style="{ width: `${(scoresByCategory[cat.key] / 10) * 100}%`, background: cat.color }"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="r-recommend">
-        <div class="r-rec-title">🎯 หมอแตมแนะนำให้เริ่มจาก</div>
-        <div v-for="(cat, i) in weakCategories" :key="cat.key" class="r-rec-item">
-          <div class="r-rec-rank" :style="{ background: cat.color }">{{ i + 1 }}</div>
-          <div class="r-rec-body">
-            <div class="r-rec-name">{{ cat.icon }} {{ cat.name }}</div>
-            <div class="r-rec-score">คะแนน {{ cat.score }}/10 · ต้องปิดช่องนี้ก่อน</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ⭐ Form inline (merged from step 4) — ลด friction ให้กรอกเลย -->
+      <!-- ⭐ STEP 1: กรอกฟอร์มก่อน — ต้องกรอกครบถึงจะเห็นผล + โหลด PDF -->
       <div class="lf-inline">
-        <h3 class="lf-inline-title">📮 กรอกเพื่อรับ PDF Checklist การเตรียมความพร้อม</h3>
-        <p class="lf-inline-sub">กรอก 3 ช่องนี้ → กด "โหลด PDF" ได้เลย</p>
+        <div class="lf-inline-badge">
+          <span class="lf-badge-num">✓</span>
+          <span>ทำแบบประเมินเสร็จแล้ว 30/30</span>
+        </div>
+        <h3 class="lf-inline-title">📮 กรอกข้อมูลเพื่อดูผล + รับ PDF</h3>
+        <p class="lf-inline-sub">ทีมงานจะส่งคำแนะนำเพิ่มเติมทาง WeChat</p>
 
         <div class="lf-field">
           <label>ชื่อจริง <span class="req">*</span></label>
@@ -649,10 +610,72 @@ onMounted(() => {
         <button class="cta-primary lf-submit" :disabled="!canSubmitForm || submitting" @click="submitAndDownload">
           <span v-if="submitting">กำลังส่ง...</span>
           <span v-else-if="!canSubmitForm">🔒 กรอก ชื่อ + มหาลัย + WeChat ให้ครบ</span>
-          <span v-else>📥 ส่งข้อมูล · โหลด PDF ทันที</span>
+          <span v-else>🔓 ดูผลคะแนน + โหลด PDF</span>
         </button>
 
         <p class="lf-privacy">🔒 ใช้สำหรับส่ง PDF + นัดปรึกษาเท่านั้น</p>
+      </div>
+
+      <!-- ⭐ STEP 2: ผลคะแนน — ล็อคจนกว่าจะกรอกฟอร์มเสร็จ -->
+      <div class="result-preview" :class="{ locked: !resultUnlocked }">
+        <div v-if="!resultUnlocked" class="rp-lock">
+          <div class="rp-lock-icon">🔒</div>
+          <div class="rp-lock-title">ผลคะแนนของคุณถูกล็อคอยู่</div>
+          <div class="rp-lock-desc">กรอกฟอร์มด้านบน → ปลดล็อคผล + PDF</div>
+        </div>
+
+        <div class="result-hero" :style="{ '--band-color': scoreBand.color }">
+          <div class="r-score-circle">
+            <svg viewBox="0 0 120 120" class="r-ring">
+              <circle cx="60" cy="60" r="52" class="r-track" />
+              <circle cx="60" cy="60" r="52" class="r-fill"
+                :style="{ strokeDasharray: 326.7, strokeDashoffset: 326.7 - (326.7 * totalScore / 60), stroke: scoreBand.color }" />
+            </svg>
+            <div class="r-score-num">
+              <div class="r-num">{{ totalScore }}</div>
+              <div class="r-max">/ 60</div>
+            </div>
+          </div>
+
+          <div class="r-band" :style="{ background: scoreBand.color }">
+            {{ scoreBand.label }}
+          </div>
+          <p class="r-desc">{{ scoreBand.desc }}</p>
+        </div>
+
+        <div class="r-cats">
+          <div class="r-cats-title">📊 คะแนนแยกหมวด</div>
+          <div v-for="cat in CATEGORIES" :key="cat.key" class="r-cat">
+            <div class="r-cat-head">
+              <span class="r-cat-icon">{{ cat.icon }}</span>
+              <span class="r-cat-name">{{ cat.name }}</span>
+              <span class="r-cat-score">{{ scoresByCategory[cat.key] }}/10</span>
+            </div>
+            <div class="r-cat-bar">
+              <div class="r-cat-bar-fill" :style="{ width: `${(scoresByCategory[cat.key] / 10) * 100}%`, background: cat.color }"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="r-recommend">
+          <div class="r-rec-title">🎯 หมอแตมแนะนำให้เริ่มจาก</div>
+          <div v-for="(cat, i) in weakCategories" :key="cat.key" class="r-rec-item">
+            <div class="r-rec-rank" :style="{ background: cat.color }">{{ i + 1 }}</div>
+            <div class="r-rec-body">
+              <div class="r-rec-name">{{ cat.icon }} {{ cat.name }}</div>
+              <div class="r-rec-score">คะแนน {{ cat.score }}/10 · ต้องปิดช่องนี้ก่อน</div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="resultUnlocked" class="r-next-cta">
+          <button v-if="pdfDownloadUrl" class="cta-primary" @click="downloadPdf">
+            📥 โหลด PDF อีกครั้ง
+          </button>
+          <button class="cta-outline" @click="step = 'thanks'; scrollTop()">
+            💬 ต่อไปที่ ติดต่อ / นัดปรึกษา →
+          </button>
+        </div>
       </div>
     </section>
 
@@ -1293,97 +1316,112 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 16px;
+  padding: 14px 18px;
   background: white;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
   text-align: left;
   overflow: hidden;
 }
-.q-opt::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: transparent;
-  transition: background 0.2s;
-}
-.q-opt.level-low::before   { background: linear-gradient(180deg, #64748b, #475569); }
-.q-opt.level-mid::before   { background: linear-gradient(180deg, #3b82f6, #2563eb); }
-.q-opt.level-high::before  { background: linear-gradient(180deg, #0a1e3d, #050f28); }
+
+/* Level-specific colors (subtle bg tint) */
+.q-opt.level-low   { background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); }
+.q-opt.level-mid   { background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); }
+.q-opt.level-high  { background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); }
 
 .q-opt:hover {
-  border-color: #94a3b8;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(10, 30, 61, 0.08);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 10px 24px rgba(10, 30, 61, 0.1);
 }
+.q-opt.level-low:hover   { border-color: #f97316; box-shadow: 0 10px 24px rgba(249, 115, 22, 0.2); }
+.q-opt.level-mid:hover   { border-color: #3b82f6; box-shadow: 0 10px 24px rgba(59, 130, 246, 0.2); }
+.q-opt.level-high:hover  { border-color: #16a34a; box-shadow: 0 10px 24px rgba(22, 163, 74, 0.2); }
+
 .q-opt.selected {
-  border-color: #0a1e3d;
-  background: linear-gradient(135deg, #ffffff, #f8fafc);
-  box-shadow: 0 8px 20px rgba(10, 30, 61, 0.12);
+  transform: translateY(-2px);
+  border-width: 2px;
+}
+.q-opt.level-low.selected {
+  border-color: #f97316;
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  box-shadow: 0 12px 28px rgba(249, 115, 22, 0.25);
+}
+.q-opt.level-mid.selected {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.25);
+}
+.q-opt.level-high.selected {
+  border-color: #16a34a;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  box-shadow: 0 12px 28px rgba(22, 163, 74, 0.25);
 }
 
-.q-opt-num {
+.q-opt-icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 15px;
-  font-weight: 900;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: white;
   display: grid;
   place-items: center;
-  font-family: 'SF Mono', 'Menlo', monospace;
-  transition: all 0.2s;
+  font-size: 24px;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.06);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.q-opt.level-low .q-opt-num  { background: #f1f5f9; color: #475569; }
-.q-opt.level-mid .q-opt-num  { background: #dbeafe; color: #1e40af; }
-.q-opt.level-high .q-opt-num { background: #0a1e3d; color: #ffffff; }
-.q-opt.selected .q-opt-num {
-  transform: scale(1.05);
+.q-opt:hover .q-opt-icon,
+.q-opt.selected .q-opt-icon {
+  transform: scale(1.15) rotate(-5deg);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
 }
 
 .q-opt-body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 .q-opt-label {
-  font-size: 14.5px;
+  font-size: 15.5px;
   font-weight: 800;
   color: #0a1e3d;
   line-height: 1.2;
 }
 .q-opt-sub {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: #64748b;
   font-weight: 600;
-  letter-spacing: 0.3px;
 }
+.q-opt.selected .q-opt-label { color: #0a1e3d; }
+.q-opt.level-low.selected .q-opt-sub { color: #9a3412; font-weight: 700; }
+.q-opt.level-mid.selected .q-opt-sub { color: #1e40af; font-weight: 700; }
+.q-opt.level-high.selected .q-opt-sub { color: #14532d; font-weight: 700; }
 
-.q-opt-check {
+.q-opt-arrow {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #0a1e3d;
-  color: white;
-  display: grid;
-  place-items: center;
+  font-size: 20px;
+  font-weight: 900;
+  color: #cbd5e1;
+  transition: all 0.25s;
   opacity: 0;
-  transform: scale(0.6);
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateX(-8px);
 }
-.q-opt.selected .q-opt-check {
+.q-opt:hover .q-opt-arrow {
   opacity: 1;
-  transform: scale(1);
+  transform: translateX(0);
+  color: #94a3b8;
 }
+.q-opt.selected .q-opt-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+.q-opt.level-low.selected .q-opt-arrow  { color: #f97316; }
+.q-opt.level-mid.selected .q-opt-arrow  { color: #3b82f6; }
+.q-opt.level-high.selected .q-opt-arrow { color: #16a34a; }
 
 .q-nav {
   display: flex;
@@ -1651,9 +1689,104 @@ onMounted(() => {
   background: white;
   border-radius: 18px;
   padding: 18px 16px;
-  margin-top: 16px;
+  margin-top: 0;
   border: 1px solid rgba(15, 23, 42, 0.06);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+.lf-inline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #14532d;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  border: 1px solid #22c55e;
+  margin-bottom: 10px;
+}
+.lf-badge-num {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #16a34a;
+  color: white;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+/* Locked result preview */
+.result-preview {
+  margin-top: 16px;
+  position: relative;
+  transition: filter 0.4s, opacity 0.4s;
+}
+.result-preview.locked {
+  filter: blur(6px);
+  opacity: 0.4;
+  pointer-events: none;
+  user-select: none;
+}
+.rp-lock {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  filter: none !important;
+  opacity: 1 !important;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.9));
+  border-radius: 18px;
+  padding: 40px 20px;
+}
+.rp-lock-icon {
+  font-size: 44px;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 4px 8px rgba(10, 30, 61, 0.2));
+}
+.rp-lock-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #0a1e3d;
+}
+.rp-lock-desc {
+  font-size: 12.5px;
+  color: #475569;
+  text-align: center;
+}
+
+/* Next CTA after unlock */
+.r-next-cta {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.cta-outline {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  background: white;
+  color: #0a1e3d;
+  border: 1.5px solid #0a1e3d;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.cta-outline:hover {
+  background: #0a1e3d;
+  color: white;
 }
 .lf-inline-title {
   font-size: 18px;
