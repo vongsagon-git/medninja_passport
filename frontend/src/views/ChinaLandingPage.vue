@@ -289,7 +289,6 @@ onMounted(() => {
 
       <header class="topbar">
         <div class="brand">
-          <img src="/img/mascot.png" alt="MedNinja" class="brand-mark" />
           <span class="brand-name">MedNinja</span>
         </div>
         <div class="badge-cn">
@@ -299,35 +298,30 @@ onMounted(() => {
       </header>
 
       <div class="hero">
+        <div class="hero-mascot-wrap">
+          <img src="/img/mascot.png" alt="MedNinja" class="hero-mascot" />
+        </div>
+
         <div class="hero-badge">🎓 นักศึกษาแพทย์ไทยในจีน</div>
 
         <h1 class="hero-title">
-          พร้อม<span class="hl-red">กลับไทย</span>
-          หรือยัง?
+          พร้อม<span class="hl-red">กลับไทย</span>หรือยัง?
         </h1>
 
         <p class="hero-sub">
-          ประเมิน <b>30 ข้อ · 3 นาที</b> รู้ทันทีต้องปิดช่องไหน
-          ก่อนสอบ <b>NL / MEQ / OSCE</b>
+          ประเมินตัวเอง <b>30 ข้อ</b> ใน 3 นาที<br />
+          รับ <b>PDF Checklist</b> + <b>ปรึกษาหมอแตม 30 นาที ฟรี</b>
         </p>
 
-        <div class="hero-pills">
-          <span class="pill">📊 30 ข้อ</span>
-          <span class="pill">💬 รับ PDF ทาง WeChat</span>
-          <span class="pill pill-gift">🎁 ปรึกษาหมอแตม 30 นาที ฟรี</span>
-        </div>
-
         <div class="products-row">
-          <div class="p-mini nl"><b>NL 1+2</b><span>ระบบใหม่</span></div>
-          <div class="p-mini meq"><b>MEQ</b><span>Modified Essay</span></div>
-          <div class="p-mini osce"><b>OSCE</b><span>Ward Ready</span></div>
+          <div class="p-mini nl"><b>NL 1+2</b></div>
+          <div class="p-mini meq"><b>MEQ</b></div>
+          <div class="p-mini osce"><b>OSCE</b></div>
         </div>
 
         <button class="cta-primary" @click="startAssessment">
           🚀 เริ่มทำแบบประเมิน
         </button>
-
-        <p class="hero-footnote">⚡ 3 นาที · ไม่มีค่าใช้จ่าย · ไม่มีข้อผูกมัด</p>
       </div>
     </section>
 
@@ -618,31 +612,49 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   min-height: 0;
+}
+.hero-mascot-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: clamp(140px, 26vh, 220px);
+  margin-bottom: -8px;
+}
+.hero-mascot {
+  height: 100%;
+  width: auto;
+  filter: drop-shadow(0 12px 24px rgba(30, 58, 138, 0.25));
+  animation: floaty 3.5s ease-in-out infinite;
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 .hero-badge {
   align-self: center;
   background: white;
   color: #0b2b5b;
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   border: 1.5px solid rgba(30, 58, 138, 0.15);
   box-shadow: 0 4px 12px rgba(30, 58, 138, 0.08);
 }
 .hero-title {
   font-size: clamp(28px, 8vw, 40px);
-  line-height: 1.05;
+  line-height: 1.1;
   font-weight: 900;
   color: #0b2b5b;
   letter-spacing: -0.02em;
   margin: 0;
+  white-space: nowrap;
 }
 .hl-red { color: #dc2626; }
 .hero-sub {
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.55;
   color: #475569;
   margin: 0 auto;
