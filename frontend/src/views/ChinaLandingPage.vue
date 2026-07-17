@@ -510,30 +510,34 @@ onMounted(() => {
       </div>
 
       <div class="q-container">
-        <div class="q-cat" :style="{ color: currentQuestion.category.color }">
-          <span class="q-cat-icon">{{ currentQuestion.category.icon }}</span>
-          <span class="q-cat-name">{{ currentQuestion.category.name }}</span>
-          <span class="q-cat-num">ข้อ {{ currentQuestion.qInCat }}/5</span>
-        </div>
+        <transition name="q-slide" mode="out-in">
+          <div :key="currentQ" class="q-slide-wrap">
+            <div class="q-cat" :style="{ color: currentQuestion.category.color }">
+              <span class="q-cat-icon">{{ currentQuestion.category.icon }}</span>
+              <span class="q-cat-name">{{ currentQuestion.category.name }}</span>
+              <span class="q-cat-num">ข้อ {{ currentQuestion.qInCat }}/5</span>
+            </div>
 
-        <h2 class="q-text">{{ currentQuestion.text }}</h2>
+            <h2 class="q-text">{{ currentQuestion.text }}</h2>
 
-        <div class="q-options">
-          <button
-            v-for="opt in SCORE_OPTIONS"
-            :key="opt.value"
-            class="q-opt"
-            :class="[`level-${opt.level}`, { selected: answers[currentQ] === opt.value }]"
-            @click="selectAnswer(opt.value)"
-          >
-            <span class="q-opt-dot"></span>
-            <span class="q-opt-body">
-              <span class="q-opt-label">{{ opt.label }}</span>
-              <span class="q-opt-sub">{{ opt.sub }}</span>
-            </span>
-            <span class="q-opt-arrow">→</span>
-          </button>
-        </div>
+            <div class="q-options">
+              <button
+                v-for="opt in SCORE_OPTIONS"
+                :key="opt.value"
+                class="q-opt"
+                :class="[`level-${opt.level}`, { selected: answers[currentQ] === opt.value }]"
+                @click="selectAnswer(opt.value)"
+              >
+                <span class="q-opt-dot"></span>
+                <span class="q-opt-body">
+                  <span class="q-opt-label">{{ opt.label }}</span>
+                  <span class="q-opt-sub">{{ opt.sub }}</span>
+                </span>
+                <span class="q-opt-arrow">→</span>
+              </button>
+            </div>
+          </div>
+        </transition>
 
         <div class="q-nav">
           <button class="q-back" :disabled="currentQ === 0" @click="prevQuestion">
@@ -1349,55 +1353,17 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* Level-specific colors (subtle bg tint) */
-.q-opt.level-low   { background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); }
-.q-opt.level-mid   { background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); }
-.q-opt.level-high  { background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); }
-
+/* Clean minimal — no bg tint, no selected highlight (avoid carry-over animation) */
+.q-opt {
+  transition: border-color 0.1s, transform 0.1s;
+}
 .q-opt:hover {
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: 0 10px 24px rgba(10, 30, 61, 0.1);
+  border-color: #0a1e3d;
 }
-.q-opt.level-low:hover   { border-color: #f97316; box-shadow: 0 10px 24px rgba(249, 115, 22, 0.2); }
-.q-opt.level-mid:hover   { border-color: #3b82f6; box-shadow: 0 10px 24px rgba(59, 130, 246, 0.2); }
-.q-opt.level-high:hover  { border-color: #16a34a; box-shadow: 0 10px 24px rgba(22, 163, 74, 0.2); }
 
+/* Selected: subtle border only (no bg change → no visual carry-over ข้อถัดไป) */
 .q-opt.selected {
-  transform: translateY(-2px);
-  border-width: 2px;
-}
-.q-opt.level-low.selected {
-  border-color: #f97316;
-  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
-  box-shadow: 0 12px 28px rgba(249, 115, 22, 0.25);
-}
-.q-opt.level-mid.selected {
-  border-color: #3b82f6;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.25);
-}
-.q-opt.level-high.selected {
-  border-color: #16a34a;
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  box-shadow: 0 12px 28px rgba(22, 163, 74, 0.25);
-}
-
-.q-opt-icon {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: white;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.06);
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.q-opt:hover .q-opt-icon,
-.q-opt.selected .q-opt-icon {
-  transform: scale(1.15) rotate(-5deg);
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+  border-color: #0a1e3d;
 }
 
 .q-opt-body {
@@ -1418,32 +1384,42 @@ onMounted(() => {
   color: #64748b;
   font-weight: 600;
 }
-.q-opt.selected .q-opt-label { color: #0a1e3d; }
-.q-opt.level-low.selected .q-opt-sub { color: #9a3412; font-weight: 700; }
-.q-opt.level-mid.selected .q-opt-sub { color: #1e40af; font-weight: 700; }
-.q-opt.level-high.selected .q-opt-sub { color: #14532d; font-weight: 700; }
+
+/* Dot indicator (แทน emoji/icon) */
+.q-opt-dot {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: white;
+  transition: all 0.1s;
+}
+.q-opt.selected .q-opt-dot {
+  border-color: #0a1e3d;
+  background: #0a1e3d;
+  box-shadow: inset 0 0 0 3px white;
+}
 
 .q-opt-arrow {
-  flex-shrink: 0;
-  font-size: 20px;
-  font-weight: 900;
-  color: #cbd5e1;
-  transition: all 0.25s;
+  display: none;   /* ไม่ต้องมี arrow */
+}
+
+/* Slide + fade transition ระหว่างข้อ (ให้เห็นชัดว่าข้อเปลี่ยน) */
+.q-slide-enter-active {
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.q-slide-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease-in;
+}
+.q-slide-enter-from {
   opacity: 0;
-  transform: translateX(-8px);
+  transform: translateX(30px);
 }
-.q-opt:hover .q-opt-arrow {
-  opacity: 1;
-  transform: translateX(0);
-  color: #94a3b8;
+.q-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
 }
-.q-opt.selected .q-opt-arrow {
-  opacity: 1;
-  transform: translateX(4px);
-}
-.q-opt.level-low.selected .q-opt-arrow  { color: #f97316; }
-.q-opt.level-mid.selected .q-opt-arrow  { color: #3b82f6; }
-.q-opt.level-high.selected .q-opt-arrow { color: #16a34a; }
 
 .q-nav {
   display: flex;
