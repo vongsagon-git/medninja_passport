@@ -14,8 +14,8 @@ const SEMINAR_BATCH = '2026-07-18-china-seminar'
 const CATEGORIES = [
   {
     key: 'officialPath',
-    icon: '📋',
-    color: '#3b82f6',
+    icon: '',
+    color: '#0a1e3d',
     name: 'เส้นทางทางการ',
     questions: [
       'ฉันรู้ว่าต้องตรวจสอบข้อมูลจาก แพทยสภา/ศ.ร.ว. ที่ไหน',
@@ -27,8 +27,8 @@ const CATEGORIES = [
   },
   {
     key: 'knowledgeNL',
-    icon: '📚',
-    color: '#8b5cf6',
+    icon: '',
+    color: '#0a1e3d',
     name: 'ความรู้และ NL',
     questions: [
       'ฉันรู้วิชาที่ต้องจัดลำดับความสำคัญ',
@@ -40,8 +40,8 @@ const CATEGORIES = [
   },
   {
     key: 'clinicalThinking',
-    icon: '🩺',
-    color: '#ef4444',
+    icon: '',
+    color: '#0a1e3d',
     name: 'Clinical Thinking',
     questions: [
       'ฉัน approach fever ได้',
@@ -53,8 +53,8 @@ const CATEGORIES = [
   },
   {
     key: 'labAndWard',
-    icon: '🧪',
-    color: '#10b981',
+    icon: '',
+    color: '#0a1e3d',
     name: 'Lab และ Ward',
     questions: [
       'ฉันอ่าน CBC เบื้องต้นได้',
@@ -66,8 +66,8 @@ const CATEGORIES = [
   },
   {
     key: 'languageOsce',
-    icon: '🗣️',
-    color: '#f59e0b',
+    icon: '',
+    color: '#0a1e3d',
     name: 'ภาษาและ OSCE',
     questions: [
       'ฉัน present case เป็นภาษาไทยได้',
@@ -79,8 +79,8 @@ const CATEGORIES = [
   },
   {
     key: 'confidence',
-    icon: '💪',
-    color: '#ec4899',
+    icon: '',
+    color: '#0a1e3d',
     name: 'ความมั่นใจและระบบ',
     questions: [
       'ฉันไม่อ่านมั่วตามความกังวล',
@@ -93,9 +93,9 @@ const CATEGORIES = [
 ]
 
 const SCORE_OPTIONS = [
-  { value: 0, label: 'ยังไม่ได้เริ่ม', sub: 'ต้องเริ่มจากศูนย์', icon: '😔', level: 'low' },
-  { value: 1, label: 'พอทำได้บ้าง', sub: 'รู้บางส่วน ไม่แน่นพอ', icon: '🤔', level: 'mid' },
-  { value: 2, label: 'ทำได้มั่นใจ', sub: 'พร้อมเจอข้อสอบ', icon: '💪', level: 'high' }
+  { value: 0, label: 'ยังไม่ได้เริ่ม', sub: 'ต้องเริ่มจากศูนย์', level: 'low' },
+  { value: 1, label: 'พอทำได้บ้าง', sub: 'รู้บางส่วน ไม่แน่นพอ', level: 'mid' },
+  { value: 2, label: 'ทำได้มั่นใจ', sub: 'พร้อมเจอข้อสอบ', level: 'high' }
 ]
 
 const YEAR_OPTIONS = [
@@ -215,10 +215,11 @@ const scoresByCategory = computed(() => {
 
 const scoreBand = computed(() => {
   const t = totalScore.value
-  if (t >= 49) return { band: '49-60', label: 'มีระบบดีเยี่ยม', desc: 'พร้อมมาก! เน้นแบบทดสอบจำลอง + fine-tune จุดเล็ก ๆ', color: '#10b981' }
-  if (t >= 36) return { band: '36-48', label: 'เริ่มพร้อมแล้ว', desc: 'ยังต้องปิดช่องว่างเฉพาะด้าน — ทำ mock quiz + ฝึก present case', color: '#3b82f6' }
-  if (t >= 21) return { band: '21-35', label: 'มีความรู้บางส่วน', desc: 'ยังไม่รู้ weak point ชัด — ทำแผน 30 วัน + MCQ + บันทึกข้อผิด', color: '#f59e0b' }
-  return { band: '0-20', label: 'ยังไม่มีระบบชัดเจน', desc: 'เริ่มจากเส้นทางทางการ + subject priority + แบบประเมินซ้ำใน 30 วัน', color: '#ef4444' }
+  // ⭐ Monochromatic navy palette — ไม่ใช้สีสด (traffic light) เพื่อดูมืออาชีพ
+  if (t >= 49) return { band: '49-60', label: 'มีระบบดีเยี่ยม', desc: 'พร้อมมาก เน้นแบบทดสอบจำลอง และปรับจุดเล็ก ๆ', color: '#0a1e3d' }
+  if (t >= 36) return { band: '36-48', label: 'เริ่มพร้อมแล้ว', desc: 'ยังต้องปิดช่องว่างเฉพาะด้าน ทำ mock quiz และฝึก present case', color: '#1e3a8a' }
+  if (t >= 21) return { band: '21-35', label: 'มีความรู้บางส่วน', desc: 'ยังไม่รู้จุดอ่อนชัด ทำแผน 30 วัน + MCQ + บันทึกข้อผิด', color: '#334155' }
+  return { band: '0-20', label: 'ยังไม่มีระบบชัดเจน', desc: 'เริ่มจากเส้นทางทางการ วิชาที่สำคัญ และประเมินตัวเองซ้ำใน 30 วัน', color: '#475569' }
 })
 
 const weakCategories = computed(() => {
@@ -414,7 +415,9 @@ onMounted(() => {
 
         <p class="hero-sub">
           ประเมินตัวเอง <b>30 ข้อ</b> ใน 3 นาที<br />
-          รับ <b>PDF Checklist การเตรียมความพร้อม</b> + <b>ปรึกษาหมอแตม 30 นาที ฟรี</b>
+          รับ <b class="nb">PDF Checklist การเตรียมความพร้อม</b>
+          <br />
+          <b class="nb">+ ปรึกษาหมอแตมแบบส่วนตัว</b>
         </p>
 
         <div class="products-row">
@@ -518,7 +521,7 @@ onMounted(() => {
             :class="[`level-${opt.level}`, { selected: answers[currentQ] === opt.value }]"
             @click="selectAnswer(opt.value)"
           >
-            <span class="q-opt-icon">{{ opt.icon }}</span>
+            <span class="q-opt-dot"></span>
             <span class="q-opt-body">
               <span class="q-opt-label">{{ opt.label }}</span>
               <span class="q-opt-sub">{{ opt.sub }}</span>
@@ -644,36 +647,36 @@ onMounted(() => {
         </div>
 
         <div class="r-cats">
-          <div class="r-cats-title">📊 คะแนนแยกหมวด</div>
+          <div class="r-cats-title">คะแนนแยกหมวด</div>
           <div v-for="cat in CATEGORIES" :key="cat.key" class="r-cat">
             <div class="r-cat-head">
-              <span class="r-cat-icon">{{ cat.icon }}</span>
               <span class="r-cat-name">{{ cat.name }}</span>
-              <span class="r-cat-score">{{ scoresByCategory[cat.key] }}/10</span>
+              <span class="r-cat-score">{{ scoresByCategory[cat.key] }}<span class="r-cat-max">/10</span></span>
             </div>
             <div class="r-cat-bar">
-              <div class="r-cat-bar-fill" :style="{ width: `${(scoresByCategory[cat.key] / 10) * 100}%`, background: cat.color }"></div>
+              <div class="r-cat-bar-fill" :style="{ width: `${(scoresByCategory[cat.key] / 10) * 100}%` }"></div>
             </div>
           </div>
         </div>
 
         <div class="r-recommend">
-          <div class="r-rec-title">🎯 หมอแตมแนะนำให้เริ่มจาก</div>
+          <div class="r-rec-title">คำแนะนำจากหมอแตม</div>
+          <div class="r-rec-sub">3 หมวดแรกที่ควรเริ่ม</div>
           <div v-for="(cat, i) in weakCategories" :key="cat.key" class="r-rec-item">
-            <div class="r-rec-rank" :style="{ background: cat.color }">{{ i + 1 }}</div>
+            <div class="r-rec-rank">{{ String(i + 1).padStart(2, '0') }}</div>
             <div class="r-rec-body">
-              <div class="r-rec-name">{{ cat.icon }} {{ cat.name }}</div>
-              <div class="r-rec-score">คะแนน {{ cat.score }}/10 · ต้องปิดช่องนี้ก่อน</div>
+              <div class="r-rec-name">{{ cat.name }}</div>
+              <div class="r-rec-score">{{ cat.score }} / 10 คะแนน</div>
             </div>
           </div>
         </div>
 
         <div v-if="resultUnlocked" class="r-next-cta">
           <button v-if="pdfDownloadUrl" class="cta-primary" @click="downloadPdf">
-            📥 โหลด PDF อีกครั้ง
+            โหลด PDF อีกครั้ง
           </button>
           <button class="cta-outline" @click="step = 'thanks'; scrollTop()">
-            💬 ต่อไปที่ ติดต่อ / นัดปรึกษา →
+            ต่อไปที่ ติดต่อ / นัดปรึกษา →
           </button>
         </div>
       </div>
@@ -691,7 +694,7 @@ onMounted(() => {
       <p class="th-sub">
         PDF Checklist การเตรียมความพร้อม ถูกดาวน์โหลดให้แล้ว<br />
         <b>ทีมงานจะติดต่อทาง WeChat ภายใน 24 ชม.</b><br />
-        พร้อมนัดปรึกษาหมอแตม 30 นาที ฟรี
+        พร้อมนัดปรึกษาหมอแตมแบบส่วนตัว
       </p>
 
       <button v-if="pdfDownloadUrl" class="th-btn download" @click="downloadPdf">
@@ -975,6 +978,11 @@ onMounted(() => {
   max-width: 560px;
 }
 .hero-sub b { color: #0b2b5b; font-weight: 800; }
+.hero-sub .nb {
+  display: inline-block;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
 
 .hero-pills {
   display: flex;
