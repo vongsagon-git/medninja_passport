@@ -135,6 +135,10 @@ const parentSubmitting = ref(false)
 const parentSubmitted = ref(false)
 const parentError = ref('')
 
+// ⭐ Contact modal (landing page)
+const contactOpen = ref(false)
+function openContact() { contactOpen.value = true }
+
 // resolved university (ใช้ตอน submit)
 const resolvedUniversity = computed(() => {
   if (form.value.universitySelect === '__OTHER__') return form.value.universityOther.trim()
@@ -377,8 +381,30 @@ onMounted(() => {
         <button class="cta-primary" @click="startAssessment">
           🚀 เริ่มทำแบบประเมิน
         </button>
+
+        <button class="cta-contact" @click="openContact">
+          💬 ติดต่อเรา
+        </button>
       </div>
     </section>
+
+    <!-- ═══════════════ Contact Modal ═══════════════ -->
+    <div v-if="contactOpen" class="contact-modal" @click.self="contactOpen = false">
+      <div class="cm-card">
+        <button class="cm-close" @click="contactOpen = false">✕</button>
+        <div class="cm-title">💬 ติดต่อเรา</div>
+        <div class="cm-list">
+          <div class="cm-item">
+            <div class="cm-label">LINE</div>
+            <div class="cm-id">@medninja</div>
+          </div>
+          <div class="cm-item">
+            <div class="cm-label">WeChat</div>
+            <div class="cm-id">medninja</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ═══════════════ STEP 2: ASSESSMENT ═══════════════ -->
     <section v-if="step === 'assess'" class="assess">
@@ -880,9 +906,9 @@ onMounted(() => {
     0 1px 0 rgba(0, 0, 0, 0.15),
     0 3px 6px rgba(0, 0, 0, 0.2);
 }
-.p-word.nl { --to: #0b2b5b; }        /* navy เข้ม */
-.p-word.meq { --to: #4c1d95; }       /* purple เข้ม */
-.p-word.osce { --to: #7c2d12; }      /* burnt orange เข้ม */
+.p-word.nl,
+.p-word.meq,
+.p-word.osce { --to: #0a1e3d; }      /* navy เข้มจัด — เดียวกันหมด match MedNinja topbar */
 .p-dot {
   color: #94a3b8;
   font-size: 24px;
@@ -922,6 +948,98 @@ onMounted(() => {
   font-size: 11px;
   color: #64748b;
   margin: 0;
+}
+
+/* Secondary contact CTA */
+.cta-contact {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  margin: 8px auto 0;
+  padding: 10px 20px;
+  background: transparent;
+  color: #64748b;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.cta-contact:hover {
+  background: white;
+  color: #0a1e3d;
+  border-color: #0a1e3d;
+}
+
+/* Contact modal */
+.contact-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(10, 30, 61, 0.5);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.cm-card {
+  position: relative;
+  background: white;
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+.cm-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-family: inherit;
+}
+.cm-close:hover { color: #dc2626; background: #fef2f2; }
+.cm-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #0a1e3d;
+  margin-bottom: 18px;
+}
+.cm-list {
+  display: grid;
+  gap: 10px;
+}
+.cm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+}
+.cm-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.cm-id {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 17px;
+  font-weight: 900;
+  color: #0a1e3d;
+  letter-spacing: 0.5px;
 }
 
 /* ═══════════════ ASSESSMENT — fit viewport ═══════════════ */
