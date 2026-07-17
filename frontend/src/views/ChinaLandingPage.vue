@@ -618,7 +618,9 @@ onMounted(() => {
 .page {
   height: 100vh;
   height: 100dvh;
-  background: #f4f7fc;
+  background:
+    radial-gradient(ellipse at top, #eff6ff 0%, transparent 60%),
+    linear-gradient(180deg, #f4f7fc 0%, #e2e8f0 100%);
   color: #0f172a;
   font-family: 'Sarabun', 'Noto Sans Thai', 'Segoe UI', -apple-system, sans-serif;
   overflow: hidden;
@@ -632,6 +634,9 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  max-width: 480px;                 /* ⭐ จำกัด content ให้ mobile-first ทุก viewport */
+  margin: 0 auto;
+  width: 100%;
 }
 .hero-bg {
   position: absolute;
