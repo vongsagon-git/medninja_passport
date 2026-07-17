@@ -555,8 +555,121 @@ router.delete('/logs', (req, res) => {
 })
 
 // ═══════════════════════════════════════════════════════════
-// PDF Lead — เก็บ lead จากหน้า /china (email/เบอร์) เพื่อส่ง PDF ทีหลัง
-// ⭐ ยังไม่ integrate email service — เก็บใน memory + console log ก่อน
+// ⭐ China Landing Lead (DB-backed) — 2026-07-17
+// เก็บ lead จาก /china (assessment + contact channels) → DB
+// สำหรับสัมมนา + PDF checklist + สิทธิ์ปรึกษาหมอแตม 30 นาที ฟรี
+// ═══════════════════════════════════════════════════════════
+const ChinaLandingLead = require('./ChinaLandingLead.model')
+
+// คำนวณคะแนนหมวด — 30 ข้อ, 6 หมวด, ข้อละ 5 ข้อ (index 0-4, 5-9, ...)
+function computeScores(answers) {
+  const arr = Array.isArray(answers) ? answers.map(n => {
+    const v = Number(n)
+    if (Number.isFinite(v) && v >= 0 && v <= 2) return v
+    return 0
+  }) : []
+  const groups = ['officialPath', 'knowledgeNL', 'clinicalThinking', 'labAndWard', 'languageOsce', 'confidence']
+  const scoresByCategory = {}
+  let total = 0
+  groups.forEach((key, gi) => {
+    const start = gi * 5
+    const groupScore = arr.slice(start, start + 5).reduce((s, v) => s + v, 0)
+    scoresByCategory[key] = groupScore
+    total += groupScore
+  })
+  let scoreBand = '0-20'
+  if (total >= 49) scoreBand = '49-60'
+  else if (total >= 36) scoreBand = '36-48'
+  else if (total >= 21) scoreBand = '21-35'
+  if (arr.length === 0) scoreBand = 'skipped'
+  return { totalScore: total, scoresByCategory, scoreBand }
+}
+
+router.post('/landing-lead', async (req, res) => {
+  const body = req.body || {}
+  const fullName = String(body.fullName || '').trim().substring(0, 120)
+  const year = String(body.year || '').trim().substring(0, 20)
+  const university = String(body.university || '').trim().substring(0, 200)
+  const email = String(body.email || '').trim().toLowerCase().substring(0, 200)
+  const phoneTh = String(body.phoneTh || '').trim().substring(0, 30)
+  const lineId = String(body.lineId || '').trim().substring(0, 60)
+  const wechatId = String(body.wechatId || '').trim().substring(0, 60)
+  const answers = Array.isArray(body.answers) ? body.answers : []
+  const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
+
+  // ต้องมี contact อย่างน้อย 1 ช่อง
+  if (!email && !phoneTh && !lineId && !wechatId) {
+    return res.status(400).json({ code: 'MISSING_CONTACT', message: 'กรุณากรอกช่องทางติดต่ออย่างน้อย 1 ช่อง (Email / เบอร์ / LINE / WeChat)' })
+  }
+
+  const scores = computeScores(answers)
+  const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
+  const country = req.geo?.country || 'unknown'
+
+  try {
+    const lead = await ChinaLandingLead.create({
+      fullName, year, university,
+      email, phoneTh, lineId, wechatId,
+      answers, ...scores,
+      seminarBatch,
+      ip, country,
+      userAgent: (req.headers['user-agent'] || '').substring(0, 300)
+    })
+    console.log(`[china-landing-lead] NEW id=${lead._id} name="${fullName}" score=${scores.totalScore}/60 band=${scores.scoreBand} contacts=[${[email && 'email', phoneTh && 'tel', lineId && 'line', wechatId && 'wechat'].filter(Boolean).join(',')}]`)
+    return res.json({
+      ok: true,
+      leadId: lead._id,
+      score: scores.totalScore,
+      scoreBand: scores.scoreBand,
+      scoresByCategory: scores.scoresByCategory
+    })
+  } catch (err) {
+    console.error('[china-landing-lead] error', err.message)
+    return res.status(500).json({ code: 'SAVE_FAILED', message: 'บันทึกไม่สำเร็จ กรุณาลองใหม่' })
+  }
+})
+
+// GET admin ดู leads (auth required — reuse existing pattern)
+router.get('/landing-leads', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store')
+  try {
+    const limit = Math.min(Number(req.query.limit) || 500, 2000)
+    const filter = {}
+    if (req.query.batch) filter.seminarBatch = req.query.batch
+    if (req.query.status) filter.contactStatus = req.query.status
+    const leads = await ChinaLandingLead.find(filter).sort({ createdAt: -1 }).limit(limit).lean()
+
+    if (req.query.format === 'text') {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+      const txt = leads.map(l =>
+        `[${l.createdAt.toISOString()}] ${l.contactStatus} · ${l.fullName || '-'} · ${l.year || '-'} · ${l.university || '-'}\n  📧 ${l.email || '-'}  📱 ${l.phoneTh || '-'}  💚 ${l.lineId || '-'}  💬 ${l.wechatId || '-'}\n  Score: ${l.totalScore}/60 (${l.scoreBand})  IP: ${l.ip} ${l.country}`
+      ).join('\n\n')
+      return res.send(txt || '(ยังไม่มี lead)')
+    }
+    return res.json({ count: leads.length, leads })
+  } catch (err) {
+    return res.status(500).json({ code: 'LOAD_FAILED', message: err.message })
+  }
+})
+
+// PATCH admin เปลี่ยน status / note
+router.patch('/landing-leads/:id', async (req, res) => {
+  const { id } = req.params
+  const body = req.body || {}
+  const update = {}
+  if (body.contactStatus) update.contactStatus = body.contactStatus
+  if (typeof body.adminNote === 'string') update.adminNote = body.adminNote.substring(0, 500)
+  try {
+    const lead = await ChinaLandingLead.findByIdAndUpdate(id, update, { new: true }).lean()
+    if (!lead) return res.status(404).json({ code: 'NOT_FOUND' })
+    return res.json({ ok: true, lead })
+  } catch (err) {
+    return res.status(500).json({ code: 'UPDATE_FAILED', message: err.message })
+  }
+})
+
+// ═══════════════════════════════════════════════════════════
+// LEGACY /pdf-lead — เก็บใน memory เก่า (2026-07-11) — ยังเก็บไว้ backward compat
 // ═══════════════════════════════════════════════════════════
 const _pdfLeads = []
 router.post('/pdf-lead', (req, res) => {

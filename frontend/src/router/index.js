@@ -362,10 +362,18 @@ const routes = [
     component: () => import('../views/ExtCheck.vue'),
     meta: { immersive: true }
   },
-  // เทส Alibaba VOD สำหรับคนในจีน (public — MVP Phase 1)
+  // ⭐ Landing สำหรับสัมมนา 2026-07-18 — นักศึกษาแพทย์ไทยในจีน 300+ คน
+  // Assessment 30 ข้อ + รับ PDF + สิทธิ์ปรึกษาหมอแตม 30 นาที ฟรี
   {
     path: '/china',
-    name: 'ChinaTest',
+    name: 'ChinaLanding',
+    component: () => import('../views/ChinaLandingPage.vue'),
+    meta: { immersive: true }
+  },
+  // เก็บหน้าเดิมไว้ debug ที่ /china-video (Aliplayer + iOS/PC dual path)
+  {
+    path: '/china-video',
+    name: 'ChinaVideo',
     component: () => import('../views/ChinaTestPage.vue'),
     meta: { immersive: true }
   },
