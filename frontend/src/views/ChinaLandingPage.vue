@@ -978,33 +978,36 @@ onMounted(() => {
   grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: clamp(12px, 3vw, 40px);
-  height: clamp(140px, 26vh, 320px);   /* ลดลง ไม่ให้ทับ title */
-  margin-bottom: 4px;
+  height: clamp(140px, 24vh, 260px);   /* ⭐ cap ที่ 260px กันโตเกิน */
+  margin: 0 auto;
   max-width: 640px;
   width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-  padding-bottom: 8px;                 /* กันชิด title */
+  flex-shrink: 0;                       /* ⭐ ไม่ให้ยืด/หดใน flex parent */
+  overflow: visible;
 }
 .hv-side {
+  position: relative;
   display: flex;
   justify-content: center;
-  align-items: center;                 /* center ไม่ใช่ flex-end (กันยื่นทับ) */
+  align-items: center;
   height: 100%;
-  overflow: hidden;                    /* กัน float animation ยื่นออก */
+  min-height: 0;
+  overflow: hidden;                     /* ⭐ กัน mascot ยื่นออก container */
 }
 .hero-mascot {
   max-height: 100%;
-  max-width: 90%;                      /* ไม่ให้ชนขอบซ้าย/ทับ */
+  max-width: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
+  object-position: center;
   filter: drop-shadow(0 12px 24px rgba(30, 58, 138, 0.25));
   animation: floaty 3.5s ease-in-out infinite;
+  will-change: transform;
 }
 @keyframes floaty {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  50% { transform: translateY(-4px); }   /* ⭐ ลด translate กัน overflow */
 }
 
 /* China emblem: mini flag + label */
