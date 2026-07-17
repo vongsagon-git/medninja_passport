@@ -334,8 +334,25 @@ onMounted(() => {
       </header>
 
       <div class="hero">
-        <div class="hero-mascot-wrap">
-          <img src="/img/mascot.png" alt="MedNinja" class="hero-mascot" />
+        <div class="hero-visual">
+          <div class="hv-side hv-mascot">
+            <img src="/img/mascot.png" alt="MedNinja" class="hero-mascot" />
+          </div>
+          <div class="hv-side hv-china">
+            <div class="china-emblem">
+              <div class="china-flag">
+                <div class="cn-star cn-star-big">★</div>
+                <div class="cn-star cn-star-1">★</div>
+                <div class="cn-star cn-star-2">★</div>
+                <div class="cn-star cn-star-3">★</div>
+                <div class="cn-star cn-star-4">★</div>
+              </div>
+              <div class="china-label">
+                <span class="cn-hanzi">中国</span>
+                <span class="cn-en">CHINA</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="hero-badge">🎓 นักศึกษาแพทย์ไทยในจีน</div>
@@ -677,22 +694,106 @@ onMounted(() => {
   gap: 12px;
   min-height: 0;
 }
-.hero-mascot-wrap {
+/* Hero split visual: mascot | china */
+.hero-visual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 12px;
+  height: clamp(140px, 26vh, 210px);
+  margin-bottom: -4px;
+}
+.hv-side {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  height: clamp(140px, 26vh, 220px);
-  margin-bottom: -8px;
+  height: 100%;
+}
+.hv-mascot {
+  align-items: flex-end;
 }
 .hero-mascot {
   height: 100%;
   width: auto;
+  max-width: 100%;
   filter: drop-shadow(0 12px 24px rgba(30, 58, 138, 0.25));
   animation: floaty 3.5s ease-in-out infinite;
 }
 @keyframes floaty {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
+}
+
+/* China emblem: mini flag + label */
+.hv-china {
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+.china-emblem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: floaty 3.5s ease-in-out infinite;
+  animation-delay: -1.75s;
+}
+.china-flag {
+  position: relative;
+  width: clamp(110px, 24vw, 140px);
+  aspect-ratio: 3 / 2;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border-radius: 10px;
+  box-shadow:
+    0 12px 28px rgba(220, 38, 38, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+.china-flag::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+  pointer-events: none;
+}
+.cn-star {
+  position: absolute;
+  color: #fde047;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  font-family: sans-serif;
+}
+.cn-star-big {
+  top: 22%;
+  left: 15%;
+  font-size: clamp(22px, 5vw, 30px);
+}
+.cn-star-1 { top: 12%; left: 40%; font-size: clamp(10px, 2vw, 13px); }
+.cn-star-2 { top: 26%; left: 48%; font-size: clamp(10px, 2vw, 13px); }
+.cn-star-3 { top: 44%; left: 48%; font-size: clamp(10px, 2vw, 13px); }
+.cn-star-4 { top: 58%; left: 40%; font-size: clamp(10px, 2vw, 13px); }
+
+.china-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  gap: 2px;
+}
+.cn-hanzi {
+  font-size: clamp(20px, 5vw, 26px);
+  font-weight: 900;
+  color: #dc2626;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+.cn-en {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 3px;
 }
 .hero-badge {
   align-self: center;
