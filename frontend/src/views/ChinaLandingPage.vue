@@ -132,6 +132,7 @@ const resultScore = ref(null)   // { totalScore, scoresByCategory, scoreBand }
 const pdfDownloadUrl = ref('')  // signed URL จาก backend หลัง save lead สำเร็จ
 const currentLeadId = ref('')   // เก็บ leadId เพื่อใช้ตอนฝากเบอร์ผู้ปกครอง
 const resultUnlocked = ref(false)  // ⭐ ปลดล็อคผลคะแนน + PDF หลังกรอกฟอร์ม
+const isReturning = ref(false)     // ⭐ user เดิม (upsert แทน create)
 
 // ⭐ ผู้ปกครองฝากเบอร์ให้หมอโทรกลับ
 const parentPhone = ref('')
@@ -233,11 +234,35 @@ const weakCategories = computed(() => {
     .slice(0, 3)
 })
 
+// ⭐ Validation rules (กันกรอกมั่ว)
+const nameError = computed(() => {
+  const v = form.value.fullName.trim()
+  if (!v) return ''
+  if (v.length < 2) return 'ชื่อต้องมีอย่างน้อย 2 ตัวอักษร'
+  if (/^\d+$/.test(v)) return 'ชื่อไม่ควรเป็นตัวเลขล้วน'
+  if (/^([a-zA-Z0-9])\1+$/.test(v)) return 'กรุณากรอกชื่อจริง'
+  if (/^(asdf|qwer|test|xxx|aaaa|1234)/i.test(v)) return 'กรุณากรอกชื่อจริง'
+  return ''
+})
+const universityError = computed(() => {
+  const v = resolvedUniversity.value.trim()
+  if (!v) return ''
+  if (v.length < 3) return 'กรุณาระบุชื่อมหาลัยให้ถูกต้อง'
+  return ''
+})
+const wechatError = computed(() => {
+  const v = form.value.wechatId.trim()
+  if (!v) return ''
+  if (v.length < 4) return 'WeChat ID ต้องมีอย่างน้อย 4 ตัว'
+  if (!/^[a-zA-Z0-9_-]+$/.test(v)) return 'WeChat ID = อังกฤษ/ตัวเลข/_/- เท่านั้น'
+  return ''
+})
+
 const canSubmitForm = computed(() => {
   const f = form.value
-  const hasName = f.fullName.trim().length >= 2
-  const hasUniversity = resolvedUniversity.value.length >= 2
-  const hasWechat = f.wechatId.trim().length >= 2   // ⭐ WeChat บังคับ = ช่องทางส่ง PDF
+  const hasName = f.fullName.trim().length >= 2 && !nameError.value
+  const hasUniversity = resolvedUniversity.value.length >= 3 && !universityError.value
+  const hasWechat = f.wechatId.trim().length >= 4 && !wechatError.value
   return hasName && hasUniversity && hasWechat
 })
 
@@ -278,7 +303,22 @@ async function submitGate() {
     // เก็บ leadId + pdfUrl ไว้ใช้ตอน result
     currentLeadId.value = data.leadId || ''
     pdfDownloadUrl.value = data.pdfUrl || ''
-    try { localStorage.setItem('mn_china_lead_id', currentLeadId.value) } catch {}
+    isReturning.value = !!data.isReturning
+    try {
+      localStorage.setItem('mn_china_lead_id', currentLeadId.value)
+      // ⭐ Save form ทั้งหมด (ไม่รวม universitySelect state) — user กลับมา autofill ได้
+      localStorage.setItem('mn_china_lead_form', JSON.stringify({
+        fullName: form.value.fullName,
+        year: form.value.year,
+        university: form.value.university,
+        universitySelect: form.value.universitySelect,
+        universityOther: form.value.universityOther,
+        email: form.value.email,
+        phoneTh: form.value.phoneTh,
+        lineId: form.value.lineId,
+        wechatId: form.value.wechatId
+      }))
+    } catch {}
     // ไปทำ assessment
     step.value = 'assess'
     currentQ.value = 0
@@ -430,6 +470,14 @@ function openLine() {
 
 onMounted(() => {
   document.title = 'MedNinja — เตรียมกลับไทย สำหรับนักศึกษาแพทย์ไทยในจีน'
+  // ⭐ Auto-fill จาก localStorage (user เดิม กลับมา ไม่ต้องกรอกซ้ำ)
+  try {
+    const cached = localStorage.getItem('mn_china_lead_form')
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      Object.assign(form.value, parsed)
+    }
+  } catch {}
 })
 </script>
 
@@ -564,7 +612,10 @@ onMounted(() => {
     <section v-if="step === 'gate'" class="gate">
       <div class="gate-inner">
         <div class="gate-header">
-          <div class="gate-badge">🔒 บันทึกข้อมูลก่อนเริ่ม</div>
+          <div v-if="form.fullName && form.wechatId" class="gate-back-badge">
+            ✓ ยินดีต้อนรับกลับมา {{ form.fullName }} · ทำแบบทดสอบซ้ำได้เลย
+          </div>
+          <div v-else class="gate-badge">🔒 บันทึกข้อมูลก่อนเริ่ม</div>
           <h2 class="gate-title">
             กรอกข้อมูลเพื่อรับ<br />
             <span class="gate-highlight">4 สิทธิ์พิเศษ</span> ฟรี
@@ -582,7 +633,8 @@ onMounted(() => {
         <div class="gate-form">
           <div class="lf-field">
             <label>ชื่อจริง <span class="req">*</span></label>
-            <input v-model="form.fullName" type="text" placeholder="ชื่อ-นามสกุล" :disabled="gateSubmitting" />
+            <input v-model="form.fullName" type="text" placeholder="ชื่อ นามสกุล" maxlength="80" :disabled="gateSubmitting" />
+            <div v-if="nameError" class="field-error">{{ nameError }}</div>
           </div>
           <div class="lf-field">
             <label>มหาลัยที่กำลังเรียน <span class="req">*</span></label>
@@ -599,8 +651,10 @@ onMounted(() => {
               type="text"
               placeholder="ชื่อมหาลัย + เมือง"
               class="lf-other-input"
+              maxlength="120"
               :disabled="gateSubmitting"
             />
+            <div v-if="universityError" class="field-error">{{ universityError }}</div>
           </div>
           <div class="lf-field">
             <label>ปีที่เรียน</label>
@@ -611,8 +665,9 @@ onMounted(() => {
           </div>
           <div class="lf-field lf-primary">
             <label>💬 WeChat ID <span class="req">*</span> <span class="tag main">ช่องทางหลัก</span></label>
-            <input v-model="form.wechatId" type="text" placeholder="wechat-id" :disabled="gateSubmitting" />
+            <input v-model="form.wechatId" type="text" placeholder="wechat-id (a-z, 0-9, _)" maxlength="40" :disabled="gateSubmitting" />
             <div class="lf-hint-inline">ทีมงานจะติดต่อคุณผ่าน WeChat</div>
+            <div v-if="wechatError" class="field-error">{{ wechatError }}</div>
           </div>
 
           <details class="lf-more">
@@ -1637,6 +1692,17 @@ onMounted(() => {
   border: 1px solid #f59e0b;
   margin-bottom: 10px;
 }
+.gate-back-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #14532d;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid #22c55e;
+  margin-bottom: 10px;
+}
 .gate-title {
   font-size: clamp(22px, 5vw, 32px);
   font-weight: 900;
@@ -2316,6 +2382,16 @@ onMounted(() => {
   color: #16a34a;
   margin-top: 4px;
   font-weight: 600;
+}
+.field-error {
+  font-size: 11.5px;
+  color: #dc2626;
+  margin-top: 5px;
+  font-weight: 700;
+  padding: 4px 8px;
+  background: #fef2f2;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
 }
 
 /* Accordion for optional contacts */

@@ -636,6 +636,36 @@ function computeScores(answers) {
   return { totalScore: total, scoresByCategory, scoreBand }
 }
 
+// ⭐ Rate limit: IP + WeChat ห้าม submit ซ้ำภายใน 5 วินาที (กัน double-click + basic bot)
+const _leadRateLimit = new Map() // key: `${ip}:${wechat}` → timestamp
+setInterval(() => {
+  const now = Date.now()
+  for (const [k, ts] of _leadRateLimit) {
+    if (now - ts > 60000) _leadRateLimit.delete(k)   // ล้างทุก entry เก่ากว่า 60s
+  }
+}, 30000)
+
+// ⭐ Validation helpers (กันกรอกมั่ว)
+function validateName(v) {
+  if (!v || v.length < 2) return 'ชื่อต้องมีอย่างน้อย 2 ตัวอักษร'
+  if (v.length > 80) return 'ชื่อยาวเกินไป'
+  if (/^\d+$/.test(v)) return 'ชื่อไม่ควรเป็นตัวเลขล้วน'
+  if (/^([a-zA-Z0-9])\1{2,}$/.test(v)) return 'กรุณากรอกชื่อจริง'
+  if (/^(asdf|qwer|test|xxx|aaaa|1234|abcd)/i.test(v)) return 'กรุณากรอกชื่อจริง'
+  return null
+}
+function validateWechat(v) {
+  if (!v || v.length < 4) return 'WeChat ID ต้องมีอย่างน้อย 4 ตัว'
+  if (v.length > 40) return 'WeChat ID ยาวเกินไป'
+  if (!/^[a-zA-Z0-9_-]+$/.test(v)) return 'WeChat ID = อังกฤษ/ตัวเลข/_/- เท่านั้น'
+  return null
+}
+function validateUniversity(v) {
+  if (!v || v.length < 3) return 'กรุณาระบุมหาลัย'
+  if (v.length > 200) return 'ชื่อมหาลัยยาวเกินไป'
+  return null
+}
+
 router.post('/landing-lead', async (req, res) => {
   const body = req.body || {}
   const fullName = String(body.fullName || '').trim().substring(0, 120)
@@ -648,34 +678,61 @@ router.post('/landing-lead', async (req, res) => {
   const answers = Array.isArray(body.answers) ? body.answers : []
   const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
 
-  // ต้องมี contact อย่างน้อย 1 ช่อง
-  if (!email && !phoneTh && !lineId && !wechatId) {
-    return res.status(400).json({ code: 'MISSING_CONTACT', message: 'กรุณากรอกช่องทางติดต่ออย่างน้อย 1 ช่อง (Email / เบอร์ / LINE / WeChat)' })
-  }
+  // ─── Validation ───
+  const nameErr = validateName(fullName)
+  if (nameErr) return res.status(400).json({ code: 'INVALID_NAME', message: nameErr })
+  const uniErr = validateUniversity(university)
+  if (uniErr) return res.status(400).json({ code: 'INVALID_UNIVERSITY', message: uniErr })
+  const wcErr = validateWechat(wechatId)
+  if (wcErr) return res.status(400).json({ code: 'INVALID_WECHAT', message: wcErr })
 
-  const scores = computeScores(answers)
   const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
   const country = req.geo?.country || 'unknown'
 
+  // ─── Rate limit (5s) ───
+  const rateKey = `${ip}:${wechatId.toLowerCase()}`
+  const lastTs = _leadRateLimit.get(rateKey)
+  if (lastTs && Date.now() - lastTs < 5000) {
+    return res.status(429).json({ code: 'TOO_FAST', message: 'กรุณารอสักครู่แล้วลองใหม่' })
+  }
+  _leadRateLimit.set(rateKey, Date.now())
+
+  const scores = computeScores(answers)
+
   try {
-    const lead = await ChinaLandingLead.create({
+    // ⭐ Upsert by WeChat ID (case-insensitive) — user เดิม = update, ใหม่ = create
+    //    ใช้ regex exact-match ignore case แทน collation (compat ทุก mongo version)
+    const wechatRegex = new RegExp(`^${wechatId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+    const update = {
       fullName, year, university,
       email, phoneTh, lineId, wechatId,
-      answers, ...scores,
-      seminarBatch,
-      ip, country,
+      seminarBatch, ip, country,
       userAgent: (req.headers['user-agent'] || '').substring(0, 300)
-    })
-    console.log(`[china-landing-lead] NEW id=${lead._id} name="${fullName}" uni="${university}" score=${scores.totalScore}/60 band=${scores.scoreBand} contacts=[${[email && 'email', phoneTh && 'tel', lineId && 'line', wechatId && 'wechat'].filter(Boolean).join(',')}]`)
+    }
+    // ถ้ามี answers ใหม่ (30 ข้อ) → update ด้วย, ถ้าว่างเปล่า = keep เดิม
+    if (answers.length === 30) {
+      update.answers = answers
+      Object.assign(update, scores)
+    }
+
+    const lead = await ChinaLandingLead.findOneAndUpdate(
+      { wechatId: wechatRegex },
+      { $set: update, $setOnInsert: { contactStatus: 'new' } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    )
+
+    const isNew = lead.createdAt && (Date.now() - new Date(lead.createdAt).getTime() < 2000)
+    console.log(`[china-landing-lead] ${isNew ? 'NEW' : 'UPDATE'} id=${lead._id} name="${fullName}" uni="${university}" wechat="${wechatId}" score=${lead.totalScore || 0}/60`)
 
     // ⭐ Sign PDF token → return signed URL (valid 30 min, ผูก leadId)
     const pdfToken = signPdfToken(String(lead._id))
     return res.json({
       ok: true,
       leadId: lead._id,
-      score: scores.totalScore,
-      scoreBand: scores.scoreBand,
-      scoresByCategory: scores.scoresByCategory,
+      isReturning: !isNew,
+      score: lead.totalScore || 0,
+      scoreBand: lead.scoreBand || 'skipped',
+      scoresByCategory: lead.scoresByCategory || {},
       pdfUrl: `/api/china/pdf/thai-return-checklist?t=${pdfToken}`
     })
   } catch (err) {

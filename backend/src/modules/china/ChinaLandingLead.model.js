@@ -59,5 +59,7 @@ const chinaLandingLeadSchema = new mongoose.Schema({
 chinaLandingLeadSchema.index({ createdAt: -1 })
 chinaLandingLeadSchema.index({ contactStatus: 1, createdAt: -1 })
 chinaLandingLeadSchema.index({ seminarBatch: 1 })
+// ⭐ WeChat = de-facto unique key (case-insensitive lookup for upsert)
+chinaLandingLeadSchema.index({ wechatId: 1 })
 
 module.exports = lmsConn.model('ChinaLandingLead', chinaLandingLeadSchema)
