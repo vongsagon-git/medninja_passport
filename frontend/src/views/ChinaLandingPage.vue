@@ -658,7 +658,14 @@ onMounted(() => {
 }
 .brand { display: flex; align-items: center; gap: 6px; }
 .brand-mark { width: 26px; height: 26px; border-radius: 6px; object-fit: cover; }
-.brand-name { font-size: 14px; font-weight: 900; color: #0b2b5b; }
+.brand-name {
+  font-size: clamp(24px, 6.5vw, 32px);
+  font-weight: 900;
+  color: #0a1e3d;                /* navy เข้มจัด */
+  letter-spacing: -0.5px;
+  line-height: 1;
+  text-shadow: 0 2px 6px rgba(10, 30, 61, 0.15);
+}
 .badge-cn {
   display: inline-flex;
   align-items: center;
