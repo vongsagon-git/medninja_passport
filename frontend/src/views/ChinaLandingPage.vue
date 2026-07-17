@@ -860,23 +860,19 @@ onMounted(() => {
 .p-word {
   font-size: clamp(26px, 8vw, 36px);
   font-weight: 900;
-  background: linear-gradient(135deg, var(--from), var(--to));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  filter:
-    drop-shadow(0 2px 0 var(--to))
-    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
+  color: var(--to);
   text-transform: uppercase;
   line-height: 1;
   letter-spacing: -0.5px;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.15),
+    0 3px 6px rgba(0, 0, 0, 0.2);
 }
-.p-word.nl { --from: #3b82f6; --to: #1e40af; }
-.p-word.meq { --from: #a78bfa; --to: #6d28d9; }
-.p-word.osce { --from: #fb923c; --to: #c2410c; }
+.p-word.nl { --to: #0b2b5b; }        /* navy เข้ม */
+.p-word.meq { --to: #4c1d95; }       /* purple เข้ม */
+.p-word.osce { --to: #7c2d12; }      /* burnt orange เข้ม */
 .p-dot {
-  color: #cbd5e1;
+  color: #94a3b8;
   font-size: 24px;
   font-weight: 900;
   line-height: 1;
