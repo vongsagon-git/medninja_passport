@@ -127,6 +127,13 @@ const submitting = ref(false)
 const submitError = ref('')
 const resultScore = ref(null)   // { totalScore, scoresByCategory, scoreBand }
 const pdfDownloadUrl = ref('')  // signed URL จาก backend หลัง save lead สำเร็จ
+const currentLeadId = ref('')   // เก็บ leadId เพื่อใช้ตอนฝากเบอร์ผู้ปกครอง
+
+// ⭐ ผู้ปกครองฝากเบอร์ให้หมอโทรกลับ
+const parentPhone = ref('')
+const parentSubmitting = ref(false)
+const parentSubmitted = ref(false)
+const parentError = ref('')
 
 // resolved university (ใช้ตอน submit)
 const resolvedUniversity = computed(() => {
@@ -257,6 +264,7 @@ async function submitAndDownload() {
 
     // ⭐ ได้ pdfUrl signed จาก backend → download + ไป thanks
     pdfDownloadUrl.value = data.pdfUrl || ''
+    currentLeadId.value = data.leadId || ''
     if (pdfDownloadUrl.value) downloadPdf()
     step.value = 'thanks'
     scrollTop()
@@ -264,6 +272,34 @@ async function submitAndDownload() {
     submitError.value = e.message
   } finally {
     submitting.value = false
+  }
+}
+
+// ⭐ ผู้ปกครองฝากเบอร์ให้หมอโทรกลับ (Thank You page)
+async function submitParentPhone() {
+  parentError.value = ''
+  const phone = parentPhone.value.trim()
+  if (!phone || phone.length < 6) {
+    parentError.value = 'กรุณากรอกเบอร์ให้ถูกต้อง'
+    return
+  }
+  parentSubmitting.value = true
+  try {
+    const res = await fetch('/api/china/landing-parent-phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        leadId: currentLeadId.value,
+        parentPhone: phone
+      })
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.message || 'ส่งไม่สำเร็จ')
+    parentSubmitted.value = true
+  } catch (e) {
+    parentError.value = e.message
+  } finally {
+    parentSubmitting.value = false
   }
 }
 
@@ -314,9 +350,11 @@ onMounted(() => {
         </p>
 
         <div class="products-row">
-          <div class="p-mini nl"><b>NL 1+2</b></div>
-          <div class="p-mini meq"><b>MEQ</b></div>
-          <div class="p-mini osce"><b>OSCE</b></div>
+          <span class="p-word nl">NL 1+2</span>
+          <span class="p-dot">·</span>
+          <span class="p-word meq">MEQ</span>
+          <span class="p-dot">·</span>
+          <span class="p-word osce">OSCE</span>
         </div>
 
         <button class="cta-primary" @click="startAssessment">
@@ -510,21 +548,45 @@ onMounted(() => {
         <span>📥</span> โหลด PDF อีกครั้ง (ถ้ายังไม่ได้)
       </button>
 
-      <div class="th-next">
-        <div class="th-next-title">💬 เพิ่ม WeChat เตรียมรับติดต่อ</div>
-        <div class="th-wechat">
-          <div class="th-w-title">WeChat ID:</div>
-          <div class="th-w-id">medninja</div>
+      <div class="th-contact">
+        <div class="th-c-title">📞 สอบถามข้อมูลเพิ่มเติม</div>
+        <div class="th-c-row">
+          <div class="th-c-item line">
+            <span class="th-c-label">LINE</span>
+            <span class="th-c-id">@medninja</span>
+          </div>
+          <div class="th-c-item wechat">
+            <span class="th-c-label">WeChat</span>
+            <span class="th-c-id">medninja</span>
+          </div>
         </div>
       </div>
 
-      <div class="th-tips">
-        <div class="th-t-title">📅 ระหว่างรอ ทำอะไรก่อน?</div>
-        <ul class="th-t-list">
-          <li>เตรียมเอกสารประกาศจาก แพทยสภา / ศ.ร.ว.</li>
-          <li>จดจุดที่คะแนนต่ำสุด 3 ข้อไว้ในสมุด</li>
-          <li>เตรียมคำถามให้หมอแตมตอน consult</li>
-        </ul>
+      <div class="th-parent">
+        <div class="th-p-title">👨‍👩‍👧 ผู้ปกครองสามารถฝากเบอร์ให้คุณหมอโทรกลับได้</div>
+
+        <div v-if="parentSubmitted" class="th-p-success">
+          ✅ ได้รับเบอร์แล้ว หมอแตมจะโทรกลับเร็ว ๆ นี้
+        </div>
+
+        <div v-else class="th-p-form">
+          <input
+            v-model="parentPhone"
+            type="tel"
+            placeholder="เบอร์ผู้ปกครอง เช่น 081-234-5678"
+            class="th-p-input"
+            :disabled="parentSubmitting"
+          />
+          <button
+            class="th-p-btn"
+            :disabled="!parentPhone.trim() || parentSubmitting"
+            @click="submitParentPhone"
+          >
+            <span v-if="parentSubmitting">กำลังส่ง...</span>
+            <span v-else>📞 ฝากเบอร์</span>
+          </button>
+        </div>
+        <div v-if="parentError" class="th-p-error">⚠ {{ parentError }}</div>
       </div>
 
       <button class="th-restart" @click="step = 'landing'; scrollTop()">← กลับหน้าแรก</button>
@@ -686,25 +748,39 @@ onMounted(() => {
 }
 
 .products-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  max-width: 380px;
-  margin: 0 auto;
-  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 8px 0 6px;
+  font-family: 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 1px;
 }
-.p-mini {
-  padding: 8px 6px;
-  border-radius: 10px;
-  text-align: center;
-  color: white;
-  line-height: 1.1;
+.p-word {
+  font-size: clamp(26px, 8vw, 36px);
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--from), var(--to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter:
+    drop-shadow(0 2px 0 var(--to))
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -0.5px;
 }
-.p-mini b { display: block; font-size: 13px; font-weight: 900; }
-.p-mini span { display: block; font-size: 10px; opacity: 0.9; margin-top: 2px; }
-.p-mini.nl { background: linear-gradient(135deg, #2563eb, #1e40af); }
-.p-mini.meq { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
-.p-mini.osce { background: linear-gradient(135deg, #ea580c, #c2410c); }
+.p-word.nl { --from: #3b82f6; --to: #1e40af; }
+.p-word.meq { --from: #a78bfa; --to: #6d28d9; }
+.p-word.osce { --from: #fb923c; --to: #c2410c; }
+.p-dot {
+  color: #cbd5e1;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0.5;
+}
 
 .cta-primary {
   display: block;
@@ -1307,6 +1383,130 @@ onMounted(() => {
   font-size: 13.5px;
   color: #475569;
   line-height: 1.8;
+}
+
+/* Contact section — LINE + WeChat */
+.th-contact {
+  background: white;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.th-c-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0b2b5b;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.th-c-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.th-c-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1.5px solid;
+}
+.th-c-item.line {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+.th-c-item.wechat {
+  background: #ecfdf5;
+  border-color: #10b981;
+}
+.th-c-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.th-c-id {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 15px;
+  font-weight: 900;
+  color: #0b2b5b;
+}
+
+/* Parent phone form */
+.th-parent {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border: 1.5px solid #f97316;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.th-p-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #9a3412;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.th-p-form {
+  display: flex;
+  gap: 6px;
+}
+.th-p-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1.5px solid #fdba74;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  color: #0f172a;
+  min-width: 0;
+}
+.th-p-input:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+.th-p-input:disabled {
+  background: #fef3c7;
+  color: #94a3b8;
+}
+.th-p-btn {
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.35);
+}
+.th-p-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.th-p-success {
+  background: white;
+  color: #16a34a;
+  font-weight: 800;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 14px;
+  border: 1.5px solid #22c55e;
+}
+.th-p-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 600;
 }
 
 .th-restart {
