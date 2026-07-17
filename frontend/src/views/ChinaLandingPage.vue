@@ -978,28 +978,27 @@ onMounted(() => {
   grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: clamp(12px, 3vw, 40px);
-  height: clamp(140px, 30vh, 380px);   /* mobile 140 → desktop 380 */
-  margin-bottom: -4px;
-  max-width: 700px;                    /* กว้างสุด 700 กันเว่อบน 4K */
+  height: clamp(140px, 26vh, 320px);   /* ลดลง ไม่ให้ทับ title */
+  margin-bottom: 4px;
+  max-width: 640px;
   width: 100%;
   margin-left: auto;
   margin-right: auto;
+  padding-bottom: 8px;                 /* กันชิด title */
 }
 .hv-side {
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: center;                 /* center ไม่ใช่ flex-end (กันยื่นทับ) */
   height: 100%;
-}
-.hv-mascot {
-  align-items: flex-end;
+  overflow: hidden;                    /* กัน float animation ยื่นออก */
 }
 .hero-mascot {
   max-height: 100%;
-  max-width: 100%;
+  max-width: 90%;                      /* ไม่ให้ชนขอบซ้าย/ทับ */
   width: auto;
   height: auto;
-  object-fit: contain;             /* ⭐ กัน distort — คง aspect ratio จริง */
+  object-fit: contain;
   filter: drop-shadow(0 12px 24px rgba(30, 58, 138, 0.25));
   animation: floaty 3.5s ease-in-out infinite;
 }
