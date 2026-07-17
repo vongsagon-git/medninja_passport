@@ -409,7 +409,7 @@ onMounted(() => {
 
         <p class="hero-sub">
           ประเมินตัวเอง <b>30 ข้อ</b> ใน 3 นาที<br />
-          รับ <b>PDF Checklist</b> + <b>ปรึกษาหมอแตม 30 นาที ฟรี</b>
+          รับ <b>PDF Checklist การเตรียมความพร้อม</b> + <b>ปรึกษาหมอแตม 30 นาที ฟรี</b>
         </p>
 
         <div class="products-row">
@@ -585,7 +585,7 @@ onMounted(() => {
 
       <!-- ⭐ Form inline (merged from step 4) — ลด friction ให้กรอกเลย -->
       <div class="lf-inline">
-        <h3 class="lf-inline-title">📮 กรอกเพื่อรับ PDF + สิทธิ์ปรึกษา</h3>
+        <h3 class="lf-inline-title">📮 กรอกเพื่อรับ PDF Checklist การเตรียมความพร้อม</h3>
         <p class="lf-inline-sub">กรอก 3 ช่องนี้ → กด "โหลด PDF" ได้เลย</p>
 
         <div class="lf-field">
@@ -666,7 +666,7 @@ onMounted(() => {
       </div>
       <h2 class="th-title">🎉 ได้รับข้อมูลแล้ว!</h2>
       <p class="th-sub">
-        PDF Checklist ถูกดาวน์โหลดให้แล้ว<br />
+        PDF Checklist การเตรียมความพร้อม ถูกดาวน์โหลดให้แล้ว<br />
         <b>ทีมงานจะติดต่อทาง WeChat ภายใน 24 ชม.</b><br />
         พร้อมนัดปรึกษาหมอแตม 30 นาที ฟรี
       </p>
