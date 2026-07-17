@@ -43,16 +43,17 @@ app.get('/api/version', (req, res) => {
 
 // ─── Standalone pages (bypass Helmet/CSP) ───
 // เสิร์ฟก่อน Helmet เพื่อให้ external SDK โหลดได้
-// china.medninja.academy → passport.medninja.academy/china (landing page ขาย)
+// ⭐ china.medninja.academy → passport.medninja.academy/china (301 permanent — SEO + browser cache)
+//    ยกเว้น /api /vendor /assets /img ให้ผ่าน (เผื่อ frontend fetch data)
 app.use((req, res, next) => {
   const host = (req.headers.host || '').toLowerCase()
-  if (host === 'china.medninja.academy' || host.startsWith('china.medninja.academy:')) {
-    // API + assets ให้ผ่าน (เผื่อ frontend fetch /api/china/... ด้วย host เดิม)
+  const isChinaSubdomain = host === 'china.medninja.academy' || host.startsWith('china.medninja.academy:')
+  if (isChinaSubdomain) {
     if (req.path.startsWith('/api/') || req.path.startsWith('/vendor/') || req.path.startsWith('/assets/') || req.path.startsWith('/img/')) {
       return next()
     }
-    // ทุก path อื่น → redirect ไป landing เดียว
-    return res.redirect(302, 'https://passport.medninja.academy/china')
+    // 301 permanent redirect — browser cache + Google index ตัว canonical URL ที่ passport
+    return res.redirect(301, 'https://passport.medninja.academy/china')
   }
   next()
 })

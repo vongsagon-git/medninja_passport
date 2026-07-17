@@ -432,9 +432,14 @@ onMounted(() => {
           🚀 เริ่มทำแบบประเมิน
         </button>
 
-        <button class="cta-contact" @click="openContact">
-          💬 ติดต่อเรา
-        </button>
+        <div class="cta-secondary-row">
+          <button class="cta-contact" @click="openContact">
+            ติดต่อเรา
+          </button>
+          <a class="cta-contact" href="https://passport.medninja.academy" rel="noopener">
+            เข้าเว็บหลัก →
+          </a>
+        </div>
       </div>
     </section>
 
@@ -1072,21 +1077,30 @@ onMounted(() => {
 }
 
 /* Secondary contact CTA */
-.cta-contact {
-  display: block;
-  width: 100%;
-  max-width: 380px;
+.cta-secondary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-width: 480px;
   margin: 8px auto 0;
-  padding: 10px 20px;
+  width: 100%;
+}
+.cta-contact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
   background: transparent;
   color: #64748b;
   border: 1.5px solid #cbd5e1;
   border-radius: 12px;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
+  text-decoration: none;
+  text-align: center;
 }
 .cta-contact:hover {
   background: white;
