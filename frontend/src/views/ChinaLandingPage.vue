@@ -135,9 +135,51 @@ const parentSubmitting = ref(false)
 const parentSubmitted = ref(false)
 const parentError = ref('')
 
-// ⭐ Contact modal (landing page)
+// ⭐ Contact modal (landing page) — ฝากเบอร์ + LINE/WeChat
 const contactOpen = ref(false)
-function openContact() { contactOpen.value = true }
+const contactPhone = ref('')
+const contactSubmitting = ref(false)
+const contactSubmitted = ref(false)
+const contactError = ref('')
+
+function openContact() {
+  contactOpen.value = true
+  contactSubmitted.value = false
+  contactError.value = ''
+  contactPhone.value = ''
+}
+
+async function submitContactPhone() {
+  contactError.value = ''
+  const phone = contactPhone.value.trim()
+  if (!phone || phone.length < 6) {
+    contactError.value = 'กรุณากรอกเบอร์ให้ถูกต้อง'
+    return
+  }
+  contactSubmitting.value = true
+  try {
+    // ส่ง lead แบบเบา — ไม่มี assessment/name/wechat
+    const res = await fetch('/api/china/landing-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: 'ติดต่อจาก landing',
+        phoneTh: phone,
+        answers: [],
+        seminarBatch: SEMINAR_BATCH
+      })
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.message || 'ส่งไม่สำเร็จ')
+    }
+    contactSubmitted.value = true
+  } catch (e) {
+    contactError.value = e.message
+  } finally {
+    contactSubmitting.value = false
+  }
+}
 
 // resolved university (ใช้ตอน submit)
 const resolvedUniversity = computed(() => {
@@ -388,11 +430,45 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- ═══════════════ Contact Modal ═══════════════ -->
+    <!-- ═══════════════ Contact Modal — ฝากเบอร์ + LINE/WeChat ═══════════════ -->
     <div v-if="contactOpen" class="contact-modal" @click.self="contactOpen = false">
       <div class="cm-card">
         <button class="cm-close" @click="contactOpen = false">✕</button>
         <div class="cm-title">💬 ติดต่อเรา</div>
+        <div class="cm-sub">ทีมงานจะโทรกลับ / ทัก LINE / WeChat</div>
+
+        <!-- ฝากเบอร์ให้โทรกลับ -->
+        <div class="cm-callback">
+          <div class="cm-cb-title">📞 ฝากเบอร์ให้ทีมงานโทรกลับ</div>
+          <div class="cm-cb-hint">ผู้ปกครอง หรือ นักเรียน — ใครก็ฝากได้</div>
+
+          <div v-if="contactSubmitted" class="cm-cb-success">
+            ✅ ได้รับเบอร์แล้ว ทีมงานจะโทรกลับเร็ว ๆ นี้
+          </div>
+          <div v-else>
+            <div class="cm-cb-form">
+              <input
+                v-model="contactPhone"
+                type="tel"
+                placeholder="เบอร์โทร เช่น 081-234-5678"
+                class="cm-cb-input"
+                :disabled="contactSubmitting"
+              />
+              <button
+                class="cm-cb-btn"
+                :disabled="!contactPhone.trim() || contactSubmitting"
+                @click="submitContactPhone"
+              >
+                <span v-if="contactSubmitting">...</span>
+                <span v-else>ฝาก</span>
+              </button>
+            </div>
+            <div v-if="contactError" class="cm-cb-error">⚠ {{ contactError }}</div>
+          </div>
+        </div>
+
+        <div class="cm-or">— หรือทักหาเราโดยตรง —</div>
+
         <div class="cm-list">
           <div class="cm-item">
             <div class="cm-label">LINE</div>
@@ -751,9 +827,11 @@ onMounted(() => {
   align-items: flex-end;
 }
 .hero-mascot {
-  height: 100%;
-  width: auto;
+  max-height: 100%;
   max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;             /* ⭐ กัน distort — คง aspect ratio จริง */
   filter: drop-shadow(0 12px 24px rgba(30, 58, 138, 0.25));
   animation: floaty 3.5s ease-in-out infinite;
 }
@@ -1012,7 +1090,87 @@ onMounted(() => {
   font-size: 20px;
   font-weight: 900;
   color: #0a1e3d;
-  margin-bottom: 18px;
+  margin-bottom: 4px;
+}
+.cm-sub {
+  font-size: 12.5px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+/* Callback form (ฝากเบอร์) */
+.cm-callback {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border: 1.5px solid #f97316;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+.cm-cb-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #9a3412;
+  margin-bottom: 2px;
+}
+.cm-cb-hint {
+  font-size: 11px;
+  color: #c2410c;
+  margin-bottom: 10px;
+}
+.cm-cb-form {
+  display: flex;
+  gap: 6px;
+}
+.cm-cb-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1.5px solid #fdba74;
+  border-radius: 9px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+}
+.cm-cb-input:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+.cm-cb-btn {
+  padding: 9px 16px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.cm-cb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cm-cb-success {
+  background: white;
+  border: 1.5px solid #22c55e;
+  color: #16a34a;
+  padding: 10px;
+  border-radius: 9px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+.cm-cb-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 600;
+}
+.cm-or {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin: 10px 0;
+  font-weight: 600;
 }
 .cm-list {
   display: grid;
