@@ -28,6 +28,7 @@ const MeqCase = () => import('../views/MeqCase.vue')
 
 // Lazy admin chunk — never needed by students
 const AdminDashboard = () => import('../views/admin/AdminDashboard.vue')
+const ChinaLeadsAdmin = () => import('../views/admin/ChinaLeads.vue')
 const ManageSections = () => import('../views/admin/ManageSections.vue')
 const ContentLibrary = () => import('../views/admin/ContentLibrary.vue')
 const WatchDebug = () => import('../views/admin/WatchDebug.vue')
@@ -376,6 +377,13 @@ const routes = [
     name: 'ChinaVideo',
     component: () => import('../views/ChinaTestPage.vue'),
     meta: { immersive: true }
+  },
+  // ⭐ Admin: ดู China Leads (สัมมนา + ต่อเนื่อง)
+  {
+    path: '/admin/china-leads',
+    name: 'ChinaLeadsAdmin',
+    component: ChinaLeadsAdmin,
+    meta: { requiresAuth: true, requiresAdmin: true, immersive: true }
   },
   // /china-serve → เสิร์ฟ standalone HTML จาก backend (bypass Vue) — test player-serve
   // 404 catch-all
