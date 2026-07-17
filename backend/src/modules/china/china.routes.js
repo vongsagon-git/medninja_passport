@@ -1,5 +1,8 @@
 const express = require('express')
 const router = express.Router()
+const path = require('path')
+const fs = require('fs')
+const crypto = require('crypto')
 const { getPlayAuth, getStsToken, listVideos, getPlayInfo, listTemplateGroups, submitTranscode, getTemplateGroup, getTranscodeStatus } = require('./china.controller')
 const { pushLog, getLogs, clearLogs, pushTestResult, getTestResults } = require('./china.logs')
 const auth = require('../../shared/middleware/auth')
@@ -561,6 +564,54 @@ router.delete('/logs', (req, res) => {
 // ═══════════════════════════════════════════════════════════
 const ChinaLandingLead = require('./ChinaLandingLead.model')
 
+// ═══════════════════════════════════════════════════════════
+// ⭐ PDF Gated Access — signed token
+// User ห้าม hit `/api/china/pdf/thai-return-checklist.docx` ตรง ๆ ได้
+// ต้อง: กรอก form → save lead สำเร็จ → backend คืน pdfUrl มี token → download
+// Token = HMAC(leadId + issueTs) ผูกกับ leadId + expire 30 นาที
+// ═══════════════════════════════════════════════════════════
+const PDF_SECRET = process.env.CHINA_PDF_SECRET || 'mn-china-pdf-2026-07-17'
+const PDF_TTL_MS = 30 * 60 * 1000  // 30 นาที
+const PDF_FILE = path.join(__dirname, 'pdf', 'thai-return-checklist.docx')
+
+function signPdfToken(leadId) {
+  const ts = Date.now()
+  const payload = `${leadId}.${ts}`
+  const sig = crypto.createHmac('sha256', PDF_SECRET).update(payload).digest('hex').substring(0, 24)
+  return `${leadId}.${ts}.${sig}`
+}
+
+function verifyPdfToken(token) {
+  if (!token || typeof token !== 'string') return null
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  const [leadId, tsStr, sig] = parts
+  const ts = Number(tsStr)
+  if (!Number.isFinite(ts)) return null
+  if (Date.now() - ts > PDF_TTL_MS) return null   // expired
+  const expected = crypto.createHmac('sha256', PDF_SECRET).update(`${leadId}.${ts}`).digest('hex').substring(0, 24)
+  if (sig !== expected) return null
+  return { leadId, ts }
+}
+
+// GET /api/china/pdf/thai-return-checklist?t=<token>
+// stream file เมื่อ token valid + ไม่ expired
+router.get('/pdf/thai-return-checklist', (req, res) => {
+  const token = String(req.query.t || '')
+  const decoded = verifyPdfToken(token)
+  if (!decoded) {
+    return res.status(403).type('text/plain').send('❌ Token invalid หรือหมดอายุ — กรุณากรอกฟอร์มใหม่ที่ /china')
+  }
+  if (!fs.existsSync(PDF_FILE)) {
+    return res.status(500).type('text/plain').send('PDF file not found')
+  }
+  console.log(`[china-pdf] serve leadId=${decoded.leadId} age=${Math.round((Date.now() - decoded.ts) / 1000)}s`)
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+  res.setHeader('Content-Disposition', 'attachment; filename="MedNinja_Thai_Return_Checklist.docx"')
+  res.setHeader('Cache-Control', 'private, no-store')
+  fs.createReadStream(PDF_FILE).pipe(res)
+})
+
 // คำนวณคะแนนหมวด — 30 ข้อ, 6 หมวด, ข้อละ 5 ข้อ (index 0-4, 5-9, ...)
 function computeScores(answers) {
   const arr = Array.isArray(answers) ? answers.map(n => {
@@ -615,13 +666,17 @@ router.post('/landing-lead', async (req, res) => {
       ip, country,
       userAgent: (req.headers['user-agent'] || '').substring(0, 300)
     })
-    console.log(`[china-landing-lead] NEW id=${lead._id} name="${fullName}" score=${scores.totalScore}/60 band=${scores.scoreBand} contacts=[${[email && 'email', phoneTh && 'tel', lineId && 'line', wechatId && 'wechat'].filter(Boolean).join(',')}]`)
+    console.log(`[china-landing-lead] NEW id=${lead._id} name="${fullName}" uni="${university}" score=${scores.totalScore}/60 band=${scores.scoreBand} contacts=[${[email && 'email', phoneTh && 'tel', lineId && 'line', wechatId && 'wechat'].filter(Boolean).join(',')}]`)
+
+    // ⭐ Sign PDF token → return signed URL (valid 30 min, ผูก leadId)
+    const pdfToken = signPdfToken(String(lead._id))
     return res.json({
       ok: true,
       leadId: lead._id,
       score: scores.totalScore,
       scoreBand: scores.scoreBand,
-      scoresByCategory: scores.scoresByCategory
+      scoresByCategory: scores.scoresByCategory,
+      pdfUrl: `/api/china/pdf/thai-return-checklist?t=${pdfToken}`
     })
   } catch (err) {
     console.error('[china-landing-lead] error', err.message)

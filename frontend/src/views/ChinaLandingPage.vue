@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { UNIVERSITIES_CHINA } from '../data/chinaUniversities'
 
 // ═══════════════════════════════════════════════════════════
 // ChinaLanding — สำหรับสัมมนา 2026-07-18 (นักศึกษาแพทย์ไทยในจีน 300+ คน)
@@ -102,15 +103,21 @@ const YEAR_OPTIONS = [
   'จบแล้ว', 'ฝึกงาน', 'อื่น ๆ'
 ]
 
+// ⭐ PDF ที่ให้ดาวน์โหลดหลังกรอก form (ไม่ต้องรอ WeChat)
+const PDF_URL = '/pdf/MedNinja_Thai_Return_Checklist.docx'
+
 // ─── State ───
-const step = ref('landing')  // landing | assess | result | form | thanks
+// flow: landing → assess (30 ข้อ) → result-form (รวมหน้าเดียว) → thanks (PDF download)
+const step = ref('landing')  // landing | assess | result-form | thanks
 const currentQ = ref(0)      // 0-29
 const answers = ref(Array(30).fill(null))
 
 const form = ref({
   fullName: '',
   year: '',
-  university: '',
+  university: '',       // ค่า final: ถ้าเลือก dropdown ปกติ = ชื่อมหาลัย, ถ้า "อื่น ๆ" = จาก universityOther
+  universitySelect: '', // ค่าใน dropdown (name หรือ '__OTHER__')
+  universityOther: '',  // ถ้าเลือก "อื่น ๆ" กรอกเอง
   email: '',
   phoneTh: '',
   lineId: '',
@@ -119,6 +126,13 @@ const form = ref({
 const submitting = ref(false)
 const submitError = ref('')
 const resultScore = ref(null)   // { totalScore, scoresByCategory, scoreBand }
+const pdfDownloadUrl = ref('')  // signed URL จาก backend หลัง save lead สำเร็จ
+
+// resolved university (ใช้ตอน submit)
+const resolvedUniversity = computed(() => {
+  if (form.value.universitySelect === '__OTHER__') return form.value.universityOther.trim()
+  return form.value.universitySelect
+})
 
 // ─── Computed ───
 const currentQuestion = computed(() => {
@@ -162,7 +176,10 @@ const weakCategories = computed(() => {
 
 const canSubmitForm = computed(() => {
   const f = form.value
-  return (f.email || f.phoneTh || f.lineId || f.wechatId) && f.fullName.trim().length > 0
+  const hasName = f.fullName.trim().length >= 2
+  const hasUniversity = resolvedUniversity.value.length >= 2
+  const hasWechat = f.wechatId.trim().length >= 2   // ⭐ WeChat บังคับ = ช่องทางส่ง PDF
+  return hasName && hasUniversity && hasWechat
 })
 
 // ─── Actions ───
@@ -195,34 +212,52 @@ function finishAssessment() {
     scoresByCategory: scoresByCategory.value,
     scoreBand: scoreBand.value.band
   }
-  step.value = 'result'
+  // ⭐ ไป Result+Form รวมหน้าเดียว (ลด friction 1 click)
+  step.value = 'result-form'
   scrollTop()
 }
 
-function goToForm() {
-  step.value = 'form'
-  scrollTop()
+function downloadPdf() {
+  if (!pdfDownloadUrl.value) return
+  const a = document.createElement('a')
+  a.href = pdfDownloadUrl.value
+  a.download = 'MedNinja_Thai_Return_Checklist.docx'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
 }
 
-async function submitForm() {
+// ⭐ กด "ส่ง + โหลด PDF" — validate → save lead → backend คืน pdfUrl → download + ไป thanks
+async function submitAndDownload() {
   submitError.value = ''
   if (!canSubmitForm.value) {
-    submitError.value = 'กรุณากรอกชื่อ และ ช่องทางติดต่ออย่างน้อย 1 ช่อง'
+    submitError.value = 'กรุณากรอก ชื่อ + มหาลัย + WeChat ID ให้ครบก่อน'
     return
   }
   submitting.value = true
   try {
+    const payload = {
+      fullName: form.value.fullName.trim(),
+      year: form.value.year,
+      university: resolvedUniversity.value,
+      email: form.value.email.trim(),
+      phoneTh: form.value.phoneTh.trim(),
+      lineId: form.value.lineId.trim(),
+      wechatId: form.value.wechatId.trim(),
+      answers: answers.value.map(v => v || 0),
+      seminarBatch: SEMINAR_BATCH
+    }
     const res = await fetch('/api/china/landing-lead', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form.value,
-        answers: answers.value.map(v => v || 0),
-        seminarBatch: SEMINAR_BATCH
-      })
+      body: JSON.stringify(payload)
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.message || 'ส่งไม่สำเร็จ')
+
+    // ⭐ ได้ pdfUrl signed จาก backend → download + ไป thanks
+    pdfDownloadUrl.value = data.pdfUrl || ''
+    if (pdfDownloadUrl.value) downloadPdf()
     step.value = 'thanks'
     scrollTop()
   } catch (e) {
@@ -259,85 +294,40 @@ onMounted(() => {
         </div>
         <div class="badge-cn">
           <span class="dot"></span>
-          🇨🇳 เล่นได้ในจีน ไม่ต้อง VPN
+          🇨🇳 เรียนได้ไม่ต้อง VPN
         </div>
       </header>
 
       <div class="hero">
-        <div class="hero-badge">
-          <span>🎓 สำหรับนักศึกษาแพทย์ไทยในจีน</span>
-        </div>
+        <div class="hero-badge">🎓 นักศึกษาแพทย์ไทยในจีน</div>
 
         <h1 class="hero-title">
           พร้อม<span class="hl-red">กลับไทย</span>
-          <br />หรือยัง?
+          หรือยัง?
         </h1>
 
         <p class="hero-sub">
-          ทำแบบประเมิน <b>30 ข้อ</b> ใน 3 นาที<br />
-          รู้ทันทีว่าต้องปิดช่องว่างตรงไหน<br />
+          ประเมิน <b>30 ข้อ · 3 นาที</b> รู้ทันทีต้องปิดช่องไหน
           ก่อนสอบ <b>NL / MEQ / OSCE</b>
         </p>
 
-        <div class="hero-benefits">
-          <div class="benefit">
-            <div class="b-icon">📊</div>
-            <div class="b-text">
-              <div class="b-title">ประเมินตัวเอง</div>
-              <div class="b-sub">6 หมวด · 30 ข้อ</div>
-            </div>
-          </div>
-          <div class="benefit">
-            <div class="b-icon">📘</div>
-            <div class="b-text">
-              <div class="b-title">รับ PDF เต็มเล่ม</div>
-              <div class="b-sub">Checklist + แผน 30 วัน</div>
-            </div>
-          </div>
-          <div class="benefit highlight">
-            <div class="b-icon">🎁</div>
-            <div class="b-text">
-              <div class="b-title">ปรึกษาหมอแตม 30 นาที</div>
-              <div class="b-sub">ฟรี! สำหรับผู้ที่กรอกครบ</div>
-            </div>
-          </div>
+        <div class="hero-pills">
+          <span class="pill">📊 30 ข้อ</span>
+          <span class="pill">💬 รับ PDF ทาง WeChat</span>
+          <span class="pill pill-gift">🎁 ปรึกษาหมอแตม 30 นาที ฟรี</span>
+        </div>
+
+        <div class="products-row">
+          <div class="p-mini nl"><b>NL 1+2</b><span>ระบบใหม่</span></div>
+          <div class="p-mini meq"><b>MEQ</b><span>Modified Essay</span></div>
+          <div class="p-mini osce"><b>OSCE</b><span>Ward Ready</span></div>
         </div>
 
         <button class="cta-primary" @click="startAssessment">
           🚀 เริ่มทำแบบประเมิน
         </button>
 
-        <p class="hero-footnote">
-          ⚡ ใช้เวลาแค่ 3 นาที · ไม่เก็บเงิน · ไม่มีข้อผูกมัด
-        </p>
-      </div>
-
-      <div class="products">
-        <div class="p-title">คอร์สที่นักเรียนแพทย์ไทยในจีนใช้อยู่</div>
-        <div class="p-list">
-          <div class="p-card">
-            <div class="p-badge nl">NL 1+2</div>
-            <div class="p-name">ระบบใหม่</div>
-            <div class="p-desc">เตรียมสอบ National License แบบใหม่</div>
-          </div>
-          <div class="p-card">
-            <div class="p-badge meq">MEQ</div>
-            <div class="p-name">Modified Essay</div>
-            <div class="p-desc">Clinical reasoning ทีละขั้น</div>
-          </div>
-          <div class="p-card">
-            <div class="p-badge osce">OSCE</div>
-            <div class="p-name">Ward Ready</div>
-            <div class="p-desc">History + Physical + Communication</div>
-          </div>
-        </div>
-        <div class="cn-highlight">
-          <span class="cn-icon">🌏</span>
-          <div>
-            <b>ดูวีดีโอเรียนได้ในจีน โดยไม่ต้องใช้ VPN</b><br />
-            <span class="cn-sub">เพราะ MedNinja มี server เฉพาะในจีน</span>
-          </div>
-        </div>
+        <p class="hero-footnote">⚡ 3 นาที · ไม่มีค่าใช้จ่าย · ไม่มีข้อผูกมัด</p>
       </div>
     </section>
 
@@ -388,8 +378,8 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- ═══════════════ STEP 3: RESULT ═══════════════ -->
-    <section v-if="step === 'result'" class="result">
+    <!-- ═══════════════ STEP 3: RESULT + FORM (รวมหน้าเดียว) ═══════════════ -->
+    <section v-if="step === 'result-form'" class="result">
       <div class="result-hero" :style="{ '--band-color': scoreBand.color }">
         <div class="r-score-circle">
           <svg viewBox="0 0 120 120" class="r-ring">
@@ -434,78 +424,76 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="r-cta-wrap">
-        <button class="cta-primary" @click="goToForm">
-          🎁 รับ PDF เต็ม + สิทธิ์ปรึกษาฟรี
-        </button>
-        <p class="r-cta-note">รับแผน 30 วัน + Checklist เต็มเล่ม<br />+ นัดปรึกษาหมอแตม 30 นาที ฟรี</p>
-      </div>
-    </section>
+      <!-- ⭐ Form inline (merged from step 4) — ลด friction ให้กรอกเลย -->
+      <div class="lf-inline">
+        <h3 class="lf-inline-title">📮 กรอกเพื่อรับ PDF + สิทธิ์ปรึกษา</h3>
+        <p class="lf-inline-sub">กรอก 3 ช่องนี้ → กด "โหลด PDF" ได้เลย</p>
 
-    <!-- ═══════════════ STEP 4: LEAD FORM ═══════════════ -->
-    <section v-if="step === 'form'" class="lead-form">
-      <div class="lf-header">
-        <div class="lf-score-mini">
-          คะแนนของคุณ: <b>{{ totalScore }}/60</b>
-          <span class="lf-band-chip" :style="{ background: scoreBand.color }">{{ scoreBand.label }}</span>
-        </div>
-        <h2 class="lf-title">📮 กรอกช่องทางส่งเอกสาร</h2>
-        <p class="lf-sub">หมอแตมจะส่ง PDF + นัดปรึกษาให้คุณเอง</p>
-      </div>
-
-      <div class="lf-form">
         <div class="lf-field">
           <label>ชื่อจริง <span class="req">*</span></label>
-          <input v-model="form.fullName" type="text" placeholder="เช่น สมชาย เก่งวิชา" :disabled="submitting" />
+          <input v-model="form.fullName" type="text" placeholder="ชื่อ-นามสกุล" :disabled="submitting" />
         </div>
 
-        <div class="lf-row">
-          <div class="lf-field">
-            <label>ปีที่เรียน</label>
-            <select v-model="form.year" :disabled="submitting">
-              <option value="">— เลือก —</option>
-              <option v-for="y in YEAR_OPTIONS" :key="y" :value="y">{{ y }}</option>
-            </select>
-          </div>
-          <div class="lf-field">
-            <label>มหาลัย / เมืองในจีน</label>
-            <input v-model="form.university" type="text" placeholder="เช่น Wenzhou / อื่น ๆ" :disabled="submitting" />
-          </div>
+        <div class="lf-field">
+          <label>มหาลัยที่กำลังเรียน <span class="req">*</span></label>
+          <select v-model="form.universitySelect" :disabled="submitting">
+            <option value="">— เลือกมหาลัย —</option>
+            <option v-for="u in UNIVERSITIES_CHINA" :key="u.id" :value="u.name">
+              {{ u.name }} ({{ u.city }})
+            </option>
+            <option value="__OTHER__">— อื่น ๆ (กรอกเอง) —</option>
+          </select>
+          <input
+            v-if="form.universitySelect === '__OTHER__'"
+            v-model="form.universityOther"
+            type="text"
+            placeholder="ชื่อมหาลัย + เมือง"
+            class="lf-other-input"
+            :disabled="submitting"
+          />
         </div>
 
-        <div class="lf-divider">
-          <span>ช่องทางติดต่อ <span class="req">*</span> (กรอกอย่างน้อย 1 ช่อง)</span>
+        <div class="lf-field">
+          <label>ปีที่เรียน</label>
+          <select v-model="form.year" :disabled="submitting">
+            <option value="">— เลือก —</option>
+            <option v-for="y in YEAR_OPTIONS" :key="y" :value="y">{{ y }}</option>
+          </select>
         </div>
 
-        <div class="lf-field lf-line">
-          <label>💚 LINE ID <span class="tag rec">แนะนำ</span></label>
-          <input v-model="form.lineId" type="text" placeholder="line-id" :disabled="submitting" />
-        </div>
-        <div class="lf-field lf-wechat">
-          <label>💬 WeChat ID <span class="tag rec">แนะนำ</span></label>
+        <div class="lf-field lf-wechat lf-primary">
+          <label>💬 WeChat ID <span class="req">*</span> <span class="tag main">ช่องทางหลัก</span></label>
           <input v-model="form.wechatId" type="text" placeholder="wechat-id" :disabled="submitting" />
-        </div>
-        <div class="lf-field">
-          <label>📧 Email</label>
-          <input v-model="form.email" type="email" placeholder="you@example.com" :disabled="submitting" />
-        </div>
-        <div class="lf-field">
-          <label>📱 เบอร์ไทย</label>
-          <input v-model="form.phoneTh" type="tel" placeholder="08x-xxx-xxxx" :disabled="submitting" />
+          <div class="lf-hint-inline">ทีมงานจะส่ง PDF + นัดปรึกษาให้ทาง WeChat</div>
         </div>
 
-        <div class="lf-hint">
-          💡 แนะนำ <b>LINE</b> หรือ <b>WeChat</b> ส่งถึงมือน้องแน่นอน
-        </div>
+        <details class="lf-more">
+          <summary>+ เพิ่มช่องทางสำรอง (ถ้าต้องการ)</summary>
+          <div class="lf-more-body">
+            <div class="lf-field lf-line">
+              <label>💚 LINE ID</label>
+              <input v-model="form.lineId" type="text" placeholder="line-id" :disabled="submitting" />
+            </div>
+            <div class="lf-field">
+              <label>📱 เบอร์ไทย</label>
+              <input v-model="form.phoneTh" type="tel" placeholder="08x-xxx-xxxx" :disabled="submitting" />
+            </div>
+            <div class="lf-field">
+              <label>📧 Email</label>
+              <input v-model="form.email" type="email" placeholder="you@example.com" :disabled="submitting" />
+            </div>
+          </div>
+        </details>
 
         <div v-if="submitError" class="lf-error">⚠ {{ submitError }}</div>
 
-        <button class="cta-primary lf-submit" :disabled="!canSubmitForm || submitting" @click="submitForm">
+        <button class="cta-primary lf-submit" :disabled="!canSubmitForm || submitting" @click="submitAndDownload">
           <span v-if="submitting">กำลังส่ง...</span>
-          <span v-else>✅ ส่งข้อมูล + รับ PDF ฟรี</span>
+          <span v-else-if="!canSubmitForm">🔒 กรอก ชื่อ + มหาลัย + WeChat ให้ครบ</span>
+          <span v-else>📥 ส่งข้อมูล · โหลด PDF ทันที</span>
         </button>
 
-        <p class="lf-privacy">🔒 ข้อมูลจะใช้เพื่อส่ง PDF + นัดปรึกษาเท่านั้น</p>
+        <p class="lf-privacy">🔒 ใช้สำหรับส่ง PDF + นัดปรึกษาเท่านั้น</p>
       </div>
     </section>
 
@@ -518,15 +506,20 @@ onMounted(() => {
         </svg>
       </div>
       <h2 class="th-title">🎉 ได้รับข้อมูลแล้ว!</h2>
-      <p class="th-sub">หมอแตมจะติดต่อกลับภายใน <b>24 ชั่วโมง</b><br />พร้อม PDF checklist + นัดปรึกษา</p>
+      <p class="th-sub">
+        PDF Checklist ถูกดาวน์โหลดให้แล้ว<br />
+        <b>ทีมงานจะติดต่อทาง WeChat ภายใน 24 ชม.</b><br />
+        พร้อมนัดปรึกษาหมอแตม 30 นาที ฟรี
+      </p>
+
+      <button v-if="pdfDownloadUrl" class="th-btn download" @click="downloadPdf">
+        <span>📥</span> โหลด PDF อีกครั้ง (ถ้ายังไม่ได้)
+      </button>
 
       <div class="th-next">
-        <div class="th-next-title">📱 เพิ่มเพื่อนตอนนี้ เพื่อรับข่าวเร็วขึ้น</div>
-        <button class="th-btn line" @click="openLine">
-          <span>💚</span> เพิ่ม LINE @tammy
-        </button>
+        <div class="th-next-title">💬 เพิ่ม WeChat เตรียมรับติดต่อ</div>
         <div class="th-wechat">
-          <div class="th-w-title">หรือค้นหา WeChat ID:</div>
+          <div class="th-w-title">WeChat ID:</div>
           <div class="th-w-id">medninja</div>
         </div>
       </div>
@@ -550,28 +543,32 @@ onMounted(() => {
 * { box-sizing: border-box; }
 
 .page {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   background: #f4f7fc;
   color: #0f172a;
   font-family: 'Sarabun', 'Noto Sans Thai', 'Segoe UI', -apple-system, sans-serif;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
-/* ═══════════════ LANDING ═══════════════ */
+/* ═══════════════ LANDING — fit in viewport ═══════════════ */
 .landing {
   position: relative;
-  padding: 16px 16px 40px;
+  height: 100%;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .hero-bg {
   position: absolute;
-  top: -100px;
-  left: -100px;
-  right: -100px;
-  height: 500px;
+  top: -60px;
+  left: -60px;
+  right: -60px;
+  height: 360px;
   background:
-    radial-gradient(ellipse at 30% 30%, rgba(56, 189, 248, 0.25), transparent 60%),
-    radial-gradient(ellipse at 70% 20%, rgba(220, 38, 38, 0.15), transparent 60%),
+    radial-gradient(ellipse at 30% 30%, rgba(56, 189, 248, 0.22), transparent 60%),
+    radial-gradient(ellipse at 70% 20%, rgba(220, 38, 38, 0.13), transparent 60%),
     linear-gradient(180deg, #eff6ff 0%, transparent 100%);
   pointer-events: none;
 }
@@ -583,110 +580,131 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }
-.brand { display: flex; align-items: center; gap: 8px; }
-.brand-mark { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
-.brand-name { font-size: 16px; font-weight: 900; color: #0b2b5b; }
+.brand { display: flex; align-items: center; gap: 6px; }
+.brand-mark { width: 26px; height: 26px; border-radius: 6px; object-fit: cover; }
+.brand-name { font-size: 14px; font-weight: 900; color: #0b2b5b; }
 .badge-cn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: rgba(34, 197, 94, 0.1);
   color: #16a34a;
-  padding: 5px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   border: 1px solid rgba(34, 197, 94, 0.25);
   white-space: nowrap;
 }
 .badge-cn .dot {
-  width: 6px; height: 6px;
+  width: 5px; height: 5px;
   border-radius: 50%;
   background: #22c55e;
   animation: pulse 2s infinite;
 }
 @keyframes pulse {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
 }
 
 .hero {
   position: relative;
   z-index: 2;
   text-align: center;
-  padding: 8px 4px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-height: 0;
 }
 .hero-badge {
-  display: inline-block;
+  align-self: center;
   background: white;
   color: #0b2b5b;
-  padding: 6px 14px;
+  padding: 4px 12px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 700;
   border: 1.5px solid rgba(30, 58, 138, 0.15);
   box-shadow: 0 4px 12px rgba(30, 58, 138, 0.08);
-  margin-bottom: 18px;
 }
 .hero-title {
-  font-size: 40px;
-  line-height: 1.1;
+  font-size: clamp(28px, 8vw, 40px);
+  line-height: 1.05;
   font-weight: 900;
   color: #0b2b5b;
   letter-spacing: -0.02em;
-  margin: 0 0 14px;
+  margin: 0;
 }
 .hl-red { color: #dc2626; }
 .hero-sub {
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 13.5px;
+  line-height: 1.55;
   color: #475569;
-  margin: 0 auto 24px;
+  margin: 0 auto;
   max-width: 340px;
 }
 .hero-sub b { color: #0b2b5b; font-weight: 800; }
 
-.hero-benefits {
-  display: grid;
-  gap: 10px;
-  max-width: 380px;
-  margin: 0 auto 24px;
-}
-.benefit {
+.hero-pills {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.pill {
   background: white;
-  padding: 12px 16px;
-  border-radius: 14px;
-  text-align: left;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.06);
+  color: #334155;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 }
-.benefit.highlight {
+.pill-gift {
   background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border: 1.5px solid #f59e0b;
-  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #92400e;
+  font-weight: 800;
 }
-.b-icon { font-size: 26px; flex-shrink: 0; }
-.b-title { font-size: 14px; font-weight: 800; color: #0b2b5b; }
-.b-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
-.benefit.highlight .b-title { color: #92400e; }
-.benefit.highlight .b-sub { color: #b45309; font-weight: 700; }
+
+.products-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-width: 380px;
+  margin: 0 auto;
+  width: 100%;
+}
+.p-mini {
+  padding: 8px 6px;
+  border-radius: 10px;
+  text-align: center;
+  color: white;
+  line-height: 1.1;
+}
+.p-mini b { display: block; font-size: 13px; font-weight: 900; }
+.p-mini span { display: block; font-size: 10px; opacity: 0.9; margin-top: 2px; }
+.p-mini.nl { background: linear-gradient(135deg, #2563eb, #1e40af); }
+.p-mini.meq { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+.p-mini.osce { background: linear-gradient(135deg, #ea580c, #c2410c); }
 
 .cta-primary {
   display: block;
   width: 100%;
   max-width: 380px;
   margin: 0 auto;
-  padding: 16px 24px;
+  padding: 14px 22px;
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   color: white;
   border: none;
-  border-radius: 14px;
-  font-size: 16px;
+  border-radius: 12px;
+  font-size: 15px;
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(220, 38, 38, 0.35), 0 0 0 4px rgba(220, 38, 38, 0.08);
@@ -704,74 +722,19 @@ onMounted(() => {
 }
 
 .hero-footnote {
-  font-size: 12px;
-  color: #64748b;
-  margin: 12px 0 0;
-}
-
-.products {
-  margin-top: 32px;
-  padding: 20px 4px;
-  position: relative;
-  z-index: 2;
-}
-.p-title {
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 16px;
-}
-.p-list {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 20px;
-}
-.p-card {
-  background: white;
-  border-radius: 14px;
-  padding: 14px 8px;
-  text-align: center;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.06);
-}
-.p-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
   font-size: 11px;
-  font-weight: 800;
-  color: white;
-  margin-bottom: 8px;
+  color: #64748b;
+  margin: 0;
 }
-.p-badge.nl { background: linear-gradient(135deg, #2563eb, #1e40af); }
-.p-badge.meq { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
-.p-badge.osce { background: linear-gradient(135deg, #ea580c, #c2410c); }
-.p-name { font-size: 13px; font-weight: 800; color: #0b2b5b; margin-bottom: 4px; }
-.p-desc { font-size: 11px; color: #64748b; line-height: 1.4; }
 
-.cn-highlight {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  border: 1.5px solid #22c55e;
-  border-radius: 14px;
-  padding: 14px 16px;
-}
-.cn-icon { font-size: 32px; flex-shrink: 0; }
-.cn-highlight b { color: #14532d; font-size: 13.5px; }
-.cn-sub { font-size: 12px; color: #166534; }
-
-/* ═══════════════ ASSESSMENT ═══════════════ */
+/* ═══════════════ ASSESSMENT — fit viewport ═══════════════ */
 .assess {
-  padding: 16px 16px 40px;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  padding: 12px 14px;
   background: linear-gradient(180deg, #ffffff 0%, #f4f7fc 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .assess-header {
   display: flex;
@@ -784,11 +747,12 @@ onMounted(() => {
 .a-progress-num { font-size: 13px; font-weight: 800; color: #64748b; }
 
 .progress-track {
-  height: 6px;
+  height: 5px;
   background: #e2e8f0;
   border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 28px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 .progress-fill {
   height: 100%;
@@ -799,46 +763,55 @@ onMounted(() => {
 .q-container {
   max-width: 420px;
   margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
 }
 .q-cat {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 800;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
-.q-cat-icon { font-size: 20px; }
+.q-cat-icon { font-size: 18px; }
 .q-cat-name { flex: 1; }
 .q-cat-num {
-  font-size: 11px;
+  font-size: 10.5px;
   color: #94a3b8;
   background: #f1f5f9;
   padding: 3px 8px;
   border-radius: 999px;
 }
 .q-text {
-  font-size: 22px;
+  font-size: clamp(18px, 5vw, 22px);
   line-height: 1.4;
   font-weight: 800;
   color: #0b2b5b;
-  margin: 0 0 28px;
+  margin: 0 0 18px;
+  flex-shrink: 0;
 }
 
 .q-options {
   display: grid;
-  gap: 10px;
-  margin-bottom: 24px;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
 }
 .q-opt {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
+  gap: 12px;
+  padding: 12px 14px;
   background: white;
   border: 2px solid #e2e8f0;
-  border-radius: 14px;
-  font-size: 15px;
+  border-radius: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: #0f172a;
   cursor: pointer;
@@ -892,24 +865,27 @@ onMounted(() => {
 
 /* ═══════════════ RESULT ═══════════════ */
 .result {
-  padding: 20px 16px 40px;
+  height: 100%;
+  padding: 12px 14px;
   max-width: 480px;
   margin: 0 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .result-hero {
   text-align: center;
-  padding: 24px 16px 20px;
+  padding: 16px 14px 14px;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 20px;
+  border-radius: 18px;
   border: 1px solid rgba(15, 23, 42, 0.06);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 .r-score-circle {
   position: relative;
-  width: 160px;
-  height: 160px;
-  margin: 0 auto 16px;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 10px;
 }
 .r-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .r-track { fill: none; stroke: #e2e8f0; stroke-width: 10; }
@@ -1011,9 +987,12 @@ onMounted(() => {
 
 /* ═══════════════ LEAD FORM ═══════════════ */
 .lead-form {
-  padding: 20px 16px 40px;
+  height: 100%;
+  padding: 12px 14px;
   max-width: 480px;
   margin: 0 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .lf-header { text-align: center; margin-bottom: 20px; }
 .lf-score-mini {
@@ -1093,6 +1072,83 @@ onMounted(() => {
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
 }
 
+/* WeChat primary field — เน้นชัด */
+.lf-primary {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1.5px solid #22c55e;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 6px 0;
+}
+.lf-primary label { color: #14532d !important; font-size: 12.5px; }
+.lf-primary input {
+  border-color: #22c55e;
+  background: white;
+}
+.tag.main {
+  background: #22c55e;
+  color: white;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+/* Inline form (merged into result step) */
+.lf-inline {
+  background: white;
+  border-radius: 18px;
+  padding: 18px 16px;
+  margin-top: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+.lf-inline-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0b2b5b;
+  margin: 0 0 4px;
+  text-align: center;
+}
+.lf-inline-sub {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0 0 14px;
+  text-align: center;
+}
+.lf-other-input {
+  margin-top: 6px;
+}
+.lf-hint-inline {
+  font-size: 11px;
+  color: #16a34a;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* Accordion for optional contacts */
+.lf-more {
+  margin: 6px 0;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+  padding: 0;
+}
+.lf-more summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748b;
+  list-style: none;
+  user-select: none;
+}
+.lf-more summary::-webkit-details-marker { display: none; }
+.lf-more[open] summary {
+  border-bottom: 1px dashed #cbd5e1;
+}
+.lf-more-body {
+  padding: 12px 14px 4px;
+}
+
 .lf-divider {
   position: relative;
   text-align: center;
@@ -1143,7 +1199,10 @@ onMounted(() => {
 
 /* ═══════════════ THANKS ═══════════════ */
 .thanks {
-  padding: 40px 20px;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px 18px;
   max-width: 460px;
   margin: 0 auto;
   text-align: center;
@@ -1200,6 +1259,11 @@ onMounted(() => {
 .th-btn.line {
   background: linear-gradient(135deg, #06c755, #04a648);
   color: white;
+}
+.th-btn.download {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  box-shadow: 0 10px 22px rgba(220, 38, 38, 0.35);
 }
 
 .th-wechat { margin-top: 8px; }
