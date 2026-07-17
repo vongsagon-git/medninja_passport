@@ -728,15 +728,15 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* ═══════════════ LANDING — fit in viewport ═══════════════ */
+/* ═══════════════ LANDING — responsive fluid (scale ตามจอ) ═══════════════ */
 .landing {
   position: relative;
   height: 100%;
-  padding: 10px 14px;
+  padding: clamp(10px, 2vw, 24px) clamp(14px, 3vw, 32px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  max-width: 480px;                 /* ⭐ จำกัด content ให้ mobile-first ทุก viewport */
+  max-width: 1200px;                /* ⭐ กว้างสุด 1200px จอใหญ่ไม่ยืดเว่อ */
   margin: 0 auto;
   width: 100%;
 }
@@ -808,14 +808,18 @@ onMounted(() => {
   gap: 12px;
   min-height: 0;
 }
-/* Hero split visual: mascot | china */
+/* Hero split visual: mascot | china — scale ตามจอ */
 .hero-visual {
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
-  gap: 12px;
-  height: clamp(140px, 26vh, 210px);
+  gap: clamp(12px, 3vw, 40px);
+  height: clamp(140px, 30vh, 380px);   /* mobile 140 → desktop 380 */
   margin-bottom: -4px;
+  max-width: 700px;                    /* กว้างสุด 700 กันเว่อบน 4K */
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 .hv-side {
   display: flex;
@@ -857,7 +861,7 @@ onMounted(() => {
 }
 .china-flag {
   position: relative;
-  width: clamp(110px, 24vw, 140px);
+  width: clamp(110px, 20vw, 240px);
   aspect-ratio: 3 / 2;
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   border-radius: 10px;
@@ -883,12 +887,12 @@ onMounted(() => {
 .cn-star-big {
   top: 22%;
   left: 15%;
-  font-size: clamp(22px, 5vw, 30px);
+  font-size: clamp(22px, 4.5vw, 48px);
 }
-.cn-star-1 { top: 12%; left: 40%; font-size: clamp(10px, 2vw, 13px); }
-.cn-star-2 { top: 26%; left: 48%; font-size: clamp(10px, 2vw, 13px); }
-.cn-star-3 { top: 44%; left: 48%; font-size: clamp(10px, 2vw, 13px); }
-.cn-star-4 { top: 58%; left: 40%; font-size: clamp(10px, 2vw, 13px); }
+.cn-star-1 { top: 12%; left: 40%; font-size: clamp(10px, 2vw, 20px); }
+.cn-star-2 { top: 26%; left: 48%; font-size: clamp(10px, 2vw, 20px); }
+.cn-star-3 { top: 44%; left: 48%; font-size: clamp(10px, 2vw, 20px); }
+.cn-star-4 { top: 58%; left: 40%; font-size: clamp(10px, 2vw, 20px); }
 
 .china-label {
   display: flex;
@@ -898,7 +902,7 @@ onMounted(() => {
   gap: 2px;
 }
 .cn-hanzi {
-  font-size: clamp(20px, 5vw, 26px);
+  font-size: clamp(20px, 4.5vw, 44px);
   font-weight: 900;
   color: #dc2626;
   letter-spacing: 2px;
@@ -906,7 +910,7 @@ onMounted(() => {
   font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
 }
 .cn-en {
-  font-size: 10px;
+  font-size: clamp(10px, 1.4vw, 14px);
   font-weight: 800;
   color: #64748b;
   letter-spacing: 3px;
@@ -923,7 +927,7 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(30, 58, 138, 0.08);
 }
 .hero-title {
-  font-size: clamp(28px, 8vw, 40px);
+  font-size: clamp(28px, 6vw, 60px);
   line-height: 1.1;
   font-weight: 900;
   color: #0b2b5b;
@@ -933,11 +937,11 @@ onMounted(() => {
 }
 .hl-red { color: #dc2626; }
 .hero-sub {
-  font-size: 14px;
+  font-size: clamp(14px, 2vw, 20px);
   line-height: 1.55;
   color: #475569;
   margin: 0 auto;
-  max-width: 340px;
+  max-width: 560px;
 }
 .hero-sub b { color: #0b2b5b; font-weight: 800; }
 
@@ -974,7 +978,7 @@ onMounted(() => {
   letter-spacing: 1px;
 }
 .p-word {
-  font-size: clamp(26px, 8vw, 36px);
+  font-size: clamp(26px, 5vw, 48px);
   font-weight: 900;
   color: var(--to);
   text-transform: uppercase;
@@ -998,14 +1002,14 @@ onMounted(() => {
 .cta-primary {
   display: block;
   width: 100%;
-  max-width: 380px;
+  max-width: 480px;
   margin: 0 auto;
-  padding: 14px 22px;
+  padding: clamp(14px, 2vw, 20px) 22px;
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   color: white;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: clamp(15px, 2vw, 18px);
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(220, 38, 38, 0.35), 0 0 0 4px rgba(220, 38, 38, 0.08);
