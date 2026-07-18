@@ -677,6 +677,7 @@ router.post('/landing-lead', async (req, res) => {
   const wechatId = String(body.wechatId || '').trim().substring(0, 60)
   const answers = Array.isArray(body.answers) ? body.answers : []
   const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
+  const leadTier = ['pdf', 'full'].includes(body.leadTier) ? body.leadTier : 'pdf'
 
   // ─── Validation ───
   const nameErr = validateName(fullName)
@@ -707,11 +708,13 @@ router.post('/landing-lead', async (req, res) => {
       fullName, year, university,
       email, phoneTh, lineId, wechatId,
       seminarBatch, ip, country,
+      leadTier,                          // ⭐ 'pdf' | 'full' (จะโดน override ด้านล่างถ้ามี answers)
       userAgent: (req.headers['user-agent'] || '').substring(0, 300)
     }
-    // ถ้ามี answers ใหม่ (30 ข้อ) → update ด้วย, ถ้าว่างเปล่า = keep เดิม
+    // ถ้ามี answers ใหม่ (30 ข้อ) → update + upgrade เป็น full เสมอ
     if (answers.length === 30) {
       update.answers = answers
+      update.leadTier = 'full'          // upgrade tier เมื่อทำแบบทดสอบครบ
       Object.assign(update, scores)
     }
 
@@ -772,11 +775,11 @@ router.patch('/landing-lead/:id/answers', async (req, res) => {
   try {
     const lead = await ChinaLandingLead.findByIdAndUpdate(
       id,
-      { answers, ...scores },
+      { answers, leadTier: 'full', ...scores },  // ⭐ upgrade tier → full
       { new: true }
     ).lean()
     if (!lead) return res.status(404).json({ code: 'NOT_FOUND' })
-    console.log(`[china-landing-lead] UPDATE answers id=${id} score=${scores.totalScore}/60 band=${scores.scoreBand}`)
+    console.log(`[china-landing-lead] UPDATE answers id=${id} score=${scores.totalScore}/60 band=${scores.scoreBand} tier=full`)
     return res.json({ ok: true, score: scores.totalScore, scoreBand: scores.scoreBand })
   } catch (err) {
     return res.status(500).json({ code: 'UPDATE_FAILED', message: err.message })

@@ -30,6 +30,11 @@ const chinaLandingLeadSchema = new mongoose.Schema({
   },
   scoreBand: { type: String, enum: ['0-20', '21-35', '36-48', '49-60', 'skipped'], default: 'skipped' },
 
+  // ─── Lead Tier (แยกกลุ่ม lead ตาม intent) ───
+  //   pdf  = แค่กรอกข้อมูล ดาวน์โหลด PDF (fast lane ตอนบรรยาย)
+  //   full = ทำแบบทดสอบ 30 ข้อ ครบ ได้ 4 สิทธิ์
+  leadTier: { type: String, enum: ['pdf', 'full'], default: 'pdf', index: true },
+
   // ─── Interests (user กด service อะไรบ้าง) ───
   //   ค่า: 'pdf' (โหลด PDF), 'wechat' (ทัก WeChat), 'vdocall' (นัด VDO Call), 'discount' (ใช้ส่วนลด)
   interests: [{ type: String }],

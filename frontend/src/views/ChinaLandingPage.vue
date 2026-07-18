@@ -268,7 +268,16 @@ const canSubmitForm = computed(() => {
 
 // ─── Actions ───
 // ⭐ Landing "เริ่มทำแบบประเมิน" → เปิด gate form ก่อน (บังคับเก็บ lead)
+// ⭐ intent = 'pdf' (fast lane — ตอนบรรยาย) หรือ 'full' (ทำแบบทดสอบ + 4 สิทธิ์)
+const intent = ref('full')
+
+function startPdfOnly() {
+  intent.value = 'pdf'
+  step.value = 'gate'
+  scrollTop()
+}
 function startAssessment() {
+  intent.value = 'full'
   step.value = 'gate'
   scrollTop()
 }
@@ -291,7 +300,8 @@ async function submitGate() {
       lineId: form.value.lineId.trim(),
       wechatId: form.value.wechatId.trim(),
       answers: [],                                  // ยังไม่ได้ทำ assessment
-      seminarBatch: SEMINAR_BATCH
+      seminarBatch: SEMINAR_BATCH,
+      leadTier: intent.value                        // ⭐ 'pdf' | 'full'
     }
     const res = await fetch('/api/china/landing-lead', {
       method: 'POST',
@@ -306,7 +316,6 @@ async function submitGate() {
     isReturning.value = !!data.isReturning
     try {
       localStorage.setItem('mn_china_lead_id', currentLeadId.value)
-      // ⭐ Save form ทั้งหมด (ไม่รวม universitySelect state) — user กลับมา autofill ได้
       localStorage.setItem('mn_china_lead_form', JSON.stringify({
         fullName: form.value.fullName,
         year: form.value.year,
@@ -319,9 +328,17 @@ async function submitGate() {
         wechatId: form.value.wechatId
       }))
     } catch {}
-    // ไปทำ assessment
-    step.value = 'assess'
-    currentQ.value = 0
+
+    // ⭐ Branch flow: PDF-only (fast lane บรรยาย) หรือ Full (assessment)
+    if (intent.value === 'pdf') {
+      // Fast lane: auto download PDF + ไปหน้า thanks เลย
+      if (pdfDownloadUrl.value) downloadPdf()
+      step.value = 'thanks'
+    } else {
+      // Full lane: ทำแบบทดสอบ
+      step.value = 'assess'
+      currentQ.value = 0
+    }
     scrollTop()
   } catch (e) {
     gateError.value = e.message
@@ -375,6 +392,86 @@ async function trackInterest(kind) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kind })
   }).catch(() => {})
+}
+
+// ⭐ Service action modal state
+const serviceModal = ref(null)  // { kind, title, message, code? }
+const copiedField = ref('')     // 'id' | 'code' | 'message' — สำหรับ toast
+
+const WECHAT_ID = 'medninja'
+const WECHAT_DEEP_LINKS = [
+  `weixin://dl/chat?${WECHAT_ID}`,
+  `weixin://dl/add?u=${WECHAT_ID}`,
+  `weixin://dl/publicaccount/?username=${WECHAT_ID}`
+]
+const DISCOUNT_CODE = 'MEDNINJA-CHINA-10'
+
+function openService(kind) {
+  trackInterest(kind)
+  const name = form.value.fullName || 'คุณ'
+  const configs = {
+    wechat: {
+      kind: 'wechat',
+      icon: '💬',
+      title: 'ทัก WeChat หมอแตม',
+      wechatId: WECHAT_ID,
+      message: `สวัสดีค่ะ ${name} จากแบบทดสอบ /china ค่ะ`,
+      note: 'ทักไปแล้วบอกชื่อ ทีมงานจะติดต่อกลับเร็ว ๆ นี้'
+    },
+    vdocall: {
+      kind: 'vdocall',
+      icon: '📹',
+      title: 'ขอนัด Zoom ปรึกษา 30 นาที',
+      wechatId: WECHAT_ID,
+      message: `ขอนัด Zoom ปรึกษา 30 นาที\nชื่อ: ${name}\nจาก /china แบบทดสอบ`,
+      note: 'ส่งข้อความนี้ใน WeChat ทีมงานจะนัดวันเวลาให้'
+    },
+    discount: {
+      kind: 'discount',
+      icon: '🎁',
+      title: 'ส่วนลด 10% ทุกคอร์ส',
+      wechatId: WECHAT_ID,
+      code: DISCOUNT_CODE,
+      message: `ขอใช้ส่วนลด 10%\nCode: ${DISCOUNT_CODE}\nชื่อ: ${name}`,
+      note: 'ใช้ได้กับทุกคอร์ส (NL 1+2 / MEQ / OSCE) แจ้งชื่อกับทีมงาน WeChat',
+      link: 'https://passport.medninja.academy'
+    }
+  }
+  serviceModal.value = configs[kind]
+  copiedField.value = ''
+}
+function closeService() { serviceModal.value = null }
+
+async function tryDeepLink() {
+  // Fire deep link (open WeChat app if installed)
+  const link = WECHAT_DEEP_LINKS[0]
+  const start = Date.now()
+  window.location.href = link
+  // ถ้า WeChat เปิด → visibilityState change → เราไม่ redirect
+  // ถ้า fail → user เห็น popup QR ค้างต่อ (fallback in-place)
+  setTimeout(() => {
+    if (Date.now() - start < 1500 && document.visibilityState === 'visible') {
+      // WeChat ไม่เปิด — popup ยังเปิดอยู่ user เห็น QR + copy อยู่แล้ว
+    }
+  }, 500)
+}
+
+async function copyToClipboard(text, field) {
+  try {
+    await navigator.clipboard.writeText(text)
+    copiedField.value = field
+    setTimeout(() => { copiedField.value = '' }, 2000)
+  } catch {
+    // fallback: create textarea
+    const ta = document.createElement('textarea')
+    ta.value = text
+    document.body.appendChild(ta)
+    ta.select()
+    try { document.execCommand('copy') } catch {}
+    document.body.removeChild(ta)
+    copiedField.value = field
+    setTimeout(() => { copiedField.value = '' }, 2000)
+  }
 }
 
 function downloadPdf() {
@@ -541,9 +638,24 @@ onMounted(() => {
           <span class="p-word osce">OSCE</span>
         </div>
 
-        <button class="cta-primary" @click="startAssessment">
-          🚀 เริ่มทำแบบประเมิน
-        </button>
+        <!-- ⭐ 2 ปุ่มหลัก: Fast lane (PDF) + Full lane (Assessment) -->
+        <div class="dual-cta">
+          <button class="cta-pdf" @click="startPdfOnly">
+            <span class="cta-icon">📥</span>
+            <span class="cta-body">
+              <span class="cta-title">รับ PDF ฟรี</span>
+              <span class="cta-sub">กรอกข้อมูล · โหลดทันที (15 วิ)</span>
+            </span>
+          </button>
+
+          <button class="cta-primary cta-full" @click="startAssessment">
+            <span class="cta-icon">🎯</span>
+            <span class="cta-body">
+              <span class="cta-title">ทำแบบทดสอบ + รับสิทธิ์เพิ่ม</span>
+              <span class="cta-sub">PDF + ปรึกษาหมอแตม + ส่วนลด (3 นาที)</span>
+            </span>
+          </button>
+        </div>
 
         <div class="cta-secondary-row">
           <button class="cta-contact" @click="openContact">
@@ -595,6 +707,12 @@ onMounted(() => {
 
         <div class="cm-or">— หรือทักหาเราโดยตรง —</div>
 
+        <!-- QR WeChat -->
+        <div class="cm-qr">
+          <img src="/img/wechat-qr.png" alt="WeChat MedNinja QR" class="cm-qr-img" />
+          <div class="cm-qr-label">📱 สแกน QR เพิ่ม WeChat</div>
+        </div>
+
         <div class="cm-list">
           <div class="cm-item">
             <div class="cm-label">LINE</div>
@@ -626,8 +744,8 @@ onMounted(() => {
         <div class="gate-perks">
           <div class="perk-item"><span class="perk-dot">1</span> PDF Checklist การเตรียมความพร้อม</div>
           <div class="perk-item"><span class="perk-dot">2</span> ทัก WeChat หมอแตม รับคำแนะนำ</div>
-          <div class="perk-item"><span class="perk-dot">3</span> นัด Zoom ปรึกษา 30 นาที ฟรี</div>
-          <div class="perk-item highlight"><span class="perk-dot">4</span> <b>ส่วนลด 10% ทุกคอร์ส</b></div>
+          <div class="perk-item"><span class="perk-dot">3</span> ปรึกษาหมอแตม <b>ตัวต่อตัว</b> 30 นาที ฟรี</div>
+          <div class="perk-item highlight"><span class="perk-dot">4</span> <b>ส่วนลด 10%</b> (แสดงบัตร นศ.จีน + แจ้งงานสัมมนา)</div>
         </div>
 
         <div class="gate-form">
@@ -859,9 +977,9 @@ onMounted(() => {
         <div class="right-card">
           <div class="rc-num">3</div>
           <div class="rc-body">
-            <div class="rc-title">📹 นัด Zoom ปรึกษา 30 นาที ฟรี</div>
+            <div class="rc-title">📹 รับคำปรึกษาหมอแตมฟรี 30 นาที</div>
             <div class="rc-desc">
-              คุยกับหมอแตมส่วนตัว · วางแผนเรียน<br />
+              <b>ตัวต่อตัว</b> · Zoom · วางแผนเรียนเฉพาะคุณ<br />
               <b>ทัก WeChat เพื่อขอนัดวันเวลา</b>
             </div>
           </div>
@@ -876,7 +994,7 @@ onMounted(() => {
             <div class="rc-title">🎁 ส่วนลด 10% ทุกคอร์ส</div>
             <div class="rc-desc">
               NL 1+2 · MEQ · OSCE<br />
-              <b>ใช้ง่าย เพียงแจ้งชื่อที่เคยทำแบบสอบถาม</b>
+              <b>แสดงบัตรนักศึกษาจีน + แจ้งว่ามาจากงานสัมมนา</b>
             </div>
           </div>
           <button class="rc-btn primary" @click="trackInterest('discount')">
@@ -884,12 +1002,18 @@ onMounted(() => {
           </button>
         </div>
 
-        <div class="rights-guide">
-          <b>วิธีใช้สิทธิ์:</b><br />
-          1. เปิด WeChat แล้วค้นหา ID: <b class="wc-highlight">medninja</b><br />
-          2. Add friend<br />
-          3. ทักไปแจ้ง <b>"ชื่อ {{ form.fullName }} มาจากแบบทดสอบ"</b><br />
-          4. ทีมงานจะจัดการสิทธิ์ให้คุณทันที
+        <!-- QR + วิธีใช้ -->
+        <div class="rights-qr-block">
+          <div class="rqr-title">📱 สแกน QR เพิ่มเพื่อน WeChat</div>
+          <img src="/img/wechat-qr.png" alt="WeChat MedNinja QR" class="rqr-image" />
+          <div class="rqr-id">WeChat ID: <b class="wc-highlight">medninja</b></div>
+          <div class="rqr-steps">
+            <b>วิธีใช้สิทธิ์:</b>
+            1. สแกน QR หรือค้นหา ID <b>medninja</b><br />
+            2. Add friend<br />
+            3. ทักไปแจ้ง <b>"ชื่อ {{ form.fullName }} มาจากแบบทดสอบ"</b><br />
+            4. ทีมงานจะจัดการสิทธิ์ให้ทันที
+          </div>
         </div>
 
         <button class="cta-outline" @click="step = 'thanks'; scrollTop()">
@@ -919,6 +1043,10 @@ onMounted(() => {
 
       <div class="th-contact">
         <div class="th-c-title">📞 สอบถามข้อมูลเพิ่มเติม</div>
+        <div class="th-qr-wrap">
+          <img src="/img/wechat-qr.png" alt="WeChat MedNinja" class="th-qr-img" />
+          <div class="th-qr-caption">สแกน QR เพิ่ม WeChat</div>
+        </div>
         <div class="th-c-row">
           <div class="th-c-item line">
             <span class="th-c-label">LINE</span>
@@ -1254,6 +1382,72 @@ onMounted(() => {
   font-weight: 900;
   line-height: 1;
   opacity: 0.5;
+}
+
+/* ═══════════════ Dual CTA (PDF only + Assessment full) ═══════════════ */
+.dual-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.cta-pdf,
+.cta-full {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+  text-align: left;
+  border: none;
+  width: 100%;
+}
+.cta-pdf {
+  background: white;
+  color: #0a1e3d;
+  border: 2px solid #0a1e3d;
+  box-shadow: 0 4px 12px rgba(10, 30, 61, 0.1);
+}
+.cta-pdf:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(10, 30, 61, 0.2);
+  background: #f8fafc;
+}
+.cta-full {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.35);
+}
+.cta-full:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(220, 38, 38, 0.45);
+}
+.cta-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.cta-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cta-title {
+  font-size: 15.5px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.cta-sub {
+  font-size: 11.5px;
+  opacity: 0.85;
+  font-weight: 600;
 }
 
 .cta-primary {
@@ -1890,6 +2084,91 @@ onMounted(() => {
   color: #78350f;
 }
 .rights-guide b { color: #92400e; }
+
+/* ⭐ QR block at Result step */
+.rights-qr-block {
+  background: white;
+  border: 2px solid #22c55e;
+  border-radius: 14px;
+  padding: 16px 14px;
+  margin: 14px 0 12px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.15);
+}
+.rqr-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #14532d;
+  margin-bottom: 10px;
+}
+.rqr-image {
+  width: clamp(160px, 45vw, 220px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  background: white;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  object-fit: contain;
+}
+.rqr-id {
+  font-size: 13px;
+  color: #14532d;
+  margin-top: 10px;
+  margin-bottom: 12px;
+}
+.rqr-steps {
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #475569;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border-radius: 8px;
+}
+.rqr-steps b { color: #14532d; }
+
+/* ⭐ QR at Contact modal */
+.cm-qr {
+  text-align: center;
+  padding: 12px 0;
+}
+.cm-qr-img {
+  width: 160px;
+  height: 160px;
+  border-radius: 8px;
+  padding: 4px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+.cm-qr-label {
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+/* ⭐ QR at Thank You */
+.th-qr-wrap {
+  text-align: center;
+  padding: 10px 0;
+}
+.th-qr-img {
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  padding: 4px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+.th-qr-caption {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+  margin-top: 4px;
+}
 
 /* ═══════════════ Result Hero V2 — % Ready + Progress Bar ═══════════════ */
 .result-hero-v2 {

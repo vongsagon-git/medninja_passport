@@ -7,6 +7,7 @@ const err = ref('')
 const search = ref('')
 const filterStatus = ref('all')
 const filterInterest = ref('all')
+const filterTier = ref('all')
 const selectedLead = ref(null)
 
 async function loadLeads() {
@@ -28,12 +29,14 @@ async function loadLeads() {
 
 const stats = computed(() => {
   const total = leads.value.length
+  const tierPdf = leads.value.filter(l => l.leadTier === 'pdf').length
+  const tierFull = leads.value.filter(l => l.leadTier === 'full').length
   const withAnswers = leads.value.filter(l => (l.answers || []).length === 30).length
   const wechatInterest = leads.value.filter(l => (l.interests || []).includes('wechat')).length
   const vdocallInterest = leads.value.filter(l => (l.interests || []).includes('vdocall')).length
   const discountInterest = leads.value.filter(l => (l.interests || []).includes('discount')).length
   const pdfDownloaded = leads.value.filter(l => (l.interests || []).includes('pdf')).length
-  return { total, withAnswers, wechatInterest, vdocallInterest, discountInterest, pdfDownloaded }
+  return { total, tierPdf, tierFull, withAnswers, wechatInterest, vdocallInterest, discountInterest, pdfDownloaded }
 })
 
 const filtered = computed(() => {
@@ -45,6 +48,7 @@ const filtered = computed(() => {
     }
     if (filterStatus.value !== 'all' && l.contactStatus !== filterStatus.value) return false
     if (filterInterest.value !== 'all' && !(l.interests || []).includes(filterInterest.value)) return false
+    if (filterTier.value !== 'all' && (l.leadTier || 'pdf') !== filterTier.value) return false
     return true
   })
 })
@@ -156,8 +160,8 @@ onMounted(loadLeads)
       <!-- Stats -->
       <div class="stats-grid">
         <div class="stat"><div class="s-num">{{ stats.total }}</div><div class="s-label">Total leads</div></div>
-        <div class="stat"><div class="s-num">{{ stats.withAnswers }}</div><div class="s-label">ทำแบบทดสอบ</div></div>
-        <div class="stat"><div class="s-num">{{ stats.pdfDownloaded }}</div><div class="s-label">📥 กด PDF</div></div>
+        <div class="stat"><div class="s-num" style="color:#64748b">{{ stats.tierPdf }}</div><div class="s-label">📥 PDF only</div></div>
+        <div class="stat"><div class="s-num" style="color:#dc2626">{{ stats.tierFull }}</div><div class="s-label">🎯 Full (assessment)</div></div>
         <div class="stat"><div class="s-num">{{ stats.wechatInterest }}</div><div class="s-label">💬 สนใจ WeChat</div></div>
         <div class="stat"><div class="s-num">{{ stats.vdocallInterest }}</div><div class="s-label">📹 สนใจ Zoom</div></div>
         <div class="stat"><div class="s-num">{{ stats.discountInterest }}</div><div class="s-label">🎁 สนใจส่วนลด</div></div>
@@ -181,6 +185,11 @@ onMounted(loadLeads)
           <option value="vdocall">Zoom</option>
           <option value="discount">Discount</option>
         </select>
+        <select v-model="filterTier">
+          <option value="all">Tier: ทั้งหมด</option>
+          <option value="pdf">📥 PDF only</option>
+          <option value="full">🎯 Full (assessment)</option>
+        </select>
       </div>
 
       <div v-if="err" class="err">⚠ {{ err }}</div>
@@ -189,7 +198,12 @@ onMounted(loadLeads)
       <div class="lead-list">
         <div v-for="lead in filtered" :key="lead._id" class="lead-row" @click="selectedLead = lead">
           <div class="lr-left">
-            <div class="lr-name">{{ lead.fullName || '(ไม่มีชื่อ)' }}</div>
+            <div class="lr-name">
+              {{ lead.fullName || '(ไม่มีชื่อ)' }}
+              <span class="tier-badge" :class="`tb-${lead.leadTier || 'pdf'}`">
+                {{ (lead.leadTier || 'pdf') === 'full' ? '🎯 Full' : '📥 PDF' }}
+              </span>
+            </div>
             <div class="lr-meta">
               🎓 {{ lead.university || '-' }} · {{ lead.year || '-' }}
             </div>
@@ -394,7 +408,16 @@ onMounted(loadLeads)
   border-color: #dc2626;
 }
 .lead-row:hover { border-color: #0a1e3d; box-shadow: 0 4px 12px rgba(10, 30, 61, 0.08); }
-.lr-name { font-weight: 900; color: #0a1e3d; font-size: 15px; }
+.lr-name { font-weight: 900; color: #0a1e3d; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tier-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+}
+.tb-pdf { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+.tb-full { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
 .lr-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
 .lr-contacts { font-size: 11.5px; color: #475569; margin-top: 4px; font-family: 'SF Mono', 'Menlo', monospace; }
 .lr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 160px; }
