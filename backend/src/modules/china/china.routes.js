@@ -692,68 +692,6 @@ function validatePhone(v) {
   return null
 }
 
-// ⭐ POST /landing-callback — ฝากเบอร์จาก contact modal
-//    ชื่อ + เบอร์ + WeChat = required (นักเรียนที่จีนต้องมี WeChat), มหาลัย = optional
-router.post('/landing-callback', async (req, res) => {
-  const body = req.body || {}
-  const fullNameRaw = String(body.fullName || '').trim().substring(0, 120)
-  const universityRaw = String(body.university || '').trim().substring(0, 200)
-  const phoneTh = String(body.phoneTh || '').trim().substring(0, 30)
-  const wechatId = String(body.wechatId || '').trim().substring(0, 60)
-  const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
-  const source = String(body.source || 'contact-modal').trim().substring(0, 40)
-
-  // ─── Validation ───
-  const nameErr = validateName(fullNameRaw)
-  if (nameErr) return res.status(400).json({ code: 'INVALID_NAME', message: nameErr })
-  const phoneErr = validatePhone(phoneTh)
-  if (phoneErr) return res.status(400).json({ code: 'INVALID_PHONE', message: phoneErr })
-  const wcErr = validateWechat(wechatId)
-  if (wcErr) return res.status(400).json({ code: 'INVALID_WECHAT', message: wcErr })
-
-  const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
-  const country = req.geo?.country || 'unknown'
-
-  // Rate limit: IP ห้ามส่งซ้ำใน 10s
-  const rateKey = `callback:${ip}`
-  const lastTs = _leadRateLimit.get(rateKey)
-  if (lastTs && Date.now() - lastTs < 10000) {
-    return res.status(429).json({ code: 'TOO_FAST', message: 'กรุณารอสักครู่แล้วลองใหม่' })
-  }
-  _leadRateLimit.set(rateKey, Date.now())
-
-  try {
-    // ⭐ Upsert by WeChat ID (case-insensitive) — เชื่อม lead callback กับ gate lead เดิม
-    const wechatRegex = new RegExp(`^${wechatId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-    const displayName = `📞 ${fullNameRaw}`
-
-    const lead = await ChinaLandingLead.findOneAndUpdate(
-      { wechatId: wechatRegex },
-      {
-        $set: {
-          fullName: displayName,
-          university: universityRaw || undefined,
-          phoneTh,
-          wechatId,
-          seminarBatch, ip, country,
-          userAgent: (req.headers['user-agent'] || '').substring(0, 300)
-        },
-        $setOnInsert: {
-          leadTier: 'pdf',
-          contactStatus: 'new'
-        }
-      },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    )
-    const isNew = lead.createdAt && (Date.now() - new Date(lead.createdAt).getTime() < 2000)
-    console.log(`[china-landing-callback] ${isNew ? 'NEW' : 'UPDATE'} id=${lead._id} name="${fullNameRaw}" wechat="${wechatId}" uni="${universityRaw}" phone="${phoneTh}" src=${source}`)
-    return res.json({ ok: true })
-  } catch (err) {
-    console.error('[china-landing-callback] error', err.message)
-    return res.status(500).json({ code: 'SAVE_FAILED', message: 'บันทึกไม่สำเร็จ กรุณาลองใหม่' })
-  }
-})
-
 router.post('/landing-lead', async (req, res) => {
   const body = req.body || {}
   const fullName = String(body.fullName || '').trim().substring(0, 120)

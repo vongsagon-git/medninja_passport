@@ -186,86 +186,10 @@ function checkEmail(raw) {
   return ''
 }
 
-// ⭐ Contact modal (landing page) — ฝากเบอร์ + WeChat
+// ⭐ Contact modal — เปิดโชว์ LINE/WeChat + QR ให้ user แอดมาสอบถามได้เลย
 const contactOpen = ref(false)
-const contactFullName = ref('')
-const contactUniversitySelect = ref('')
-const contactUniversityOther = ref('')
-const contactPhone = ref('')
-const contactWechat = ref('')
-const contactSubmitting = ref(false)
-const contactSubmitted = ref(false)
-const contactError = ref('')
-
-const contactResolvedUniversity = computed(() => {
-  if (contactUniversitySelect.value === '__OTHER__') return contactUniversityOther.value.trim()
-  return contactUniversitySelect.value
-})
-
-// ⭐ Contact modal — ชื่อ + เบอร์ + WeChat = required (นักเรียนที่จีนต้องมี WeChat)
-const contactNameError = computed(() => {
-  if (!contactFullName.value.trim()) return ''
-  return checkName(contactFullName.value)
-})
-const contactPhoneError = computed(() => {
-  if (!contactPhone.value.trim()) return ''
-  return checkPhone(contactPhone.value)
-})
-const contactWechatError = computed(() => {
-  if (!contactWechat.value.trim()) return ''
-  return checkWechat(contactWechat.value)
-})
-const canSubmitContact = computed(() => {
-  const nameOk = contactFullName.value.trim() && !checkName(contactFullName.value)
-  const phoneOk = contactPhone.value.trim() && !checkPhone(contactPhone.value)
-  const wechatOk = contactWechat.value.trim() && !checkWechat(contactWechat.value)
-  return nameOk && phoneOk && wechatOk
-})
-
 function openContact() {
   contactOpen.value = true
-  contactSubmitted.value = false
-  contactError.value = ''
-  // autofill จาก form ถ้ามี
-  contactFullName.value = form.value.fullName || ''
-  contactUniversitySelect.value = form.value.universitySelect || ''
-  contactUniversityOther.value = form.value.universityOther || ''
-  contactPhone.value = form.value.phoneTh || ''
-  contactWechat.value = form.value.wechatId || ''
-}
-
-async function submitContactPhone() {
-  contactError.value = ''
-  const nameErr = checkName(contactFullName.value)
-  if (nameErr) { contactError.value = nameErr; return }
-  const phoneErr = checkPhone(contactPhone.value)
-  if (phoneErr) { contactError.value = phoneErr; return }
-  const wechatErr = checkWechat(contactWechat.value)
-  if (wechatErr) { contactError.value = wechatErr; return }
-  contactSubmitting.value = true
-  try {
-    const res = await fetch('/api/china/landing-callback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fullName: contactFullName.value.trim(),
-        university: contactResolvedUniversity.value,
-        phoneTh: contactPhone.value.trim(),
-        wechatId: contactWechat.value.trim(),
-        seminarBatch: SEMINAR_BATCH,
-        source: 'contact-modal'
-      })
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      throw new Error(data.message || 'ส่งไม่สำเร็จ')
-    }
-    contactSubmitted.value = true
-  } catch (e) {
-    contactError.value = e.message
-  } finally {
-    contactSubmitting.value = false
-  }
 }
 
 // resolved university (ใช้ตอน submit)
@@ -769,111 +693,42 @@ onMounted(() => {
       </div>
     </section>
 
-    <!-- ═══════════════ Contact Modal — ฝากเบอร์ + LINE/WeChat ═══════════════ -->
+    <!-- ═══════════════ Contact Modal — LINE / WeChat (แอดมาสอบถามได้เลย) ═══════════════ -->
     <div v-if="contactOpen" class="contact-modal" @click.self="contactOpen = false">
       <div class="cm-card">
         <button class="cm-close" @click="contactOpen = false">✕</button>
         <div class="cm-title">💬 ติดต่อเรา</div>
-        <div class="cm-sub">หมอแตมจะโทรกลับเอง / ทัก WeChat</div>
+        <div class="cm-sub">แอดช่องทางไหนก็ได้ — ทักมาสอบถามได้เลย</div>
 
-        <!-- ฝากเบอร์ให้หมอแตมโทรกลับ -->
-        <div class="cm-callback">
-          <div class="cm-cb-title">📞 ฝากเบอร์ให้หมอแตมโทรกลับ</div>
-          <div class="cm-cb-hint">ผู้ปกครอง หรือ นักเรียน — ใครก็ฝากได้</div>
-
-          <div v-if="contactSubmitted" class="cm-cb-success">
-            ✅ ได้รับข้อมูลแล้ว หมอแตมจะโทรกลับเร็ว ๆ นี้
-          </div>
-          <div v-else>
-            <div class="cm-cb-fields">
-              <input
-                v-model="contactFullName"
-                type="text"
-                placeholder="ชื่อ + นามสกุล *"
-                class="cm-cb-input"
-                :class="{ 'input-invalid': contactNameError }"
-                maxlength="80"
-                :disabled="contactSubmitting"
-              />
-              <div v-if="contactNameError" class="cm-cb-field-err">⚠ {{ contactNameError }}</div>
-
-              <select
-                v-model="contactUniversitySelect"
-                class="cm-cb-input"
-                :disabled="contactSubmitting"
-              >
-                <option value="">— เลือกมหาลัย (ไม่บังคับ) —</option>
-                <option v-for="u in UNIVERSITIES_CHINA" :key="u.id" :value="u.name">
-                  {{ u.name }} ({{ u.city }})
-                </option>
-                <option value="__OTHER__">— อื่น ๆ (กรอกเอง) —</option>
-              </select>
-              <input
-                v-if="contactUniversitySelect === '__OTHER__'"
-                v-model="contactUniversityOther"
-                type="text"
-                placeholder="ชื่อมหาลัย + เมือง"
-                class="cm-cb-input"
-                maxlength="120"
-                :disabled="contactSubmitting"
-              />
-
-              <input
-                v-model="contactPhone"
-                type="tel"
-                placeholder="เบอร์โทร เช่น 081-234-5678 *"
-                class="cm-cb-input"
-                :class="{ 'input-invalid': contactPhoneError }"
-                maxlength="20"
-                :disabled="contactSubmitting"
-              />
-              <div v-if="contactPhoneError" class="cm-cb-field-err">⚠ {{ contactPhoneError }}</div>
-
-              <input
-                v-model="contactWechat"
-                type="text"
-                placeholder="💬 WeChat ID *"
-                class="cm-cb-input"
-                :class="{ 'input-invalid': contactWechatError }"
-                maxlength="40"
-                :disabled="contactSubmitting"
-              />
-              <div v-if="contactWechatError" class="cm-cb-field-err">⚠ {{ contactWechatError }}</div>
-              <div class="cm-cb-wechat-note">
-                💡 นักเรียนที่เรียนที่จีนทุกคนต้องมี WeChat — ถ้ายังไม่มี ให้สมัครก่อนกรอก
-              </div>
-
-              <button
-                class="cm-cb-btn cm-cb-btn-full"
-                :disabled="!canSubmitContact || contactSubmitting"
-                @click="submitContactPhone"
-              >
-                <span v-if="contactSubmitting">กำลังส่ง...</span>
-                <span v-else-if="!canSubmitContact">🔒 กรอก ชื่อ + เบอร์ + WeChat ให้ถูกต้อง</span>
-                <span v-else>📞 ฝากเบอร์ให้หมอแตมโทรกลับ</span>
-              </button>
+        <!-- 2 ทางเลือกใหญ่: LINE / WeChat -->
+        <div class="cm-channels">
+          <a
+            class="cm-channel line"
+            href="https://line.me/R/ti/p/@medninja"
+            target="_blank"
+            rel="noopener"
+          >
+            <span class="cm-ch-icon">💚</span>
+            <div class="cm-ch-body">
+              <div class="cm-ch-name">LINE</div>
+              <div class="cm-ch-id">@medninja</div>
             </div>
-            <div v-if="contactError" class="cm-cb-error">⚠ {{ contactError }}</div>
+            <span class="cm-ch-arrow">→</span>
+          </a>
+
+          <div class="cm-channel wechat">
+            <span class="cm-ch-icon">💬</span>
+            <div class="cm-ch-body">
+              <div class="cm-ch-name">WeChat</div>
+              <div class="cm-ch-id">medninja</div>
+            </div>
           </div>
         </div>
 
-        <div class="cm-or">— หรือทักหาเราโดยตรง —</div>
-
-        <!-- QR WeChat -->
+        <!-- QR WeChat (ใหญ่ scan ได้ง่าย) -->
         <div class="cm-qr">
           <img src="/img/wechat-qr.png" alt="WeChat MedNinja QR" class="cm-qr-img" />
-          <div class="cm-qr-label">📱 สแกน QR เพิ่ม WeChat</div>
-        </div>
-
-        <div class="cm-list">
-          <div class="cm-item">
-            <div class="cm-label">LINE</div>
-            <div class="cm-id">@medninja</div>
-          </div>
-          <div class="cm-item">
-            <div class="cm-label">WeChat</div>
-            <div class="cm-id">medninja</div>
-          </div>
+          <div class="cm-qr-label">📱 สแกน QR เพื่อแอด WeChat</div>
         </div>
       </div>
     </div>
@@ -1720,145 +1575,63 @@ onMounted(() => {
 }
 
 /* Callback form (ฝากเบอร์) */
-.cm-callback {
-  background: linear-gradient(135deg, #fff7ed, #ffedd5);
-  border: 1.5px solid #f97316;
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 12px;
-  text-align: left;
-}
-.cm-cb-title {
-  font-size: 13px;
-  font-weight: 800;
-  color: #9a3412;
-  margin-bottom: 2px;
-}
-.cm-cb-hint {
-  font-size: 11px;
-  color: #c2410c;
-  margin-bottom: 10px;
-}
-.cm-cb-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.cm-cb-form {
-  display: flex;
-  gap: 6px;
-}
-.cm-cb-fields select.cm-cb-input {
-  appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23c2410c' d='M6 8L0 0h12z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
-  cursor: pointer;
-}
-.cm-cb-input {
-  flex: 1;
-  min-width: 0;
-  padding: 9px 12px;
-  border: 1.5px solid #fdba74;
-  border-radius: 9px;
-  font-size: 14px;
-  font-family: inherit;
-  background: white;
-}
-.cm-cb-input:focus {
-  outline: none;
-  border-color: #f97316;
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
-}
-.cm-cb-btn {
-  padding: 9px 16px;
-  background: linear-gradient(135deg, #f97316, #ea580c);
-  color: white;
-  border: none;
-  border-radius: 9px;
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
-}
-.cm-cb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.cm-cb-btn-full {
-  width: 100%;
-  padding: 12px 16px;
-  font-size: 14px;
-  margin-top: 4px;
-}
-.cm-cb-field-err {
-  color: #dc2626;
-  font-size: 11.5px;
-  font-weight: 600;
-  margin-top: -4px;
-  padding-left: 4px;
-}
-.cm-cb-input.input-invalid {
-  border-color: #dc2626;
-  background: #fef2f2;
-}
-.cm-cb-wechat-note {
-  font-size: 11px;
-  color: #7c2d12;
-  background: #fff7ed;
-  border-left: 3px solid #f97316;
-  padding: 6px 10px;
-  border-radius: 6px;
-  line-height: 1.5;
-  margin-top: -2px;
-}
-.cm-cb-success {
-  background: white;
-  border: 1.5px solid #22c55e;
-  color: #16a34a;
-  padding: 10px;
-  border-radius: 9px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-}
-.cm-cb-error {
-  color: #dc2626;
-  font-size: 12px;
-  margin-top: 6px;
-  font-weight: 600;
-}
-.cm-or {
-  font-size: 11.5px;
-  color: #94a3b8;
-  margin: 10px 0;
-  font-weight: 600;
-}
-.cm-list {
+/* ⭐ 2 channel cards (LINE / WeChat) — แอดมาสอบถามได้เลย */
+.cm-channels {
   display: grid;
   gap: 10px;
+  margin-bottom: 16px;
 }
-.cm-item {
+.cm-channel {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: #f8fafc;
+  gap: 12px;
+  padding: 14px 16px;
+  background: white;
   border: 1.5px solid #e2e8f0;
   border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  text-align: left;
 }
-.cm-label {
-  font-size: 12px;
-  font-weight: 800;
+.cm-channel:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.cm-channel.line:hover { border-color: #06c755; }
+.cm-channel.wechat { cursor: default; }
+.cm-channel.wechat:hover { transform: none; box-shadow: none; border-color: #e2e8f0; }
+.cm-ch-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+.cm-ch-body {
+  flex: 1;
+  min-width: 0;
+}
+.cm-ch-name {
+  font-size: 11px;
   color: #64748b;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
+  line-height: 1.2;
 }
-.cm-id {
+.cm-ch-id {
   font-family: 'SF Mono', 'Menlo', monospace;
   font-size: 17px;
   font-weight: 900;
   color: #0a1e3d;
   letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.cm-ch-arrow {
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 /* ═══════════════ ASSESSMENT — fit viewport ═══════════════ */
