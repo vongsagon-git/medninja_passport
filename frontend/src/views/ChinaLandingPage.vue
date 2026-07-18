@@ -954,85 +954,38 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 4 สิทธิ์พิเศษ -->
-      <div class="rights-section">
-        <div class="rights-title">🎁 4 สิทธิ์พิเศษของคุณ</div>
-        <div class="rights-sub">
-          ทัก WeChat หมอแตม <b class="wc-highlight">medninja</b> แล้วแจ้ง
-          <b>ชื่อ "{{ form.fullName }}"</b> เพื่อรับสิทธิ์
+      <!-- ⭐ Simple rights section: 4 bullets สั้น + QR ใหญ่ -->
+      <div class="simple-rights">
+        <div class="sr-list">
+          <div class="sr-item">📥 <b>PDF Checklist</b> การเตรียมความพร้อม</div>
+          <div class="sr-item">📹 <b>ปรึกษาหมอแตม 30 นาที ฟรี</b> (ตัวต่อตัว)</div>
+          <div class="sr-item">🎁 <b>ส่วนลด 10%</b> ทุกคอร์ส (NL 1+2 / MEQ / OSCE)</div>
+          <div class="sr-item">💬 คำแนะนำเฉพาะคุณจากหมอแตม</div>
         </div>
 
-        <div class="right-card">
-          <div class="rc-num">1</div>
-          <div class="rc-body">
-            <div class="rc-title">📥 PDF Checklist การเตรียมความพร้อม</div>
-            <div class="rc-desc">ดาวน์โหลดได้เลย · Full version รับทาง WeChat</div>
+        <div class="sr-qr-box">
+          <div class="sr-qr-title">📱 แอด WeChat มารับสิทธิ์</div>
+          <img
+            src="/img/wechat-qr.png"
+            alt="WeChat MedNinja"
+            class="sr-qr-image"
+            @click="trackInterest('wechat')"
+          />
+          <div class="sr-qr-id">
+            หรือค้นหา ID: <b class="wc-highlight">medninja</b>
           </div>
-          <button class="rc-btn" @click="downloadPdf(); trackInterest('pdf')">
-            โหลด
-          </button>
-        </div>
-
-        <div class="right-card">
-          <div class="rc-num">2</div>
-          <div class="rc-body">
-            <div class="rc-title">💬 ทัก WeChat หมอแตม</div>
-            <div class="rc-desc">ปรึกษา 1-on-1 · คำแนะนำเฉพาะคุณ</div>
-          </div>
-          <button class="rc-btn primary" @click="trackInterest('wechat')">
-            WeChat
-          </button>
-        </div>
-
-        <div class="right-card">
-          <div class="rc-num">3</div>
-          <div class="rc-body">
-            <div class="rc-title">📹 รับคำปรึกษาหมอแตมฟรี 30 นาที</div>
-            <div class="rc-desc">
-              <b>ตัวต่อตัว</b> · Zoom · วางแผนเรียนเฉพาะคุณ<br />
-              <b>ทัก WeChat เพื่อขอนัดวันเวลา</b>
-            </div>
-          </div>
-          <button class="rc-btn primary" @click="trackInterest('vdocall')">
-            ขอนัด
-          </button>
-        </div>
-
-        <div class="right-card highlight">
-          <div class="rc-num">4</div>
-          <div class="rc-body">
-            <div class="rc-title">🎁 ส่วนลด 10% ทุกคอร์ส</div>
-            <div class="rc-desc">
-              NL 1+2 · MEQ · OSCE<br />
-              <b>แสดงบัตรนักศึกษาจีน + แจ้งว่ามาจากงานสัมมนา</b>
-            </div>
-          </div>
-          <button class="rc-btn primary" @click="trackInterest('discount')">
-            ใช้
-          </button>
-        </div>
-
-        <!-- QR + วิธีใช้ -->
-        <div class="rights-qr-block">
-          <div class="rqr-title">📱 สแกน QR เพิ่มเพื่อน WeChat</div>
-          <img src="/img/wechat-qr.png" alt="WeChat MedNinja QR" class="rqr-image" />
-          <div class="rqr-id">WeChat ID: <b class="wc-highlight">medninja</b></div>
-          <div class="rqr-steps">
-            <b>วิธีใช้สิทธิ์:</b>
-            1. สแกน QR หรือค้นหา ID <b>medninja</b><br />
-            2. Add friend<br />
-            3. ทักไปแจ้ง <b>"ชื่อ {{ form.fullName }} มาจากแบบทดสอบ"</b><br />
-            4. ทีมงานจะจัดการสิทธิ์ให้ทันที
+          <div class="sr-qr-note">
+            แจ้ง <b>ชื่อ "{{ form.fullName }}"</b> เพื่อรับสิทธิ์
           </div>
         </div>
 
-        <button class="cta-outline" @click="step = 'thanks'; scrollTop()">
-          ดูสรุปสิทธิ์ทั้งหมด →
+        <button v-if="pdfDownloadUrl" class="sr-pdf-btn" @click="downloadPdf(); trackInterest('pdf')">
+          📥 โหลด PDF อีกครั้ง
         </button>
       </div>
     </section>
 
-    <!-- ═══════════════ STEP 5: THANK YOU ═══════════════ -->
+    <!-- ═══════════════ STEP 5: THANK YOU (Simple) ═══════════════ -->
     <section v-if="step === 'thanks'" class="thanks">
       <div class="th-check">
         <svg viewBox="0 0 60 60" class="th-check-svg">
@@ -1042,60 +995,22 @@ onMounted(() => {
       </div>
       <h2 class="th-title">🎉 ได้รับข้อมูลแล้ว!</h2>
       <p class="th-sub">
-        PDF Checklist การเตรียมความพร้อม ถูกดาวน์โหลดให้แล้ว<br />
-        <b>ทีมงานจะติดต่อทาง WeChat ภายใน 24 ชม.</b><br />
-        พร้อมนัดปรึกษาหมอแตมแบบส่วนตัว
+        PDF ถูกดาวน์โหลดให้แล้ว<br />
+        <b>แอด WeChat เพื่อรับสิทธิ์เพิ่มเติม</b>
       </p>
 
-      <button v-if="pdfDownloadUrl" class="th-btn download" @click="downloadPdf">
-        <span>📥</span> โหลด PDF อีกครั้ง (ถ้ายังไม่ได้)
+      <!-- QR ใหญ่ = จุดสำคัญเดียว -->
+      <div class="th-qr-main">
+        <img src="/img/wechat-qr.png" alt="WeChat MedNinja" class="th-qr-big" />
+        <div class="th-qr-id">WeChat ID: <b>medninja</b></div>
+        <div class="th-qr-msg">
+          แจ้ง <b>ชื่อ "{{ form.fullName }}"</b> เพื่อรับสิทธิ์
+        </div>
+      </div>
+
+      <button v-if="pdfDownloadUrl" class="th-restart" @click="downloadPdf">
+        📥 โหลด PDF อีกครั้ง
       </button>
-
-      <div class="th-contact">
-        <div class="th-c-title">📞 สอบถามข้อมูลเพิ่มเติม</div>
-        <div class="th-qr-wrap">
-          <img src="/img/wechat-qr.png" alt="WeChat MedNinja" class="th-qr-img" />
-          <div class="th-qr-caption">สแกน QR เพิ่ม WeChat</div>
-        </div>
-        <div class="th-c-row">
-          <div class="th-c-item line">
-            <span class="th-c-label">LINE</span>
-            <span class="th-c-id">@medninja</span>
-          </div>
-          <div class="th-c-item wechat">
-            <span class="th-c-label">WeChat</span>
-            <span class="th-c-id">medninja</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="th-parent">
-        <div class="th-p-title">👨‍👩‍👧 ผู้ปกครองสามารถฝากเบอร์ให้คุณหมอโทรกลับได้</div>
-
-        <div v-if="parentSubmitted" class="th-p-success">
-          ✅ ได้รับเบอร์แล้ว หมอแตมจะโทรกลับเร็ว ๆ นี้
-        </div>
-
-        <div v-else class="th-p-form">
-          <input
-            v-model="parentPhone"
-            type="tel"
-            placeholder="เบอร์ผู้ปกครอง เช่น 081-234-5678"
-            class="th-p-input"
-            :disabled="parentSubmitting"
-          />
-          <button
-            class="th-p-btn"
-            :disabled="!parentPhone.trim() || parentSubmitting"
-            @click="submitParentPhone"
-          >
-            <span v-if="parentSubmitting">กำลังส่ง...</span>
-            <span v-else>📞 ฝากเบอร์</span>
-          </button>
-        </div>
-        <div v-if="parentError" class="th-p-error">⚠ {{ parentError }}</div>
-      </div>
-
       <button class="th-restart" @click="step = 'landing'; scrollTop()">← กลับหน้าแรก</button>
     </section>
 
@@ -2110,7 +2025,94 @@ onMounted(() => {
 }
 .rights-guide b { color: #92400e; }
 
-/* ⭐ QR block at Result step */
+/* ⭐ Simple rights section (redesign for clarity) */
+.simple-rights {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #fefce8 0%, #ffffff 100%);
+  border: 2px solid #eab308;
+  border-radius: 18px;
+  padding: 20px 16px;
+  box-shadow: 0 12px 28px rgba(234, 179, 8, 0.15);
+}
+.sr-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.sr-item {
+  padding: 10px 14px;
+  background: white;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.5;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+.sr-item b { color: #0a1e3d; font-weight: 800; }
+
+.sr-qr-box {
+  background: white;
+  border: 2px solid #22c55e;
+  border-radius: 14px;
+  padding: 16px 14px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.15);
+}
+.sr-qr-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #14532d;
+  margin-bottom: 12px;
+}
+.sr-qr-image {
+  width: clamp(200px, 60vw, 280px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  padding: 4px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  object-fit: contain;
+}
+.sr-qr-id {
+  font-size: 13px;
+  color: #475569;
+  margin-top: 10px;
+}
+.sr-qr-note {
+  font-size: 12.5px;
+  color: #64748b;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+.sr-qr-note b { color: #14532d; }
+
+.sr-pdf-btn {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 14px auto 0;
+  padding: 10px 20px;
+  background: white;
+  color: #0a1e3d;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.sr-pdf-btn:hover {
+  border-color: #0a1e3d;
+  background: #f8fafc;
+}
+
+/* ⭐ QR block at Result step (legacy — unused ตอนนี้) */
 .rights-qr-block {
   background: white;
   border: 2px solid #22c55e;
@@ -2994,6 +2996,43 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* Simple thank you QR block */
+.th-qr-main {
+  background: white;
+  border: 2px solid #22c55e;
+  border-radius: 18px;
+  padding: 22px 16px;
+  margin: 20px auto;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(34, 197, 94, 0.15);
+}
+.th-qr-big {
+  width: clamp(220px, 70vw, 300px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  padding: 4px;
+  background: white;
+  object-fit: contain;
+}
+.th-qr-main .th-qr-id {
+  font-size: 14px;
+  color: #14532d;
+  margin-top: 12px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+.th-qr-main .th-qr-id b { color: #16a34a; font-weight: 900; }
+.th-qr-msg {
+  font-size: 13px;
+  color: #475569;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border-radius: 8px;
+}
+.th-qr-msg b { color: #14532d; }
+
 .th-restart {
   background: transparent;
   border: 1.5px solid #cbd5e1;
@@ -3004,6 +3043,7 @@ onMounted(() => {
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+  margin: 4px;
 }
 
 /* ═══════════════ RESPONSIVE ═══════════════ */
