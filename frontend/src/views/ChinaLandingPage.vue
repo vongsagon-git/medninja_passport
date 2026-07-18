@@ -731,6 +731,33 @@ onMounted(() => {
           </button>
         </div>
 
+        <!-- ⭐ ทางเลือกไม่กรอกฟอร์ม: ทัก LINE/WeChat ขอ PDF ได้เลย -->
+        <div class="direct-ask">
+          <div class="direct-ask-label">— หรือทักมาขอ PDF ได้ที่ —</div>
+          <div class="direct-ask-buttons">
+            <a
+              class="direct-ask-btn line"
+              href="https://line.me/R/ti/p/@medninja"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="dab-icon">💚</span>
+              <span class="dab-body">
+                <span class="dab-title">LINE</span>
+                <span class="dab-id">@medninja</span>
+              </span>
+            </a>
+            <button class="direct-ask-btn wechat" @click="openContact">
+              <span class="dab-icon">💬</span>
+              <span class="dab-body">
+                <span class="dab-title">WeChat</span>
+                <span class="dab-id">medninja</span>
+              </span>
+            </button>
+          </div>
+          <div class="direct-ask-hint">พิมพ์ว่า <b>"ขอ PDF"</b> ทีมงานจะส่งให้ทันที</div>
+        </div>
+
         <div class="cta-secondary-row">
           <button class="cta-contact" @click="openContact">
             ติดต่อเรา
@@ -1540,6 +1567,85 @@ onMounted(() => {
   max-width: 480px;
   margin: 8px auto 0;
   width: 100%;
+}
+
+/* ⭐ Direct ask (ทัก LINE/WeChat ขอ PDF ตรง ๆ) */
+.direct-ask {
+  max-width: 480px;
+  margin: 20px auto 0;
+  width: 100%;
+  text-align: center;
+}
+.direct-ask-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.direct-ask-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.direct-ask-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s;
+  font-family: inherit;
+  text-align: left;
+}
+.direct-ask-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.direct-ask-btn.line:hover { border-color: #06c755; }
+.direct-ask-btn.wechat:hover { border-color: #16a34a; }
+.dab-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.dab-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.dab-title {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.dab-id {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.direct-ask-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 10px;
+  line-height: 1.5;
+}
+.direct-ask-hint b {
+  color: #f97316;
+  background: #fff7ed;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 800;
 }
 .cta-contact {
   display: inline-flex;
