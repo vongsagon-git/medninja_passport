@@ -755,7 +755,7 @@ onMounted(() => {
               </span>
             </button>
           </div>
-          <div class="direct-ask-hint">พิมพ์ว่า <b>"ขอ PDF"</b> ทีมงานจะส่งให้ทันที</div>
+          <div class="direct-ask-hint">พิมพ์ว่า <b>"ขอ PDF"</b></div>
         </div>
 
         <div class="cta-secondary-row">
