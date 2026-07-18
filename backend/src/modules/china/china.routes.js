@@ -666,6 +666,46 @@ function validateUniversity(v) {
   return null
 }
 
+// ⭐ POST /landing-callback — ฝากเบอร์จาก contact modal (เบา ไม่ validate มาก)
+//    ไม่ต้องกรอกชื่อ/มหาลัย/WeChat — แค่ฝากเบอร์ให้ทีมโทรกลับ
+router.post('/landing-callback', async (req, res) => {
+  const body = req.body || {}
+  const phoneTh = String(body.phoneTh || '').trim().substring(0, 30)
+  const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
+  const source = String(body.source || 'contact-modal').trim().substring(0, 40)
+
+  if (!phoneTh || phoneTh.length < 6) {
+    return res.status(400).json({ code: 'INVALID_PHONE', message: 'กรุณากรอกเบอร์ให้ถูกต้อง' })
+  }
+
+  const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
+  const country = req.geo?.country || 'unknown'
+
+  // Rate limit: IP ห้ามส่งซ้ำใน 10s
+  const rateKey = `callback:${ip}`
+  const lastTs = _leadRateLimit.get(rateKey)
+  if (lastTs && Date.now() - lastTs < 10000) {
+    return res.status(429).json({ code: 'TOO_FAST', message: 'กรุณารอสักครู่แล้วลองใหม่' })
+  }
+  _leadRateLimit.set(rateKey, Date.now())
+
+  try {
+    const lead = await ChinaLandingLead.create({
+      fullName: `📞 ฝากเบอร์ (${source})`,
+      phoneTh,
+      seminarBatch,
+      ip, country,
+      leadTier: 'pdf',
+      userAgent: (req.headers['user-agent'] || '').substring(0, 300)
+    })
+    console.log(`[china-landing-callback] NEW id=${lead._id} phone="${phoneTh}" src=${source}`)
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('[china-landing-callback] error', err.message)
+    return res.status(500).json({ code: 'SAVE_FAILED', message: 'บันทึกไม่สำเร็จ กรุณาลองใหม่' })
+  }
+})
+
 router.post('/landing-lead', async (req, res) => {
   const body = req.body || {}
   const fullName = String(body.fullName || '').trim().substring(0, 120)

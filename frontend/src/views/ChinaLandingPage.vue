@@ -163,15 +163,14 @@ async function submitContactPhone() {
   }
   contactSubmitting.value = true
   try {
-    // ส่ง lead แบบเบา — ไม่มี assessment/name/wechat
-    const res = await fetch('/api/china/landing-lead', {
+    // ส่ง callback request (ไม่ต้อง validate มหาลัย/WeChat — แค่ฝากเบอร์)
+    const res = await fetch('/api/china/landing-callback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fullName: 'ติดต่อจาก landing',
         phoneTh: phone,
-        answers: [],
-        seminarBatch: SEMINAR_BATCH
+        seminarBatch: SEMINAR_BATCH,
+        source: 'contact-modal'
       })
     })
     if (!res.ok) {
