@@ -142,16 +142,28 @@ const parentError = ref('')
 
 // ⭐ Contact modal (landing page) — ฝากเบอร์ + LINE/WeChat
 const contactOpen = ref(false)
+const contactFullName = ref('')
+const contactUniversitySelect = ref('')
+const contactUniversityOther = ref('')
 const contactPhone = ref('')
 const contactSubmitting = ref(false)
 const contactSubmitted = ref(false)
 const contactError = ref('')
 
+const contactResolvedUniversity = computed(() => {
+  if (contactUniversitySelect.value === '__OTHER__') return contactUniversityOther.value.trim()
+  return contactUniversitySelect.value
+})
+
 function openContact() {
   contactOpen.value = true
   contactSubmitted.value = false
   contactError.value = ''
-  contactPhone.value = ''
+  // autofill จาก form ถ้ามี
+  contactFullName.value = form.value.fullName || ''
+  contactUniversitySelect.value = form.value.universitySelect || ''
+  contactUniversityOther.value = form.value.universityOther || ''
+  contactPhone.value = form.value.phoneTh || ''
 }
 
 async function submitContactPhone() {
@@ -163,11 +175,13 @@ async function submitContactPhone() {
   }
   contactSubmitting.value = true
   try {
-    // ส่ง callback request (ไม่ต้อง validate มหาลัย/WeChat — แค่ฝากเบอร์)
+    // ส่ง callback request (ไม่ต้อง validate WeChat — แค่ฝากเบอร์+ชื่อ+มหาลัย)
     const res = await fetch('/api/china/landing-callback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        fullName: contactFullName.value.trim(),
+        university: contactResolvedUniversity.value,
         phoneTh: phone,
         seminarBatch: SEMINAR_BATCH,
         source: 'contact-modal'
@@ -673,25 +687,55 @@ onMounted(() => {
           <div class="cm-cb-hint">ผู้ปกครอง หรือ นักเรียน — ใครก็ฝากได้</div>
 
           <div v-if="contactSubmitted" class="cm-cb-success">
-            ✅ ได้รับเบอร์แล้ว ทีมงานจะโทรกลับเร็ว ๆ นี้
+            ✅ ได้รับข้อมูลแล้ว ทีมงานจะโทรกลับเร็ว ๆ นี้
           </div>
           <div v-else>
-            <div class="cm-cb-form">
+            <div class="cm-cb-fields">
               <input
-                v-model="contactPhone"
-                type="tel"
-                placeholder="เบอร์โทร เช่น 081-234-5678"
+                v-model="contactFullName"
+                type="text"
+                placeholder="ชื่อ (ไม่บังคับ)"
                 class="cm-cb-input"
+                maxlength="80"
                 :disabled="contactSubmitting"
               />
-              <button
-                class="cm-cb-btn"
-                :disabled="!contactPhone.trim() || contactSubmitting"
-                @click="submitContactPhone"
+              <select
+                v-model="contactUniversitySelect"
+                class="cm-cb-input"
+                :disabled="contactSubmitting"
               >
-                <span v-if="contactSubmitting">...</span>
-                <span v-else>ฝาก</span>
-              </button>
+                <option value="">— เลือกมหาลัย (ไม่บังคับ) —</option>
+                <option v-for="u in UNIVERSITIES_CHINA" :key="u.id" :value="u.name">
+                  {{ u.name }} ({{ u.city }})
+                </option>
+                <option value="__OTHER__">— อื่น ๆ (กรอกเอง) —</option>
+              </select>
+              <input
+                v-if="contactUniversitySelect === '__OTHER__'"
+                v-model="contactUniversityOther"
+                type="text"
+                placeholder="ชื่อมหาลัย + เมือง"
+                class="cm-cb-input"
+                maxlength="120"
+                :disabled="contactSubmitting"
+              />
+              <div class="cm-cb-form">
+                <input
+                  v-model="contactPhone"
+                  type="tel"
+                  placeholder="เบอร์โทร เช่น 081-234-5678"
+                  class="cm-cb-input"
+                  :disabled="contactSubmitting"
+                />
+                <button
+                  class="cm-cb-btn"
+                  :disabled="!contactPhone.trim() || contactSubmitting"
+                  @click="submitContactPhone"
+                >
+                  <span v-if="contactSubmitting">...</span>
+                  <span v-else>ฝาก</span>
+                </button>
+              </div>
             </div>
             <div v-if="contactError" class="cm-cb-error">⚠ {{ contactError }}</div>
           </div>
@@ -1456,7 +1500,9 @@ onMounted(() => {
   border-radius: 20px;
   padding: 28px 24px 24px;
   width: 100%;
-  max-width: 340px;
+  max-width: 400px;
+  max-height: 92vh;
+  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   text-align: center;
 }
@@ -1506,9 +1552,22 @@ onMounted(() => {
   color: #c2410c;
   margin-bottom: 10px;
 }
+.cm-cb-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .cm-cb-form {
   display: flex;
   gap: 6px;
+}
+.cm-cb-fields select.cm-cb-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23c2410c' d='M6 8L0 0h12z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
 }
 .cm-cb-input {
   flex: 1;
@@ -2154,14 +2213,15 @@ onMounted(() => {
 }
 .rqr-steps b { color: #14532d; }
 
-/* ⭐ QR at Contact modal */
+/* ⭐ QR at Contact modal (ใหญ่ scan ได้ชัด) */
 .cm-qr {
   text-align: center;
   padding: 12px 0;
 }
 .cm-qr-img {
-  width: 160px;
-  height: 160px;
+  width: clamp(240px, 75vw, 320px);
+  height: auto;
+  aspect-ratio: 1 / 1;
   border-radius: 8px;
   padding: 4px;
   background: white;
@@ -2169,10 +2229,10 @@ onMounted(() => {
   object-fit: contain;
 }
 .cm-qr-label {
-  font-size: 11.5px;
+  font-size: 13px;
   color: #64748b;
   font-weight: 700;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 /* ⭐ QR at Thank You */

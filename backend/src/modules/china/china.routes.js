@@ -667,9 +667,11 @@ function validateUniversity(v) {
 }
 
 // ⭐ POST /landing-callback — ฝากเบอร์จาก contact modal (เบา ไม่ validate มาก)
-//    ไม่ต้องกรอกชื่อ/มหาลัย/WeChat — แค่ฝากเบอร์ให้ทีมโทรกลับ
+//    ไม่ต้อง WeChat — ชื่อ/มหาลัย optional, แค่เบอร์บังคับ
 router.post('/landing-callback', async (req, res) => {
   const body = req.body || {}
+  const fullNameRaw = String(body.fullName || '').trim().substring(0, 120)
+  const universityRaw = String(body.university || '').trim().substring(0, 200)
   const phoneTh = String(body.phoneTh || '').trim().substring(0, 30)
   const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
   const source = String(body.source || 'contact-modal').trim().substring(0, 40)
@@ -690,15 +692,21 @@ router.post('/landing-callback', async (req, res) => {
   _leadRateLimit.set(rateKey, Date.now())
 
   try {
+    // ถ้ามีชื่อ → ใช้ชื่อ + prefix 📞, ถ้าไม่มี → fallback เดิม
+    const fullName = fullNameRaw
+      ? `📞 ${fullNameRaw}`
+      : `📞 ฝากเบอร์ (${source})`
+
     const lead = await ChinaLandingLead.create({
-      fullName: `📞 ฝากเบอร์ (${source})`,
+      fullName,
+      university: universityRaw || undefined,
       phoneTh,
       seminarBatch,
       ip, country,
       leadTier: 'pdf',
       userAgent: (req.headers['user-agent'] || '').substring(0, 300)
     })
-    console.log(`[china-landing-callback] NEW id=${lead._id} phone="${phoneTh}" src=${source}`)
+    console.log(`[china-landing-callback] NEW id=${lead._id} name="${fullNameRaw}" uni="${universityRaw}" phone="${phoneTh}" src=${source}`)
     return res.json({ ok: true })
   } catch (err) {
     console.error('[china-landing-callback] error', err.message)
