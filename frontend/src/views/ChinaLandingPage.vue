@@ -103,8 +103,8 @@ const YEAR_OPTIONS = [
   'จบแล้ว', 'ฝึกงาน', 'อื่น ๆ'
 ]
 
-// ⭐ PDF ที่ให้ดาวน์โหลดหลังกรอก form (ไม่ต้องรอ WeChat)
-const PDF_URL = '/pdf/MedNinja_Thai_Return_Checklist.docx'
+// ⭐ PDF ที่ให้ดาวน์โหลดหลังกรอก form (backend serve จริงผ่าน signed URL)
+const PDF_URL = '/api/china/pdf/thai-return-checklist'
 
 // ─── State ───
 // ⭐ Flow ใหม่ (เก็บ lead ก่อน) — เน้น conversion สัมมนา
@@ -478,7 +478,7 @@ function downloadPdf() {
   if (!pdfDownloadUrl.value) return
   const a = document.createElement('a')
   a.href = pdfDownloadUrl.value
-  a.download = 'MedNinja_Thai_Return_Checklist.docx'
+  a.download = 'MedNinja_Thai_Return_Checklist.pdf'
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

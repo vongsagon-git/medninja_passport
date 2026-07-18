@@ -572,7 +572,7 @@ const ChinaLandingLead = require('./ChinaLandingLead.model')
 // ═══════════════════════════════════════════════════════════
 const PDF_SECRET = process.env.CHINA_PDF_SECRET || 'mn-china-pdf-2026-07-17'
 const PDF_TTL_MS = 30 * 60 * 1000  // 30 นาที
-const PDF_FILE = path.join(__dirname, 'pdf', 'thai-return-checklist.docx')
+const PDF_FILE = path.join(__dirname, 'pdf', 'thai-return-checklist.pdf')
 
 function signPdfToken(leadId) {
   const ts = Date.now()
@@ -606,8 +606,8 @@ router.get('/pdf/thai-return-checklist', (req, res) => {
     return res.status(500).type('text/plain').send('PDF file not found')
   }
   console.log(`[china-pdf] serve leadId=${decoded.leadId} age=${Math.round((Date.now() - decoded.ts) / 1000)}s`)
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-  res.setHeader('Content-Disposition', 'attachment; filename="MedNinja_Thai_Return_Checklist.docx"')
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', 'attachment; filename="MedNinja_Thai_Return_Checklist.pdf"')
   res.setHeader('Cache-Control', 'private, no-store')
   fs.createReadStream(PDF_FILE).pipe(res)
 })
