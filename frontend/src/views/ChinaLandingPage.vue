@@ -638,22 +638,15 @@ onMounted(() => {
           <span class="p-word osce">OSCE</span>
         </div>
 
-        <!-- ⭐ 2 ปุ่มหลัก: Fast lane (PDF) + Full lane (Assessment) -->
+        <!-- ⭐ 2 ปุ่มธรรมดา (ไม่เทียบ — รายละเอียดไปโชว์ที่ gate) -->
         <div class="dual-cta">
           <button class="cta-pdf" @click="startPdfOnly">
             <span class="cta-icon">📥</span>
-            <span class="cta-body">
-              <span class="cta-title">รับ PDF ฟรี</span>
-              <span class="cta-sub">กรอกข้อมูล · โหลดทันที (15 วิ)</span>
-            </span>
+            <span class="cta-title">กรอกเพื่อรับ PDF</span>
           </button>
-
           <button class="cta-primary cta-full" @click="startAssessment">
             <span class="cta-icon">🎯</span>
-            <span class="cta-body">
-              <span class="cta-title">ทำแบบทดสอบ + รับสิทธิ์เพิ่ม</span>
-              <span class="cta-sub">PDF + ปรึกษาหมอแตม + ส่วนลด (3 นาที)</span>
-            </span>
+            <span class="cta-title">ทำแบบสอบถาม รับสิทธิ์</span>
           </button>
         </div>
 
@@ -731,21 +724,37 @@ onMounted(() => {
       <div class="gate-inner">
         <div class="gate-header">
           <div v-if="form.fullName && form.wechatId" class="gate-back-badge">
-            ✓ ยินดีต้อนรับกลับมา {{ form.fullName }} · ทำแบบทดสอบซ้ำได้เลย
+            ✓ ยินดีต้อนรับกลับมา {{ form.fullName }}
           </div>
-          <div v-else class="gate-badge">🔒 บันทึกข้อมูลก่อนเริ่ม</div>
-          <h2 class="gate-title">
-            กรอกข้อมูลเพื่อรับ<br />
-            <span class="gate-highlight">4 สิทธิ์พิเศษ</span> ฟรี
+          <div v-else class="gate-badge" :class="intent === 'pdf' ? 'badge-pdf' : 'badge-full'">
+            {{ intent === 'pdf' ? '📥 กรอกเพื่อรับ PDF' : '🎯 ทำแบบสอบถาม รับสิทธิ์' }}
+          </div>
+          <h2 class="gate-title" v-if="intent === 'pdf'">
+            กรอกข้อมูลเพื่อ<br />
+            <span class="gate-highlight">รับ PDF ฟรี</span>
           </h2>
-          <p class="gate-sub">ใช้เวลาแค่ 30 วินาที · ทีมงานจะติดต่อคุณทาง WeChat</p>
+          <h2 class="gate-title" v-else>
+            กรอกเพื่อทำแบบสอบถาม<br />
+            รับ <span class="gate-highlight">4 สิทธิ์พิเศษ</span>
+          </h2>
+          <p class="gate-sub">
+            <template v-if="intent === 'pdf'">15 วินาที · โหลด PDF ทันที</template>
+            <template v-else>3 นาที · ทีมงานติดต่อคุณทาง WeChat</template>
+          </p>
         </div>
 
+        <!-- Perks ตาม intent -->
         <div class="gate-perks">
-          <div class="perk-item"><span class="perk-dot">1</span> PDF Checklist การเตรียมความพร้อม</div>
-          <div class="perk-item"><span class="perk-dot">2</span> ทัก WeChat หมอแตม รับคำแนะนำ</div>
-          <div class="perk-item"><span class="perk-dot">3</span> ปรึกษาหมอแตม <b>ตัวต่อตัว</b> 30 นาที ฟรี</div>
-          <div class="perk-item highlight"><span class="perk-dot">4</span> <b>ส่วนลด 10%</b> (แสดงบัตร นศ.จีน + แจ้งงานสัมมนา)</div>
+          <div class="perks-title">📌 คุณจะได้รับ:</div>
+          <template v-if="intent === 'pdf'">
+            <div class="perk-item"><span class="perk-dot">1</span> PDF Checklist การเตรียมความพร้อม (โหลดทันที)</div>
+          </template>
+          <template v-else>
+            <div class="perk-item"><span class="perk-dot">1</span> PDF Checklist การเตรียมความพร้อม</div>
+            <div class="perk-item"><span class="perk-dot">2</span> คะแนน 6 หมวด + จุดอ่อนของคุณ</div>
+            <div class="perk-item"><span class="perk-dot">3</span> ปรึกษาหมอแตม <b>ตัวต่อตัว</b> 30 นาที ฟรี</div>
+            <div class="perk-item highlight"><span class="perk-dot">4</span> <b>ส่วนลด 10%</b> (แสดงบัตร นศ.จีน + แจ้งงานสัมมนา)</div>
+          </template>
         </div>
 
         <div class="gate-form">
@@ -811,7 +820,8 @@ onMounted(() => {
           <button class="cta-primary" :disabled="!canSubmitForm || gateSubmitting" @click="submitGate">
             <span v-if="gateSubmitting">กำลังบันทึก...</span>
             <span v-else-if="!canSubmitForm">🔒 กรอก ชื่อ + มหาลัย + WeChat ให้ครบ</span>
-            <span v-else>🚀 เริ่มทำแบบประเมิน 30 ข้อ</span>
+            <span v-else-if="intent === 'pdf'">📥 บันทึก + โหลด PDF</span>
+            <span v-else>🎯 เริ่มทำแบบสอบถาม 30 ข้อ</span>
           </button>
 
           <button class="q-back gate-back" @click="step = 'landing'; scrollTop()">← ย้อนกลับ</button>
@@ -1877,14 +1887,29 @@ onMounted(() => {
 .gate-header { text-align: center; margin-bottom: 18px; }
 .gate-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #92400e;
   padding: 5px 14px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 800;
-  border: 1px solid #f59e0b;
   margin-bottom: 10px;
+}
+.gate-badge.badge-pdf {
+  background: #f1f5f9;
+  color: #0a1e3d;
+  border: 1px solid #cbd5e1;
+}
+.gate-badge.badge-full {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+.perks-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
 .gate-back-badge {
   display: inline-block;
