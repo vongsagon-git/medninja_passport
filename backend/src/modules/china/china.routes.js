@@ -823,6 +823,19 @@ router.patch('/landing-leads/:id', async (req, res) => {
   }
 })
 
+// DELETE admin ลบ lead (test data / spam)
+router.delete('/landing-leads/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    const lead = await ChinaLandingLead.findByIdAndDelete(id).lean()
+    if (!lead) return res.status(404).json({ code: 'NOT_FOUND' })
+    console.log(`[china-landing-lead] DELETE id=${id} name="${lead.fullName}" wechat="${lead.wechatId}"`)
+    return res.json({ ok: true })
+  } catch (err) {
+    return res.status(500).json({ code: 'DELETE_FAILED', message: err.message })
+  }
+})
+
 // ═══════════════════════════════════════════════════════════
 // LEGACY /pdf-lead — เก็บใน memory เก่า (2026-07-11) — ยังเก็บไว้ backward compat
 // ═══════════════════════════════════════════════════════════

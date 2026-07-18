@@ -74,6 +74,22 @@ async function saveNote(lead) {
   } catch (e) { alert(e.message) }
 }
 
+async function deleteLead(lead, event) {
+  if (event) event.stopPropagation()
+  const name = lead.fullName || '(ไม่มีชื่อ)'
+  if (!confirm(`ลบ lead "${name}" (WeChat: ${lead.wechatId || '-'}) ?\n\nการลบไม่สามารถย้อนกลับได้`)) return
+  try {
+    const res = await fetch(`/api/china/landing-leads/${lead._id}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    })
+    if (!res.ok) throw new Error(`ลบไม่สำเร็จ (${res.status})`)
+    // remove จาก list ทันที
+    leads.value = leads.value.filter(l => l._id !== lead._id)
+    if (selectedLead.value?._id === lead._id) selectedLead.value = null
+  } catch (e) { alert(e.message) }
+}
+
 function scoreBandLabel(band) {
   if (!band) return '-'
   const map = { '0-19%': '🚀 เริ่มต้น', '20-39%': '📚 เริ่มเตรียม', '40-59%': '🎯 เริ่มพร้อม',
@@ -210,6 +226,11 @@ onMounted(loadLeads)
             </select>
             <div class="lr-date">{{ formatDate(lead.createdAt) }}</div>
           </div>
+          <button
+            class="lr-delete"
+            title="ลบ lead"
+            @click="deleteLead(lead, $event)"
+          >🗑</button>
         </div>
         <div v-if="!loading && filtered.length === 0" class="empty">
           ไม่พบ leads ที่ตรงกับ filter
@@ -254,6 +275,13 @@ onMounted(loadLeads)
           <h3>Admin note</h3>
           <textarea v-model="selectedLead.adminNote" rows="3" placeholder="บันทึกภายใน (admin เท่านั้น)"></textarea>
           <button class="btn primary" @click="saveNote(selectedLead)">บันทึก note</button>
+        </div>
+
+        <div class="danger-zone">
+          <h3>⚠ Danger zone</h3>
+          <button class="btn btn-danger" @click="deleteLead(selectedLead)">
+            🗑 ลบ lead นี้ (กู้คืนไม่ได้)
+          </button>
         </div>
       </div>
     </div>
@@ -342,10 +370,28 @@ onMounted(loadLeads)
   border-radius: 10px;
   padding: 12px 14px;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 10px;
+  align-items: center;
   cursor: pointer;
   transition: all 0.15s;
+}
+.lr-delete {
+  background: transparent;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px 10px;
+  transition: all 0.15s;
+  font-family: inherit;
+  align-self: center;
+}
+.lr-delete:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
 }
 .lead-row:hover { border-color: #0a1e3d; box-shadow: 0 4px 12px rgba(10, 30, 61, 0.08); }
 .lr-name { font-weight: 900; color: #0a1e3d; font-size: 15px; }
@@ -450,5 +496,26 @@ onMounted(loadLeads)
   font-size: 13px;
   margin-bottom: 8px;
   resize: vertical;
+}
+.danger-zone {
+  margin-top: 20px;
+  padding: 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+}
+.danger-zone h3 {
+  color: #dc2626 !important;
+  margin-top: 0 !important;
+}
+.btn-danger {
+  background: white;
+  color: #dc2626;
+  border: 1.5px solid #dc2626;
+  padding: 10px 16px;
+}
+.btn-danger:hover {
+  background: #dc2626;
+  color: white;
 }
 </style>
