@@ -649,9 +649,15 @@ setInterval(() => {
 function validateName(v) {
   if (!v || v.length < 2) return 'ชื่อต้องมีอย่างน้อย 2 ตัวอักษร'
   if (v.length > 80) return 'ชื่อยาวเกินไป'
-  if (/^\d+$/.test(v)) return 'ชื่อไม่ควรเป็นตัวเลขล้วน'
-  if (/^([a-zA-Z0-9])\1{2,}$/.test(v)) return 'กรุณากรอกชื่อจริง'
-  if (/^(asdf|qwer|test|xxx|aaaa|1234|abcd)/i.test(v)) return 'กรุณากรอกชื่อจริง'
+  // ⭐ อนุญาตเฉพาะ ไทย/อังกฤษ/จีน + เว้นวรรค/./-/'  (ห้ามตัวเลข+สัญลักษณ์อื่น)
+  if (!/^[฀-๿一-鿿a-zA-Z\s.\-']+$/.test(v)) {
+    return 'ชื่อต้องเป็นตัวอักษรไทย/อังกฤษ/จีน (ห้ามตัวเลข/สัญลักษณ์)'
+  }
+  const parts = v.split(/\s+/).filter(Boolean)
+  if (parts.length < 2) return 'กรุณากรอกชื่อ + นามสกุล'
+  if (parts.some(p => p.length < 2)) return 'ชื่อ/นามสกุลสั้นเกินไป'
+  if (/^([a-zA-Z฀-๿])\1{2,}/.test(v.replace(/\s/g, ''))) return 'กรุณากรอกชื่อจริง'
+  if (/^(asdf|qwer|test|xxx|aaaa|abcd|zxcs|zxcv|ทดสอบ|เทส)/i.test(v)) return 'กรุณากรอกชื่อจริง'
   return null
 }
 function validateWechat(v) {
@@ -666,9 +672,14 @@ function validateUniversity(v) {
   return null
 }
 function validateEmail(v) {
-  if (!v || v.length < 5) return 'กรุณากรอกอีเมล'
+  if (!v || v.length < 6) return 'กรุณากรอกอีเมล'
   if (v.length > 120) return 'อีเมลยาวเกินไป'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง'
+  if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง'
+  if (/@@|\.\.|^\.|\.$|@\.|\.@/.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง'
+  const [local, domain] = v.split('@')
+  if (local.length < 2) return 'ส่วนหน้า @ สั้นเกินไป'
+  if (/^(test|xxx|asdf|1234|aaaa|abcd|zxcs|zxcv|ทดสอบ)/i.test(local)) return 'กรุณากรอกอีเมลจริง'
+  if (/^(test|example|localhost|xxx|aaa)\./i.test(domain)) return 'กรุณากรอกอีเมลจริง'
   return null
 }
 function validatePhone(v) {
@@ -677,11 +688,12 @@ function validatePhone(v) {
   if (digits.length < 8) return 'เบอร์โทรสั้นเกินไป (อย่างน้อย 8 หลัก)'
   if (digits.length > 15) return 'เบอร์โทรยาวเกินไป'
   if (/^([0-9])\1+$/.test(digits)) return 'กรุณากรอกเบอร์จริง'
+  if (/^(1234|0000|1111|9999|8888)/.test(digits)) return 'กรุณากรอกเบอร์จริง'
   return null
 }
 
-// ⭐ POST /landing-callback — ฝากเบอร์จาก contact modal (เบา ไม่ validate มาก)
-//    ไม่ต้อง WeChat — ชื่อ/มหาลัย optional, แค่เบอร์บังคับ
+// ⭐ POST /landing-callback — ฝากเบอร์จาก contact modal
+//    ชื่อ + เบอร์ = required (validate), มหาลัย = optional
 router.post('/landing-callback', async (req, res) => {
   const body = req.body || {}
   const fullNameRaw = String(body.fullName || '').trim().substring(0, 120)
@@ -690,9 +702,11 @@ router.post('/landing-callback', async (req, res) => {
   const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
   const source = String(body.source || 'contact-modal').trim().substring(0, 40)
 
-  if (!phoneTh || phoneTh.length < 6) {
-    return res.status(400).json({ code: 'INVALID_PHONE', message: 'กรุณากรอกเบอร์ให้ถูกต้อง' })
-  }
+  // ─── Validation (reuse gate helpers) ───
+  const nameErr = validateName(fullNameRaw)
+  if (nameErr) return res.status(400).json({ code: 'INVALID_NAME', message: nameErr })
+  const phoneErr = validatePhone(phoneTh)
+  if (phoneErr) return res.status(400).json({ code: 'INVALID_PHONE', message: phoneErr })
 
   const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
   const country = req.geo?.country || 'unknown'

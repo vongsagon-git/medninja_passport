@@ -139,6 +139,43 @@ const parentSubmitting = ref(false)
 const parentSubmitted = ref(false)
 const parentError = ref('')
 
+// ⭐ Shared validators (reuse ทั้ง gate form + contact modal)
+function checkName(raw) {
+  const v = (raw || '').trim()
+  if (!v) return 'กรุณากรอกชื่อ + นามสกุล'
+  if (v.length < 2) return 'ชื่อสั้นเกินไป'
+  if (v.length > 80) return 'ชื่อยาวเกินไป'
+  if (!/^[฀-๿一-鿿a-zA-Z\s.\-']+$/.test(v)) return 'ชื่อต้องเป็นตัวอักษรไทย/อังกฤษ/จีน (ห้ามตัวเลข/สัญลักษณ์)'
+  const parts = v.split(/\s+/).filter(Boolean)
+  if (parts.length < 2) return 'กรุณากรอกชื่อ + นามสกุล'
+  if (parts.some(p => p.length < 2)) return 'ชื่อ/นามสกุลสั้นเกินไป'
+  if (/^([a-zA-Zก-๙])\1{2,}/.test(v.replace(/\s/g, ''))) return 'กรุณากรอกชื่อจริง'
+  if (/^(asdf|qwer|test|xxx|aaaa|abcd|zxcs|zxcv|ทดสอบ|เทส)/i.test(v)) return 'กรุณากรอกชื่อจริง'
+  return ''
+}
+function checkPhone(raw) {
+  const v = (raw || '').trim()
+  if (!v) return 'กรุณากรอกเบอร์โทร'
+  const digits = v.replace(/\D/g, '')
+  if (digits.length < 8) return 'เบอร์โทรสั้นเกินไป (อย่างน้อย 8 หลัก)'
+  if (digits.length > 15) return 'เบอร์โทรยาวเกินไป'
+  if (/^([0-9])\1+$/.test(digits)) return 'กรุณากรอกเบอร์จริง'
+  if (/^(1234|0000|1111|9999|8888)/.test(digits)) return 'กรุณากรอกเบอร์จริง'
+  return ''
+}
+function checkEmail(raw) {
+  const v = (raw || '').trim().toLowerCase()
+  if (!v) return 'กรุณากรอกอีเมล'
+  if (v.length < 6 || v.length > 120) return 'ความยาวอีเมลไม่ถูกต้อง'
+  if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง'
+  if (/@@|\.\.|^\.|\.$|@\.|\.@/.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง'
+  const [local, domain] = v.split('@')
+  if (local.length < 2) return 'ส่วนหน้า @ สั้นเกินไป'
+  if (/^(test|xxx|asdf|1234|aaaa|abcd|zxcs|zxcv|ทดสอบ)/.test(local)) return 'กรุณากรอกอีเมลจริง'
+  if (/^(test|example|localhost|xxx|aaa)\./i.test(domain)) return 'กรุณากรอกอีเมลจริง'
+  return ''
+}
+
 // ⭐ Contact modal (landing page) — ฝากเบอร์ + LINE/WeChat
 const contactOpen = ref(false)
 const contactFullName = ref('')
@@ -154,6 +191,21 @@ const contactResolvedUniversity = computed(() => {
   return contactUniversitySelect.value
 })
 
+// ⭐ Contact modal — ชื่อ + เบอร์ = required, มหาลัย = optional
+const contactNameError = computed(() => {
+  if (!contactFullName.value.trim()) return ''  // ยังไม่แตะ ไม่โชว์ error
+  return checkName(contactFullName.value)
+})
+const contactPhoneError = computed(() => {
+  if (!contactPhone.value.trim()) return ''
+  return checkPhone(contactPhone.value)
+})
+const canSubmitContact = computed(() => {
+  const nameOk = contactFullName.value.trim() && !checkName(contactFullName.value)
+  const phoneOk = contactPhone.value.trim() && !checkPhone(contactPhone.value)
+  return nameOk && phoneOk
+})
+
 function openContact() {
   contactOpen.value = true
   contactSubmitted.value = false
@@ -167,21 +219,19 @@ function openContact() {
 
 async function submitContactPhone() {
   contactError.value = ''
-  const phone = contactPhone.value.trim()
-  if (!phone || phone.length < 6) {
-    contactError.value = 'กรุณากรอกเบอร์ให้ถูกต้อง'
-    return
-  }
+  const nameErr = checkName(contactFullName.value)
+  if (nameErr) { contactError.value = nameErr; return }
+  const phoneErr = checkPhone(contactPhone.value)
+  if (phoneErr) { contactError.value = phoneErr; return }
   contactSubmitting.value = true
   try {
-    // ส่ง callback request (ไม่ต้อง validate WeChat — แค่ฝากเบอร์+ชื่อ+มหาลัย)
     const res = await fetch('/api/china/landing-callback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fullName: contactFullName.value.trim(),
         university: contactResolvedUniversity.value,
-        phoneTh: phone,
+        phoneTh: contactPhone.value.trim(),
         seminarBatch: SEMINAR_BATCH,
         source: 'contact-modal'
       })
@@ -248,13 +298,8 @@ const weakCategories = computed(() => {
 
 // ⭐ Validation rules (กันกรอกมั่ว)
 const nameError = computed(() => {
-  const v = form.value.fullName.trim()
-  if (!v) return ''
-  if (v.length < 2) return 'ชื่อต้องมีอย่างน้อย 2 ตัวอักษร'
-  if (/^\d+$/.test(v)) return 'ชื่อไม่ควรเป็นตัวเลขล้วน'
-  if (/^([a-zA-Z0-9])\1+$/.test(v)) return 'กรุณากรอกชื่อจริง'
-  if (/^(asdf|qwer|test|xxx|aaaa|1234)/i.test(v)) return 'กรุณากรอกชื่อจริง'
-  return ''
+  if (!form.value.fullName.trim()) return ''
+  return checkName(form.value.fullName)
 })
 const universityError = computed(() => {
   const v = resolvedUniversity.value.trim()
@@ -270,20 +315,12 @@ const wechatError = computed(() => {
   return ''
 })
 const emailError = computed(() => {
-  const v = form.value.email.trim()
-  if (!v) return ''
-  if (v.length < 5) return 'อีเมลสั้นเกินไป'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง'
-  return ''
+  if (!form.value.email.trim()) return ''
+  return checkEmail(form.value.email)
 })
 const phoneError = computed(() => {
-  const v = form.value.phoneTh.trim()
-  if (!v) return ''
-  const digits = v.replace(/\D/g, '')
-  if (digits.length < 8) return 'เบอร์โทรสั้นเกินไป (อย่างน้อย 8 หลัก)'
-  if (digits.length > 15) return 'เบอร์โทรยาวเกินไป'
-  if (/^([0-9])\1+$/.test(digits)) return 'กรุณากรอกเบอร์จริง'
-  return ''
+  if (!form.value.phoneTh.trim()) return ''
+  return checkPhone(form.value.phoneTh)
 })
 
 const canSubmitForm = computed(() => {
@@ -693,26 +730,29 @@ onMounted(() => {
       <div class="cm-card">
         <button class="cm-close" @click="contactOpen = false">✕</button>
         <div class="cm-title">💬 ติดต่อเรา</div>
-        <div class="cm-sub">ทีมงานจะโทรกลับ / ทัก LINE / WeChat</div>
+        <div class="cm-sub">หมอแตมจะโทรกลับเอง / ทัก WeChat</div>
 
-        <!-- ฝากเบอร์ให้โทรกลับ -->
+        <!-- ฝากเบอร์ให้หมอแตมโทรกลับ -->
         <div class="cm-callback">
-          <div class="cm-cb-title">📞 ฝากเบอร์ให้ทีมงานโทรกลับ</div>
+          <div class="cm-cb-title">📞 ฝากเบอร์ให้หมอแตมโทรกลับ</div>
           <div class="cm-cb-hint">ผู้ปกครอง หรือ นักเรียน — ใครก็ฝากได้</div>
 
           <div v-if="contactSubmitted" class="cm-cb-success">
-            ✅ ได้รับข้อมูลแล้ว ทีมงานจะโทรกลับเร็ว ๆ นี้
+            ✅ ได้รับข้อมูลแล้ว หมอแตมจะโทรกลับเร็ว ๆ นี้
           </div>
           <div v-else>
             <div class="cm-cb-fields">
               <input
                 v-model="contactFullName"
                 type="text"
-                placeholder="ชื่อ (ไม่บังคับ)"
+                placeholder="ชื่อ + นามสกุล *"
                 class="cm-cb-input"
+                :class="{ 'input-invalid': contactNameError }"
                 maxlength="80"
                 :disabled="contactSubmitting"
               />
+              <div v-if="contactNameError" class="cm-cb-field-err">⚠ {{ contactNameError }}</div>
+
               <select
                 v-model="contactUniversitySelect"
                 class="cm-cb-input"
@@ -733,23 +773,27 @@ onMounted(() => {
                 maxlength="120"
                 :disabled="contactSubmitting"
               />
-              <div class="cm-cb-form">
-                <input
-                  v-model="contactPhone"
-                  type="tel"
-                  placeholder="เบอร์โทร เช่น 081-234-5678"
-                  class="cm-cb-input"
-                  :disabled="contactSubmitting"
-                />
-                <button
-                  class="cm-cb-btn"
-                  :disabled="!contactPhone.trim() || contactSubmitting"
-                  @click="submitContactPhone"
-                >
-                  <span v-if="contactSubmitting">...</span>
-                  <span v-else>ฝาก</span>
-                </button>
-              </div>
+
+              <input
+                v-model="contactPhone"
+                type="tel"
+                placeholder="เบอร์โทร เช่น 081-234-5678 *"
+                class="cm-cb-input"
+                :class="{ 'input-invalid': contactPhoneError }"
+                maxlength="20"
+                :disabled="contactSubmitting"
+              />
+              <div v-if="contactPhoneError" class="cm-cb-field-err">⚠ {{ contactPhoneError }}</div>
+
+              <button
+                class="cm-cb-btn cm-cb-btn-full"
+                :disabled="!canSubmitContact || contactSubmitting"
+                @click="submitContactPhone"
+              >
+                <span v-if="contactSubmitting">กำลังส่ง...</span>
+                <span v-else-if="!canSubmitContact">🔒 กรอก ชื่อ + เบอร์ ให้ถูกต้อง</span>
+                <span v-else>📞 ฝากเบอร์ให้หมอแตมโทรกลับ</span>
+              </button>
             </div>
             <div v-if="contactError" class="cm-cb-error">⚠ {{ contactError }}</div>
           </div>
@@ -1603,6 +1647,23 @@ onMounted(() => {
   white-space: nowrap;
 }
 .cm-cb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cm-cb-btn-full {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-top: 4px;
+}
+.cm-cb-field-err {
+  color: #dc2626;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-top: -4px;
+  padding-left: 4px;
+}
+.cm-cb-input.input-invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
 .cm-cb-success {
   background: white;
   border: 1.5px solid #22c55e;
