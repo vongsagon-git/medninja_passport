@@ -123,7 +123,6 @@ const form = ref({
   universityOther: '',  // ถ้าเลือก "อื่น ๆ" กรอกเอง
   email: '',
   phoneTh: '',
-  lineId: '',
   wechatId: ''
 })
 const submitting = ref(false)
@@ -270,13 +269,31 @@ const wechatError = computed(() => {
   if (!/^[a-zA-Z0-9_-]+$/.test(v)) return 'WeChat ID = อังกฤษ/ตัวเลข/_/- เท่านั้น'
   return ''
 })
+const emailError = computed(() => {
+  const v = form.value.email.trim()
+  if (!v) return ''
+  if (v.length < 5) return 'อีเมลสั้นเกินไป'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง'
+  return ''
+})
+const phoneError = computed(() => {
+  const v = form.value.phoneTh.trim()
+  if (!v) return ''
+  const digits = v.replace(/\D/g, '')
+  if (digits.length < 8) return 'เบอร์โทรสั้นเกินไป (อย่างน้อย 8 หลัก)'
+  if (digits.length > 15) return 'เบอร์โทรยาวเกินไป'
+  if (/^([0-9])\1+$/.test(digits)) return 'กรุณากรอกเบอร์จริง'
+  return ''
+})
 
 const canSubmitForm = computed(() => {
   const f = form.value
   const hasName = f.fullName.trim().length >= 2 && !nameError.value
   const hasUniversity = resolvedUniversity.value.length >= 3 && !universityError.value
   const hasWechat = f.wechatId.trim().length >= 4 && !wechatError.value
-  return hasName && hasUniversity && hasWechat
+  const hasEmail = f.email.trim().length >= 5 && !emailError.value
+  const hasPhone = f.phoneTh.trim().replace(/\D/g, '').length >= 8 && !phoneError.value
+  return hasName && hasUniversity && hasWechat && hasEmail && hasPhone
 })
 
 // ─── Actions ───
@@ -299,7 +316,7 @@ function startAssessment() {
 async function submitGate() {
   gateError.value = ''
   if (!canSubmitForm.value) {
-    gateError.value = 'กรุณากรอก ชื่อ + มหาลัย + WeChat ID ให้ครบก่อน'
+    gateError.value = 'กรุณากรอก ชื่อ + อีเมล + เบอร์ + WeChat ให้ครบและถูกต้อง'
     return
   }
   gateSubmitting.value = true
@@ -310,7 +327,6 @@ async function submitGate() {
       university: resolvedUniversity.value,
       email: form.value.email.trim(),
       phoneTh: form.value.phoneTh.trim(),
-      lineId: form.value.lineId.trim(),
       wechatId: form.value.wechatId.trim(),
       answers: [],                                  // ยังไม่ได้ทำ assessment
       seminarBatch: SEMINAR_BATCH,
@@ -337,7 +353,6 @@ async function submitGate() {
         universityOther: form.value.universityOther,
         email: form.value.email,
         phoneTh: form.value.phoneTh,
-        lineId: form.value.lineId,
         wechatId: form.value.wechatId
       }))
     } catch {}
@@ -501,7 +516,7 @@ function downloadPdf() {
 async function submitAndDownload() {
   submitError.value = ''
   if (!canSubmitForm.value) {
-    submitError.value = 'กรุณากรอก ชื่อ + มหาลัย + WeChat ID ให้ครบก่อน'
+    submitError.value = 'กรุณากรอก ชื่อ + อีเมล + เบอร์ + WeChat ให้ครบและถูกต้อง'
     return
   }
   submitting.value = true
@@ -512,7 +527,6 @@ async function submitAndDownload() {
       university: resolvedUniversity.value,
       email: form.value.email.trim(),
       phoneTh: form.value.phoneTh.trim(),
-      lineId: form.value.lineId.trim(),
       wechatId: form.value.wechatId.trim(),
       answers: answers.value.map(v => v || 0),
       seminarBatch: SEMINAR_BATCH
@@ -834,35 +848,27 @@ onMounted(() => {
             </select>
           </div>
           <div class="lf-field lf-primary">
-            <label>💬 WeChat ID <span class="req">*</span> <span class="tag main">ช่องทางหลัก</span></label>
+            <label>💬 WeChat ID <span class="req">*</span></label>
             <input v-model="form.wechatId" type="text" placeholder="wechat-id (a-z, 0-9, _)" maxlength="40" :disabled="gateSubmitting" />
             <div class="lf-hint-inline">ทีมงานจะติดต่อคุณผ่าน WeChat</div>
             <div v-if="wechatError" class="field-error">{{ wechatError }}</div>
           </div>
-
-          <details class="lf-more">
-            <summary>+ เพิ่มช่องทางสำรอง (ถ้าต้องการ)</summary>
-            <div class="lf-more-body">
-              <div class="lf-field lf-line">
-                <label>💚 LINE ID</label>
-                <input v-model="form.lineId" type="text" placeholder="line-id" :disabled="gateSubmitting" />
-              </div>
-              <div class="lf-field">
-                <label>📱 เบอร์ไทย</label>
-                <input v-model="form.phoneTh" type="tel" placeholder="08x-xxx-xxxx" :disabled="gateSubmitting" />
-              </div>
-              <div class="lf-field">
-                <label>📧 Email</label>
-                <input v-model="form.email" type="email" placeholder="you@example.com" :disabled="gateSubmitting" />
-              </div>
-            </div>
-          </details>
+          <div class="lf-field">
+            <label>📱 เบอร์โทร <span class="req">*</span></label>
+            <input v-model="form.phoneTh" type="tel" placeholder="08x-xxx-xxxx" maxlength="20" :disabled="gateSubmitting" />
+            <div v-if="phoneError" class="field-error">{{ phoneError }}</div>
+          </div>
+          <div class="lf-field">
+            <label>📧 Email <span class="req">*</span></label>
+            <input v-model="form.email" type="email" placeholder="you@example.com" maxlength="120" :disabled="gateSubmitting" />
+            <div v-if="emailError" class="field-error">{{ emailError }}</div>
+          </div>
 
           <div v-if="gateError" class="lf-error">⚠ {{ gateError }}</div>
 
           <button class="cta-primary" :disabled="!canSubmitForm || gateSubmitting" @click="submitGate">
             <span v-if="gateSubmitting">กำลังบันทึก...</span>
-            <span v-else-if="!canSubmitForm">🔒 กรอก ชื่อ + มหาลัย + WeChat ให้ครบ</span>
+            <span v-else-if="!canSubmitForm">🔒 กรอกให้ครบ ชื่อ + อีเมล + เบอร์ + WeChat</span>
             <span v-else-if="intent === 'pdf'">📥 บันทึก + โหลด PDF</span>
             <span v-else>🎯 เริ่มทำแบบสอบถาม 30 ข้อ</span>
           </button>
@@ -2594,9 +2600,8 @@ onMounted(() => {
   color: #94a3b8;
 }
 .lf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.lf-line label { color: #16a34a; }
 .lf-wechat label { color: #16a34a; }
-.lf-line input:focus, .lf-wechat input:focus {
+.lf-wechat input:focus {
   border-color: #16a34a;
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
 }

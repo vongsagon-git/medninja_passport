@@ -10,10 +10,9 @@ const chinaLandingLeadSchema = new mongoose.Schema({
   year: { type: String, trim: true, maxlength: 20 },       // ปี 1, ปี 2, ... จบแล้ว, ฝึกงาน
   university: { type: String, trim: true, maxlength: 200 }, // มหาลัย/เมืองในจีน
 
-  // ─── ช่องทางติดต่อ (ต้องมีอย่างน้อย 1) ───
+  // ─── ช่องทางติดต่อ (email + phone + wechat = required ที่ landing form) ───
   email: { type: String, trim: true, lowercase: true, maxlength: 200 },
   phoneTh: { type: String, trim: true, maxlength: 30 },
-  lineId: { type: String, trim: true, maxlength: 60 },
   wechatId: { type: String, trim: true, maxlength: 60 },
 
   // ─── Assessment (30 ข้อ) ───

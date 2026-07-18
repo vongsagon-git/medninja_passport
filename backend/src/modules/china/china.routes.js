@@ -665,6 +665,20 @@ function validateUniversity(v) {
   if (v.length > 200) return 'ชื่อมหาลัยยาวเกินไป'
   return null
 }
+function validateEmail(v) {
+  if (!v || v.length < 5) return 'กรุณากรอกอีเมล'
+  if (v.length > 120) return 'อีเมลยาวเกินไป'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง'
+  return null
+}
+function validatePhone(v) {
+  if (!v) return 'กรุณากรอกเบอร์โทร'
+  const digits = v.replace(/\D/g, '')
+  if (digits.length < 8) return 'เบอร์โทรสั้นเกินไป (อย่างน้อย 8 หลัก)'
+  if (digits.length > 15) return 'เบอร์โทรยาวเกินไป'
+  if (/^([0-9])\1+$/.test(digits)) return 'กรุณากรอกเบอร์จริง'
+  return null
+}
 
 // ⭐ POST /landing-callback — ฝากเบอร์จาก contact modal (เบา ไม่ validate มาก)
 //    ไม่ต้อง WeChat — ชื่อ/มหาลัย optional, แค่เบอร์บังคับ
@@ -721,17 +735,20 @@ router.post('/landing-lead', async (req, res) => {
   const university = String(body.university || '').trim().substring(0, 200)
   const email = String(body.email || '').trim().toLowerCase().substring(0, 200)
   const phoneTh = String(body.phoneTh || '').trim().substring(0, 30)
-  const lineId = String(body.lineId || '').trim().substring(0, 60)
   const wechatId = String(body.wechatId || '').trim().substring(0, 60)
   const answers = Array.isArray(body.answers) ? body.answers : []
   const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
   const leadTier = ['pdf', 'full'].includes(body.leadTier) ? body.leadTier : 'pdf'
 
-  // ─── Validation ───
+  // ─── Validation (4 required: name + email + phone + wechat) ───
   const nameErr = validateName(fullName)
   if (nameErr) return res.status(400).json({ code: 'INVALID_NAME', message: nameErr })
   const uniErr = validateUniversity(university)
   if (uniErr) return res.status(400).json({ code: 'INVALID_UNIVERSITY', message: uniErr })
+  const emailErr = validateEmail(email)
+  if (emailErr) return res.status(400).json({ code: 'INVALID_EMAIL', message: emailErr })
+  const phoneErr = validatePhone(phoneTh)
+  if (phoneErr) return res.status(400).json({ code: 'INVALID_PHONE', message: phoneErr })
   const wcErr = validateWechat(wechatId)
   if (wcErr) return res.status(400).json({ code: 'INVALID_WECHAT', message: wcErr })
 
@@ -754,7 +771,7 @@ router.post('/landing-lead', async (req, res) => {
     const wechatRegex = new RegExp(`^${wechatId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
     const update = {
       fullName, year, university,
-      email, phoneTh, lineId, wechatId,
+      email, phoneTh, wechatId,
       seminarBatch, ip, country,
       leadTier,                          // ⭐ 'pdf' | 'full' (จะโดน override ด้านล่างถ้ามี answers)
       userAgent: (req.headers['user-agent'] || '').substring(0, 300)
@@ -805,7 +822,7 @@ router.get('/landing-leads', async (req, res) => {
     if (req.query.format === 'text') {
       res.setHeader('Content-Type', 'text/plain; charset=utf-8')
       const txt = leads.map(l =>
-        `[${l.createdAt.toISOString()}] ${l.contactStatus} · ${l.fullName || '-'} · ${l.year || '-'} · ${l.university || '-'}\n  📧 ${l.email || '-'}  📱 ${l.phoneTh || '-'}  💚 ${l.lineId || '-'}  💬 ${l.wechatId || '-'}\n  Score: ${l.totalScore}/60 (${l.scoreBand})  IP: ${l.ip} ${l.country}`
+        `[${l.createdAt.toISOString()}] ${l.contactStatus} · ${l.fullName || '-'} · ${l.year || '-'} · ${l.university || '-'}\n  📧 ${l.email || '-'}  📱 ${l.phoneTh || '-'}  💬 ${l.wechatId || '-'}\n  Score: ${l.totalScore}/60 (${l.scoreBand})  IP: ${l.ip} ${l.country}`
       ).join('\n\n')
       return res.send(txt || '(ยังไม่มี lead)')
     }

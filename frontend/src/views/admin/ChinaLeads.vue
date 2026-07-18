@@ -43,7 +43,7 @@ const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
   return leads.value.filter(l => {
     if (q) {
-      const hay = [l.fullName, l.wechatId, l.university, l.email, l.phoneTh, l.lineId].filter(Boolean).join(' ').toLowerCase()
+      const hay = [l.fullName, l.wechatId, l.university, l.email, l.phoneTh].filter(Boolean).join(' ').toLowerCase()
       if (!hay.includes(q)) return false
     }
     if (filterStatus.value !== 'all' && l.contactStatus !== filterStatus.value) return false
@@ -115,7 +115,6 @@ function exportCSV() {
     university: l.university || '',
     year: l.year || '',
     wechatId: l.wechatId || '',
-    lineId: l.lineId || '',
     email: l.email || '',
     phoneTh: l.phoneTh || '',
     score: l.totalScore || 0,
@@ -209,7 +208,6 @@ onMounted(loadLeads)
             </div>
             <div class="lr-contacts">
               💬 {{ lead.wechatId || '—' }}
-              <span v-if="lead.lineId"> · 💚 {{ lead.lineId }}</span>
               <span v-if="lead.phoneTh"> · 📱 {{ lead.phoneTh }}</span>
               <span v-if="lead.email"> · 📧 {{ lead.email }}</span>
             </div>
@@ -259,7 +257,6 @@ onMounted(loadLeads)
         <h2>{{ selectedLead.fullName }}</h2>
         <div class="detail-grid">
           <div><b>WeChat:</b> {{ selectedLead.wechatId || '—' }}</div>
-          <div><b>LINE:</b> {{ selectedLead.lineId || '—' }}</div>
           <div><b>Email:</b> {{ selectedLead.email || '—' }}</div>
           <div><b>Phone:</b> {{ selectedLead.phoneTh || '—' }}</div>
           <div><b>University:</b> {{ selectedLead.university || '—' }}</div>
