@@ -139,6 +139,16 @@ const parentSubmitting = ref(false)
 const parentSubmitted = ref(false)
 const parentError = ref('')
 
+function checkWechat(raw) {
+  const v = (raw || '').trim()
+  if (!v) return 'กรุณากรอก WeChat ID'
+  if (v.length < 4) return 'WeChat ID ต้องมีอย่างน้อย 4 ตัว'
+  if (v.length > 40) return 'WeChat ID ยาวเกินไป'
+  if (!/^[a-zA-Z0-9_-]+$/.test(v)) return 'WeChat ID = อังกฤษ/ตัวเลข/_/- เท่านั้น'
+  if (/^([a-zA-Z0-9])\1{2,}$/.test(v)) return 'กรุณากรอก WeChat จริง'
+  return ''
+}
+
 // ⭐ Shared validators (reuse ทั้ง gate form + contact modal)
 function checkName(raw) {
   const v = (raw || '').trim()
@@ -176,12 +186,13 @@ function checkEmail(raw) {
   return ''
 }
 
-// ⭐ Contact modal (landing page) — ฝากเบอร์ + LINE/WeChat
+// ⭐ Contact modal (landing page) — ฝากเบอร์ + WeChat
 const contactOpen = ref(false)
 const contactFullName = ref('')
 const contactUniversitySelect = ref('')
 const contactUniversityOther = ref('')
 const contactPhone = ref('')
+const contactWechat = ref('')
 const contactSubmitting = ref(false)
 const contactSubmitted = ref(false)
 const contactError = ref('')
@@ -191,19 +202,24 @@ const contactResolvedUniversity = computed(() => {
   return contactUniversitySelect.value
 })
 
-// ⭐ Contact modal — ชื่อ + เบอร์ = required, มหาลัย = optional
+// ⭐ Contact modal — ชื่อ + เบอร์ + WeChat = required (นักเรียนที่จีนต้องมี WeChat)
 const contactNameError = computed(() => {
-  if (!contactFullName.value.trim()) return ''  // ยังไม่แตะ ไม่โชว์ error
+  if (!contactFullName.value.trim()) return ''
   return checkName(contactFullName.value)
 })
 const contactPhoneError = computed(() => {
   if (!contactPhone.value.trim()) return ''
   return checkPhone(contactPhone.value)
 })
+const contactWechatError = computed(() => {
+  if (!contactWechat.value.trim()) return ''
+  return checkWechat(contactWechat.value)
+})
 const canSubmitContact = computed(() => {
   const nameOk = contactFullName.value.trim() && !checkName(contactFullName.value)
   const phoneOk = contactPhone.value.trim() && !checkPhone(contactPhone.value)
-  return nameOk && phoneOk
+  const wechatOk = contactWechat.value.trim() && !checkWechat(contactWechat.value)
+  return nameOk && phoneOk && wechatOk
 })
 
 function openContact() {
@@ -215,6 +231,7 @@ function openContact() {
   contactUniversitySelect.value = form.value.universitySelect || ''
   contactUniversityOther.value = form.value.universityOther || ''
   contactPhone.value = form.value.phoneTh || ''
+  contactWechat.value = form.value.wechatId || ''
 }
 
 async function submitContactPhone() {
@@ -223,6 +240,8 @@ async function submitContactPhone() {
   if (nameErr) { contactError.value = nameErr; return }
   const phoneErr = checkPhone(contactPhone.value)
   if (phoneErr) { contactError.value = phoneErr; return }
+  const wechatErr = checkWechat(contactWechat.value)
+  if (wechatErr) { contactError.value = wechatErr; return }
   contactSubmitting.value = true
   try {
     const res = await fetch('/api/china/landing-callback', {
@@ -232,6 +251,7 @@ async function submitContactPhone() {
         fullName: contactFullName.value.trim(),
         university: contactResolvedUniversity.value,
         phoneTh: contactPhone.value.trim(),
+        wechatId: contactWechat.value.trim(),
         seminarBatch: SEMINAR_BATCH,
         source: 'contact-modal'
       })
@@ -308,11 +328,8 @@ const universityError = computed(() => {
   return ''
 })
 const wechatError = computed(() => {
-  const v = form.value.wechatId.trim()
-  if (!v) return ''
-  if (v.length < 4) return 'WeChat ID ต้องมีอย่างน้อย 4 ตัว'
-  if (!/^[a-zA-Z0-9_-]+$/.test(v)) return 'WeChat ID = อังกฤษ/ตัวเลข/_/- เท่านั้น'
-  return ''
+  if (!form.value.wechatId.trim()) return ''
+  return checkWechat(form.value.wechatId)
 })
 const emailError = computed(() => {
   if (!form.value.email.trim()) return ''
@@ -785,13 +802,27 @@ onMounted(() => {
               />
               <div v-if="contactPhoneError" class="cm-cb-field-err">⚠ {{ contactPhoneError }}</div>
 
+              <input
+                v-model="contactWechat"
+                type="text"
+                placeholder="💬 WeChat ID *"
+                class="cm-cb-input"
+                :class="{ 'input-invalid': contactWechatError }"
+                maxlength="40"
+                :disabled="contactSubmitting"
+              />
+              <div v-if="contactWechatError" class="cm-cb-field-err">⚠ {{ contactWechatError }}</div>
+              <div class="cm-cb-wechat-note">
+                💡 นักเรียนที่เรียนที่จีนทุกคนต้องมี WeChat — ถ้ายังไม่มี ให้สมัครก่อนกรอก
+              </div>
+
               <button
                 class="cm-cb-btn cm-cb-btn-full"
                 :disabled="!canSubmitContact || contactSubmitting"
                 @click="submitContactPhone"
               >
                 <span v-if="contactSubmitting">กำลังส่ง...</span>
-                <span v-else-if="!canSubmitContact">🔒 กรอก ชื่อ + เบอร์ ให้ถูกต้อง</span>
+                <span v-else-if="!canSubmitContact">🔒 กรอก ชื่อ + เบอร์ + WeChat ให้ถูกต้อง</span>
                 <span v-else>📞 ฝากเบอร์ให้หมอแตมโทรกลับ</span>
               </button>
             </div>
@@ -1663,6 +1694,16 @@ onMounted(() => {
 .cm-cb-input.input-invalid {
   border-color: #dc2626;
   background: #fef2f2;
+}
+.cm-cb-wechat-note {
+  font-size: 11px;
+  color: #7c2d12;
+  background: #fff7ed;
+  border-left: 3px solid #f97316;
+  padding: 6px 10px;
+  border-radius: 6px;
+  line-height: 1.5;
+  margin-top: -2px;
 }
 .cm-cb-success {
   background: white;

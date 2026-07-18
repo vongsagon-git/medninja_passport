@@ -693,20 +693,23 @@ function validatePhone(v) {
 }
 
 // ⭐ POST /landing-callback — ฝากเบอร์จาก contact modal
-//    ชื่อ + เบอร์ = required (validate), มหาลัย = optional
+//    ชื่อ + เบอร์ + WeChat = required (นักเรียนที่จีนต้องมี WeChat), มหาลัย = optional
 router.post('/landing-callback', async (req, res) => {
   const body = req.body || {}
   const fullNameRaw = String(body.fullName || '').trim().substring(0, 120)
   const universityRaw = String(body.university || '').trim().substring(0, 200)
   const phoneTh = String(body.phoneTh || '').trim().substring(0, 30)
+  const wechatId = String(body.wechatId || '').trim().substring(0, 60)
   const seminarBatch = String(body.seminarBatch || '').trim().substring(0, 80)
   const source = String(body.source || 'contact-modal').trim().substring(0, 40)
 
-  // ─── Validation (reuse gate helpers) ───
+  // ─── Validation ───
   const nameErr = validateName(fullNameRaw)
   if (nameErr) return res.status(400).json({ code: 'INVALID_NAME', message: nameErr })
   const phoneErr = validatePhone(phoneTh)
   if (phoneErr) return res.status(400).json({ code: 'INVALID_PHONE', message: phoneErr })
+  const wcErr = validateWechat(wechatId)
+  if (wcErr) return res.status(400).json({ code: 'INVALID_WECHAT', message: wcErr })
 
   const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
   const country = req.geo?.country || 'unknown'
@@ -720,21 +723,30 @@ router.post('/landing-callback', async (req, res) => {
   _leadRateLimit.set(rateKey, Date.now())
 
   try {
-    // ถ้ามีชื่อ → ใช้ชื่อ + prefix 📞, ถ้าไม่มี → fallback เดิม
-    const fullName = fullNameRaw
-      ? `📞 ${fullNameRaw}`
-      : `📞 ฝากเบอร์ (${source})`
+    // ⭐ Upsert by WeChat ID (case-insensitive) — เชื่อม lead callback กับ gate lead เดิม
+    const wechatRegex = new RegExp(`^${wechatId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+    const displayName = `📞 ${fullNameRaw}`
 
-    const lead = await ChinaLandingLead.create({
-      fullName,
-      university: universityRaw || undefined,
-      phoneTh,
-      seminarBatch,
-      ip, country,
-      leadTier: 'pdf',
-      userAgent: (req.headers['user-agent'] || '').substring(0, 300)
-    })
-    console.log(`[china-landing-callback] NEW id=${lead._id} name="${fullNameRaw}" uni="${universityRaw}" phone="${phoneTh}" src=${source}`)
+    const lead = await ChinaLandingLead.findOneAndUpdate(
+      { wechatId: wechatRegex },
+      {
+        $set: {
+          fullName: displayName,
+          university: universityRaw || undefined,
+          phoneTh,
+          wechatId,
+          seminarBatch, ip, country,
+          userAgent: (req.headers['user-agent'] || '').substring(0, 300)
+        },
+        $setOnInsert: {
+          leadTier: 'pdf',
+          contactStatus: 'new'
+        }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    )
+    const isNew = lead.createdAt && (Date.now() - new Date(lead.createdAt).getTime() < 2000)
+    console.log(`[china-landing-callback] ${isNew ? 'NEW' : 'UPDATE'} id=${lead._id} name="${fullNameRaw}" wechat="${wechatId}" uni="${universityRaw}" phone="${phoneTh}" src=${source}`)
     return res.json({ ok: true })
   } catch (err) {
     console.error('[china-landing-callback] error', err.message)
