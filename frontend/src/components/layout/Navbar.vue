@@ -54,9 +54,10 @@ export default {
   },
   methods: {
     openLogin() { this.$router.push('/') },
-    handleLogout() {
-      this.authStore.logout()
-      this.router.push('/')
+    async handleLogout() {
+      await this.authStore.logout()
+      // ⭐ Full reload — เคลียร์ shell + reactive state ทั้งหมด
+      window.location.href = '/'
     }
   }
 }

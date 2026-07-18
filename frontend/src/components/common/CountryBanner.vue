@@ -99,7 +99,9 @@ const isLoggedIn = computed(() => !!authStore.token)
 async function handleLogout () {
   if (!confirm('ต้องการออกจากระบบใช่ไหม?')) return
   await authStore.logout()
-  router.push('/')
+  // ⭐ Full reload — เคลียร์ shell ทั้งหมด (Navbar/Banner/activation cache/socket)
+  //   router.push ไม่พอ เพราะ App.vue reactive state ค้างอยู่
+  window.location.href = '/'
 }
 
 // ─── Device Info ───
