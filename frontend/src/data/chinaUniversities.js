@@ -1,7 +1,20 @@
 // ⭐ 21 มหาลัยแพทย์ในจีนที่นักเรียนไทยเรียนอยู่
 // source: institue.json (production data)
-// sort by name asc — ใช้กับ /china landing dropdown
-export const UNIVERSITIES_CHINA = [
+// sort: TOP 8 = มหาลัยที่นักเรียนไทยส่วนใหญ่เรียนอยู่ (verified by หมอแตม 2026-07-19)
+// → ที่เหลือเรียงตาม name asc
+// ใช้กับ /china landing dropdown
+const TOP_IDS = [
+  39, // Xi'an Jiaotong University Health Science Center
+  30, // Hebei Medical University
+  35, // Tongji Medical College, HUST (Huazhong)
+  36, // Fujian Medical University
+  26, // Zhejiang University School of Medicine
+  37, // Southern Medical University
+  29, // China Medical University (Liaoning)
+  27  // Dalian Medical University
+]
+
+const ALL = [
   { id: 33, name: 'Capital Medical University', city: 'Beijing' },
   { id: 32, name: 'Cheeloo College of Medicine, Shandong University', city: 'Shandong' },
   { id: 29, name: 'China Medical University', city: 'Liaoning' },
@@ -23,4 +36,11 @@ export const UNIVERSITIES_CHINA = [
   { id: 40, name: 'Youjiang Medical University for Nationalities', city: 'Guangxi' },
   { id: 26, name: 'Zhejiang University School of Medicine', city: 'Zhejiang' },
   { id: 34, name: 'Zhejiang University Yiwu Campus', city: 'Yiwu' }
-].sort((a, b) => a.name.localeCompare(b.name))
+]
+
+const top = TOP_IDS.map(id => ALL.find(u => u.id === id)).filter(Boolean)
+const rest = ALL
+  .filter(u => !TOP_IDS.includes(u.id))
+  .sort((a, b) => a.name.localeCompare(b.name))
+
+export const UNIVERSITIES_CHINA = [...top, ...rest]
