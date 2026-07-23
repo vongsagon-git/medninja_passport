@@ -64,6 +64,7 @@
                 <div style="display:flex;gap:6px;">
                   <button type="button" class="btn btn-sm btn-outline" @click="addTopicRow" style="border-color:#a855f7;color:#a855f7;">+ เพิ่ม Topic</button>
                   <button type="button" class="btn btn-sm btn-outline" @click="addVideo">+ เพิ่มวีดีโอ (ไม่มี Topic)</button>
+                  <button type="button" class="btn btn-sm btn-outline" @click="addDocRow" style="border-color:#0ea5e9;color:#0ea5e9;">+ เพิ่มเอกสาร (ไม่มี Topic)</button>
                 </div>
               </label>
 
@@ -103,6 +104,7 @@
                         </select>
                         <button type="button" class="btn btn-sm btn-outline" style="font-size:11px;border-color:#a855f7;color:#a855f7;" @click="addSubtopicInTopic(node.name)">+ Sub</button>
                         <button type="button" class="btn btn-sm btn-outline" style="font-size:11px;border-color:#3b82f6;color:#3b82f6;" @click="addVideoInTopic(node.name)">+ VDO</button>
+                        <button type="button" class="btn btn-sm btn-outline" style="font-size:11px;border-color:#0ea5e9;color:#0ea5e9;" @click="addDocInTopic(node.name)">+ เอกสาร</button>
                         <button type="button" class="btn btn-sm btn-outline" style="font-size:11px;border-color:#10b981;color:#10b981;" @click="insertTopicBefore(node.name)" title="แทรก Topic ข้างบน">+ Topic</button>
                         <button type="button" class="btn-move" :disabled="tIdx === 0 || treeStructure[tIdx-1].type !== 'topic'" @click="moveTopicUp(node.name)" title="ขึ้น">↑</button>
                         <button type="button" class="btn-move" :disabled="isLastTopic(tIdx)" @click="moveTopicDown(node.name)" title="ลง">↓</button>
@@ -145,6 +147,7 @@
                                 <option value="6">→ ระดับ 6</option>
                               </select>
                               <button type="button" class="btn btn-sm btn-outline" style="font-size:11px;border-color:#3b82f6;color:#3b82f6;" @click="addVideoInSubtopic(node.name, child.name)">+ VDO</button>
+                              <button type="button" class="btn btn-sm btn-outline" style="font-size:11px;border-color:#0ea5e9;color:#0ea5e9;" @click="addDocInSubtopic(node.name, child.name)">+ เอกสาร</button>
                               <button type="button" class="btn btn-sm btn-outline" style="font-size:10px;border-color:#a855f7;color:#a855f7;" @click="insertSubtopicBefore(node.name, child.name)" title="แทรก Subtopic ข้างบน">+ Sub</button>
                               <button type="button" class="btn-move btn-move-sm" :disabled="sIdx === 0" @click="moveSubtopicUp(node.name, child.name)" title="ขึ้น">↑</button>
                               <button type="button" class="btn-move btn-move-sm" :disabled="sIdx === node.children.length - 1" @click="moveSubtopicDown(node.name, child.name)" title="ลง">↓</button>
@@ -154,7 +157,24 @@
                           <!-- Subtopic videos -->
                           <div class="tree-subtopic-videos">
                             <div v-for="(vid, vIdx) in child.videos" :key="'v'+vid.flatIdx">
-                              <div class="tree-video-row">
+                              <!-- === DOC-ONLY row under subtopic === -->
+                              <div v-if="_isDocRow(vid.ref)" class="tree-video-row tree-doc-row">
+                                <span class="tree-video-num tree-doc-num">📄</span>
+                                <input v-model="vid.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อเอกสาร" style="flex:1;min-width:120px;" />
+                                <select v-model="vid.ref.pdfFile" class="form-control form-control-sm doc-pdf-select" style="min-width:220px;max-width:280px;" :title="vid.ref.pdfFile || 'เลือกไฟล์ PDF'">
+                                  <option value="">— เลือกไฟล์ PDF —</option>
+                                  <option v-for="f in pdfLibrary" :key="f.name" :value="f.name">{{ f.name }}</option>
+                                </select>
+                                <span class="doc-tag">เอกสาร</span>
+                                <div class="tree-video-actions">
+                                  <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(vid.flatIdx)" title="แทรกข้างบน">+</button>
+                                  <button type="button" class="btn-assign-sub" @click="moveVideoTo(vid.flatIdx)" title="ย้ายไป Topic/Subtopic อื่น">⇄</button>
+                                  <button type="button" class="btn-move btn-move-sm" :disabled="vIdx === 0" @click="moveVideoInGroup(node.name, child.name, vIdx, -1)" title="ขึ้น">↑</button>
+                                  <button type="button" class="btn-move btn-move-sm" :disabled="vIdx === child.videos.length - 1" @click="moveVideoInGroup(node.name, child.name, vIdx, 1)" title="ลง">↓</button>
+                                  <button type="button" class="btn-move btn-move-sm btn-move-danger" @click="removeVideo(vid.flatIdx)" title="ลบ">✕</button>
+                                </div>
+                              </div>
+                              <div v-else class="tree-video-row">
                               <span class="tree-video-num">{{ vid.flatIdx + 1 }}</span>
                               <input v-model="vid.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="vid.ref._locked" />
                               <button v-if="vid.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(vid.ref)" :disabled="vid.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ vid.ref._renaming ? '...' : '✏️' }}</button>
@@ -273,6 +293,24 @@
                           </div>
                         </div>
 
+                        <!-- === DOC-ONLY row directly under topic === -->
+                        <div v-else-if="_isDocRow(child.ref)" class="tree-video-row tree-video-in-topic tree-doc-row">
+                          <span class="tree-video-num tree-doc-num">📄</span>
+                          <input v-model="child.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อเอกสาร" style="flex:1;min-width:120px;" />
+                          <select v-model="child.ref.pdfFile" class="form-control form-control-sm doc-pdf-select" style="min-width:220px;max-width:280px;" :title="child.ref.pdfFile || 'เลือกไฟล์ PDF'">
+                            <option value="">— เลือกไฟล์ PDF —</option>
+                            <option v-for="f in pdfLibrary" :key="f.name" :value="f.name">{{ f.name }}</option>
+                          </select>
+                          <span class="doc-tag">เอกสาร</span>
+                          <div class="tree-video-actions">
+                            <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(child.flatIdx)" title="แทรกข้างบน">+</button>
+                            <button type="button" class="btn-assign-sub" @click="moveVideoTo(child.flatIdx)" title="ย้ายไป Topic/Subtopic">⇄</button>
+                            <button type="button" class="btn-move btn-move-sm" :disabled="sIdx === 0 || node.children[sIdx-1].type === 'subtopic'" @click="moveVideoInGroup(node.name, '', sIdx, -1)" title="ขึ้น">↑</button>
+                            <button type="button" class="btn-move btn-move-sm" :disabled="sIdx === node.children.length - 1" @click="moveVideoInGroup(node.name, '', sIdx, 1)" title="ลง">↓</button>
+                            <button type="button" class="btn-move btn-move-sm btn-move-danger" @click="removeVideo(child.flatIdx)" title="ลบ">✕</button>
+                          </div>
+                        </div>
+
                         <!-- === VIDEO directly under topic (no subtopic) === -->
                         <div v-else>
                           <div class="tree-video-row tree-video-in-topic">
@@ -381,6 +419,24 @@
                         </div>
 
                       </template>
+                    </div>
+                  </div>
+
+                  <!-- === DOC-ONLY row (root, no topic) === -->
+                  <div v-else-if="_isDocRow(node.ref)" class="tree-video-row tree-video-root tree-doc-row">
+                    <span class="tree-video-num tree-doc-num">📄</span>
+                    <input v-model="node.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อเอกสาร" style="flex:1;min-width:120px;" />
+                    <select v-model="node.ref.pdfFile" class="form-control form-control-sm doc-pdf-select" style="min-width:220px;max-width:280px;" :title="node.ref.pdfFile || 'เลือกไฟล์ PDF'">
+                      <option value="">— เลือกไฟล์ PDF —</option>
+                      <option v-for="f in pdfLibrary" :key="f.name" :value="f.name">{{ f.name }}</option>
+                    </select>
+                    <span class="doc-tag">เอกสาร</span>
+                    <div class="tree-video-actions">
+                      <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(node.flatIdx)" title="แทรกข้างบน">+</button>
+                      <button type="button" class="btn-assign-sub" @click="moveVideoTo(node.flatIdx)" title="ย้ายไป Topic/Subtopic">⇄</button>
+                      <button type="button" class="btn-move btn-move-sm" :disabled="tIdx === 0" @click="moveVideo(node.flatIdx, -1)" title="ขึ้น">↑</button>
+                      <button type="button" class="btn-move btn-move-sm" :disabled="tIdx === treeStructure.length - 1" @click="moveVideo(node.flatIdx, 1)" title="ลง">↓</button>
+                      <button type="button" class="btn-move btn-move-sm btn-move-danger" @click="removeVideo(node.flatIdx)" title="ลบ">✕</button>
                     </div>
                   </div>
 
@@ -878,6 +934,7 @@ export default {
   async mounted() {
     await this.fetchSections()
     this.loadSelfCheckTemplates()
+    this.loadPdfLibrary()
     // ⭐ ปิด action menu เมื่อคลิกที่อื่น
     this._onDocClick = () => { this._openMenuIdx = null }
     document.addEventListener('click', this._onDocClick)
@@ -1196,6 +1253,56 @@ export default {
       row.order = this.form.videos.length
       this.form.videos.push(row)
     },
+
+    // === เอกสารล้วน — VDO ที่ไม่มี video id เลย แต่มี pdfFile ===
+    _isDocRow(v) {
+      if (!v) return false
+      return !((v.bunnyVideoId || '').trim()) &&
+             !((v.bunnyDrmVideoId || '').trim()) &&
+             !((v.aliVideoId || '').trim())
+    },
+    _newDocRow(topic = '', subtopic = '') {
+      const row = this._newVideoRow(topic, subtopic)
+      row.pdfFile = ''
+      row.pdfFileName = ''
+      row.pdfEnabled = true
+      // ผ่าน verify ทันที (ไม่ต้องรอ Bunny/Ali)
+      row._verified = true
+      row._drmVerified = true
+      row._aliVerified = true
+      return row
+    },
+    addDocRow() {
+      const name = prompt('ชื่อเอกสาร:')
+      if (!name || !name.trim()) return
+      const row = this._newDocRow()
+      row.title = name.trim()
+      row.order = this.form.videos.length
+      this.form.videos.push(row)
+    },
+    addDocInTopic(topicName) {
+      const name = prompt(`ชื่อเอกสารใน "${topicName}":`)
+      if (!name || !name.trim()) return
+      let lastIdx = -1
+      this.form.videos.forEach((v, i) => { if (v.topic === topicName) lastIdx = i })
+      const row = this._newDocRow(topicName)
+      row.title = name.trim()
+      this.form.videos.splice(lastIdx + 1, 0, row)
+      this.form.videos.forEach((v, i) => { v.order = i })
+    },
+    addDocInSubtopic(topicName, subtopicName) {
+      const name = prompt(`ชื่อเอกสารใน "${subtopicName}":`)
+      if (!name || !name.trim()) return
+      let lastIdx = -1
+      this.form.videos.forEach((v, i) => {
+        if (v.topic === topicName && v.subtopic === subtopicName) lastIdx = i
+      })
+      const row = this._newDocRow(topicName, subtopicName)
+      row.title = name.trim()
+      this.form.videos.splice(lastIdx + 1, 0, row)
+      this.form.videos.forEach((v, i) => { v.order = i })
+    },
+
     addSubtopicInTopic(topicName) {
       const name = prompt('ชื่อ Subtopic:')
       if (!name || !name.trim()) return
@@ -1891,6 +1998,11 @@ export default {
             duration: v.duration || '--:--',
             order: v.order || 0,
             requiredTier: v.requiredTier || 6,
+            // PDF fields (doc-only row + attached PDF)
+            pdfFile: v.pdfFile || '',
+            pdfFileName: v.pdfFileName || '',
+            pdfFileUrl: v.pdfFileUrl || '',
+            pdfEnabled: v.pdfEnabled !== false,
             _verified: v.bunnyVideoId ? true : null,
             _verifying: false,
             _bunnyName: '',
@@ -2092,8 +2204,9 @@ export default {
         }
 
         // กรอง video ที่มีข้อมูล — อนุญาตให้ save โครงสร้างเปล่า (มีแค่ title/topic/subtopic ยังไม่มี UUID)
+        // + row เอกสารล้วน (มี pdfFile แต่ไม่มี bunnyVideoId)
         const validVideos = this.form.videos.filter(v =>
-          (v.title || '').trim() || (v.bunnyVideoId || '').trim() || (v.topic || '').trim()
+          (v.title || '').trim() || (v.bunnyVideoId || '').trim() || (v.topic || '').trim() || (v.pdfFile || '').trim()
         )
 
         const payload = {
@@ -2173,10 +2286,11 @@ export default {
         if (!sec) return
         const sorted = [...sec.videos].sort((a, b) => (a.order || 0) - (b.order || 0))
         const vid = sorted[videoIdx]
-        if (vid) { vid.pdfFile = fileName }
-        // update ใน DB
+        if (!vid) return
+        vid.pdfFile = fileName
+        // match ด้วย object reference — VDO เอกสารทุกตัวมี bunnyVideoId ว่างเหมือนกัน → collide ถ้า match ด้วย id
         const videos = sec.videos.map(v => {
-          if (v.bunnyVideoId === vid.bunnyVideoId) return { ...v, pdfFile: fileName }
+          if (v === vid) return { ...v, pdfFile: fileName }
           return v
         })
         await api.put(`/admin/sections/${sectionId}`, { videos })
@@ -2189,9 +2303,10 @@ export default {
         if (!sec) return
         const sorted = [...sec.videos].sort((a, b) => (a.order || 0) - (b.order || 0))
         const vid = sorted[videoIdx]
-        if (vid) { vid.bonusPdfFile = fileName }
+        if (!vid) return
+        vid.bonusPdfFile = fileName
         const videos = sec.videos.map(v => {
-          if (v === vid || (v.bunnyVideoId && v.bunnyVideoId === vid.bunnyVideoId)) return { ...v, bonusPdfFile: fileName }
+          if (v === vid) return { ...v, bonusPdfFile: fileName }
           return v
         })
         await api.put(`/admin/sections/${sectionId}`, { videos })
@@ -2386,6 +2501,39 @@ export default {
 </script>
 
 <style scoped>
+/* Doc-only row (row เอกสารล้วน) */
+.tree-doc-row {
+  background: linear-gradient(90deg, #eff6ff 0%, #f0f9ff 100%) !important;
+  border-left: 3px solid #0ea5e9;
+}
+.tree-doc-num {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  font-size: 14px !important;
+  border-color: #7dd3fc !important;
+}
+.doc-pdf-select {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+  color: #0c4a6e;
+  font-weight: 600;
+  font-size: 12px !important;
+}
+.doc-pdf-select:focus {
+  border-color: #0ea5e9;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+}
+.doc-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #0ea5e9;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
 .btn-sm {
   padding: 6px 12px;
   font-size: 12px;
