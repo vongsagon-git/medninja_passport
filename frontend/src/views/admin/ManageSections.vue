@@ -166,6 +166,14 @@
                                   <option v-for="f in pdfLibrary" :key="f.name" :value="f.name">{{ f.name }}</option>
                                 </select>
                                 <span class="doc-tag">เอกสาร</span>
+                                <select v-model.number="vid.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (vid.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะโหลดได้'">
+                                  <option :value="1">ระดับ 1</option>
+                                  <option :value="2">ระดับ 2</option>
+                                  <option :value="3">ระดับ 3</option>
+                                  <option :value="4">ระดับ 4</option>
+                                  <option :value="5">ระดับ 5</option>
+                                  <option :value="6">ระดับ 6</option>
+                                </select>
                                 <div class="tree-video-actions">
                                   <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(vid.flatIdx)" title="แทรกข้างบน">+</button>
                                   <button type="button" class="btn-assign-sub" @click="moveVideoTo(vid.flatIdx)" title="ย้ายไป Topic/Subtopic อื่น">⇄</button>
@@ -302,6 +310,14 @@
                             <option v-for="f in pdfLibrary" :key="f.name" :value="f.name">{{ f.name }}</option>
                           </select>
                           <span class="doc-tag">เอกสาร</span>
+                          <select v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะโหลดได้'">
+                            <option :value="1">ระดับ 1</option>
+                            <option :value="2">ระดับ 2</option>
+                            <option :value="3">ระดับ 3</option>
+                            <option :value="4">ระดับ 4</option>
+                            <option :value="5">ระดับ 5</option>
+                            <option :value="6">ระดับ 6</option>
+                          </select>
                           <div class="tree-video-actions">
                             <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(child.flatIdx)" title="แทรกข้างบน">+</button>
                             <button type="button" class="btn-assign-sub" @click="moveVideoTo(child.flatIdx)" title="ย้ายไป Topic/Subtopic">⇄</button>
@@ -431,6 +447,14 @@
                       <option v-for="f in pdfLibrary" :key="f.name" :value="f.name">{{ f.name }}</option>
                     </select>
                     <span class="doc-tag">เอกสาร</span>
+                    <select v-model.number="node.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (node.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะโหลดได้'">
+                      <option :value="1">ระดับ 1</option>
+                      <option :value="2">ระดับ 2</option>
+                      <option :value="3">ระดับ 3</option>
+                      <option :value="4">ระดับ 4</option>
+                      <option :value="5">ระดับ 5</option>
+                      <option :value="6">ระดับ 6</option>
+                    </select>
                     <div class="tree-video-actions">
                       <button type="button" class="btn-move btn-move-sm btn-move-insert" @click="insertVideoBefore(node.flatIdx)" title="แทรกข้างบน">+</button>
                       <button type="button" class="btn-assign-sub" @click="moveVideoTo(node.flatIdx)" title="ย้ายไป Topic/Subtopic">⇄</button>
