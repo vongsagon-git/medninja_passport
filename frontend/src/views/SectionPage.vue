@@ -80,8 +80,19 @@
             <div class="topic-content">
               <!-- Direct videos (no subtopic) -->
               <template v-for="v in topic.videos.filter(x => !x.subtopic)" :key="'v'+v.index">
+                <!-- เอกสารอย่างเดียว LOCK (tier ไม่ถึง) -->
+                <div v-if="!isVideoRow(v) && v.hasPdf && v.locked" class="video-row doc-row locked-row">
+                  <div class="vr-check locked-check">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+                  </div>
+                  <svg class="vr-video-icon" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="color:#cbd5e1"><path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5z" clip-rule="evenodd"/></svg>
+                  <div class="vr-info">
+                    <span class="vr-title locked-title">{{ v.title }}</span>
+                    <div class="vr-meta"><span class="vr-doc-label">เอกสาร</span> <span class="vr-tier-badge">ระดับ {{ v.requiredTier }}</span></div>
+                  </div>
+                </div>
                 <!-- เอกสารอย่างเดียว (ไม่มีวิดีโอ แต่มี PDF) -->
-                <div v-if="!isVideoRow(v) && v.hasPdf" class="video-row doc-row" @click="showPdfModal(v.index)">
+                <div v-else-if="!isVideoRow(v) && v.hasPdf" class="video-row doc-row" @click="showPdfModal(v.index)">
                   <div class="vr-check doc-check">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clip-rule="evenodd"/></svg>
                   </div>
@@ -256,8 +267,19 @@
                 </div>
                 <!-- Subtopic Videos -->
                 <template v-for="v in sub.videos" :key="'sv'+v.index">
+                  <!-- เอกสารอย่างเดียว LOCK (tier ไม่ถึง) -->
+                  <div v-if="!isVideoRow(v) && v.hasPdf && v.locked" class="video-row doc-row in-subtopic locked-row">
+                    <div class="vr-check locked-check">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+                    </div>
+                    <svg class="vr-video-icon" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="color:#cbd5e1"><path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5z" clip-rule="evenodd"/></svg>
+                    <div class="vr-info">
+                      <span class="vr-title locked-title">{{ v.title }}</span>
+                      <div class="vr-meta"><span class="vr-doc-label">เอกสาร</span> <span class="vr-tier-badge">ระดับ {{ v.requiredTier }}</span></div>
+                    </div>
+                  </div>
                   <!-- เอกสารอย่างเดียว (ไม่มีวิดีโอ แต่มี PDF) -->
-                  <div v-if="!isVideoRow(v) && v.hasPdf" class="video-row doc-row in-subtopic" @click="showPdfModal(v.index)">
+                  <div v-else-if="!isVideoRow(v) && v.hasPdf" class="video-row doc-row in-subtopic" @click="showPdfModal(v.index)">
                     <div class="vr-check doc-check">
                       <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clip-rule="evenodd"/></svg>
                     </div>

@@ -11,17 +11,11 @@ router.post('/heartbeat', heartbeat)
 router.delete('/heartbeat', clearHeartbeat)
 router.post('/client-log', clientLog)
 
-// ── PDF ดาวน์โหลดพร้อมลายน้ำ (per video + topic/subtopic) ──
-const { downloadPdf, downloadGroupPdf, pdfQueueMiddleware, pdfQueueStatus, startPdfJob, getPdfJobStatus, downloadPdfJob, cancelPdfJob } = require('./pdf.controller')
-router.get('/sections/:id/videos/:idx/pdf', pdfQueueMiddleware, downloadPdf)
-router.get('/sections/:id/videos/:idx/pdf-status', pdfQueueStatus)
-router.get('/sections/:id/topic-pdf/:topicName', pdfQueueMiddleware, downloadGroupPdf)
-router.get('/sections/:id/subtopic-pdf/:subtopicName', pdfQueueMiddleware, downloadGroupPdf)
-router.get('/sections/:id/pdf-status', pdfQueueStatus)
-
-// ── PDF Async (submit → poll → download) ──
+// ── PDF (queue-based flow: submit → poll → download พร้อมลายน้ำ) ──
+// ทุก PDF (video / bonus / topic / subtopic) ต้องผ่าน consent modal → pdf-start → poll → download
+const { startPdfJob, startGroupPdfJob, getPdfJobStatus, downloadPdfJob, cancelPdfJob } = require('./pdf.controller')
 router.post('/sections/:id/videos/:idx/pdf-start', startPdfJob)
-router.post('/sections/:id/group-pdf-start/:type/:groupName', require('./pdf.controller').startGroupPdfJob)
+router.post('/sections/:id/group-pdf-start/:type/:groupName', startGroupPdfJob)
 router.get('/pdf-job/:jobId/status', getPdfJobStatus)
 router.get('/pdf-job/:jobId/download', downloadPdfJob)
 router.post('/pdf-job/:jobId/cancel', cancelPdfJob)
