@@ -71,7 +71,7 @@ exports.getSection = async (req, res, next) => {
         const required = v.requiredTier || 6
         const locked = userTier < required
         const bonusLocked = userTier < 6
-        const hasPdf = v.pdfEnabled !== false && !!v.pdfFile
+        const hasPdf = v.pdfEnabled !== false && !!(v.pdfFile || v.pdfFileUrl)
         const hasBonusVideo = !!v.bonusBunnyVideoId
 
         return {
