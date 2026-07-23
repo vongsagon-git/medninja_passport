@@ -44,6 +44,44 @@ const { uploadPdf, deletePdf } = require('./pdf.controller')
 router.post('/sections/:id/videos/:idx/upload-pdf', auth, admin, pdfUpload.single('pdf'), uploadPdf)
 router.delete('/sections/:id/videos/:idx/pdf', auth, admin, deletePdf)
 
+// Admin: Inspect raw video row — debug PDF visibility issue
+router.get('/sections/:id/videos/:idx/inspect', auth, admin, async (req, res) => {
+  try {
+    const Section = require('./Section.model')
+    const section = await Section.findById(req.params.id).lean()
+    if (!section) return res.status(404).json({ message: 'section not found' })
+    const idx = parseInt(req.params.idx, 10)
+    const sorted = [...section.videos].sort((a, b) => (a.order || 0) - (b.order || 0))
+    const v = sorted[idx]
+    if (!v) return res.status(404).json({ message: 'video index out of range', total: sorted.length })
+    const computedHasPdf = v.pdfEnabled !== false && !!(v.pdfFile || v.pdfFileUrl)
+    res.json({
+      sectionCode: section.code,
+      sectionName: section.name,
+      videoIndex: idx,
+      title: v.title,
+      pdfEnabled: v.pdfEnabled,
+      pdfFile: v.pdfFile || null,
+      pdfFileUrl: v.pdfFileUrl || null,
+      pdfFileName: v.pdfFileName || null,
+      requiredTier: v.requiredTier,
+      topic: v.topic || null,
+      subtopic: v.subtopic || null,
+      bunnyVideoId: v.bunnyVideoId || null,
+      aliVideoId: v.aliVideoId || null,
+      computedHasPdf,
+      willShowPdfButton: computedHasPdf,
+      hint: computedHasPdf
+        ? 'hasPdf=true → นักเรียนจะเห็นปุ่มถ้า tier ถึง'
+        : (v.pdfEnabled === false
+          ? 'hasPdf=false เพราะ pdfEnabled=false'
+          : 'hasPdf=false เพราะไม่มี pdfFile หรือ pdfFileUrl')
+    })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
+
 // Admin: PDF Download Logs
 const PdfDownloadLog = require('./PdfDownloadLog.model')
 router.get('/pdf-logs', auth, admin, async (req, res) => {
