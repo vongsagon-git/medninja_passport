@@ -117,11 +117,13 @@ exports.getSection = async (req, res, next) => {
     const rawTopicPdfMap = section.topicPdfMap instanceof Map ? Object.fromEntries(section.topicPdfMap) : (section.topicPdfMap || {})
     const rawSubtopicPdfMap = section.subtopicPdfMap instanceof Map ? Object.fromEntries(section.subtopicPdfMap) : (section.subtopicPdfMap || {})
 
-    const canAccessGroup = (groupName) =>
-      section.videos.some(v =>
-        (v.topic === groupName || v.subtopic === groupName) &&
-        userTier >= (v.requiredTier || 6)
+    const canAccessGroup = (groupName) => {
+      const videosInGroup = section.videos.filter(v =>
+        v.topic === groupName || v.subtopic === groupName
       )
+      if (videosInGroup.length === 0) return true
+      return videosInGroup.some(v => userTier >= (v.requiredTier || 6))
+    }
 
     const topicPdfMap = {}
     for (const [k, v] of Object.entries(rawTopicPdfMap)) {

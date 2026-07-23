@@ -423,10 +423,12 @@ exports.downloadGroupPdf = async (req, res) => {
         .filter(a => matchingPkgIds.has(a.packageId.toString()))
         .reduce((max, a) => Math.max(max, a.tier || 6), 0)
 
-      const canAccessGroup = section.videos.some(v =>
-        (v.topic === groupName || v.subtopic === groupName) &&
-        userTier >= (v.requiredTier || 6)
+      const videosInGroup = section.videos.filter(v =>
+        v.topic === groupName || v.subtopic === groupName
       )
+      const canAccessGroup = videosInGroup.length === 0
+        ? true
+        : videosInGroup.some(v => userTier >= (v.requiredTier || 6))
       if (!canAccessGroup) {
         return res.status(403).json({
           code: 'TIER_LOCKED',
@@ -915,10 +917,12 @@ exports.startGroupPdfJob = async (req, res) => {
         .filter(a => matchingPkgIds.has(a.packageId.toString()))
         .reduce((max, a) => Math.max(max, a.tier || 6), 0)
 
-      const canAccessGroup = section.videos.some(v =>
-        (v.topic === groupName || v.subtopic === groupName) &&
-        userTier >= (v.requiredTier || 6)
+      const videosInGroup = section.videos.filter(v =>
+        v.topic === groupName || v.subtopic === groupName
       )
+      const canAccessGroup = videosInGroup.length === 0
+        ? true
+        : videosInGroup.some(v => userTier >= (v.requiredTier || 6))
       if (!canAccessGroup) {
         releaseUserLock(userId, lockTicket)
         return res.status(403).json({
