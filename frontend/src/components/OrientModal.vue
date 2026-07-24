@@ -41,7 +41,8 @@
               allow="autoplay; encrypted-media; fullscreen"
               allowfullscreen
             ></iframe>
-            <div class="orient-video-blocker" v-if="isPlaying"></div>
+            <!-- Block iframe clicks ตลอดเวลา -->
+            <div class="orient-video-blocker"></div>
             <button
               v-if="!isPlaying"
               class="orient-play-btn"
@@ -384,13 +385,14 @@ export default {
   position: absolute; inset: 0;
   background: transparent;
   z-index: 5;
-  cursor: not-allowed;
+  cursor: default;
+  pointer-events: auto;
 }
 .orient-play-btn {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 10;
+  z-index: 20;
   width: 84px; height: 84px;
   border-radius: 50%;
   background: rgba(0, 53, 128, 0.92);
