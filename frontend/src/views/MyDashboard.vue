@@ -436,7 +436,8 @@ export default {
       if (!confirm('ต้องการดูปฐมนิเทศอีกครั้งใช่ไหม? (สำหรับทดสอบ)')) return
       try {
         await api.post(`/my/orient/${act._id}/reset`)
-        alert('รีเซ็ตแล้ว — modal จะเด้งอีกครั้งตอนคลิกยอมรับ')
+        // เปิด modal เลย ไม่ต้องรอกด "ยอมรับ" (เพราะ consent อาจ accept แล้ว)
+        this.orientActId = act._id
       } catch (e) {
         alert(e?.response?.data?.message || 'รีเซ็ตไม่สำเร็จ')
       }
