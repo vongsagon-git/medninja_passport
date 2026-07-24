@@ -1,1 +1,0 @@
-import{s as t}from"./index-BHAtXUiW.js";const s={fetchCases(){return t.get("/my/meq")},fetchCase(e){return t.get(`/my/meq/${e}`)},startCase(e){return t.post(`/my/meq/${e}/start`)},submitAnswer(e,r){return t.post(`/my/meq/${e}/answer`,r)},completeCase(e){return t.post(`/my/meq/${e}/complete`)},fetchHistory(){return t.get("/my/meq/history")}};export{s as m};

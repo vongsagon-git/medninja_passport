@@ -41,6 +41,18 @@
               allow="autoplay; encrypted-media; fullscreen"
               allowfullscreen
             ></iframe>
+            <div class="orient-video-blocker" v-if="isPlaying"></div>
+            <button
+              v-if="!isPlaying"
+              class="orient-play-btn"
+              @click="handlePlay"
+              type="button"
+              aria-label="เล่นวิดีโอ"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </button>
           </div>
 
           <!-- PLAYER: ALI (Passport-only, placeholder — mount AliPlayer.vue เมื่อ implement) -->
@@ -107,7 +119,9 @@ export default {
       threshold: 0.95,
       accepting: false,
       pollTimer: null,
-      variant: 'drm'
+      variant: 'drm',
+      isPlaying: false,
+      _player: null
     }
   },
   computed: {
@@ -170,9 +184,7 @@ export default {
     },
     startPolling() {
       this.cleanup()
-      // ยิง heartbeat ทุก 10 วิ ผ่าน playerjs (Bunny mediadelivery iframe)
       let playerReady = false
-      let player = null
       const load = () => {
         if (!window.playerjs) {
           const s = document.createElement('script')
@@ -185,36 +197,45 @@ export default {
         try {
           const frame = this.$refs.playerFrame
           if (!frame) return
-          player = new window.playerjs.Player(frame)
-          player.on('ready', () => {
+          this._player = new window.playerjs.Player(frame)
+          this._player.on('ready', () => {
             playerReady = true
-            player.getDuration(d => { if (d > 0) this.durationSeconds = d })
+            this._player.getDuration(d => { if (d > 0) this.durationSeconds = d })
           })
-          player.on('timeupdate', ({ seconds, duration }) => {
+          this._player.on('play', () => { this.isPlaying = true })
+          this._player.on('pause', () => { this.isPlaying = false })
+          this._player.on('timeupdate', ({ seconds, duration }) => {
             if (duration > 0) this.durationSeconds = duration
-            // Anti-skip: หากเลื่อนไกลเกิน watched+15 → เด้งกลับ
             if (seconds > this.watchedSeconds + 15) {
-              player.setCurrentTime(this.watchedSeconds)
+              this._player.setCurrentTime(this.watchedSeconds)
               return
             }
             if (seconds > this.watchedSeconds) this.watchedSeconds = seconds
           })
-          player.on('ended', () => this.sendComplete())
+          this._player.on('ended', () => {
+            this.isPlaying = false
+            this.sendComplete()
+          })
         } catch (e) {
           console.warn('[Orient] playerjs init error:', e)
         }
       }
       load()
 
-      // Heartbeat ทุก 10 วิ
       this.pollTimer = setInterval(() => {
-        if (!playerReady || !player) return
-        player.getCurrentTime(t => {
-          player.getDuration(d => {
+        if (!playerReady || !this._player) return
+        this._player.getCurrentTime(t => {
+          this._player.getDuration(d => {
             this.sendHeartbeat(t, d)
           })
         })
       }, 10000)
+    },
+    handlePlay() {
+      if (this._player) {
+        try { this._player.play() } catch (_) {}
+      }
+      this.isPlaying = true
     },
     async sendHeartbeat(position, duration) {
       try {
@@ -349,6 +370,35 @@ export default {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   border: 0;
+}
+.orient-video-blocker {
+  position: absolute; inset: 0;
+  background: transparent;
+  z-index: 5;
+  cursor: not-allowed;
+}
+.orient-play-btn {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  background: rgba(0, 53, 128, 0.92);
+  color: #fff;
+  border: 3px solid #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  transition: all 0.2s;
+  padding: 0;
+}
+.orient-play-btn:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  background: #0071c2;
+}
+.orient-play-btn svg {
+  margin-left: 4px;
 }
 .orient-ali-placeholder {
   display: flex; align-items: center; justify-content: center;
