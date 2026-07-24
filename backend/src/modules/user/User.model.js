@@ -61,6 +61,13 @@ const userSchema = new mongoose.Schema({
   profileLocked: { type: Boolean, default: false },
   profileCompletedAt: Date,
 
+  // ─── Billing Address (สำหรับใบเสร็จ) ───
+  address: { type: String, trim: true, default: '' },
+  subDistrict: { type: String, trim: true, default: '' },
+  district: { type: String, trim: true, default: '' },
+  province: { type: String, trim: true, default: '' },
+  postalCode: { type: String, trim: true, default: '' },
+
   // ─── Ban ───
   isBanned: { type: Boolean, default: false },
   bannedAt: Date,

@@ -114,6 +114,19 @@
             <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </router-link>
 
+          <router-link to="/admin/receipts" class="admin-nav-card">
+            <div class="nav-icon" style="background:linear-gradient(135deg,#2864c8,#3b82f6);color:#fff;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div class="nav-content">
+              <h3>ใบเสร็จรับเงิน</h3>
+              <p>ออกใบเสร็จให้นักเรียน + ดาวน์โหลด PDF</p>
+            </div>
+            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </router-link>
+
         </div>
       </div>
 
@@ -225,6 +238,18 @@
             <div class="nav-content">
               <h3>PDF Download Center</h3>
               <p>ติดตามการดาวน์โหลด + หลักฐานทางกฎหมาย</p>
+            </div>
+            <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </router-link>
+
+          <!-- ⭐ China Leads (สัมมนา + landing china.medninja.academy) -->
+          <router-link to="/admin/china-leads" class="admin-nav-card nav-highlight">
+            <div class="nav-icon nav-icon-red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            </div>
+            <div class="nav-content">
+              <h3>🇨🇳 China Leads <span class="badge-new">NEW</span></h3>
+              <p>Leads จาก china.medninja.academy · assessment · 4 สิทธิ์</p>
             </div>
             <svg class="nav-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </router-link>

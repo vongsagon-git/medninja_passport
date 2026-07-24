@@ -36,6 +36,7 @@ const SystemCircuit = () => import('../views/admin/SystemCircuit.vue')
 const ManagePackages = () => import('../views/admin/ManagePackages.vue')
 const ManageActivations = () => import('../views/admin/ManageActivations.vue')
 const ManagePassport = () => import('../views/admin/ManagePassport.vue')
+const AdminReceipts = () => import('../views/admin/AdminReceipts.vue')
 const ActiveViewers = () => import('../views/admin/ActiveViewers.vue')
 const ValkeyDebug = () => import('../views/admin/ValkeyDebug.vue')
 const PdfDownloadCenter = () => import('../views/admin/PdfDownloadCenter.vue')
@@ -208,6 +209,12 @@ const routes = [
     path: '/admin/activations',
     name: 'ManageActivations',
     component: ManageActivations,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/receipts',
+    name: 'AdminReceipts',
+    component: AdminReceipts,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
