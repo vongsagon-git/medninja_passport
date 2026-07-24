@@ -137,7 +137,7 @@ export default {
       this.loadError = ''
       this.variant = this.detectVariant()
       try {
-        const { data } = await api.get(`/my/orient/${this.activationId}`, {
+        const data = await api.get(`/my/orient/${this.activationId}`, {
           params: { variant: this.variant }
         })
         this.skipped = !!data.skipped
@@ -218,17 +218,17 @@ export default {
     },
     async sendHeartbeat(position, duration) {
       try {
-        const { data } = await api.post(`/my/orient/${this.activationId}/heartbeat`, {
+        const data = await api.post(`/my/orient/${this.activationId}/heartbeat`, {
           position, duration
         })
-        if (data.completed) this.completed = true
-        if (typeof data.watchedSeconds === 'number') this.watchedSeconds = data.watchedSeconds
+        if (data?.completed) this.completed = true
+        if (typeof data?.watchedSeconds === 'number') this.watchedSeconds = data.watchedSeconds
       } catch (_) {}
     },
     async sendComplete() {
       try {
-        const { data } = await api.post(`/my/orient/${this.activationId}/complete`, {})
-        if (data.ok) this.completed = true
+        const data = await api.post(`/my/orient/${this.activationId}/complete`, {})
+        if (data?.ok) this.completed = true
       } catch (e) {
         // ยังไม่ครบ — ปล่อยให้ heartbeat ต่อไป
       }
