@@ -11,6 +11,7 @@ const {
   moveActivation,
   unbanActivation
 } = require('./activation.admin.controller')
+const orient = require('./orient.controller')
 
 // Admin: CRUD Activations
 router.get('/', auth, admin, getAllActivations)
@@ -20,6 +21,10 @@ router.delete('/:id', auth, admin, deleteActivation)              // แบน (
 router.post('/:id/unban', auth, admin, unbanActivation)            // ปลดแบน
 router.delete('/:id/permanent', auth, admin, hardDeleteActivation) // ลบถาวร (hard — ลบจาก DB)
 router.patch('/:id/move', auth, admin, moveActivation)             // ย้ายคอร์ส
+router.post('/:id/orient-reset', auth, admin, (req, res, next) => {
+  req.params.activationId = req.params.id
+  return orient.adminReset(req, res, next)
+})
 
 // Toggle feature (DDx, NLEX, etc.)
 router.patch('/:id/feature', auth, admin, async (req, res, next) => {

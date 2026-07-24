@@ -42,9 +42,31 @@ const packageSchema = new mongoose.Schema({
   aiInfo: {
     type: String,
     default: ''  // รายละเอียด จุดเด่น ราคา ชั่วโมง ฯลฯ
+  },
+  // ═════ ORIENT VIDEOS (ปฐมนิเทศ) — 3 slots ═════
+  orientBunnyDrmVideoId: {
+    type: String,
+    default: ''
+  },
+  orientBunnyNoDrmVideoId: {
+    type: String,
+    default: ''
+  },
+  orientAliVideoId: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true
+})
+
+packageSchema.pre('save', function(next) {
+  const hasDrm = !!(this.orientBunnyDrmVideoId && this.orientBunnyDrmVideoId.trim())
+  const hasNoDrm = !!(this.orientBunnyNoDrmVideoId && this.orientBunnyNoDrmVideoId.trim())
+  if (hasDrm !== hasNoDrm) {
+    return next(new Error('Bunny orient video ต้องใส่ครบคู่ (DRM + No-DRM) หรือเว้นทั้งคู่'))
+  }
+  next()
 })
 
 module.exports = lmsConn.model('Package', packageSchema)

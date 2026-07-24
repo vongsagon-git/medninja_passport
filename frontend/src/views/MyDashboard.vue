@@ -152,7 +152,7 @@
             </a>
 
             <!-- รอ consent -->
-            <button v-else-if="!isExpired(act) && !activationStore.isConsentAccepted(act._id)" class="btn btn-cta" @click="openConsentModal(act)">
+            <button v-else-if="!isExpired(act) && !activationStore.isConsentAccepted(act._id)" class="btn btn-cta" @click="openOrientModal(act)">
               ยอมรับและเริ่มเรียน
             </button>
 
@@ -191,6 +191,9 @@
               </span>
             </router-link>
           </div>
+          <button class="orient-reset-link" @click="handleSelfResetOrient(act)" title="ล้าง progress ปฐมนิเทศเพื่อทดสอบ">
+            🔄 ดูปฐมนิเทศอีกครั้ง
+          </button>
         </div>
       </article>
     </div>
@@ -203,7 +206,15 @@
       </router-link>
     </div>
 
-    <!-- ═══ CONSENT MODAL ═══ -->
+    <!-- ═══ ORIENT MODAL (new — bundles orient video + consent) ═══ -->
+    <OrientModal
+      :show="!!orientActId"
+      :activation-id="orientActId"
+      @close="orientActId = ''"
+      @accepted="handleOrientAccepted"
+    />
+
+    <!-- ═══ CONSENT MODAL (legacy fallback — เผื่อ orient skipped) ═══ -->
     <Teleport to="body">
       <div v-if="consentModalAct" class="consent-overlay" @click.self="() => {}">
         <div class="consent-modal">
@@ -250,6 +261,7 @@ import { useAuthStore } from '../stores/auth'
 import { useActivationStore } from '../stores/activation'
 import api from '../services/api'
 import { useCountryGuard } from '../composables/useCountryGuard'
+import OrientModal from '../components/OrientModal.vue'
 
 const MINIAPPS = [
   { key: 'synapse', emoji: '🧠', name: 'Synapse' },
@@ -264,11 +276,13 @@ const MINIAPPS = [
 
 export default {
   name: 'MyDashboard',
+  components: { OrientModal },
   data() {
     return {
       liveSessions: [],
       consentModalAct: null,
-      consentAccepting: false
+      consentAccepting: false,
+      orientActId: ''
     }
   },
   setup() {
@@ -406,6 +420,25 @@ export default {
         alert(e.response?.data?.message || 'เกิดข้อผิดพลาด')
       } finally {
         this.consentAccepting = false
+      }
+    },
+    openOrientModal(act) { this.orientActId = act._id },
+    async handleOrientAccepted() {
+      if (this.orientActId) {
+        if (!this.activationStore.consentAcceptedIds) this.activationStore.consentAcceptedIds = []
+        if (!this.activationStore.consentAcceptedIds.includes(this.orientActId)) {
+          this.activationStore.consentAcceptedIds.push(this.orientActId)
+        }
+      }
+      this.orientActId = ''
+    },
+    async handleSelfResetOrient(act) {
+      if (!confirm('ต้องการดูปฐมนิเทศอีกครั้งใช่ไหม? (สำหรับทดสอบ)')) return
+      try {
+        await api.post(`/my/orient/${act._id}/reset`)
+        alert('รีเซ็ตแล้ว — modal จะเด้งอีกครั้งตอนคลิกยอมรับ')
+      } catch (e) {
+        alert(e?.response?.data?.message || 'รีเซ็ตไม่สำเร็จ')
       }
     }
   }
@@ -726,6 +759,26 @@ export default {
 }
 .course-sec-link:last-child { border-bottom: none; }
 .course-sec-link:hover { background: #fff; }
+.orient-reset-link {
+  display: block;
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.orient-reset-link:hover {
+  background: #f1f5f9;
+  color: #0071c2;
+  border-color: #0071c2;
+}
 .course-sec-code {
   font-size: 14px; font-weight: 700;
   color: var(--ink-900);

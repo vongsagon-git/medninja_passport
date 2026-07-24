@@ -88,6 +88,46 @@
               </div>
             </div>
 
+            <!-- ═══ ORIENT VIDEOS (ปฐมนิเทศ) ═══ -->
+            <fieldset style="border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 12px 0;">
+              <legend style="font-weight: 800; font-size: 13px; color: #003580; padding: 0 8px;">
+                🎬 Orient Video (ปฐมนิเทศ) — modal เด้งครั้งแรกที่นักเรียนกด "ยอมรับ"
+              </legend>
+
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label style="font-size: 12px; font-weight: 700;">
+                  🔗 Bunny DRM Video ID
+                  <span style="color: #d97706; font-weight: 600; font-size: 11px;">— ต้องคู่กับ No-DRM</span>
+                </label>
+                <input v-model="form.orientBunnyDrmVideoId" type="text" class="form-control" placeholder="เช่น e1d3df7e-49be-4e5d-9966-430cafa9febc" />
+                <small style="color: #64748b; font-size: 11px;">ใช้กับ Desktop Chrome, Android</small>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label style="font-size: 12px; font-weight: 700;">
+                  🔗 Bunny No-DRM Video ID
+                  <span style="color: #d97706; font-weight: 600; font-size: 11px;">— ต้องคู่กับ DRM</span>
+                </label>
+                <input v-model="form.orientBunnyNoDrmVideoId" type="text" class="form-control" placeholder="เช่น 15c58504-4516-4c75-b806-fe080356b60b" />
+                <small style="color: #64748b; font-size: 11px;">ใช้กับ iOS, Safari (Widevine ไม่ support)</small>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 6px;">
+                <label style="font-size: 12px; font-weight: 700;">
+                  🎯 Ali Video ID (Passport-only — optional)
+                </label>
+                <input v-model="form.orientAliVideoId" type="text" class="form-control" placeholder="Ali Video ID (dual encryption)" />
+                <small style="color: #64748b; font-size: 11px;">iOS/Safari + จีน + Bunny fallback (Passport เท่านั้น)</small>
+              </div>
+
+              <div v-if="orientPairError" style="background: #fef2f2; color: #dc2626; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 8px;">
+                ⚠️ {{ orientPairError }}
+              </div>
+              <div v-else-if="!form.orientBunnyDrmVideoId && !form.orientBunnyNoDrmVideoId && !form.orientAliVideoId" style="color: #64748b; font-size: 11px; margin-top: 6px;">
+                ℹ️ ไม่ใส่เลย = ไม่มี modal orient (นักเรียนกด "ยอมรับ" แล้วเข้าคอร์สได้ทันทีเหมือนเดิม)
+              </div>
+            </fieldset>
+
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
               <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
                 <input type="checkbox" id="isPublished" v-model="form.isPublished" />
@@ -203,13 +243,24 @@ export default {
         order: 0,
         isPublished: false,
         liveEnabled: false,
-        sectionIds: []
+        sectionIds: [],
+        orientBunnyDrmVideoId: '',
+        orientBunnyNoDrmVideoId: '',
+        orientAliVideoId: ''
       }
     }
   },
   computed: {
     sortedPackages() {
       return [...this.packages].sort((a, b) => (a.order || 0) - (b.order || 0))
+    },
+    orientPairError() {
+      const drm = (this.form.orientBunnyDrmVideoId || '').trim()
+      const noDrm = (this.form.orientBunnyNoDrmVideoId || '').trim()
+      if (!!drm !== !!noDrm) {
+        return 'Bunny orient video ต้องใส่ครบคู่ (DRM + No-DRM) หรือเว้นทั้งคู่'
+      }
+      return ''
     },
     sectionCodeMap() {
       const map = {}
@@ -287,7 +338,10 @@ export default {
         order: pkg.order || 0,
         isPublished: pkg.isPublished || false,
         liveEnabled: pkg.liveEnabled || false,
-        sectionIds
+        sectionIds,
+        orientBunnyDrmVideoId: pkg.orientBunnyDrmVideoId || '',
+        orientBunnyNoDrmVideoId: pkg.orientBunnyNoDrmVideoId || '',
+        orientAliVideoId: pkg.orientAliVideoId || ''
       }
       this.showForm = true
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -299,6 +353,10 @@ export default {
     },
 
     async handleSubmit() {
+      if (this.orientPairError) {
+        this.error = this.orientPairError
+        return
+      }
       this.saving = true
       this.error = null
       try {
@@ -309,7 +367,10 @@ export default {
           order: this.form.order,
           isPublished: this.form.isPublished,
           liveEnabled: this.form.liveEnabled,
-          sections: this.form.sectionIds
+          sections: this.form.sectionIds,
+          orientBunnyDrmVideoId: (this.form.orientBunnyDrmVideoId || '').trim(),
+          orientBunnyNoDrmVideoId: (this.form.orientBunnyNoDrmVideoId || '').trim(),
+          orientAliVideoId: (this.form.orientAliVideoId || '').trim()
         }
         const isEdit = !!this.editingId
         if (isEdit) {
@@ -352,7 +413,10 @@ export default {
         order: 0,
         isPublished: false,
         liveEnabled: false,
-        sectionIds: []
+        sectionIds: [],
+        orientBunnyDrmVideoId: '',
+        orientBunnyNoDrmVideoId: '',
+        orientAliVideoId: ''
       }
     }
   }

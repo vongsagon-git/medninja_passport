@@ -92,6 +92,35 @@ const activationSchema = new mongoose.Schema({
     type: Number,
     enum: [1, 2, 3, 4, 5, 6],
     default: 6
+  },
+  // ═════ ORIENT TRACKING (per-activation) ═════
+  orientCompletedAt: {
+    type: Date,
+    default: null
+  },
+  orientWatchedSeconds: {
+    type: Number,
+    default: 0
+  },
+  orientDurationSeconds: {
+    type: Number,
+    default: 0
+  },
+  orientVideoIdUsed: {
+    type: String,
+    default: ''
+  },
+  orientResetCount: {
+    type: Number,
+    default: 0
+  },
+  orientLastResetBy: {
+    type: String,
+    default: ''  // 'self' | 'admin:{userId}'
+  },
+  orientLastResetAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true
