@@ -20,6 +20,7 @@ const videoSchema = new mongoose.Schema({
   pdfFileName: { type: String, default: '' },
   pdfFile: { type: String, default: '' },      // filename ใน Bunny Storage (ระบบใหม่)
   pdfEnabled: { type: Boolean, default: true },
+  docOnly: { type: Boolean, default: false },   // ⭐ true = row เอกสารล้วน (ไม่มี VDO — admin กด "+ เพิ่มเอกสาร")
   // VDO พิเศษ — ผูก 1:1 กับ VDO หลัก ย้ายตามอัตโนมัติ
   bonusLabel: { type: String, default: '' },  // ชื่อหมวด เช่น BRIDGING, ADVANCE, BONUS
   bonusTitle: { type: String, default: '' },

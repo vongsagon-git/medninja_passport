@@ -1097,6 +1097,7 @@ export default {
         duration: v.duration || '',
         order: v.order || 0,
         requiredTier: [1, 2, 3, 4, 5, 6].includes(v.requiredTier) ? v.requiredTier : 6,
+        docOnly: v.docOnly === true,
         pdfFile: v.pdfFile || '',
         pdfFileName: v.pdfFileName || '',
         pdfFileUrl: v.pdfFileUrl || '',
@@ -1281,12 +1282,15 @@ export default {
     // === เอกสารล้วน — VDO ที่ไม่มี video id เลย แต่มี pdfFile ===
     _isDocRow(v) {
       if (!v) return false
-      return !((v.bunnyVideoId || '').trim()) &&
-             !((v.bunnyDrmVideoId || '').trim()) &&
-             !((v.aliVideoId || '').trim())
+      if (v.docOnly === true) return true
+      const hasAnyVid = ((v.bunnyVideoId || '').trim()) ||
+                        ((v.bunnyDrmVideoId || '').trim()) ||
+                        ((v.aliVideoId || '').trim())
+      return !hasAnyVid && !!(v.pdfFile || '').trim()
     },
     _newDocRow(topic = '', subtopic = '') {
       const row = this._newVideoRow(topic, subtopic)
+      row.docOnly = true
       row.pdfFile = ''
       row.pdfFileName = ''
       row.pdfEnabled = true
@@ -2023,6 +2027,7 @@ export default {
             order: v.order || 0,
             requiredTier: v.requiredTier || 6,
             // PDF fields (doc-only row + attached PDF)
+            docOnly: v.docOnly === true || (!(v.bunnyVideoId || '').trim() && !(v.bunnyDrmVideoId || '').trim() && !(v.aliVideoId || '').trim() && !!(v.pdfFile || '').trim()),
             pdfFile: v.pdfFile || '',
             pdfFileName: v.pdfFileName || '',
             pdfFileUrl: v.pdfFileUrl || '',
