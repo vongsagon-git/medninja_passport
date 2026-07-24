@@ -191,7 +191,7 @@
               </span>
             </router-link>
           </div>
-          <button class="orient-reset-link" @click="handleSelfResetOrient(act)" title="ล้าง progress ปฐมนิเทศเพื่อทดสอบ">
+          <button v-if="act.package?.hasOrientVideo" class="orient-reset-link" @click="handleSelfResetOrient(act)" title="ล้าง progress ปฐมนิเทศเพื่อทดสอบ">
             🔄 ดูปฐมนิเทศอีกครั้ง
           </button>
         </div>

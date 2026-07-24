@@ -25,6 +25,10 @@ router.post('/:id/orient-reset', auth, admin, (req, res, next) => {
   req.params.activationId = req.params.id
   return orient.adminReset(req, res, next)
 })
+router.post('/:id/orient-bypass', auth, admin, (req, res, next) => {
+  req.params.activationId = req.params.id
+  return orient.adminBypass(req, res, next)
+})
 
 // Toggle feature (DDx, NLEX, etc.)
 router.patch('/:id/feature', auth, admin, async (req, res, next) => {

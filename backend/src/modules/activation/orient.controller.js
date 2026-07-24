@@ -217,7 +217,31 @@ exports.adminReset = async (req, res, next) => {
     activation.orientLastResetBy = `admin:${req.user._id}`
     activation.orientLastResetAt = new Date()
     await activation.save()
-    res.json({ ok: true, resetCount: activation.orientResetCount })
+
+    // ลบ ConsentLog → user เข้าคอร์สไม่ได้จนกว่าจะดู orient ใหม่
+    const ConsentLog = require('./ConsentLog.model')
+    await ConsentLog.deleteMany({ activationId })
+
+    res.json({ ok: true, resetCount: activation.orientResetCount, consentCleared: true })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * POST /api/admin/orient/:activationId/bypass — Admin skip orient ให้เลย
+ */
+exports.adminBypass = async (req, res, next) => {
+  try {
+    const { activationId } = req.params
+    const activation = await Activation.findById(activationId)
+    if (!activation) return res.status(404).json({ message: 'ไม่พบ activation' })
+
+    activation.orientCompletedAt = new Date()
+    activation.orientLastResetBy = `admin-bypass:${req.user._id}`
+    activation.orientLastResetAt = new Date()
+    await activation.save()
+    res.json({ ok: true, completedAt: activation.orientCompletedAt })
   } catch (error) {
     next(error)
   }

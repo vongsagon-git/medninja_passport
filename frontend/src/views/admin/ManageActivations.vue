@@ -202,6 +202,7 @@
                     <button class="btn btn-sm btn-outline" @click="startExtend(act._id)">ต่ออายุ</button>
                     <button class="btn btn-sm btn-outline" style="margin-left:4px;" @click="openMove(act)">ย้ายคอร์ส</button>
                     <button class="btn btn-sm btn-outline" style="margin-left:4px;" @click="handleOrientReset(act._id)" title="ล้าง progress ปฐมนิเทศ — user จะต้องดูใหม่">🔄 Orient</button>
+                    <button class="btn btn-sm btn-outline" style="margin-left:4px;background:#fef3c7;border-color:#f59e0b;" @click="handleOrientBypass(act._id)" title="Mark orient completed ให้เลย — user ไม่ต้องดู">✅ Bypass</button>
                     <button v-if="getStatus(act) === 'revoked'" class="btn btn-sm btn-warn" style="margin-left:4px;" @click="handleUnban(act._id)">ปลดแบน</button>
                     <button v-else class="btn btn-sm btn-danger" style="margin-left:4px;" @click="startBan(act._id)">แบน</button>
                     <button class="btn btn-sm btn-danger" style="margin-left:4px;" @click="hardDeletingId = act._id">ลบ</button>
@@ -772,6 +773,17 @@ export default {
         setTimeout(() => { this.successMsg = '' }, 3000)
       } catch (err) {
         this.error = err.response?.data?.message || 'รีเซ็ตไม่สำเร็จ'
+      }
+    },
+    async handleOrientBypass(id) {
+      if (!confirm('Bypass orient? นักเรียนจะเข้าคอร์สได้ทันทีไม่ต้องดูวิดีโอปฐมนิเทศ')) return
+      this.error = null
+      try {
+        await api.post(`/admin/activations/${id}/orient-bypass`)
+        this.successMsg = 'Bypass orient เรียบร้อย — นักเรียนเข้าคอร์สได้ทันที'
+        setTimeout(() => { this.successMsg = '' }, 3000)
+      } catch (err) {
+        this.error = err.response?.data?.message || 'Bypass ไม่สำเร็จ'
       }
     }
   }
