@@ -47,7 +47,10 @@ function buildEmbedUrl(pick) {
     // Ali: return raw videoId — client-side AliPlayer จะจัดการ playAuth/STS เอง
     return { embedUrl: '', aliVideoId: pick.videoId }
   }
-  return { embedUrl: pick.drm ? getSignedEmbedUrl(pick.videoId) : getDemoEmbedUrl(pick.videoId), aliVideoId: '' }
+  const base = pick.drm ? getSignedEmbedUrl(pick.videoId) : getDemoEmbedUrl(pick.videoId)
+  // Force manual play — user ต้องกดปุ่ม play เอง ห้าม auto-play (บาง browser ไม่รองรับ autoplay)
+  const url = base + (base.includes('?') ? '&' : '?') + 'autoplay=false&preload=false'
+  return { embedUrl: url, aliVideoId: '' }
 }
 
 exports.getOrient = async (req, res, next) => {
