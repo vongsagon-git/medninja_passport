@@ -309,8 +309,21 @@ const emptyForm = () => ({
 const form = reactive(emptyForm())
 
 function openIssueModal() {
-  Object.assign(form, emptyForm())
+  // Reset ทีละ field เพื่อ preserve reactivity ของ nested customer object
+  form.userId = null
+  form.customer.name = ''
+  form.customer.nationalId = ''
+  form.customer.email = ''
+  form.customer.phone = ''
+  form.customer.address = ''
+  form.customer.subDistrict = ''
+  form.customer.district = ''
+  form.customer.province = ''
+  form.customer.postalCode = ''
   form.items = [{ description: '', amount: 0 }]
+  form.paymentMethod = 'เงินสด'
+  form.notes = ''
+  form.saveAddressToUser = true
   userSearch.value = ''
   userResults.value = []
   activations.value = []
@@ -341,13 +354,32 @@ async function searchUsers() {
 }
 
 async function selectUser(u) {
+  // ⭐ Pre-fill ทันทีจาก search result ก่อน await
+  //    กัน form ว่างถ้า prefill API ช้า/ล้ม (นักเรียนต้องเห็นชื่อทันที)
+  const fallbackName = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || ''
+  form.customer.name = fallbackName
+  form.customer.nationalId = u.nationalId || ''
+  form.customer.email = u.email || ''
+  form.customer.phone = u.phone || ''
   form.userId = u._id
+
   try {
     const data = await api.get(`/admin/receipts/prefill/${u._id}`)
-    Object.assign(form.customer, data.customer)
+    // Merge ทีละ field เพื่อไม่ทับข้อมูลที่มีอยู่ด้วยค่าว่าง
+    if (data.customer) {
+      for (const k of Object.keys(form.customer)) {
+        if (data.customer[k] !== undefined && data.customer[k] !== '') {
+          form.customer[k] = data.customer[k]
+        }
+      }
+    }
     activations.value = data.activations || []
   } catch (e) {
-    console.error(e)
+    console.error('prefill fail:', e)
+    // แสดงเตือนแค่ address (ชื่อมีอยู่แล้วจาก fallback)
+    if (e?.response?.status && e.response.status !== 404) {
+      alert('โหลดข้อมูลที่อยู่ไม่สำเร็จ — กรอกเองได้ (' + (e?.response?.data?.message || e.message) + ')')
+    }
   }
 }
 
