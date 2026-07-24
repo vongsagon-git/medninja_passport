@@ -166,10 +166,14 @@ export default {
         this.threshold = data.threshold || 0.95
 
         if (this.skipped) {
+          // ไม่มี orient video → auto-accept consent ให้เลย
+          await this.autoAcceptConsent()
           this.$emit('accepted')
           return
         }
         if (this.completed) {
+          // ดู orient จบแล้ว แต่ยังไม่ได้ accept consent → auto-accept
+          await this.autoAcceptConsent()
           this.$emit('accepted')
           return
         }
@@ -236,6 +240,11 @@ export default {
         try { this._player.play() } catch (_) {}
       }
       this.isPlaying = true
+    },
+    async autoAcceptConsent() {
+      try {
+        await api.post('/my/consent/accept', { activationId: this.activationId })
+      } catch (_) {}
     },
     async sendHeartbeat(position, duration) {
       try {
