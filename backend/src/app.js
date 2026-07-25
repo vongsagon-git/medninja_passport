@@ -10,7 +10,7 @@ const errorHandler = require('./shared/middleware/errorHandler')
 const profileGuard = require('./shared/middleware/profileGuard')
 const auth = require('./shared/middleware/auth')
 const htmlGuard = require('./shared/middleware/htmlGuard')
-const { maintenanceMiddleware, isMaintenanceOn, setMaintenance } = require('./shared/middleware/maintenance')
+const { circuitBreaker } = require('./shared/middleware/circuitBreaker')
 
 // ─── Modular Monolith Routes ───
 const authRoutes = require('./modules/auth/auth.routes')
@@ -34,29 +34,7 @@ app.set('trust proxy', 1)
 // ─── Version check (bypass Helmet — fast, no CSP needed) ───
 const BUILD_VERSION = Date.now().toString()
 const GIT_HASH = (() => { try { return require('child_process').execSync('git rev-parse --short HEAD').toString().trim() } catch { return 'unknown' } })()
-// ─── Maintenance toggle (emergency kill switch) ───
-// GET  /api/maintenance-status                       → public: { enabled: bool }
-// POST /api/admin/maintenance-toggle?key=X&on=1      → admin key: enable
-// POST /api/admin/maintenance-toggle?key=X&on=0      → admin key: disable
-const MAINT_KEY = process.env.MAINT_ADMIN_KEY || process.env.SPY_ADMIN_KEY || 'medninja-2026'
-app.get('/api/maintenance-status', async (req, res) => {
-  res.setHeader('Cache-Control', 'no-store')
-  res.json({ enabled: await isMaintenanceOn() })
-})
-app.post('/api/admin/maintenance-toggle', async (req, res) => {
-  const key = req.query.k || req.query.key || req.headers['x-admin-key']
-  if (key !== MAINT_KEY) return res.status(404).json({ message: 'Not found' })
-  const on = String(req.query.on || '0') === '1'
-  await setMaintenance(on)
-  res.json({ ok: true, enabled: on })
-})
-app.get('/api/admin/maintenance-toggle', async (req, res) => {
-  const key = req.query.k || req.query.key || req.headers['x-admin-key']
-  if (key !== MAINT_KEY) return res.status(404).json({ message: 'Not found' })
-  const on = String(req.query.on || '0') === '1'
-  await setMaintenance(on)
-  res.json({ ok: true, enabled: on, hint: on ? 'MAINTENANCE ON — /watch blocked for non-admin' : 'MAINTENANCE OFF — normal service' })
-})
+// Legacy URL-based maintenance toggle removed — use /admin/system-circuit UI instead
 
 app.get('/api/version', (req, res) => {
   // ห้าม cache ทุกระดับ (browser, Cloudflare, DigitalOcean edge)
@@ -335,6 +313,7 @@ app.use('/api/ddx', (req, res) => res.redirect(301, 'https://ddx.medninja.academ
 app.use('/api/admin/flashcard', (req, res) => res.redirect(301, 'https://ddx.medninja.academy/api/admin/flashcard' + req.url))
 app.use('/api/admin/arena', (req, res) => res.redirect(301, 'https://ddx.medninja.academy/api/admin/arena' + req.url))
 app.use('/api/admin/db', require('./modules/admin/dbviewer.routes'))
+app.use('/api/admin/circuit', require('./modules/admin/circuit.routes'))
 
 // Health check — เช็คทั้ง passport + lms connections
 app.get('/api/health', async (req, res) => {
@@ -475,10 +454,10 @@ if (process.env.NODE_ENV === 'production') {
       .replace(/<meta name="twitter:description"[^>]*>/i, `<meta name="twitter:description" content="${og.desc}" />\n    <meta name="twitter:image" content="${og.image}" />`)
   }
 
-  // ⭐ Maintenance Mode — emergency kill switch for /watch pages
-  //    Toggle via GET /api/admin/maintenance-toggle?key=X&on=1
-  //    Admin (role=admin via cookie) always bypasses
-  app.use(maintenanceMiddleware)
+  // ⭐ Circuit Breaker — admin-controlled maintenance per scope (my/section/watch/live)
+  //    Managed via /admin/system-circuit UI + POST /api/admin/circuit
+  //    /admin/* bypasses (fail-safe so admin can always turn off)
+  app.use(circuitBreaker)
 
   // ⭐ HTML Route Guard — "no permission = 404 stealth"
   //    Reads httpOnly cookie 'sid' → Valkey ticket → User role → allow or 404

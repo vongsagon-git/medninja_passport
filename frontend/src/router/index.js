@@ -319,6 +319,12 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true, immersive: true }
   },
   {
+    path: '/admin/maintenance-circuit',
+    name: 'MaintenanceCircuit',
+    component: () => import('../views/admin/MaintenanceCircuit.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/doctor',
     name: 'Doctor',
     component: () => import('../views/DoctorPage.vue'),
