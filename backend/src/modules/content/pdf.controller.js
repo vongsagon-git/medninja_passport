@@ -123,7 +123,7 @@ exports.downloadPdf = async (req, res) => {
         _id: { $in: packageIds },
         sections: section._id
       }).select('_id').lean()
-      if (matchingPkgs.length === 0) return res.status(403).json({ message: 'ไม่มีสิทธิ์ดาวน์โหลด' })
+      if (matchingPkgs.length === 0) return res.status(404).json({ message: 'ไม่พบ' })
 
       const matchingPkgIds = new Set(matchingPkgs.map(p => p._id.toString()))
       const userTier = activations
@@ -416,7 +416,7 @@ exports.downloadGroupPdf = async (req, res) => {
       const activations = await Activation.find({ userId, isActive: true, expiresAt: { $gt: now } }).select('packageId tier').lean()
       const packageIds = activations.map(a => a.packageId)
       const matchingPkgs = await Package.find({ _id: { $in: packageIds }, sections: section._id }).select('_id').lean()
-      if (matchingPkgs.length === 0) return res.status(403).json({ message: 'ไม่มีสิทธิ์ดาวน์โหลด' })
+      if (matchingPkgs.length === 0) return res.status(404).json({ message: 'ไม่พบ' })
 
       const matchingPkgIds = new Set(matchingPkgs.map(p => p._id.toString()))
       const userTier = activations
@@ -756,7 +756,7 @@ exports.startPdfJob = async (req, res) => {
       const now = new Date()
       const activations = await Activation.find({ userId, isActive: true, expiresAt: { $gt: now } }).select('packageId tier').lean()
       const matchingPkgs = await Package.find({ _id: { $in: activations.map(a => a.packageId) }, sections: section._id }).select('_id').lean()
-      if (matchingPkgs.length === 0) { releaseUserLock(userId, lockTicket); return res.status(403).json({ message: 'ไม่มีสิทธิ์ดาวน์โหลด' }) }
+      if (matchingPkgs.length === 0) { releaseUserLock(userId, lockTicket); return res.status(404).json({ message: 'ไม่พบ' }) }
 
       const matchingPkgIds = new Set(matchingPkgs.map(p => p._id.toString()))
       const userTier = activations
@@ -910,7 +910,7 @@ exports.startGroupPdfJob = async (req, res) => {
       const now = new Date()
       const activations = await Activation.find({ userId, isActive: true, expiresAt: { $gt: now } }).select('packageId tier').lean()
       const matchingPkgs = await Package.find({ _id: { $in: activations.map(a => a.packageId) }, sections: section._id }).select('_id').lean()
-      if (matchingPkgs.length === 0) { releaseUserLock(userId, lockTicket); return res.status(403).json({ message: 'ไม่มีสิทธิ์ดาวน์โหลด' }) }
+      if (matchingPkgs.length === 0) { releaseUserLock(userId, lockTicket); return res.status(404).json({ message: 'ไม่พบ' }) }
 
       const matchingPkgIds = new Set(matchingPkgs.map(p => p._id.toString()))
       const userTier = activations

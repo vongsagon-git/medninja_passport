@@ -46,7 +46,7 @@ exports.getOne = async (req, res, next) => {
     const template = await SelfCheckTemplate.findOne({ slug, isPublished: true }).lean()
     if (!template) return res.status(404).json({ message: 'ไม่พบ checklist' })
     if (!(await canAccessTemplate(req.user, slug))) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์เข้าถึง checklist นี้' })
+      return res.status(404).json({ message: 'ไม่พบ' })
     }
     const prog = await SelfCheckProgress.findOne({ userId: req.user._id, templateSlug: slug }).lean()
     const checkedItems = prog?.checkedItems || []
@@ -70,7 +70,7 @@ exports.toggle = async (req, res, next) => {
     const template = await SelfCheckTemplate.findOne({ slug, isPublished: true }).lean()
     if (!template) return res.status(404).json({ message: 'ไม่พบ checklist' })
     if (!(await canAccessTemplate(req.user, slug))) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์' })
+      return res.status(404).json({ message: 'ไม่พบ' })
     }
     // ตรวจ itemId ต้องอยู่ใน template (กัน inject)
     const validIds = new Set(template.sections.flatMap(s => (s.items || []).map(i => i.id)))

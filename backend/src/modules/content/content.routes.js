@@ -47,7 +47,7 @@ router.post('/watch-progress', async (req, res) => {
 
     // ตรวจสิทธิ์ — ต้องมี activation สำหรับ section นี้
     if (!(await hasAccessToSection(req.user, sectionId))) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์' })
+      return res.status(404).json({ message: 'ไม่พบ' })
     }
 
     const update = {}
@@ -71,7 +71,7 @@ router.get('/watch-progress/:sectionId', async (req, res) => {
   try {
     // ตรวจสิทธิ์
     if (!(await hasAccessToSection(req.user, req.params.sectionId))) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์' })
+      return res.status(404).json({ message: 'ไม่พบ' })
     }
 
     const progress = await WatchProgress.find({

@@ -48,7 +48,8 @@ exports.getSection = async (req, res, next) => {
     })
 
     if (!matchingActivation) {
-      return res.status(403).json({ message: 'คุณไม่มีสิทธิ์เข้าถึง Section นี้' })
+      // Stealth 404 — ไม่บอกว่า section มีจริง (กัน metadata leak / probing)
+      return res.status(404).json({ message: 'ไม่พบ Section' })
     }
 
     // เช็ค consent — ต้องยอมรับข้อตกลงก่อนเข้าเรียน (ทั้ง admin + นักเรียน)
@@ -243,7 +244,8 @@ exports.getVideo = async (req, res, next) => {
     })
 
     if (!matchingActivation) {
-      return res.status(403).json({ message: 'คุณไม่มีสิทธิ์เข้าถึง Section นี้' })
+      // Stealth 404 — ไม่บอกว่า section มีจริง (กัน metadata leak / probing)
+      return res.status(404).json({ message: 'ไม่พบ Section' })
     }
 
     // เช็ค consent

@@ -14,6 +14,8 @@ const path = require('path')
 const fs = require('fs')
 const { lookupTicket } = require('../../modules/auth/session.service')
 const User = require('../../modules/user/User.model')
+const Activation = require('../../modules/activation/Activation.model')
+const Package = require('../../modules/content/Package.model')
 
 let stealthPage = null
 function getStealthPage () {
@@ -113,6 +115,53 @@ async function getUserFromCookie (req) {
   }
 }
 
+/**
+ * Extract section ID from HTML path patterns (both global + CN):
+ *   /my/section/:sectionId
+ *   /my/watch/:sectionId/:videoIndex
+ *   /my-cn/section/:sectionId
+ *   /my-cn/watch/:sectionId/:videoIndex
+ */
+function extractSectionId (reqPath) {
+  const patterns = [
+    /^\/my\/section\/([0-9a-f]{24})/i,
+    /^\/my\/watch\/([0-9a-f]{24})\//i,
+    /^\/my-cn\/section\/([0-9a-f]{24})/i,
+    /^\/my-cn\/watch\/([0-9a-f]{24})\//i
+  ]
+  for (const re of patterns) {
+    const m = reqPath.match(re)
+    if (m) return m[1]
+  }
+  return null
+}
+
+/**
+ * Check if user has entitlement to a specific section
+ * (via Activation → Package → sections list). Admin bypass.
+ */
+async function hasEntitlementToSection (user, sectionId) {
+  if (user.role === 'admin') return true
+  try {
+    const now = new Date()
+    const activations = await Activation.find({
+      userId: user._id,
+      isActive: true,
+      passedAt: null,
+      expiresAt: { $gt: now }
+    }).select('packageId').lean()
+    if (!activations.length) return false
+    const packageIds = activations.map(a => a.packageId).filter(Boolean)
+    const match = await Package.exists({
+      _id: { $in: packageIds },
+      sections: sectionId
+    })
+    return !!match
+  } catch {
+    return false
+  }
+}
+
 async function htmlGuard (req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next()
 
@@ -134,6 +183,14 @@ async function htmlGuard (req, res, next) {
   if (!user) return send404(res)
 
   if (need === 'admin' && user.role !== 'admin') return send404(res)
+
+  // ⭐ Entitlement check for section-scoped paths
+  //    Deny = 404 stealth (no metadata leak — hacker can't confirm section exists)
+  const sectionId = extractSectionId(req.path)
+  if (sectionId) {
+    const allowed = await hasEntitlementToSection(user, sectionId)
+    if (!allowed) return send404(res)
+  }
 
   return next()
 }
