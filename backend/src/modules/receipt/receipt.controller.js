@@ -6,30 +6,41 @@ const Activation = require('../activation/Activation.model')
 
 // GET /api/admin/receipts/prefill/:userId
 // ดึงข้อมูล user + activation ล่าสุด สำหรับ prefill ฟอร์ม
+// ⭐ Split เป็น 2 step — user ก่อน (fast), activation ค่อยลอง (best-effort)
+//   กัน 504 ถ้า populate ช้า → อย่างน้อยที่อยู่ต้องขึ้น
 exports.prefill = async (req, res) => {
   const { userId } = req.params
-  const user = await User.findById(userId).lean()
+
+  // ─── Step 1: User info (must succeed) ───
+  const user = await User.findById(userId)
+    .select('firstName lastName name nationalId email phone address subDistrict district province postalCode')
+    .lean()
   if (!user) return res.status(404).json({ message: 'ไม่พบนักเรียน' })
 
-  const activations = await Activation.find({ userId })
-    .sort({ activatedAt: -1 })
-    .limit(10)
-    .populate('packageId', 'name title price')
-    .lean()
+  const customer = {
+    name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.name || '',
+    nationalId: user.nationalId || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    address: user.address || '',
+    subDistrict: user.subDistrict || '',
+    district: user.district || '',
+    province: user.province || '',
+    postalCode: user.postalCode || ''
+  }
 
-  res.json({
-    customer: {
-      name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.name || '',
-      nationalId: user.nationalId || '',
-      email: user.email || '',
-      phone: user.phone || '',
-      address: user.address || '',
-      subDistrict: user.subDistrict || '',
-      district: user.district || '',
-      province: user.province || '',
-      postalCode: user.postalCode || ''
-    },
-    activations: activations.map(a => ({
+  // ─── Step 2: Activations (best-effort with timeout, ไม่ block response) ───
+  let activations = []
+  try {
+    const raw = await Promise.race([
+      Activation.find({ userId })
+        .sort({ activatedAt: -1 })
+        .limit(10)
+        .populate('packageId', 'name title price')
+        .lean(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('activation-timeout')), 8000))
+    ])
+    activations = raw.map(a => ({
       _id: a._id,
       packageName: a.packageId?.name || a.packageId?.title || '(ไม่ระบุแพ็กเกจ)',
       packagePrice: a.packageId?.price || 0,
@@ -37,7 +48,12 @@ exports.prefill = async (req, res) => {
       expiresAt: a.expiresAt,
       tier: a.tier
     }))
-  })
+  } catch (e) {
+    console.warn('[receipt.prefill] activation fetch failed:', e.message, '— returning without activations')
+    // อย่า throw — user ได้ข้อมูล address แค่ activations ว่างเปล่า
+  }
+
+  res.json({ customer, activations })
 }
 
 // POST /api/admin/receipts
