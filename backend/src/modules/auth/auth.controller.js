@@ -13,6 +13,36 @@ function generateToken(id, sessionId) {
 }
 
 /**
+ * Set httpOnly session cookie 'sid' — HTML Guard uses this to gate protected routes.
+ * Domain=.medninja.academy → shared with LMS + all subdomains.
+ * SameSite=Lax → iOS Safari safe + still blocks cross-site CSRF.
+ */
+function setSessionCookie(res, sessionId) {
+  if (!sessionId) return
+  const days = parseInt(process.env.SESSION_TTL_DAYS || '7', 10)
+  const isProd = process.env.NODE_ENV === 'production'
+  res.cookie('sid', sessionId, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    domain: isProd ? '.medninja.academy' : undefined,
+    path: '/',
+    maxAge: days * 86400 * 1000
+  })
+}
+
+function clearSessionCookie(res) {
+  const isProd = process.env.NODE_ENV === 'production'
+  res.clearCookie('sid', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    domain: isProd ? '.medninja.academy' : undefined,
+    path: '/'
+  })
+}
+
+/**
  * ส่ง user data กลับ (ใช้ร่วมกันทุก endpoint)
  */
 function userResponse(user) {
@@ -67,9 +97,10 @@ exports.register = async (req, res, next) => {
       console.error('⚠️  Failed to send verification email:', err.message)
     })
 
-    // สร้าง session ใน Valkey
-    const sessionId = await createSession(user._id.toString())
+    // สร้าง session ใน Valkey (+ reverse ticket lookup)
+    const sessionId = await createSession(user._id.toString(), { ip: getIp(req), ua: req.headers['user-agent'] || '' })
     const token = generateToken(user._id, sessionId)
+    setSessionCookie(res, sessionId)
 
     const ua = parseUA(req.headers['user-agent'])
     logActivity({ userId: user._id, userName: user.name, userEmail: user.email, action: 'register', ip: getIp(req), ...ua, userAgent: req.headers['user-agent'] || '' })
@@ -123,9 +154,10 @@ exports.login = async (req, res, next) => {
       })
     }
 
-    // สร้าง session ใน Valkey + kick เครื่องเก่าถ้าเกิน limit
-    const sessionId = await createSession(user._id.toString())
+    // สร้าง session ใน Valkey (+ reverse ticket lookup สำหรับ HTML Guard)
+    const sessionId = await createSession(user._id.toString(), { ip: getIp(req), ua: req.headers['user-agent'] || '' })
     const token = generateToken(user._id, sessionId)
+    setSessionCookie(res, sessionId)
 
     const ua = parseUA(req.headers['user-agent'])
     logActivity({ userId: user._id, userName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.name, userEmail: user.email, action: 'login', detail: isNidLogin ? 'login ด้วยเลขบัตร' : 'login ด้วย email', ip: getIp(req), ...ua, userAgent: req.headers['user-agent'] || '' })
@@ -184,8 +216,9 @@ exports.googleLogin = async (req, res, next) => {
       })
     }
 
-    const sessionId = await createSession(user._id.toString())
+    const sessionId = await createSession(user._id.toString(), { ip: getIp(req), ua: req.headers['user-agent'] || '' })
     const token = generateToken(user._id, sessionId)
+    setSessionCookie(res, sessionId)
 
     const uaParsed = parseUA(req.headers['user-agent'])
     logActivity({ userId: user._id, userName: user.name, userEmail: user.email, action: 'login_google', ip: getIp(req), ...uaParsed, userAgent: req.headers['user-agent'] || '' })
@@ -338,6 +371,7 @@ exports.logout = async (req, res, next) => {
     if (req.sessionId) {
       await removeSession(req.user._id.toString(), req.sessionId)
     }
+    clearSessionCookie(res)
     res.json({ message: 'ออกจากระบบเรียบร้อย' })
   } catch (error) {
     next(error)

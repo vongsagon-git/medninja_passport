@@ -15,6 +15,9 @@ async function getMockAdapter() {
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
+  // withCredentials: sends httpOnly 'sid' cookie with every request
+  // so login/logout set-cookie takes effect and cross-subdomain works
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
   }

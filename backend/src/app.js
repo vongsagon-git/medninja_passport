@@ -2,12 +2,14 @@ const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
 const morgan = require('morgan')
+const cookieParser = require('cookie-parser')
 const path = require('path')
 require('dotenv').config({ path: path.join(__dirname, '../../.env') })
 
 const errorHandler = require('./shared/middleware/errorHandler')
 const profileGuard = require('./shared/middleware/profileGuard')
 const auth = require('./shared/middleware/auth')
+const htmlGuard = require('./shared/middleware/htmlGuard')
 
 // ─── Modular Monolith Routes ───
 const authRoutes = require('./modules/auth/auth.routes')
@@ -210,6 +212,9 @@ app.use(cors({
   credentials: true
 }))
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+
+// Cookie parser — required by HTML Guard (reads 'sid' from httpOnly cookie)
+app.use(cookieParser())
 
 // ─── Geo Middleware (DO-only, geoip-lite) ───
 // Attach req.geo = { country, isChina, isThai, ip, ... } to every request
@@ -444,6 +449,12 @@ if (process.env.NODE_ENV === 'production') {
       .replace(/<meta name="twitter:title"[^>]*>/i, `<meta name="twitter:title" content="${og.title}" />`)
       .replace(/<meta name="twitter:description"[^>]*>/i, `<meta name="twitter:description" content="${og.desc}" />\n    <meta name="twitter:image" content="${og.image}" />`)
   }
+
+  // ⭐ HTML Route Guard — "no permission = 404 stealth"
+  //    Reads httpOnly cookie 'sid' → Valkey ticket → User role → allow or 404
+  //    Protects /admin/*, /my/*, /live/*, etc. from HTML shell leak
+  //    Runs BEFORE SPA fallback so hackers curl get 404, not index.html
+  app.use(htmlGuard)
 
   // index.html → ห้าม cache → ได้ JS chunk ใหม่เสมอ
   // + CDN-Cache-Control เพื่อข้าม Cloudflare cache

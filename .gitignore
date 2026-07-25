@@ -15,3 +15,6 @@ coverage/
 
 # CMA sync script outputs (contain personal data)
 backend/scripts/cma-check-result-*.json
+
+# ID card images exported for address backfill (sensitive)
+_idcards/
