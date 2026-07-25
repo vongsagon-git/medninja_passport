@@ -199,14 +199,14 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:", 'https://static.line-scdn.net', 'https://liff.line.me', 'https://assets.mediadelivery.net', 'https://connect.facebook.net', 'https://g.alicdn.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:", 'https://static.line-scdn.net', 'https://liff.line.me', 'https://assets.mediadelivery.net', 'https://embed.mediadelivery.net', 'https://player.mediadelivery.net', 'https://connect.facebook.net', 'https://g.alicdn.com', 'https://pagead2.googlesyndication.com'],
       styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
       fontSrc: ["'self'", 'https:', 'data:'],
       imgSrc: ["'self'", 'data:', 'https:'],
       // Allow Bunny.net video player
-      frameSrc: ["'self'", 'https://player.mediadelivery.net'],
+      frameSrc: ["'self'", 'https://player.mediadelivery.net', 'https://embed.mediadelivery.net'],
       mediaSrc: ["'self'", 'blob:', 'https://cdn-cn.medninja.academy', 'https://*.aliyuncs.com', 'https://*.alicdn.com'],
-      connectSrc: ["'self'", 'https://api.line.me', 'https://liff.line.me', 'https://access.line.me', 'https://liffsdk.line-scdn.net', 'https://api.qrserver.com', 'https://ws.medninja.academy', 'wss://ws.medninja.academy', 'https://www.facebook.com', 'https://connect.facebook.net', 'https://cdn-cn.medninja.academy', 'https://*.aliyuncs.com', 'https://*.alicdn.com'],
+      connectSrc: ["'self'", 'https://api.line.me', 'https://liff.line.me', 'https://access.line.me', 'https://liffsdk.line-scdn.net', 'https://api.qrserver.com', 'https://ws.medninja.academy', 'wss://ws.medninja.academy', 'https://www.facebook.com', 'https://connect.facebook.net', 'https://cdn-cn.medninja.academy', 'https://*.aliyuncs.com', 'https://*.alicdn.com', 'https://player.mediadelivery.net', 'https://embed.mediadelivery.net', 'https://assets.mediadelivery.net', 'https://iframe.mediadelivery.net', 'https://video.bunnycdn.com', 'https://pagead2.googlesyndication.com'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
