@@ -5,22 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>ไม่พบหน้านี้ | MedNinja</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;800&family=Inter:wght@700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%;font-family:'Noto Sans Thai',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e2e8f0;background:#0a0f1c}
-  body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 30% 20%,rgba(59,130,246,.15) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(139,92,246,.12) 0%,transparent 60%),#0a0f1c;overflow:hidden;position:relative}
-  .card{max-width:460px;width:100%;text-align:center;background:rgba(30,41,59,.6);backdrop-filter:blur(20px);border:1px solid rgba(148,163,184,.15);border-radius:24px;padding:56px 40px;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative;z-index:1}
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 30% 20%,rgba(59,130,246,.18) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(139,92,246,.14) 0%,transparent 60%),#0a0f1c;overflow:hidden;position:relative}
+  .brand-top{display:flex;align-items:center;gap:10px;margin-bottom:32px;z-index:2}
+  .brand-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(59,130,246,.4)}
+  .brand-mark svg{width:22px;height:22px;fill:#fff}
+  .brand-name{font-family:'Inter',sans-serif;font-size:20px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px}
+  .card{max-width:460px;width:100%;text-align:center;background:rgba(30,41,59,.55);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(148,163,184,.18);border-radius:24px;padding:48px 36px;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative;z-index:1}
   .icon{width:80px;height:80px;margin:0 auto 24px;border-radius:50%;background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(59,130,246,.4)}
   .icon svg{width:40px;height:40px;fill:#fff}
-  h1{font-size:64px;font-weight:800;color:#f1f5f9;margin-bottom:4px;letter-spacing:-2px;line-height:1}
-  .subtitle{font-size:20px;font-weight:600;color:#cbd5e1;margin-bottom:12px}
-  p{font-size:15px;line-height:1.7;color:#94a3b8;margin-bottom:32px}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%);color:#fff;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 8px 20px rgba(59,130,246,.35);transition:all .2s;border:none;cursor:pointer;font-family:inherit}
-  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(59,130,246,.5)}
-  .btn svg{width:18px;height:18px;fill:currentColor}
-  .brand{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:11px;color:#334155;letter-spacing:3px;text-transform:uppercase;font-weight:700}
-  .glow{position:fixed;width:400px;height:400px;border-radius:50%;pointer-events:none;opacity:.12;filter:blur(80px)}
+  h1{font-family:'Inter',sans-serif;font-size:72px;font-weight:800;color:#f1f5f9;margin-bottom:4px;letter-spacing:-3px;line-height:1;background:linear-gradient(135deg,#60a5fa 0%,#a78bfa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .subtitle{font-size:22px;font-weight:700;color:#f1f5f9;margin-bottom:14px}
+  p{font-size:14px;line-height:1.75;color:#94a3b8;margin-bottom:32px}
+  .btn{display:inline-flex;align-items:center;gap:10px;padding:14px 32px;border-radius:12px;background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%);color:#fff;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 8px 24px rgba(59,130,246,.4);transition:all .2s;border:none;cursor:pointer;font-family:inherit}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(59,130,246,.55)}
+  .btn:active{transform:translateY(0)}
+  .btn svg{width:16px;height:16px;fill:currentColor}
+  .footer{margin-top:20px;font-size:11px;color:#475569;letter-spacing:2px;text-transform:uppercase;font-weight:700}
+  .glow{position:fixed;width:400px;height:400px;border-radius:50%;pointer-events:none;opacity:.15;filter:blur(80px)}
   .g1{top:-100px;left:-100px;background:#3b82f6}
   .g2{bottom:-100px;right:-100px;background:#8b5cf6}
 </style>
@@ -28,6 +33,14 @@
 <body>
 <div class="glow g1"></div>
 <div class="glow g2"></div>
+
+<div class="brand-top">
+  <div class="brand-mark">
+    <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4zm-1 6h2v3h3v2h-3v3h-2v-3H8v-2h3V8z"/></svg>
+  </div>
+  <div class="brand-name">MedNinja</div>
+</div>
+
 <div class="card">
   <div class="icon">
     <svg viewBox="0 0 24 24"><path d="M15.5,14L20.5,19L19,20.5L14,15.5V14.71L13.73,14.43C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.43,13.73L14.71,14H15.5M9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14Z"/></svg>
@@ -40,6 +53,7 @@
     กลับสู่หน้าแรก
   </a>
 </div>
-<div class="brand">MEDNINJA</div>
+
+<div class="footer">MEDNINJA</div>
 </body>
 </html>
