@@ -1,6 +1,6 @@
 const Receipt = require('./Receipt.model')
 const { nextReceiptNo } = require('./ReceiptCounter.model')
-const { generateReceiptPdf } = require('./receipt.pdf')
+const { generateReceiptHtml } = require('./receipt.html')
 const User = require('../user/User.model')
 const Activation = require('../activation/Activation.model')
 
@@ -165,14 +165,15 @@ exports.getOne = async (req, res) => {
 }
 
 // GET /api/admin/receipts/:id/pdf
+// เปลี่ยนเป็น HTML — user กด "พิมพ์" ใน browser → บันทึกเป็น PDF เอง
+// (เร็วกว่ามาก ไม่ timeout, font ไทยใช้ system font)
 exports.pdf = async (req, res) => {
   const receipt = await Receipt.findById(req.params.id).lean()
   if (!receipt) return res.status(404).json({ message: 'ไม่พบใบเสร็จ' })
-  const buf = await generateReceiptPdf(receipt)
-  res.setHeader('Content-Type', 'application/pdf')
-  res.setHeader('Content-Disposition', `inline; filename="${receipt.receiptNo}.pdf"`)
+  const html = generateReceiptHtml(receipt, 'MedNinja')
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
   res.setHeader('Cache-Control', 'private, no-store')
-  res.send(buf)
+  res.send(html)
 }
 
 // PATCH /api/admin/receipts/:id/void

@@ -63,7 +63,7 @@
               </td>
               <td class="actions">
                 <button class="btn btn-mini btn-outline" @click="openPdf(r._id, r.receiptNo)">
-                  ดาวน์โหลด PDF
+                  เปิดใบเสร็จ
                 </button>
                 <button v-if="!r.voided" class="btn btn-mini btn-danger-outline"
                         @click="voidReceipt(r)">
@@ -230,7 +230,7 @@
         <div v-if="form.userId" class="modal-foot">
           <button class="btn btn-outline" @click="closeModal">ยกเลิก</button>
           <button class="btn btn-primary" :disabled="!canSubmit || submitting" @click="submit">
-            {{ submitting ? 'กำลังออก...' : 'ออกใบเสร็จ + ดาวน์โหลด PDF' }}
+            {{ submitting ? 'กำลังออก...' : 'ออกใบเสร็จ + เปิดหน้าพิมพ์' }}
           </button>
         </div>
       </div>
@@ -271,9 +271,9 @@ async function loadList() {
   }
 }
 
-// ⭐ Fetch PDF via axios (Authorization header) → blob → open in new tab
-//    หลบปัญหา query token shim ที่ backend อาจไม่ทำงาน
-async function openPdf(id, receiptNo) {
+// ⭐ Fetch HTML receipt (with Bearer auth) → open new tab → user กด "พิมพ์" เอง
+//    เร็วกว่า PDF gen บน server (0ms font load, 0ms subset)
+async function openPdf(id /* keep name for API compat */) {
   try {
     const token = localStorage.getItem('token')
     const resp = await fetch(`/api/admin/receipts/${id}/pdf`, {
@@ -281,25 +281,23 @@ async function openPdf(id, receiptNo) {
     })
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ message: 'HTTP ' + resp.status }))
-      throw new Error(err.message || 'ดาวน์โหลด PDF ไม่สำเร็จ')
+      throw new Error(err.message || 'เปิดใบเสร็จไม่สำเร็จ')
     }
-    const blob = await resp.blob()
-    const url = URL.createObjectURL(blob)
-    // Open in new tab
-    const win = window.open(url, '_blank')
-    if (!win) {
-      // Popup blocked → download instead
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${receiptNo || 'receipt'}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+    const html = await resp.text()
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.open()
+      win.document.write(html)
+      win.document.close()
+    } else {
+      // Popup blocked → open in same tab via blob
+      const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      window.location.href = url
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
     }
-    // Cleanup blob URL after 60s
-    setTimeout(() => URL.revokeObjectURL(url), 60000)
   } catch (e) {
-    alert('ดาวน์โหลด PDF ไม่สำเร็จ: ' + (e.message || e))
+    alert('เปิดใบเสร็จไม่สำเร็จ: ' + (e.message || e))
   }
 }
 
