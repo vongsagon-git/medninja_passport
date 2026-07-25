@@ -254,10 +254,6 @@ function generateReceiptHtml(receipt, appName = 'MedNinja') {
       <div class="note">
         บริษัทฯ ได้รับเงินจำนวนดังกล่าวไว้ถูกต้องแล้ว
       </div>
-      <div class="sig-box">
-        <div class="sig-line">ผู้รับเงิน / Authorized Signature</div>
-        <div class="sig-name">${esc(receipt.issuedByName || '-')} • ${fmtDateTh(receipt.issuedAt)}</div>
-      </div>
     </div>
 
     <div class="bottom">

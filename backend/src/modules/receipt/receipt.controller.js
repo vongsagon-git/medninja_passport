@@ -176,6 +176,61 @@ exports.pdf = async (req, res) => {
   res.send(html)
 }
 
+// PATCH /api/admin/receipts/:id
+// แก้ไขใบเสร็จ (คงเลขที่, issuedAt, issuedBy เดิม — เปลี่ยน customer/items/notes/paymentMethod)
+exports.update = async (req, res) => {
+  const receipt = await Receipt.findById(req.params.id)
+  if (!receipt) return res.status(404).json({ message: 'ไม่พบใบเสร็จ' })
+  if (receipt.voided) return res.status(400).json({ message: 'ใบเสร็จถูกยกเลิกแล้ว แก้ไขไม่ได้' })
+
+  const { customer, items, total, paymentMethod, notes, saveAddressToUser } = req.body || {}
+
+  if (!customer || !customer.name) return res.status(400).json({ message: 'ต้องระบุชื่อลูกค้า' })
+  if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ message: 'ต้องมีรายการอย่างน้อย 1 รายการ' })
+
+  const cleanItems = items
+    .map(it => ({ description: String(it.description || '').trim(), amount: Number(it.amount) || 0 }))
+    .filter(it => it.description && it.amount > 0)
+  if (cleanItems.length === 0) return res.status(400).json({ message: 'รายการไม่ถูกต้อง' })
+
+  const calcTotal = cleanItems.reduce((s, it) => s + it.amount, 0)
+  const finalTotal = Number(total) > 0 ? Number(total) : calcTotal
+
+  // Save address back to user (optional)
+  if (saveAddressToUser && receipt.userId) {
+    const user = await User.findById(receipt.userId)
+    if (user) {
+      if (customer.nationalId && !user.nationalId) user.nationalId = customer.nationalId
+      if (customer.phone) user.phone = customer.phone
+      if (customer.address) user.address = customer.address
+      if (customer.subDistrict) user.subDistrict = customer.subDistrict
+      if (customer.district) user.district = customer.district
+      if (customer.province) user.province = customer.province
+      if (customer.postalCode) user.postalCode = customer.postalCode
+      await user.save()
+    }
+  }
+
+  receipt.customer = {
+    name: String(customer.name || '').trim(),
+    nationalId: String(customer.nationalId || '').trim(),
+    email: String(customer.email || '').trim(),
+    phone: String(customer.phone || '').trim(),
+    address: String(customer.address || '').trim(),
+    subDistrict: String(customer.subDistrict || '').trim(),
+    district: String(customer.district || '').trim(),
+    province: String(customer.province || '').trim(),
+    postalCode: String(customer.postalCode || '').trim()
+  }
+  receipt.items = cleanItems
+  receipt.total = finalTotal
+  receipt.paymentMethod = String(paymentMethod || 'เงินสด').trim()
+  receipt.notes = String(notes || '').trim()
+
+  await receipt.save()
+  res.json({ ok: true, receipt })
+}
+
 // PATCH /api/admin/receipts/:id/void
 exports.voidReceipt = async (req, res) => {
   const receipt = await Receipt.findById(req.params.id)

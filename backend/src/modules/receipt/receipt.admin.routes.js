@@ -28,6 +28,7 @@ router.get('/', ctrl.list)
 router.post('/', ctrl.create)
 router.get('/:id', ctrl.getOne)
 router.get('/:id/pdf', ctrl.pdf)
+router.patch('/:id', ctrl.update)
 router.patch('/:id/void', ctrl.voidReceipt)
 
 module.exports = router

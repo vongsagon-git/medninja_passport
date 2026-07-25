@@ -65,6 +65,9 @@
                 <button class="btn btn-mini btn-outline" @click="openPdf(r._id, r.receiptNo)">
                   เปิดใบเสร็จ
                 </button>
+                <button v-if="!r.voided" class="btn btn-mini btn-edit" @click="openEditModal(r)">
+                  แก้ไข
+                </button>
                 <button v-if="!r.voided" class="btn btn-mini btn-danger-outline"
                         @click="voidReceipt(r)">
                   ยกเลิก
@@ -87,11 +90,11 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════ MODAL: ออกใบเสร็จใหม่ ═══════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════ MODAL: ออก/แก้ไขใบเสร็จ ═══════════════════════════════════════ -->
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2>ออกใบเสร็จใหม่</h2>
+          <h2>{{ editMode ? `แก้ไขใบเสร็จ ${editingReceiptNo || ''}` : 'ออกใบเสร็จใหม่' }}</h2>
           <button class="btn-close" @click="closeModal">✕</button>
         </div>
 
@@ -122,7 +125,7 @@
             <!-- ข้อมูลลูกค้า -->
             <div class="section-head">
               <h3>ข้อมูลลูกค้า</h3>
-              <button class="btn btn-mini btn-outline" @click="resetUser">เปลี่ยนนักเรียน</button>
+              <button v-if="!editMode" class="btn btn-mini btn-outline" @click="resetUser">เปลี่ยนนักเรียน</button>
             </div>
 
             <div class="grid-2">
@@ -230,7 +233,7 @@
         <div v-if="form.userId" class="modal-foot">
           <button class="btn btn-outline" @click="closeModal">ยกเลิก</button>
           <button class="btn btn-primary" :disabled="!canSubmit || submitting" @click="submit">
-            {{ submitting ? 'กำลังออก...' : 'ออกใบเสร็จ + เปิดหน้าพิมพ์' }}
+            {{ submitting ? (editMode ? 'กำลังบันทึก...' : 'กำลังออก...') : (editMode ? 'บันทึกการแก้ไข + เปิดใบเสร็จ' : 'ออกใบเสร็จ + เปิดหน้าพิมพ์') }}
           </button>
         </div>
       </div>
@@ -319,6 +322,10 @@ const userResults = ref([])
 const searchLoading = ref(false)
 const activations = ref([])
 const submitting = ref(false)
+// ⭐ Edit mode
+const editMode = ref(false)
+const editingId = ref(null)
+const editingReceiptNo = ref('')
 
 const emptyForm = () => ({
   userId: null,
@@ -334,6 +341,9 @@ const emptyForm = () => ({
 const form = reactive(emptyForm())
 
 function openIssueModal() {
+  editMode.value = false
+  editingId.value = null
+  editingReceiptNo.value = ''
   // Reset ทีละ field เพื่อ preserve reactivity ของ nested customer object
   form.userId = null
   form.customer.name = ''
@@ -354,7 +364,39 @@ function openIssueModal() {
   activations.value = []
   showModal.value = true
 }
-function closeModal() { showModal.value = false }
+
+// ⭐ เปิด modal เพื่อแก้ไขใบเสร็จเดิม
+function openEditModal(r) {
+  editMode.value = true
+  editingId.value = r._id
+  editingReceiptNo.value = r.receiptNo
+  form.userId = r.userId  // มี userId → skip step 1 search
+  form.customer.name = r.customer?.name || ''
+  form.customer.nationalId = r.customer?.nationalId || ''
+  form.customer.email = r.customer?.email || ''
+  form.customer.phone = r.customer?.phone || ''
+  form.customer.address = r.customer?.address || ''
+  form.customer.subDistrict = r.customer?.subDistrict || ''
+  form.customer.district = r.customer?.district || ''
+  form.customer.province = r.customer?.province || ''
+  form.customer.postalCode = r.customer?.postalCode || ''
+  form.items = (r.items && r.items.length) ? r.items.map(it => ({
+    description: it.description || '',
+    amount: Number(it.amount) || 0
+  })) : [{ description: '', amount: 0 }]
+  form.paymentMethod = r.paymentMethod || 'เงินสด'
+  form.notes = r.notes || ''
+  form.saveAddressToUser = false  // ไม่ update user ตอนแก้ไข (default)
+  activations.value = []  // ไม่ต้องโหลด activation ตอน edit
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+  editMode.value = false
+  editingId.value = null
+  editingReceiptNo.value = ''
+}
 function resetUser() {
   form.userId = null
   activations.value = []
@@ -446,13 +488,18 @@ async function submit() {
       notes: form.notes,
       saveAddressToUser: form.saveAddressToUser
     }
-    const data = await api.post('/admin/receipts', payload)
+    let data
+    if (editMode.value && editingId.value) {
+      data = await api.patch(`/admin/receipts/${editingId.value}`, payload)
+    } else {
+      data = await api.post('/admin/receipts', payload)
+    }
     const id = data.receipt?._id
     if (id) await openPdf(id, data.receipt?.receiptNo)
     closeModal()
     await loadList()
   } catch (e) {
-    alert('ออกใบเสร็จไม่สำเร็จ: ' + (e?.response?.data?.message || e.message))
+    alert((editMode.value ? 'บันทึกไม่สำเร็จ: ' : 'ออกใบเสร็จไม่สำเร็จ: ') + (e?.response?.data?.message || e.message))
   } finally {
     submitting.value = false
   }
@@ -513,6 +560,8 @@ onMounted(loadList)
 .btn-outline:hover { background: #f1f5f9; }
 .btn-danger-outline { background: #fff; color: #b91c1c; border: 1px solid #fecaca; }
 .btn-danger-outline:hover { background: #fef2f2; }
+.btn-edit { background: #fff; color: #b45309; border: 1px solid #fde68a; }
+.btn-edit:hover { background: #fffbeb; }
 .btn-mini { padding: 6px 10px; font-size: 12px; }
 
 .table-card {
