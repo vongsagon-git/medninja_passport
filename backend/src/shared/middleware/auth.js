@@ -1,6 +1,35 @@
 const jwt = require('jsonwebtoken')
 const User = require('../../modules/user/User.model')
-const { validateSession } = require('../../modules/auth/session.service')
+const { validateSession, createSession, lookupTicket } = require('../../modules/auth/session.service')
+
+/**
+ * Auto-migrate: if user has valid JWT but no cookie 'sid', create session + set cookie.
+ * Users logged in BEFORE cookie deploy get cookie set on first authenticated API call.
+ */
+async function ensureCookie (req, res, userId) {
+  try {
+    const existing = req.cookies && req.cookies.sid
+    if (existing) {
+      const t = await lookupTicket(existing)
+      if (t && t.userId === String(userId)) return
+    }
+    const ua = req.headers['user-agent'] || ''
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip
+    const newSid = await createSession(String(userId), { ip, ua })
+    if (newSid) {
+      const days = parseInt(process.env.SESSION_TTL_DAYS || '7', 10)
+      const isProd = process.env.NODE_ENV === 'production'
+      res.cookie('sid', newSid, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        domain: isProd ? '.medninja.academy' : undefined,
+        path: '/',
+        maxAge: days * 86400 * 1000
+      })
+    }
+  } catch {}
+}
 
 const auth = async (req, res, next) => {
   try {
@@ -49,7 +78,8 @@ const auth = async (req, res, next) => {
     req.user = user
     req.sessionId = decoded.sid || null
 
-    // ─── Device Fingerprint — ปิดชั่วคราว ค่อยเปิดทีหลัง ───
+    // ⭐ Auto-migrate: ensure cookie exists for legacy JWT-only sessions
+    await ensureCookie(req, res, user._id)
 
     next()
   } catch (error) {

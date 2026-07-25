@@ -1,18 +1,14 @@
 /**
- * HTML Route Guard — "No permission = 404 stealth"
+ * HTML Route Guard — "path ไหนไม่มี/ไม่มีสิทธิ์ = 404 stealth"
  *
- * Blocks HTML shell leak by returning stealth 404 for protected paths
- * when the requester has no valid session (or wrong role).
+ * Explicit whitelist model:
+ *   - PUBLIC_EXACT / PUBLIC_PREFIXES  → anyone (no auth check)
+ *   - STUDENT_PREFIXES                 → require logged-in user (any role)
+ *   - ADMIN_PREFIXES                   → require role=admin
+ *   - Anything NOT in these lists      → 404 stealth (unknown path)
  *
- * Design:
- *   - Reads opaque session ticket from httpOnly cookie 'sid'
- *   - Looks up ticket in Valkey (fast: 1ms)
- *   - Fetches User + role from MongoDB (realtime — no stale role in cookie)
- *   - Returns 404 stealth (same body as random 404) if not authorized
- *   - Falls through to next() so SPA fallback serves index.html for legit users
- *
- * Public paths bypass guard (see PUBLIC_EXACT + PUBLIC_PREFIXES).
- * Everything else that MATCHES a protected pattern must have valid session.
+ * Auth check reads httpOnly cookie 'sid' → Valkey ticket → User.role
+ * Serves branded 404 page (with "กลับสู่หน้าแรก" button) for all denied cases.
  */
 const path = require('path')
 const fs = require('fs')
@@ -25,7 +21,7 @@ function getStealthPage () {
   try {
     stealthPage = fs.readFileSync(path.join(__dirname, '../../pages/404.html'), 'utf8')
   } catch {
-    stealthPage = '<!DOCTYPE html><html><head><title>Not Found</title></head><body><h1>404 Not Found</h1></body></html>'
+    stealthPage = '<!DOCTYPE html><html><head><title>Not Found</title></head><body><h1>404 Not Found</h1><a href="/">Home</a></body></html>'
   }
   return stealthPage
 }
@@ -68,11 +64,18 @@ const PUBLIC_PREFIXES = [
   '/handoff'
 ]
 
-// Student paths intentionally REMOVED from server-guard
-// Client-side Vue Router + /api auth is sufficient
-// Server-guard broke F5 for users without cookie yet (pre-deploy sessions)
 const STUDENT_PREFIXES = [
-  // intentionally empty
+  '/my',
+  '/my-cn',
+  '/live',
+  '/qa',
+  '/alumni',
+  '/complete-profile',
+  '/diag',
+  '/doctor',
+  '/doctor-cn',
+  '/watch-beta',
+  '/profile'
 ]
 
 const ADMIN_PREFIXES = [
@@ -96,6 +99,20 @@ function requiredRole (reqPath) {
   return null
 }
 
+async function getUserFromCookie (req) {
+  const sid = req.cookies && req.cookies.sid
+  if (!sid) return null
+  try {
+    const ticket = await lookupTicket(sid)
+    if (!ticket || !ticket.userId) return null
+    const user = await User.findById(ticket.userId).select('role isBanned').lean()
+    if (!user || user.isBanned) return null
+    return user
+  } catch {
+    return null
+  }
+}
+
 async function htmlGuard (req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next()
 
@@ -108,28 +125,17 @@ async function htmlGuard (req, res, next) {
   if (isPublicPath(req.path)) return next()
 
   const need = requiredRole(req.path)
-  if (!need) return next()
 
-  // ⚠️ Grace period: no cookie → let SPA handle
-  //    (users logged in BEFORE this deploy have no cookie yet — server can't 404 them)
-  //    404 only when we KNOW user is not authorized (has cookie but wrong role)
-  const sid = req.cookies && req.cookies.sid
-  if (!sid) return next()
+  // Unknown path → 404 stealth (no shell leak)
+  if (!need) return send404(res)
 
-  try {
-    const ticket = await lookupTicket(sid)
-    if (!ticket || !ticket.userId) return next()
+  // Protected path — must have valid session
+  const user = await getUserFromCookie(req)
+  if (!user) return send404(res)
 
-    const user = await User.findById(ticket.userId).select('role isBanned').lean()
-    if (!user) return next()
-    if (user.isBanned) return next()
+  if (need === 'admin' && user.role !== 'admin') return send404(res)
 
-    if (need === 'admin' && user.role !== 'admin') return send404(res)
-
-    return next()
-  } catch (err) {
-    return next()
-  }
+  return next()
 }
 
 module.exports = htmlGuard
