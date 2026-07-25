@@ -62,9 +62,9 @@
                 <span v-else class="badge ok">ใช้งาน</span>
               </td>
               <td class="actions">
-                <a class="btn btn-mini btn-outline" :href="pdfUrl(r._id)" target="_blank">
+                <button class="btn btn-mini btn-outline" @click="openPdf(r._id, r.receiptNo)">
                   ดาวน์โหลด PDF
-                </a>
+                </button>
                 <button v-if="!r.voided" class="btn btn-mini btn-danger-outline"
                         @click="voidReceipt(r)">
                   ยกเลิก
@@ -271,9 +271,36 @@ async function loadList() {
   }
 }
 
-function pdfUrl(id) {
-  const token = localStorage.getItem('token')
-  return `/api/admin/receipts/${id}/pdf?_token=${encodeURIComponent(token || '')}`
+// ⭐ Fetch PDF via axios (Authorization header) → blob → open in new tab
+//    หลบปัญหา query token shim ที่ backend อาจไม่ทำงาน
+async function openPdf(id, receiptNo) {
+  try {
+    const token = localStorage.getItem('token')
+    const resp = await fetch(`/api/admin/receipts/${id}/pdf`, {
+      headers: { Authorization: `Bearer ${token || ''}` }
+    })
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ message: 'HTTP ' + resp.status }))
+      throw new Error(err.message || 'ดาวน์โหลด PDF ไม่สำเร็จ')
+    }
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    // Open in new tab
+    const win = window.open(url, '_blank')
+    if (!win) {
+      // Popup blocked → download instead
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${receiptNo || 'receipt'}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+    // Cleanup blob URL after 60s
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (e) {
+    alert('ดาวน์โหลด PDF ไม่สำเร็จ: ' + (e.message || e))
+  }
 }
 
 async function voidReceipt(r) {
@@ -423,7 +450,7 @@ async function submit() {
     }
     const data = await api.post('/admin/receipts', payload)
     const id = data.receipt?._id
-    if (id) window.open(pdfUrl(id), '_blank')
+    if (id) await openPdf(id, data.receipt?.receiptNo)
     closeModal()
     await loadList()
   } catch (e) {
