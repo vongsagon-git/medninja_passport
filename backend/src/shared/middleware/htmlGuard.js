@@ -68,16 +68,11 @@ const PUBLIC_PREFIXES = [
   '/handoff'
 ]
 
+// Student paths intentionally REMOVED from server-guard
+// Client-side Vue Router + /api auth is sufficient
+// Server-guard broke F5 for users without cookie yet (pre-deploy sessions)
 const STUDENT_PREFIXES = [
-  '/my',
-  '/live',
-  '/qa',
-  '/alumni',
-  '/complete-profile',
-  '/diag',
-  '/doctor',
-  '/doctor-cn',
-  '/watch-beta'
+  // intentionally empty
 ]
 
 const ADMIN_PREFIXES = [
@@ -115,22 +110,25 @@ async function htmlGuard (req, res, next) {
   const need = requiredRole(req.path)
   if (!need) return next()
 
+  // ⚠️ Grace period: no cookie → let SPA handle
+  //    (users logged in BEFORE this deploy have no cookie yet — server can't 404 them)
+  //    404 only when we KNOW user is not authorized (has cookie but wrong role)
   const sid = req.cookies && req.cookies.sid
-  if (!sid) return send404(res)
+  if (!sid) return next()
 
   try {
     const ticket = await lookupTicket(sid)
-    if (!ticket || !ticket.userId) return send404(res)
+    if (!ticket || !ticket.userId) return next()
 
     const user = await User.findById(ticket.userId).select('role isBanned').lean()
-    if (!user) return send404(res)
-    if (user.isBanned) return send404(res)
+    if (!user) return next()
+    if (user.isBanned) return next()
 
     if (need === 'admin' && user.role !== 'admin') return send404(res)
 
     return next()
   } catch (err) {
-    return send404(res)
+    return next()
   }
 }
 
