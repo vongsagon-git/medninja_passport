@@ -314,6 +314,7 @@ app.use('/api/admin/flashcard', (req, res) => res.redirect(301, 'https://ddx.med
 app.use('/api/admin/arena', (req, res) => res.redirect(301, 'https://ddx.medninja.academy/api/admin/arena' + req.url))
 app.use('/api/admin/db', require('./modules/admin/dbviewer.routes'))
 app.use('/api/admin/circuit', require('./modules/admin/circuit.routes'))
+app.use('/api/admin/progress', require('./modules/progress/progress.admin.routes'))
 
 // Health check — เช็คทั้ง passport + lms connections
 app.get('/api/health', async (req, res) => {

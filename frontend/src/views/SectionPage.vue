@@ -58,7 +58,11 @@
                 <span class="topic-name">{{ topic.name }}</span>
                 <span class="topic-meta">{{ topic.totalCount }} บทเรียน<span v-if="topic.totalDuration"> &bull; {{ formatTotalDuration(topic.totalDuration) }}</span></span>
               </div>
-              <div class="topic-progress-badge" v-if="!isDemo">{{ topic.watchedCount }}/{{ topic.totalCount }}</div>
+              <div v-if="!isDemo && topic.totalCount > 0 && topic.watchedCount >= topic.totalCount" class="topic-complete-badge" title="ดูจบ Topic นี้แล้ว">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                <span>จบ Topic</span>
+              </div>
+              <div v-else-if="!isDemo" class="topic-progress-badge">{{ topic.watchedCount }}/{{ topic.totalCount }}</div>
               <button
                 v-if="!isDemo && topicSelfCheck(topic)"
                 class="self-check-btn"
@@ -248,7 +252,11 @@
                     <span class="subtopic-name">{{ sub.name }}</span>
                     <span class="subtopic-meta">{{ sub.totalCount }} บทเรียน<span v-if="sub.totalDuration"> &bull; {{ formatTotalDuration(sub.totalDuration) }}</span></span>
                   </div>
-                  <div class="subtopic-progress-badge" v-if="!isDemo">{{ sub.watchedCount }}/{{ sub.totalCount }}</div>
+                  <div v-if="!isDemo && sub.totalCount > 0 && sub.watchedCount >= sub.totalCount" class="topic-complete-badge sub" title="ดูจบ Subtopic นี้แล้ว">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="11" height="11"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
+                    <span>จบ</span>
+                  </div>
+                  <div v-else-if="!isDemo" class="subtopic-progress-badge">{{ sub.watchedCount }}/{{ sub.totalCount }}</div>
                   <button
                     v-if="!isDemo && subtopicSelfCheck(sub)"
                     class="self-check-btn subtopic-sc"
@@ -1061,6 +1069,21 @@ export default {
   border: 1.5px solid rgba(255,255,255,.25);
   padding: 4px 10px; border-radius: 4px;
   white-space: nowrap; flex-shrink: 0;
+}
+.topic-complete-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 800; color: #fff;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: 1.5px solid rgba(255,255,255,.35);
+  padding: 4px 10px; border-radius: 999px;
+  white-space: nowrap; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37,99,235,.35);
+}
+.topic-complete-badge svg { display: block; }
+.topic-complete-badge.sub {
+  font-size: 10px; padding: 3px 8px;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  box-shadow: 0 1px 4px rgba(59,130,246,.3);
 }
 
 /* ═══ Subtopic Header ═══ */
