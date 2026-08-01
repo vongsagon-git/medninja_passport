@@ -86,7 +86,10 @@ const ADMIN_PREFIXES = [
 ]
 
 function matchesPrefix (reqPath, prefixes) {
-  return prefixes.some(p => reqPath === p || reqPath.startsWith(p + '/'))
+  return prefixes.some(p => {
+    const base = p.endsWith('/') ? p.slice(0, -1) : p
+    return reqPath === base || reqPath.startsWith(base + '/')
+  })
 }
 
 function isPublicPath (reqPath) {
