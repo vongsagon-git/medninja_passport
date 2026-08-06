@@ -22,6 +22,16 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async login(credentials) {
       const data = await authService.login(credentials)
+      // 🔐 Admin TOTP gate — 202 { totpRequired, pendingLoginId } → ยังไม่ set auth
+      if (data?.totpRequired && data?.pendingLoginId) {
+        return { totpRequired: true, pendingLoginId: data.pendingLoginId }
+      }
+      this._setAuth(data)
+      return data
+    },
+
+    async verifyTotpLogin(pendingLoginId, code) {
+      const data = await authService.verifyTotpLogin(pendingLoginId, code)
       this._setAuth(data)
       return data
     },

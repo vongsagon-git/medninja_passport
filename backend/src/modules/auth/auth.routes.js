@@ -3,7 +3,8 @@ const router = express.Router()
 const rateLimit = require('express-rate-limit')
 const {
   register, login, getMe, changePassword, logout,
-  googleLogin, verifyEmail, resendVerify, resendVerifyPublic
+  googleLogin, verifyEmail, resendVerify, resendVerifyPublic,
+  verifyTotpLogin
 } = require('./auth.controller')
 const { lineLink, lineUnlink } = require('./line.controller')
 const auth = require('../../shared/middleware/auth')
@@ -20,6 +21,8 @@ const authLimiter = rateLimit({
 router.post('/register', authLimiter, register)
 router.post('/login', authLimiter, login)
 router.post('/google', authLimiter, googleLogin)
+// 🔐 Admin TOTP verify — ต้องผ่านเพื่อออก JWT (2026-08-06 anti-hack)
+router.post('/verify-totp-login', authLimiter, verifyTotpLogin)
 router.get('/verify-email', verifyEmail)
 router.post('/resend-verify', auth, resendVerify)
 router.post('/resend-verify-public', authLimiter, resendVerifyPublic)

@@ -3,6 +3,7 @@ const User = require('../user/User.model')
 const { createSession, removeSession } = require('./session.service')
 const { generateVerifyToken, sendVerificationEmail } = require('./email.service')
 const { logActivity, getIp, parseUA } = require('../activity/activity.service')
+const totpService = require('./totp.service')
 
 function generateToken(id, sessionId) {
   const payload = { id }
@@ -157,6 +158,21 @@ exports.login = async (req, res, next) => {
       })
     }
 
+    // ═══ 🔐 ADMIN TOTP GATE (2026-08-06 anti-hack) ═══
+    // ⚠ กฎเหล็ก: admin/staff — password ถูก "ไม่พอ" ต้อง TOTP ผ่านก่อน issue JWT
+    if ((user.role === 'admin' || user.role === 'staff') && totpService.isTotpEnabled()) {
+      const pendingLoginId = totpService.createPendingLogin(user._id, {
+        ip: getIp(req),
+        ua: req.headers['user-agent'] || ''
+      })
+      console.log(`[TOTP gate] admin login pending: ${user.email} (${user.role}) → pendingId=${pendingLoginId.slice(0, 8)}...`)
+      return res.status(202).json({
+        totpRequired: true,
+        pendingLoginId,
+        message: 'กรุณากรอกรหัส TOTP 6 หลัก'
+      })
+    }
+
     // สร้าง session ใน Valkey (+ reverse ticket lookup สำหรับ HTML Guard)
     const sessionId = await createSession(user._id.toString(), { ip: getIp(req), ua: req.headers['user-agent'] || '' })
     const token = generateToken(user._id, sessionId)
@@ -166,6 +182,55 @@ exports.login = async (req, res, next) => {
     logActivity({ userId: user._id, userName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.name, userEmail: user.email, action: 'login', detail: isNidLogin ? 'login ด้วยเลขบัตร' : 'login ด้วย email', ip: getIp(req), ...ua, userAgent: req.headers['user-agent'] || '' })
 
     res.json({ token, user: userResponse(user) })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * POST /api/auth/verify-totp-login — admin TOTP verify (2026-08-06 anti-hack)
+ */
+exports.verifyTotpLogin = async (req, res, next) => {
+  try {
+    const { pendingLoginId, code } = req.body || {}
+    if (!pendingLoginId || !code) {
+      return res.status(400).json({ message: 'ต้องส่ง pendingLoginId + code' })
+    }
+
+    const result = totpService.checkTotpForLogin(String(code).trim())
+    if (!result.ok) {
+      const status = result.blocked ? 429 : (result.halfUnlock ? 202 : 401)
+      console.log(`[TOTP verify] fail pending=${pendingLoginId.slice(0, 8)}... status=${status} err="${result.error}"`)
+      return res.status(status).json({ error: result.error, halfUnlock: result.halfUnlock, blocked: result.blocked, waitSeconds: result.waitSeconds, remainingAttempts: result.remainingAttempts })
+    }
+
+    const pending = totpService.consumePendingLogin(pendingLoginId)
+    if (!pending) {
+      return res.status(410).json({ message: 'session หมดอายุ กรุณา login ใหม่' })
+    }
+
+    const user = await User.findById(pending.userId)
+    if (!user) return res.status(404).json({ message: 'ไม่พบ user' })
+    if (user.isBanned) return res.status(403).json({ message: 'บัญชีถูกระงับ', code: 'BANNED' })
+
+    const sessionId = await createSession(user._id.toString(), { ip: getIp(req), ua: req.headers['user-agent'] || '' })
+    const token = generateToken(user._id, sessionId)
+    setSessionCookie(res, sessionId)
+
+    const ua = parseUA(req.headers['user-agent'])
+    logActivity({
+      userId: user._id,
+      userName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.name,
+      userEmail: user.email,
+      action: 'login_totp',
+      detail: `admin login + TOTP verified (who=${result.who || '-'}${result.bypassed ? ', bypass-unlock' : ''})`,
+      ip: getIp(req),
+      ...ua,
+      userAgent: req.headers['user-agent'] || ''
+    })
+
+    console.log(`[TOTP verify] success ${user.email} (${user.role}) who=${result.who || '-'}`)
+    res.json({ token, user: userResponse(user), who: result.who, bypassed: !!result.bypassed })
   } catch (error) {
     next(error)
   }
@@ -216,6 +281,20 @@ exports.googleLogin = async (req, res, next) => {
         googleId,
         authProvider: 'google',
         emailVerified: true // Google ยืนยันให้แล้ว
+      })
+    }
+
+    // ═══ 🔐 ADMIN TOTP GATE — Google OAuth ก็ต้องผ่าน TOTP ถ้าเป็น admin ═══
+    if ((user.role === 'admin' || user.role === 'staff') && totpService.isTotpEnabled()) {
+      const pendingLoginId = totpService.createPendingLogin(user._id, {
+        ip: getIp(req),
+        ua: req.headers['user-agent'] || ''
+      })
+      console.log(`[TOTP gate] admin google login pending: ${user.email}`)
+      return res.status(202).json({
+        totpRequired: true,
+        pendingLoginId,
+        message: 'กรุณากรอกรหัส TOTP 6 หลัก'
       })
     }
 

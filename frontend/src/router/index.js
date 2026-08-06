@@ -11,6 +11,7 @@ const CompleteProfilePage = () => import('../views/CompleteProfilePage.vue')
 const AwaitingApprovalPage = () => import('../views/AwaitingApprovalPage.vue')
 const RejectedPage = () => import('../views/RejectedPage.vue')
 const ApproveRegistration = () => import('../views/admin/ApproveRegistration.vue')
+const AdminTotpVerifyPage = () => import('../views/AdminTotpVerifyPage.vue')
 const LineLink = () => import('../views/LineLink.vue')
 const ReplyStudent = () => import('../views/ReplyStudent.vue')
 
@@ -90,6 +91,12 @@ const routes = [
     name: 'AwaitingApproval',
     component: AwaitingApprovalPage,
     meta: { requiresAuth: true, immersive: true }
+  },
+  {
+    path: '/admin-totp',
+    name: 'AdminTotpVerify',
+    component: AdminTotpVerifyPage,
+    meta: { immersive: true }
   },
   {
     path: '/rejected',

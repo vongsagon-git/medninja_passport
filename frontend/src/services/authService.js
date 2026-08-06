@@ -27,5 +27,10 @@ export default {
 
   resendVerify() {
     return api.post('/auth/resend-verify')
+  },
+
+  // 🔐 Admin TOTP verify
+  verifyTotpLogin(pendingLoginId, code) {
+    return api.post('/auth/verify-totp-login', { pendingLoginId, code })
   }
 }

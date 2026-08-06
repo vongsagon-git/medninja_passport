@@ -202,10 +202,15 @@ export default {
       this.resendMsg = ''
       try {
         const cleanNid = this.form.nationalId.replace(/\D/g, '')
-        await this.authStore.login({
+        const loginResult = await this.authStore.login({
           nationalId: cleanNid,
           password: this.form.password
         })
+        // 🔐 admin TOTP gate — ไปหน้า TOTP verify
+        if (loginResult?.totpRequired) {
+          this.router.push({ name: 'AdminTotpVerify', query: { pending: loginResult.pendingLoginId } })
+          return
+        }
 
         // ⭐ Detect country จาก backend (ไม่ใช้ localStorage)
         let userCountry = 'TH'
