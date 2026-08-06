@@ -153,10 +153,10 @@
                   </td>
                   <td style="font-size: 12px; color: var(--gray);">{{ formatDate(reg.createdAt) }}</td>
                   <td @click.stop>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                      <button class="btn-action btn-approve" @click="doApprove(reg)" title="อนุมัติ → ได้ VISA ทดลอง 30 วัน"><span>✅ Approve</span></button>
-                      <button class="btn-action btn-edit" title="ดูรายละเอียด (รูปบัตร + ข้อมูล)" @click="viewDetail(reg._id)"><span>👁 ดู</span></button>
-                    </div>
+                    <ActionMenu :reg="reg" context="pending"
+                      @approve="doApprove" @view-detail="viewDetail"
+                      @kick="doKick" @lock="doLock" @unlock="doUnlock"
+                      @ban="doBan" @unban="doUnban" />
                   </td>
                 </tr>
               </tbody>
@@ -227,18 +227,11 @@
                   </td>
                   <td><span class="badge badge-admin">Admin</span></td>
                   <td @click.stop>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                      <button class="btn-action btn-edit" title="แก้ไข" @click="viewDetail(reg._id, true)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span>แก้ไข</span>
-                      </button>
-                      <button v-if="reg.status === 'pending_approval'" class="btn-action btn-approve" @click="doApprove(reg)"><span>✅ Approve</span></button>
-                      <button class="btn-action btn-kick" @click="doKick(reg)" title="Kick session (login ใหม่ได้)"><span>🥾 Kick</span></button>
-                      <button v-if="!reg.isLocked" class="btn-action btn-lock" @click="doLock(reg)"><span>🔒 Lock</span></button>
-                      <button v-else class="btn-action btn-unlock" @click="doUnlock(reg)"><span>🔓 Unlock</span></button>
-                      <button v-if="!reg.isBanned" class="btn-action btn-ban" @click="doBan(reg)"><span>⛔ Ban</span></button>
-                      <button v-else class="btn-action btn-unban" @click="doUnban(reg)"><span>✓ Unban</span></button>
-                    </div>
+                    <ActionMenu :reg="reg"
+                      @view-detail="(id) => viewDetail(id)" @edit="(id) => viewDetail(id, true)"
+                      @approve="doApprove" @change-status="changeStatus"
+                      @kick="doKick" @lock="doLock" @unlock="doUnlock"
+                      @ban="doBan" @unban="doUnban" />
                   </td>
                 </tr>
               </tbody>
@@ -309,18 +302,11 @@
                   </td>
                   <td><span class="badge" style="background:#7c3aed;color:#fff">Staff</span></td>
                   <td @click.stop>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                      <button class="btn-action btn-edit" title="แก้ไข" @click="viewDetail(reg._id, true)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span>แก้ไข</span>
-                      </button>
-                      <button v-if="reg.status === 'pending_approval'" class="btn-action btn-approve" @click="doApprove(reg)"><span>✅ Approve</span></button>
-                      <button class="btn-action btn-kick" @click="doKick(reg)" title="Kick session (login ใหม่ได้)"><span>🥾 Kick</span></button>
-                      <button v-if="!reg.isLocked" class="btn-action btn-lock" @click="doLock(reg)"><span>🔒 Lock</span></button>
-                      <button v-else class="btn-action btn-unlock" @click="doUnlock(reg)"><span>🔓 Unlock</span></button>
-                      <button v-if="!reg.isBanned" class="btn-action btn-ban" @click="doBan(reg)"><span>⛔ Ban</span></button>
-                      <button v-else class="btn-action btn-unban" @click="doUnban(reg)"><span>✓ Unban</span></button>
-                    </div>
+                    <ActionMenu :reg="reg"
+                      @view-detail="(id) => viewDetail(id)" @edit="(id) => viewDetail(id, true)"
+                      @approve="doApprove" @change-status="changeStatus"
+                      @kick="doKick" @lock="doLock" @unlock="doUnlock"
+                      @ban="doBan" @unban="doUnban" />
                   </td>
                 </tr>
               </tbody>
@@ -401,36 +387,11 @@
                   </td>
                   <td style="font-size: 13px; color: var(--gray);">{{ formatDate(reg.createdAt) }}</td>
                   <td @click.stop>
-                    <div style="display: flex; gap: 6px;">
-                      <button class="btn-action btn-edit" title="แก้ไข" @click="viewDetail(reg._id, true)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span>แก้ไข</span>
-                      </button>
-                      <button v-if="reg.status === 'pending'" class="btn-action btn-review" title="ตรวจแล้ว" @click="changeStatus(reg._id, 'reviewed')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                        <span>ตรวจแล้ว</span>
-                      </button>
-                      <button v-else class="btn-action btn-unreview" title="ย้อน" @click="changeStatus(reg._id, 'pending')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
-                        <span>ย้อน</span>
-                      </button>
-                      <button v-if="!reg.isLocked" class="btn-action btn-lock" title="ระงับชั่วคราว (kick + block login)" @click="doLock(reg)">
-                        <span>🔒 Lock</span>
-                      </button>
-                      <button v-else class="btn-action btn-unlock" title="ปลดล็อค" @click="doUnlock(reg)">
-                        <span>🔓 Unlock</span>
-                      </button>
-                      <button v-if="!reg.isBanned" class="btn-action btn-ban" title="แบนถาวร" @click="doBan(reg)">
-                        <span>⛔ Ban</span>
-                      </button>
-                      <button v-else class="btn-action btn-unban" title="ปลดแบน" @click="doUnban(reg)">
-                        <span>✓ Unban</span>
-                      </button>
-                      <button class="btn-action btn-delete" title="ลบ" @click="openDeleteModal(reg)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-                        <span>ลบ</span>
-                      </button>
-                    </div>
+                    <ActionMenu :reg="reg"
+                      @view-detail="(id) => viewDetail(id)" @edit="(id) => viewDetail(id, true)"
+                      @approve="doApprove" @change-status="changeStatus"
+                      @kick="doKick" @lock="doLock" @unlock="doUnlock"
+                      @ban="doBan" @unban="doUnban" @delete="openDeleteModal" />
                   </td>
                 </tr>
               </tbody>
@@ -516,36 +477,11 @@
                   </td>
                   <td style="font-size: 13px; color: var(--gray);">{{ formatDate(reg.createdAt) }}</td>
                   <td @click.stop>
-                    <div style="display: flex; gap: 6px;">
-                      <button class="btn-action btn-edit" title="แก้ไข" @click="viewDetail(reg._id, true)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span>แก้ไข</span>
-                      </button>
-                      <button v-if="reg.status === 'pending'" class="btn-action btn-review" title="ตรวจแล้ว" @click="changeStatus(reg._id, 'reviewed')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                        <span>ตรวจแล้ว</span>
-                      </button>
-                      <button v-else class="btn-action btn-unreview" title="ย้อน" @click="changeStatus(reg._id, 'pending')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
-                        <span>ย้อน</span>
-                      </button>
-                      <button v-if="!reg.isLocked" class="btn-action btn-lock" title="ระงับชั่วคราว (kick + block login)" @click="doLock(reg)">
-                        <span>🔒 Lock</span>
-                      </button>
-                      <button v-else class="btn-action btn-unlock" title="ปลดล็อค" @click="doUnlock(reg)">
-                        <span>🔓 Unlock</span>
-                      </button>
-                      <button v-if="!reg.isBanned" class="btn-action btn-ban" title="แบนถาวร" @click="doBan(reg)">
-                        <span>⛔ Ban</span>
-                      </button>
-                      <button v-else class="btn-action btn-unban" title="ปลดแบน" @click="doUnban(reg)">
-                        <span>✓ Unban</span>
-                      </button>
-                      <button class="btn-action btn-delete" title="ลบ" @click="openDeleteModal(reg)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-                        <span>ลบ</span>
-                      </button>
-                    </div>
+                    <ActionMenu :reg="reg"
+                      @view-detail="(id) => viewDetail(id)" @edit="(id) => viewDetail(id, true)"
+                      @approve="doApprove" @change-status="changeStatus"
+                      @kick="doKick" @lock="doLock" @unlock="doUnlock"
+                      @ban="doBan" @unban="doUnban" @delete="openDeleteModal" />
                   </td>
                 </tr>
               </tbody>
@@ -916,8 +852,49 @@
 <script>
 import api from '../../services/api'
 
+// Reusable Action Menu component — ปุ่ม ⋮ เปิด dropdown
+const ActionMenu = {
+  name: 'ActionMenu',
+  props: {
+    reg: { type: Object, required: true },
+    context: { type: String, default: 'default' } // 'pending' | 'default'
+  },
+  emits: ['approve', 'view-detail', 'edit', 'lock', 'unlock', 'ban', 'unban', 'kick', 'delete', 'change-status'],
+  data() { return { open: false } },
+  mounted() {
+    this._outsideClick = (e) => {
+      if (this.open && !this.$el.contains(e.target)) this.open = false
+    }
+    document.addEventListener('click', this._outsideClick)
+  },
+  beforeUnmount() { document.removeEventListener('click', this._outsideClick) },
+  template: `
+    <div class="action-menu-wrap" @click.stop>
+      <button class="action-menu-btn" @click="open = !open" aria-label="เมนู">⋮</button>
+      <div v-if="open" class="action-menu-panel" @click="open = false">
+        <button v-if="context === 'pending'" class="action-item green" @click="$emit('approve', reg)">
+          ✅ อนุมัติ (Approve)
+        </button>
+        <button class="action-item" @click="$emit('view-detail', reg._id)">👁 ดูรายละเอียด</button>
+        <button v-if="context !== 'pending'" class="action-item" @click="$emit('edit', reg._id)">✎ แก้ไข</button>
+        <button v-if="context !== 'pending' && reg.status === 'pending'" class="action-item" @click="$emit('change-status', reg._id, 'reviewed')">✓ ตรวจแล้ว</button>
+        <button v-else-if="context !== 'pending' && reg.status === 'reviewed'" class="action-item" @click="$emit('change-status', reg._id, 'pending')">↺ ย้อนสถานะ</button>
+        <div class="action-sep"></div>
+        <button class="action-item purple" @click="$emit('kick', reg)">🥾 Kick session</button>
+        <button v-if="!reg.isLocked" class="action-item amber" @click="$emit('lock', reg)">🔒 Lock (ระงับ)</button>
+        <button v-else class="action-item green" @click="$emit('unlock', reg)">🔓 Unlock</button>
+        <button v-if="!reg.isBanned" class="action-item red" @click="$emit('ban', reg)">⛔ Ban ถาวร</button>
+        <button v-else class="action-item green" @click="$emit('unban', reg)">✓ Unban</button>
+        <div v-if="context !== 'pending'" class="action-sep"></div>
+        <button v-if="context !== 'pending'" class="action-item red" @click="$emit('delete', reg)">🗑 ลบ</button>
+      </div>
+    </div>
+  `
+}
+
 export default {
   name: 'ManagePassport',
+  components: { ActionMenu },
   data() {
     return {
       universities: [
@@ -1667,6 +1644,50 @@ export default {
 .btn-ban:hover { background: #991b1b; border-color: #991b1b; }
 .btn-unban { color: #16a34a; border-color: #16a34a; font-weight: 700; }
 .btn-unban:hover { background: #dcfce7; }
+
+/* ═══ ActionMenu (⋮ dropdown) — mobile-friendly ═══ */
+.action-menu-wrap { position: relative; display: inline-block; }
+.action-menu-btn {
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid #cbd5e1; background: #fff; color: #475569;
+  font-size: 20px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.action-menu-btn:hover { background: #f1f5f9; border-color: #94a3b8; color: #1e293b; }
+.action-menu-btn:active { transform: scale(0.95); }
+.action-menu-panel {
+  position: absolute; top: 100%; right: 0; margin-top: 4px;
+  background: #fff; border-radius: 10px; z-index: 100;
+  box-shadow: 0 8px 32px rgba(15,23,42,0.15);
+  border: 1px solid #e2e8f0;
+  min-width: 200px; overflow: hidden;
+  padding: 4px 0;
+}
+.action-item {
+  display: block; width: 100%;
+  padding: 10px 14px; background: transparent; border: 0;
+  text-align: left; font-size: 14px; color: #1e293b;
+  cursor: pointer; transition: background 0.1s;
+  white-space: nowrap;
+}
+.action-item:hover { background: #f1f5f9; }
+.action-item.green { color: #16a34a; font-weight: 600; }
+.action-item.green:hover { background: #dcfce7; }
+.action-item.amber { color: #d97706; }
+.action-item.amber:hover { background: #fef3c7; }
+.action-item.red { color: #dc2626; }
+.action-item.red:hover { background: #fee2e2; }
+.action-item.purple { color: #7c3aed; }
+.action-item.purple:hover { background: #ede9fe; }
+.action-sep { height: 1px; background: #e2e8f0; margin: 4px 0; }
+
+/* Mobile: card layout — hide table แสดง card แทน */
+@media (max-width: 768px) {
+  .action-menu-panel { min-width: 180px; }
+  .table th, .table td { padding: 8px 6px; font-size: 12px; }
+  .action-menu-btn { width: 32px; height: 32px; }
+}
 
 /* Delete confirm modal */
 .delete-warning {
