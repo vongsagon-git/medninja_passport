@@ -103,6 +103,67 @@
         <button class="btn btn-outline" style="margin-top:12px;" @click="fetchRegistrations">ลองใหม่</button>
       </div>
       <template v-else>
+        <!-- ⏳ รออนุมัติ Section (โผล่บนสุด — admin ต้องตัดสินก่อน) -->
+        <div v-if="groupPendingApproval.length" class="group-section">
+          <div class="group-header" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff">
+            <span class="group-icon">⏳</span>
+            <span class="group-title">รออนุมัติ</span>
+            <span class="group-count">{{ groupPendingApproval.length }} คน</span>
+          </div>
+          <div class="card" style="overflow-x: auto;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ชื่อ-นามสกุล</th>
+                  <th>เลขบัตร</th>
+                  <th>เพศ</th>
+                  <th>มหาวิทยาลัย</th>
+                  <th>LINE</th>
+                  <th>สถานะ ศรว.</th>
+                  <th>เวลาสมัคร</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(reg, idx) in groupPendingApproval" :key="reg._id" class="row-clickable" :class="cmaRowClass(reg)" @click="viewDetail(reg._id)">
+                  <td style="color: var(--gray); font-size: 13px;">{{ idx + 1 }}</td>
+                  <td>
+                    <div style="font-weight: 600; color: var(--dark);">{{ reg.firstName }} {{ reg.lastName }}</div>
+                    <div style="font-size: 12px; color: var(--gray);">{{ reg.firstNameEn }} {{ reg.lastNameEn }}</div>
+                  </td>
+                  <td style="font-family: monospace; font-size: 13px;">{{ formatNid(reg.nationalId) }}</td>
+                  <td @click.stop>
+                    <span v-if="reg.sex === 'M'">♂ ชาย</span>
+                    <span v-else-if="reg.sex === 'F'">♀ หญิง</span>
+                    <span v-else style="color: var(--gray)">-</span>
+                  </td>
+                  <td style="font-size: 13px; color: var(--gray);">{{ reg.university || '-' }}</td>
+                  <td @click.stop>
+                    <div v-if="reg.lineDisplayName" style="display:flex;align-items:center;gap:6px;">
+                      <img v-if="reg.linePictureUrl" :src="reg.linePictureUrl" style="width:24px;height:24px;border-radius:50%;">
+                      <span style="font-size: 12px;">{{ reg.lineDisplayName }}</span>
+                    </div>
+                    <span v-else style="font-size:11px;color:#cbd5e1;">ยังไม่เชื่อม</span>
+                  </td>
+                  <td>
+                    <span v-if="reg.cmaPassedAll" class="badge" style="background:#fee2e2;color:#991b1b;">🎓 สอบครบ</span>
+                    <span v-else-if="reg.cmaRegistered" class="badge" style="background:#dcfce7;color:#166534;">✓ สมัคร ศรว.</span>
+                    <span v-else class="badge" style="background:#fef3c7;color:#78350f;">❌ ไม่พบ</span>
+                  </td>
+                  <td style="font-size: 12px; color: var(--gray);">{{ formatDate(reg.createdAt) }}</td>
+                  <td @click.stop>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                      <button class="btn-action btn-approve" @click="doApprove(reg)" title="อนุมัติ → ได้ VISA ทดลอง 30 วัน"><span>✅ Approve</span></button>
+                      <button class="btn-action btn-edit" title="ดูรายละเอียด (รูปบัตร + ข้อมูล)" @click="viewDetail(reg._id)"><span>👁 ดู</span></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Admin Section -->
         <div v-if="groupAdmin.length" class="group-section">
           <div class="group-header group-header-purple">
@@ -492,7 +553,7 @@
           </div>
         </div>
 
-        <div v-if="!groupAdmin.length && !groupStaff.length && !groupEnrolled.length && !groupNoCourse.length" class="card" style="text-align: center; color: var(--gray); padding: 32px;">
+        <div v-if="!groupPendingApproval.length && !groupAdmin.length && !groupStaff.length && !groupEnrolled.length && !groupNoCourse.length" class="card" style="text-align: center; color: var(--gray); padding: 32px;">
           {{ search || statusFilter ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีผู้ลงทะเบียน' }}
         </div>
       </template>
@@ -950,12 +1011,25 @@ export default {
     groupStaff() {
       return this.filteredRegistrations.filter(r => r.role === 'staff')
     },
+    // ⏳ รอ approve — โผล่บนสุด (admin ต้องตัดสินก่อน)
+    groupPendingApproval() {
+      const list = this.filteredRegistrations.filter(r => r.role !== 'admin' && r.role !== 'staff' && r.status === 'pending_approval')
+      return this.sortByCmaAndAge(list)
+    },
     groupEnrolled() {
-      const list = this.filteredRegistrations.filter(r => r.role !== 'admin' && r.role !== 'staff' && r.activations && r.activations.length > 0)
+      const list = this.filteredRegistrations.filter(r =>
+        r.role !== 'admin' && r.role !== 'staff' &&
+        r.status !== 'pending_approval' &&
+        r.activations && r.activations.length > 0
+      )
       return this.sortByCmaAndAge(list)
     },
     groupNoCourse() {
-      const list = this.filteredRegistrations.filter(r => r.role !== 'admin' && r.role !== 'staff' && (!r.activations || r.activations.length === 0))
+      const list = this.filteredRegistrations.filter(r =>
+        r.role !== 'admin' && r.role !== 'staff' &&
+        r.status !== 'pending_approval' &&
+        (!r.activations || r.activations.length === 0)
+      )
       return this.sortByCmaAndAge(list)
     },
     unfollowCount() {
