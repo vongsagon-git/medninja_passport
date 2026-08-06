@@ -104,13 +104,18 @@
       </div>
       <template v-else>
         <!-- ⏳ รออนุมัติ Section (โผล่บนสุด — admin ต้องตัดสินก่อน) -->
-        <div v-if="groupPendingApproval.length" class="group-section">
+        <div class="group-section">
           <div class="group-header" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff">
             <span class="group-icon">⏳</span>
             <span class="group-title">รออนุมัติ</span>
             <span class="group-count">{{ groupPendingApproval.length }} คน</span>
           </div>
-          <div class="card" style="overflow-x: auto;">
+          <div v-if="!groupPendingApproval.length" class="card" style="text-align:center;padding:24px;color:#94a3b8;">
+            <div style="font-size:32px;margin-bottom:8px;">📭</div>
+            <div style="font-size:14px;">ยังไม่มีคนรอ approve</div>
+            <div style="font-size:12px;margin-top:4px;">เมื่อมีคนสมัคร Passport ใหม่ จะโผล่ที่นี่ให้ admin กด Approve</div>
+          </div>
+          <div v-else class="card" style="overflow-x: auto;">
             <table class="table">
               <thead>
                 <tr>
@@ -155,6 +160,7 @@
                   <td @click.stop>
                     <ActionMenu :reg="reg" context="pending"
                       @approve="doApprove" @view-detail="viewDetail"
+                      @bypass-email="doBypassEmail" @resend-verify="doResendVerify"
                       @kick="doKick" @lock="doLock" @unlock="doUnlock"
                       @ban="doBan" @unban="doUnban" />
                   </td>
@@ -390,6 +396,7 @@
                     <ActionMenu :reg="reg"
                       @view-detail="(id) => viewDetail(id)" @edit="(id) => viewDetail(id, true)"
                       @approve="doApprove" @change-status="changeStatus"
+                      @bypass-email="doBypassEmail" @resend-verify="doResendVerify"
                       @kick="doKick" @lock="doLock" @unlock="doUnlock"
                       @ban="doBan" @unban="doUnban" @delete="openDeleteModal" />
                   </td>
@@ -480,6 +487,7 @@
                     <ActionMenu :reg="reg"
                       @view-detail="(id) => viewDetail(id)" @edit="(id) => viewDetail(id, true)"
                       @approve="doApprove" @change-status="changeStatus"
+                      @bypass-email="doBypassEmail" @resend-verify="doResendVerify"
                       @kick="doKick" @lock="doLock" @unlock="doUnlock"
                       @ban="doBan" @unban="doUnban" @delete="openDeleteModal" />
                   </td>
@@ -861,7 +869,7 @@ const ActionMenu = {
     reg: { type: Object, required: true },
     context: { type: String, default: 'default' }
   },
-  emits: ['approve', 'view-detail', 'edit', 'lock', 'unlock', 'ban', 'unban', 'kick', 'delete', 'change-status'],
+  emits: ['approve', 'view-detail', 'edit', 'lock', 'unlock', 'ban', 'unban', 'kick', 'delete', 'change-status', 'bypass-email', 'resend-verify'],
   data() { return { open: false } },
   mounted() {
     this._outsideClick = (e) => {
@@ -890,6 +898,9 @@ const ActionMenu = {
         items.push(this._item('↺ ย้อนสถานะ', '', () => this.$emit('change-status', reg._id, 'pending')))
       }
     }
+    items.push(h('div', { class: 'action-sep' }))
+    items.push(this._item('✉️ Bypass Email Verify', '', () => this.$emit('bypass-email', reg)))
+    items.push(this._item('📧 ส่งอีเมลยืนยันอีกครั้ง', '', () => this.$emit('resend-verify', reg)))
     items.push(h('div', { class: 'action-sep' }))
     items.push(this._item('🥾 Kick session', 'purple', () => this.$emit('kick', reg)))
     items.push(reg.isLocked
@@ -1133,6 +1144,29 @@ export default {
         alert('✅ ' + data.message)
       } catch (err) {
         alert('❌ ' + (err.response?.data?.message || 'Approve ไม่สำเร็จ'))
+      }
+    },
+
+    // ═══ ✉️ Bypass Email Verify (admin verify email ให้) ═══
+    async doBypassEmail(reg) {
+      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+      if (!confirm(`✉️ Bypass email verify ให้ "${name}"?\n\nระบบจะ mark emailVerified = true ทันที (ไม่ต้องรออีเมล)`)) return
+      try {
+        const data = await api.post(`/admin/passport/${reg._id}/bypass-verify`)
+        alert('✅ ' + data.message)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'Bypass ไม่สำเร็จ'))
+      }
+    },
+
+    async doResendVerify(reg) {
+      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+      if (!confirm(`📧 ส่งอีเมลยืนยันให้ "${name}" อีกครั้ง?`)) return
+      try {
+        const data = await api.post(`/admin/passport/${reg._id}/resend-verify`)
+        alert('✅ ' + data.message)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'ส่งอีเมลไม่สำเร็จ'))
       }
     },
 
