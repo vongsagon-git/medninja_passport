@@ -232,6 +232,12 @@ export default {
           this.emailNotVerified = true
           this.unverifiedEmail = data.email || ''
           this.error = ''
+        } else if (data?.code === 'LOCKED') {
+          this.router.push({ name: 'Locked', query: { name: data.contactName || '' } })
+        } else if (data?.code === 'PENDING_APPROVAL') {
+          this.router.push({ name: 'AwaitingApproval', query: { name: data.contactName || '' } })
+        } else if (data?.code === 'REJECTED') {
+          this.router.push({ name: 'Rejected', query: { name: data.contactName || '' } })
         } else {
           this.error = data?.message || 'เข้าสู่ระบบไม่สำเร็จ'
         }

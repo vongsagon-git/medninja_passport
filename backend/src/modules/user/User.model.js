@@ -68,10 +68,17 @@ const userSchema = new mongoose.Schema({
   province: { type: String, trim: true, default: '' },
   postalCode: { type: String, trim: true, default: '' },
 
-  // ─── Ban ───
+  // ─── Ban (permanent) ───
   isBanned: { type: Boolean, default: false },
   bannedAt: Date,
+  bannedBy: { type: String, default: '' },
   bannedReason: { type: String, default: '' },
+
+  // ─── Lock (temporary) — 2026-08-06 anti-hack ───
+  isLocked: { type: Boolean, default: false, index: true },
+  lockedAt: Date,
+  lockedBy: { type: String, default: '' },
+  lockedReason: { type: String, default: '' },
 
   // ─── Admin Approval Gate (2026-08-06) ───
   // กันคนใช้บัตรคนอื่นสมัคร: user login ได้ทันที แต่ต้องรอ admin approve ก่อนใช้งาน

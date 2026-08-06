@@ -22,7 +22,7 @@ router.get('/', auth, admin, async (req, res) => {
     // เพิ่ม LINE info + role จาก User
     const nids = registrations.map(r => r.nationalId).filter(Boolean)
     const users = await User.find({ nationalId: { $in: nids } })
-      .select('nationalId lineUserId lineDisplayName linePictureUrl role')
+      .select('nationalId lineUserId lineDisplayName linePictureUrl role isLocked lockedBy lockedReason isBanned bannedBy bannedReason')
       .lean()
     const userMap = new Map(users.map(u => [u.nationalId, u]))
 
@@ -100,6 +100,12 @@ router.get('/', auth, admin, async (req, res) => {
         reg.lineDisplayName = u.lineDisplayName || null
         reg.linePictureUrl = u.linePictureUrl || null
         reg.role = u.role || 'student'
+        reg.isLocked = !!u.isLocked
+        reg.lockedBy = u.lockedBy || ''
+        reg.lockedReason = u.lockedReason || ''
+        reg.isBanned = !!u.isBanned
+        reg.bannedBy = u.bannedBy || ''
+        reg.bannedReason = u.bannedReason || ''
         reg.activations = actMap.get(uid) || []
         reg.demoActivations = demoMap.get(uid) || []
         // follow status
@@ -949,6 +955,124 @@ router.post('/:id/approve-direct', auth, admin, async (req, res) => {
     res.json({ ok: true, message: `อนุมัติ ${reg.firstName} ${reg.lastName} สำเร็จ` })
   } catch (err) {
     res.status(500).json({ message: 'อนุมัติไม่สำเร็จ: ' + err.message })
+  }
+})
+
+// ═══════════════════════════════════════════════════════════════
+// LOCK / BAN / KICK ENDPOINTS (2026-08-06 anti-hack)
+// ═══════════════════════════════════════════════════════════════
+const { removeAllSessions } = require('../auth/session.service')
+const { getClient: getValkey } = require('../../shared/config/valkey')
+
+router.post('/:id/kick', auth, admin, async (req, res) => {
+  try {
+    const reg = await PreRegistration.findById(req.params.id).lean()
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+    const user = await User.findOne({ nationalId: reg.nationalId }).select('_id email firstName lastName name').lean()
+    if (!user) return res.status(404).json({ message: 'ไม่พบ User' })
+    await removeAllSessions(user._id.toString())
+    console.log(`[KICK] ${user.email} kicked by ${req.user?.name || 'admin'}`)
+    res.json({ ok: true, message: `Kick ${user.firstName || user.name} แล้ว (session หลุดทันที)` })
+  } catch (err) {
+    res.status(500).json({ message: 'Kick ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+router.post('/kick-all', auth, admin, async (req, res) => {
+  try {
+    const client = getValkey()
+    if (!client) return res.status(503).json({ message: 'Valkey ไม่พร้อม' })
+    let cursor = '0'; let sessCount = 0; let ticketCount = 0
+    do {
+      const [next, keys] = await client.scan(cursor, 'MATCH', 'sess:*', 'COUNT', 500)
+      cursor = next
+      if (keys.length) { await client.del(...keys); sessCount += keys.length }
+    } while (cursor !== '0')
+    cursor = '0'
+    do {
+      const [next, keys] = await client.scan(cursor, 'MATCH', 'ticket:*', 'COUNT', 500)
+      cursor = next
+      if (keys.length) { await client.del(...keys); ticketCount += keys.length }
+    } while (cursor !== '0')
+    console.log(`[KICK-ALL] ${sessCount} users + ${ticketCount} tickets by ${req.user?.name || 'admin'}`)
+    res.json({ ok: true, message: `Kick ทุกคนแล้ว (${sessCount} users, ${ticketCount} sessions) — ทุกคนต้อง login ใหม่`, sessCount, ticketCount })
+  } catch (err) {
+    console.error('[KICK-ALL] error:', err)
+    res.status(500).json({ message: 'Kick-all ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+router.post('/:id/lock', auth, admin, async (req, res) => {
+  try {
+    const { reason = '' } = req.body || {}
+    const reg = await PreRegistration.findById(req.params.id).lean()
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    if (!user) return res.status(404).json({ message: 'ไม่พบ User' })
+    const adminName = req.user?.name || req.user?.email || 'admin'
+    user.isLocked = true
+    user.lockedAt = new Date()
+    user.lockedBy = adminName
+    user.lockedReason = String(reason).slice(0, 500)
+    await user.save()
+    await removeAllSessions(user._id.toString())
+    console.log(`[LOCK] ${user.email} (${user.nationalId}) locked by ${adminName} — ${reason}`)
+    res.json({ ok: true, message: `ระงับและ kick ${user.firstName || user.name} แล้ว`, isLocked: true, lockedBy: adminName })
+  } catch (err) {
+    res.status(500).json({ message: 'Lock ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+router.post('/:id/unlock', auth, admin, async (req, res) => {
+  try {
+    const reg = await PreRegistration.findById(req.params.id).lean()
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    if (!user) return res.status(404).json({ message: 'ไม่พบ User' })
+    user.isLocked = false
+    user.lockedReason = ''
+    await user.save()
+    console.log(`[UNLOCK] ${user.email} unlocked by ${req.user?.name || 'admin'}`)
+    res.json({ ok: true, message: `ปลด lock ${user.firstName || user.name} แล้ว`, isLocked: false })
+  } catch (err) {
+    res.status(500).json({ message: 'Unlock ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+router.post('/:id/ban', auth, admin, async (req, res) => {
+  try {
+    const { reason = '' } = req.body || {}
+    const reg = await PreRegistration.findById(req.params.id).lean()
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    if (!user) return res.status(404).json({ message: 'ไม่พบ User' })
+    const adminName = req.user?.name || req.user?.email || 'admin'
+    user.isBanned = true
+    user.bannedAt = new Date()
+    user.bannedBy = adminName
+    user.bannedReason = String(reason).slice(0, 500)
+    await user.save()
+    await removeAllSessions(user._id.toString())
+    console.log(`[BAN] ${user.email} banned by ${adminName} — ${reason}`)
+    res.json({ ok: true, message: `แบนและ kick ${user.firstName || user.name} แล้ว`, isBanned: true, bannedBy: adminName })
+  } catch (err) {
+    res.status(500).json({ message: 'Ban ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+router.post('/:id/unban', auth, admin, async (req, res) => {
+  try {
+    const reg = await PreRegistration.findById(req.params.id).lean()
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    if (!user) return res.status(404).json({ message: 'ไม่พบ User' })
+    user.isBanned = false
+    user.bannedReason = ''
+    await user.save()
+    console.log(`[UNBAN] ${user.email} unbanned by ${req.user?.name || 'admin'}`)
+    res.json({ ok: true, message: `ปลด ban ${user.firstName || user.name} แล้ว`, isBanned: false })
+  } catch (err) {
+    res.status(500).json({ message: 'Unban ไม่สำเร็จ: ' + err.message })
   }
 })
 

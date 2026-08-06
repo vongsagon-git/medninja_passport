@@ -134,7 +134,7 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ message: 'ข้อมูลเข้าสู่ระบบไม่ถูกต้อง' })
     }
 
-    // ═══ Ban check ═══
+    // ═══ Ban check (permanent) ═══
     if (user.isBanned) {
       return res.status(403).json({ message: 'บัญชีถูกระงับ กรุณาติดต่อ admin', code: 'BANNED' })
     }
@@ -147,6 +147,41 @@ exports.login = async (req, res, next) => {
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
       return res.status(401).json({ message: 'ข้อมูลเข้าสู่ระบบไม่ถูกต้อง' })
+    }
+
+    // ═══ 🔒 Lock check (temporary) — 2026-08-06 anti-hack ═══
+    if (user.isLocked) {
+      const contactName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name
+      console.log(`[LOCK] blocked login: ${user.email} (${user.nationalId})`)
+      return res.status(403).json({
+        message: 'กรุณาติดต่อ admin ที่ LINE @medninja',
+        code: 'LOCKED',
+        contactName
+      })
+    }
+
+    // ═══ ⏳ Approval gate — pending/rejected = ไม่ออก JWT (2026-08-06 anti-hack) ═══
+    // ⚠ กฎเหล็ก: user ที่ยังไม่ approve = ไม่ได้ JWT/session — ป้องกัน hack shell / API abuse
+    // Admin/staff bypass (ต้องเข้าระบบไป approve คนอื่น)
+    if (user.role !== 'admin' && user.role !== 'staff') {
+      if (user.approvalStatus === 'pending') {
+        const contactName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name
+        console.log(`[APPROVAL gate] blocked login: ${user.email} (${user.nationalId}) — pending`)
+        return res.status(403).json({
+          message: 'บัญชีของคุณกำลังรอ admin อนุมัติ (5–30 นาที) กรุณาทัก LINE @medninja แจ้งชื่อ',
+          code: 'PENDING_APPROVAL',
+          contactName
+        })
+      }
+      if (user.approvalStatus === 'rejected') {
+        const contactName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name
+        console.log(`[APPROVAL gate] blocked login: ${user.email} — rejected`)
+        return res.status(403).json({
+          message: 'บัญชีของคุณไม่ผ่านการตรวจสอบ กรุณาติดต่อ admin ที่ LINE @medninja',
+          code: 'REJECTED',
+          contactName
+        })
+      }
     }
 
     // ═══ บังคับ email verification (ยกเว้น admin) ═══

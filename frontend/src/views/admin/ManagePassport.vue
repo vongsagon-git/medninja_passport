@@ -8,6 +8,13 @@
         </div>
         <div style="display: flex; gap: 12px; align-items: center;">
           <button
+            class="btn-kick-all"
+            @click="doKickAll"
+            title="🥾 Kick ทุก user (emergency — รวม admin เอง)"
+          >
+            🥾 Kick ALL
+          </button>
+          <button
             class="btn-sync-cma"
             :disabled="cmaSyncing"
             @click="syncCma"
@@ -159,11 +166,17 @@
                   </td>
                   <td><span class="badge badge-admin">Admin</span></td>
                   <td @click.stop>
-                    <div style="display: flex; gap: 6px;">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                       <button class="btn-action btn-edit" title="แก้ไข" @click="viewDetail(reg._id, true)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
                         <span>แก้ไข</span>
                       </button>
+                      <button v-if="reg.status === 'pending_approval'" class="btn-action btn-approve" @click="doApprove(reg)"><span>✅ Approve</span></button>
+                      <button class="btn-action btn-kick" @click="doKick(reg)" title="Kick session (login ใหม่ได้)"><span>🥾 Kick</span></button>
+                      <button v-if="!reg.isLocked" class="btn-action btn-lock" @click="doLock(reg)"><span>🔒 Lock</span></button>
+                      <button v-else class="btn-action btn-unlock" @click="doUnlock(reg)"><span>🔓 Unlock</span></button>
+                      <button v-if="!reg.isBanned" class="btn-action btn-ban" @click="doBan(reg)"><span>⛔ Ban</span></button>
+                      <button v-else class="btn-action btn-unban" @click="doUnban(reg)"><span>✓ Unban</span></button>
                     </div>
                   </td>
                 </tr>
@@ -235,10 +248,18 @@
                   </td>
                   <td><span class="badge" style="background:#7c3aed;color:#fff">Staff</span></td>
                   <td @click.stop>
-                    <button class="btn-action btn-edit" title="แก้ไข" @click="viewDetail(reg._id, true)">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                      <span>แก้ไข</span>
-                    </button>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                      <button class="btn-action btn-edit" title="แก้ไข" @click="viewDetail(reg._id, true)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                        <span>แก้ไข</span>
+                      </button>
+                      <button v-if="reg.status === 'pending_approval'" class="btn-action btn-approve" @click="doApprove(reg)"><span>✅ Approve</span></button>
+                      <button class="btn-action btn-kick" @click="doKick(reg)" title="Kick session (login ใหม่ได้)"><span>🥾 Kick</span></button>
+                      <button v-if="!reg.isLocked" class="btn-action btn-lock" @click="doLock(reg)"><span>🔒 Lock</span></button>
+                      <button v-else class="btn-action btn-unlock" @click="doUnlock(reg)"><span>🔓 Unlock</span></button>
+                      <button v-if="!reg.isBanned" class="btn-action btn-ban" @click="doBan(reg)"><span>⛔ Ban</span></button>
+                      <button v-else class="btn-action btn-unban" @click="doUnban(reg)"><span>✓ Unban</span></button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -331,6 +352,18 @@
                       <button v-else class="btn-action btn-unreview" title="ย้อน" @click="changeStatus(reg._id, 'pending')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
                         <span>ย้อน</span>
+                      </button>
+                      <button v-if="!reg.isLocked" class="btn-action btn-lock" title="ระงับชั่วคราว (kick + block login)" @click="doLock(reg)">
+                        <span>🔒 Lock</span>
+                      </button>
+                      <button v-else class="btn-action btn-unlock" title="ปลดล็อค" @click="doUnlock(reg)">
+                        <span>🔓 Unlock</span>
+                      </button>
+                      <button v-if="!reg.isBanned" class="btn-action btn-ban" title="แบนถาวร" @click="doBan(reg)">
+                        <span>⛔ Ban</span>
+                      </button>
+                      <button v-else class="btn-action btn-unban" title="ปลดแบน" @click="doUnban(reg)">
+                        <span>✓ Unban</span>
                       </button>
                       <button class="btn-action btn-delete" title="ลบ" @click="openDeleteModal(reg)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
@@ -435,6 +468,18 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
                         <span>ย้อน</span>
                       </button>
+                      <button v-if="!reg.isLocked" class="btn-action btn-lock" title="ระงับชั่วคราว (kick + block login)" @click="doLock(reg)">
+                        <span>🔒 Lock</span>
+                      </button>
+                      <button v-else class="btn-action btn-unlock" title="ปลดล็อค" @click="doUnlock(reg)">
+                        <span>🔓 Unlock</span>
+                      </button>
+                      <button v-if="!reg.isBanned" class="btn-action btn-ban" title="แบนถาวร" @click="doBan(reg)">
+                        <span>⛔ Ban</span>
+                      </button>
+                      <button v-else class="btn-action btn-unban" title="ปลดแบน" @click="doUnban(reg)">
+                        <span>✓ Unban</span>
+                      </button>
                       <button class="btn-action btn-delete" title="ลบ" @click="openDeleteModal(reg)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
                         <span>ลบ</span>
@@ -501,13 +546,10 @@
                 <div class="modal-row">
                   <span>ยืนยันอีเมล</span>
                   <span v-if="detailModal._emailVerified" style="color:#10b981;font-weight:700;">ยืนยันแล้ว</span>
-                  <span v-else style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span v-else style="display:flex;align-items:center;gap:8px;">
                     <span style="color:#f59e0b;font-weight:700;">ยังไม่ยืนยัน</span>
-                    <button class="btn btn-sm btn-outline" @click="resendVerify" :disabled="resending || bypassing" style="font-size:11px;">
+                    <button class="btn btn-sm btn-outline" @click="resendVerify" :disabled="resending" style="font-size:11px;">
                       {{ resending ? 'กำลังส่ง...' : 'ส่งอีเมลยืนยันอีกครั้ง' }}
-                    </button>
-                    <button class="btn btn-sm btn-bypass" @click="bypassVerify" :disabled="resending || bypassing" style="font-size:11px;" title="ข้ามการยืนยันอีเมล (Admin only)">
-                      {{ bypassing ? 'กำลัง Bypass...' : '⚡ Bypass Email' }}
                     </button>
                   </span>
                 </div>
@@ -857,7 +899,6 @@ export default {
       detailLoading: false,
       editing: false,
       resending: false,
-      bypassing: false,
       editSaving: false,
       editError: '',
       editForm: {},
@@ -1010,6 +1051,101 @@ export default {
       }
     },
 
+    // ═══ ✅ Approve (สมัครใหม่ pending) — approve-direct จาก dashboard ═══
+    async doApprove(reg) {
+      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+      if (!confirm(`✅ อนุมัติ "${name}"?\n\nระบบจะ:\n1. เปลี่ยน approvalStatus → approved\n2. Bypass email verify\n3. Auto assign VISA ทดลอง 30 วัน\n4. แจ้ง user ทาง LINE`)) return
+      try {
+        const data = await api.post(`/admin/passport/${reg._id}/approve-direct`)
+        this._updateRegLockStatus(reg._id, { status: 'approved' })
+        alert('✅ ' + data.message)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'Approve ไม่สำเร็จ'))
+      }
+    },
+
+    // ═══ 🥾 Kick session (login ใหม่ได้ ไม่ block) ═══
+    async doKick(reg) {
+      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+      if (!confirm(`🥾 Kick "${name}"?\n\nระบบจะลบ session ทั้งหมดของ user นี้ → หลุด login ทันที\nUser สามารถ login ใหม่ได้`)) return
+      try {
+        const data = await api.post(`/admin/passport/${reg._id}/kick`)
+        alert('✅ ' + data.message)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'Kick ไม่สำเร็จ'))
+      }
+    },
+
+    async doKickAll() {
+      if (!confirm('⚠ Kick ทุกคน — Emergency\n\nทุกคนในระบบจะหลุด login (รวม admin เอง!)\nต้อง login ใหม่หมด\n\nยืนยัน?')) return
+      if (!confirm('⚠ ยืนยันอีกครั้ง — ทุกคนจะโดน kick — พิมพ์ OK เพื่อยืนยัน')) return
+      try {
+        const data = await api.post('/admin/passport/kick-all')
+        alert(`✅ ${data.message}\n\nคุณจะโดน kick ด้วย — จะถูก redirect ไปหน้า login`)
+        setTimeout(() => window.location.href = '/', 2000)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'Kick-all ไม่สำเร็จ'))
+      }
+    },
+
+    // ═══ 🔒 Lock / ⛔ Ban actions (2026-08-06 anti-hack) ═══
+    async doLock(reg) {
+      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+      const reason = prompt(`🔒 ระงับชั่วคราว "${name}"?\n\nระบบจะ:\n1. Kick session ปัจจุบัน (ถ้า login อยู่หลุดทันที)\n2. Login ครั้งต่อไปเจอข้อความ "ติดต่อ admin"\n3. ไม่ออก JWT/session\n\nระบุเหตุผล (บันทึกใน log):`, '')
+      if (reason === null) return
+      try {
+        const data = await api.post(`/admin/passport/${reg._id}/lock`, { reason })
+        this._updateRegLockStatus(reg._id, { isLocked: true, lockedBy: data.lockedBy, lockedReason: reason })
+        alert('✅ ' + data.message)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'Lock ไม่สำเร็จ'))
+      }
+    },
+
+    async doUnlock(reg) {
+      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+      if (!confirm(`🔓 ปลด lock "${name}"?\nUser จะ login ได้เลย`)) return
+      try {
+        const data = await api.post(`/admin/passport/${reg._id}/unlock`)
+        this._updateRegLockStatus(reg._id, { isLocked: false, lockedBy: '', lockedReason: '' })
+        alert('✅ ' + data.message)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'Unlock ไม่สำเร็จ'))
+      }
+    },
+
+    async doBan(reg) {
+      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+      const reason = prompt(`⛔ แบนถาวร "${name}"?\n\nระบบจะ:\n1. Kick session ปัจจุบัน\n2. Login ครั้งต่อไป error "บัญชีถูกระงับ"\n3. ไม่ออก JWT\n\nระบุเหตุผล (บันทึกใน log):`, '')
+      if (reason === null) return
+      try {
+        const data = await api.post(`/admin/passport/${reg._id}/ban`, { reason })
+        this._updateRegLockStatus(reg._id, { isBanned: true, bannedBy: data.bannedBy, bannedReason: reason })
+        alert('✅ ' + data.message)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'Ban ไม่สำเร็จ'))
+      }
+    },
+
+    async doUnban(reg) {
+      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
+      if (!confirm(`✓ ปลด ban "${name}"?\nUser จะ login ได้เลย`)) return
+      try {
+        const data = await api.post(`/admin/passport/${reg._id}/unban`)
+        this._updateRegLockStatus(reg._id, { isBanned: false, bannedBy: '', bannedReason: '' })
+        alert('✅ ' + data.message)
+      } catch (err) {
+        alert('❌ ' + (err.response?.data?.message || 'Unban ไม่สำเร็จ'))
+      }
+    },
+
+    _updateRegLockStatus(id, updates) {
+      const idx = this.registrations.findIndex(r => r._id === id)
+      if (idx >= 0) {
+        this.registrations[idx] = { ...this.registrations[idx], ...updates }
+      }
+    },
+
     async markReviewed(id) {
       await this.changeStatus(id, 'reviewed')
       if (this.detailModal && this.detailModal._id === id) {
@@ -1094,22 +1230,6 @@ export default {
         alert(e.response?.data?.message || 'ส่งไม่สำเร็จ')
       } finally {
         this.resending = false
-      }
-    },
-
-    async bypassVerify() {
-      if (!this.detailModal?._id) return
-      const email = this.detailModal.email || 'อีเมลนี้'
-      if (!confirm(`ยืนยันข้ามการ verify email ${email}?\n\nUser จะ login ได้ทันทีโดยไม่ต้อง click link ในเมล`)) return
-      this.bypassing = true
-      try {
-        const res = await api.post(`/admin/passport/${this.detailModal._id}/bypass-verify`)
-        this.detailModal._emailVerified = true
-        alert(res.message || 'Bypass สำเร็จ')
-      } catch (e) {
-        alert(e.response?.data?.message || 'Bypass ไม่สำเร็จ')
-      } finally {
-        this.bypassing = false
       }
     },
 
@@ -1373,27 +1493,6 @@ export default {
 </script>
 
 <style scoped>
-.btn-bypass {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: #fff;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
-  transition: box-shadow 0.15s, transform 0.15s, background 0.15s;
-}
-.btn-bypass:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1d4ed8, #1e40af);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
-  transform: translateY(-1px);
-}
-.btn-bypass:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .stat-card {
   background: var(--white);
   border: 1px solid var(--border);
@@ -1471,6 +1570,29 @@ export default {
 .btn-unreview:hover { background: #f3f4f6; border-color: #6b7280; }
 .btn-delete { color: #dc2626; }
 .btn-delete:hover { background: #fee2e2; border-color: #dc2626; }
+/* ✅ Approve button */
+.btn-approve { color: #ffffff; background: #16a34a; border-color: #16a34a; font-weight: 700; }
+.btn-approve:hover { background: #15803d; border-color: #15803d; }
+/* 🥾 Kick button */
+.btn-kick { color: #7c3aed; border-color: #c4b5fd; }
+.btn-kick:hover { background: #ede9fe; border-color: #7c3aed; }
+.btn-kick-all {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff; border: 0; padding: 8px 16px; border-radius: 8px;
+  font-weight: 700; cursor: pointer; font-size: 13px;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+  transition: transform 0.15s;
+}
+.btn-kick-all:hover { transform: translateY(-1px); }
+/* 🔒 Lock / ⛔ Ban buttons */
+.btn-lock { color: #d97706; border-color: #fcd34d; }
+.btn-lock:hover { background: #fef3c7; border-color: #d97706; }
+.btn-unlock { color: #16a34a; border-color: #86efac; }
+.btn-unlock:hover { background: #dcfce7; border-color: #16a34a; }
+.btn-ban { color: #ffffff; background: #dc2626; border-color: #dc2626; font-weight: 700; }
+.btn-ban:hover { background: #991b1b; border-color: #991b1b; }
+.btn-unban { color: #16a34a; border-color: #16a34a; font-weight: 700; }
+.btn-unban:hover { background: #dcfce7; }
 
 /* Delete confirm modal */
 .delete-warning {

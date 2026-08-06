@@ -12,6 +12,7 @@ const AwaitingApprovalPage = () => import('../views/AwaitingApprovalPage.vue')
 const RejectedPage = () => import('../views/RejectedPage.vue')
 const ApproveRegistration = () => import('../views/admin/ApproveRegistration.vue')
 const AdminTotpVerifyPage = () => import('../views/AdminTotpVerifyPage.vue')
+const LockedPage = () => import('../views/LockedPage.vue')
 const LineLink = () => import('../views/LineLink.vue')
 const ReplyStudent = () => import('../views/ReplyStudent.vue')
 
@@ -96,6 +97,12 @@ const routes = [
     path: '/admin-totp',
     name: 'AdminTotpVerify',
     component: AdminTotpVerifyPage,
+    meta: { immersive: true }
+  },
+  {
+    path: '/locked',
+    name: 'Locked',
+    component: LockedPage,
     meta: { immersive: true }
   },
   {
