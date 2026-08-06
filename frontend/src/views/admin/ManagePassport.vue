@@ -1737,51 +1737,108 @@ export default {
 .action-item.purple:hover { background: #ede9fe; }
 .action-sep { height: 1px; background: #e2e8f0; margin: 4px 0; }
 
-/* ═══ Mobile Card Layout (< 768px) ═══
-   แปลง table → card แนวตั้ง โดยไม่ต้องแก้ HTML
-   1. Hide thead
-   2. Each tr = card (block + border + shadow)
-   3. Each td = row (flex + label ก่อน content)
+/* ═══ Mobile Card Layout (< 768px) — Compact card ═══
+   แนวคิด: แต่ละ tr = card แนวนอน (2 คอลัมน์) แน่น ไม่เปลืองพื้นที่
+   - Row 1: ชื่อ + age + sex + status ── ⋮
+   - Row 2: NID (mono) + มหาลัย
+   - Row 3+: courses/LINE/etc รวมเป็น flex-wrap chips
 */
 @media (max-width: 768px) {
-  .action-menu-panel { min-width: 200px; right: 0; }
-  .action-menu-btn { width: 36px; height: 36px; font-size: 24px; }
+  .action-menu-panel { min-width: 220px; right: 0; }
+  .action-menu-btn {
+    width: 40px; height: 40px; font-size: 24px;
+    background: #f1f5f9; border-color: #cbd5e1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .action-menu-btn:hover { background: #e2e8f0; }
 
-  .card { overflow-x: visible !important; padding: 8px !important; background: transparent !important; box-shadow: none !important; }
+  /* card wrapper */
+  .card { overflow-x: visible !important; padding: 0 !important; background: transparent !important; box-shadow: none !important; border: 0 !important; }
+
+  /* Convert table to card layout */
   .table { display: block; background: transparent; }
   .table thead { display: none; }
-  .table tbody { display: block; }
+  .table tbody { display: flex; flex-direction: column; gap: 10px; }
   .table tr {
-    display: block; margin-bottom: 12px; padding: 12px;
-    background: #fff; border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name  menu"
+      "info  info"
+      "meta  meta"
+      "extra extra";
+    gap: 6px 10px;
+    padding: 14px 14px 12px;
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04);
     border: 1px solid #e2e8f0;
   }
-  .table tr.row-cma-passed { background: #fef3c7; }
-  .table tr.row-cma-ok { background: #f0fdf4; }
-  .table tr.row-cma-warn { background: #fff7ed; }
+  .table tr.row-cma-passed { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-color: #fcd34d; }
+  .table tr.row-cma-ok { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #86efac; }
+  .table tr.row-cma-warn { background: linear-gradient(135deg, #fff7ed, #fed7aa); border-color: #fdba74; }
+  .table tr:hover { transform: none; }
+
+  /* All td: no border, tight padding */
   .table td {
-    display: flex; padding: 6px 0 !important; border: 0 !important;
-    align-items: flex-start; gap: 10px;
-    font-size: 13px;
+    padding: 0 !important; border: 0 !important;
+    font-size: 13px; line-height: 1.5;
+    background: transparent !important;
   }
-  /* label ก่อน content (data-label = ชื่อ column) */
-  .table td::before {
-    content: attr(data-label);
-    flex: 0 0 90px;
-    color: #64748b; font-size: 12px; font-weight: 600;
+
+  /* Hide # column (idx) + status column (ซ้ำกับที่อื่น) */
+  .table td:first-child { display: none; }
+
+  /* Column 2 = ชื่อ (grid area name) */
+  .table td:nth-child(2) {
+    grid-area: name; align-self: center;
+    font-size: 15px; font-weight: 700; color: #0f172a;
   }
-  .table td:first-child { display: none; } /* hide # column บน mobile */
+  .table td:nth-child(2) > div:first-child {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .table td:nth-child(2) > div:last-child {
+    font-size: 11px; color: #64748b; font-weight: 400; margin-top: 2px;
+  }
+
+  /* Last column = ⋮ menu (grid area menu) */
   .table td:last-child {
-    justify-content: flex-end; margin-top: 8px;
-    padding-top: 8px !important;
-    border-top: 1px solid #f1f5f9 !important;
+    grid-area: menu; align-self: start;
+    justify-self: end;
   }
-  .table td:last-child::before { display: none; }
-  .table td > * { flex: 1; }
-  /* Wrapping badges/tags */
-  .badge, .cma-badge, .age-badge, .sex-badge, .course-tag { display: inline-flex; }
-  .course-tag { margin: 2px 4px 2px 0; }
+
+  /* Middle columns stack together (info area) */
+  .table td:nth-child(n+3):not(:last-child) {
+    grid-area: info;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 2px 0 !important;
+  }
+  /* Make consecutive info tds stack in same area */
+  .table td:nth-child(3) { grid-area: info; }
+  .table td:nth-child(4) { grid-area: info; }
+  .table td:nth-child(5) { grid-area: meta; font-size: 12px; color: #64748b; }
+  .table td:nth-child(6) { grid-area: extra; }
+  .table td:nth-child(n+7):not(:last-child) { grid-area: extra; }
+
+  /* NID monospace */
+  .table td[style*="monospace"] {
+    background: #f8fafc; padding: 3px 8px !important;
+    border-radius: 6px; font-size: 12px !important;
+    display: inline-flex; width: fit-content;
+  }
+
+  /* Course tags stack better on mobile */
+  .course-tag {
+    margin: 3px 4px 3px 0;
+    padding: 3px 8px;
+    background: #eff6ff; border-radius: 6px;
+    font-size: 11px;
+  }
+
+  /* Badges compact */
+  .badge, .cma-badge, .age-badge, .sex-badge {
+    font-size: 11px !important;
+    padding: 2px 8px !important;
+  }
 }
 
 /* Delete confirm modal */
