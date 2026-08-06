@@ -850,14 +850,16 @@
 </template>
 
 <script>
+import { h } from 'vue'
 import api from '../../services/api'
 
 // Reusable Action Menu component — ปุ่ม ⋮ เปิด dropdown
+// ⚠ ใช้ render function (h) แทน template string เพราะ Vue prod = runtime-only ไม่มี template compiler
 const ActionMenu = {
   name: 'ActionMenu',
   props: {
     reg: { type: Object, required: true },
-    context: { type: String, default: 'default' } // 'pending' | 'default'
+    context: { type: String, default: 'default' }
   },
   emits: ['approve', 'view-detail', 'edit', 'lock', 'unlock', 'ban', 'unban', 'kick', 'delete', 'change-status'],
   data() { return { open: false } },
@@ -868,28 +870,47 @@ const ActionMenu = {
     document.addEventListener('click', this._outsideClick)
   },
   beforeUnmount() { document.removeEventListener('click', this._outsideClick) },
-  template: `
-    <div class="action-menu-wrap" @click.stop>
-      <button class="action-menu-btn" @click="open = !open" aria-label="เมนู">⋮</button>
-      <div v-if="open" class="action-menu-panel" @click="open = false">
-        <button v-if="context === 'pending'" class="action-item green" @click="$emit('approve', reg)">
-          ✅ อนุมัติ (Approve)
-        </button>
-        <button class="action-item" @click="$emit('view-detail', reg._id)">👁 ดูรายละเอียด</button>
-        <button v-if="context !== 'pending'" class="action-item" @click="$emit('edit', reg._id)">✎ แก้ไข</button>
-        <button v-if="context !== 'pending' && reg.status === 'pending'" class="action-item" @click="$emit('change-status', reg._id, 'reviewed')">✓ ตรวจแล้ว</button>
-        <button v-else-if="context !== 'pending' && reg.status === 'reviewed'" class="action-item" @click="$emit('change-status', reg._id, 'pending')">↺ ย้อนสถานะ</button>
-        <div class="action-sep"></div>
-        <button class="action-item purple" @click="$emit('kick', reg)">🥾 Kick session</button>
-        <button v-if="!reg.isLocked" class="action-item amber" @click="$emit('lock', reg)">🔒 Lock (ระงับ)</button>
-        <button v-else class="action-item green" @click="$emit('unlock', reg)">🔓 Unlock</button>
-        <button v-if="!reg.isBanned" class="action-item red" @click="$emit('ban', reg)">⛔ Ban ถาวร</button>
-        <button v-else class="action-item green" @click="$emit('unban', reg)">✓ Unban</button>
-        <div v-if="context !== 'pending'" class="action-sep"></div>
-        <button v-if="context !== 'pending'" class="action-item red" @click="$emit('delete', reg)">🗑 ลบ</button>
-      </div>
-    </div>
-  `
+  methods: {
+    _item(label, cls, onClick) {
+      return h('button', { class: ['action-item', cls], onClick: (e) => { e.stopPropagation(); this.open = false; onClick() } }, label)
+    }
+  },
+  render() {
+    const reg = this.reg
+    const items = []
+    if (this.context === 'pending') {
+      items.push(this._item('✅ อนุมัติ (Approve)', 'green', () => this.$emit('approve', reg)))
+    }
+    items.push(this._item('👁 ดูรายละเอียด', '', () => this.$emit('view-detail', reg._id)))
+    if (this.context !== 'pending') {
+      items.push(this._item('✎ แก้ไข', '', () => this.$emit('edit', reg._id)))
+      if (reg.status === 'pending') {
+        items.push(this._item('✓ ตรวจแล้ว', '', () => this.$emit('change-status', reg._id, 'reviewed')))
+      } else if (reg.status === 'reviewed') {
+        items.push(this._item('↺ ย้อนสถานะ', '', () => this.$emit('change-status', reg._id, 'pending')))
+      }
+    }
+    items.push(h('div', { class: 'action-sep' }))
+    items.push(this._item('🥾 Kick session', 'purple', () => this.$emit('kick', reg)))
+    items.push(reg.isLocked
+      ? this._item('🔓 Unlock', 'green', () => this.$emit('unlock', reg))
+      : this._item('🔒 Lock (ระงับ)', 'amber', () => this.$emit('lock', reg)))
+    items.push(reg.isBanned
+      ? this._item('✓ Unban', 'green', () => this.$emit('unban', reg))
+      : this._item('⛔ Ban ถาวร', 'red', () => this.$emit('ban', reg)))
+    if (this.context !== 'pending') {
+      items.push(h('div', { class: 'action-sep' }))
+      items.push(this._item('🗑 ลบ', 'red', () => this.$emit('delete', reg)))
+    }
+    return h('div', { class: 'action-menu-wrap', onClick: (e) => e.stopPropagation() }, [
+      h('button', {
+        class: 'action-menu-btn',
+        'aria-label': 'เมนู',
+        onClick: (e) => { e.stopPropagation(); this.open = !this.open }
+      }, '⋮'),
+      this.open ? h('div', { class: 'action-menu-panel' }, items) : null
+    ])
+  }
 }
 
 export default {
@@ -1682,11 +1703,51 @@ export default {
 .action-item.purple:hover { background: #ede9fe; }
 .action-sep { height: 1px; background: #e2e8f0; margin: 4px 0; }
 
-/* Mobile: card layout — hide table แสดง card แทน */
+/* ═══ Mobile Card Layout (< 768px) ═══
+   แปลง table → card แนวตั้ง โดยไม่ต้องแก้ HTML
+   1. Hide thead
+   2. Each tr = card (block + border + shadow)
+   3. Each td = row (flex + label ก่อน content)
+*/
 @media (max-width: 768px) {
-  .action-menu-panel { min-width: 180px; }
-  .table th, .table td { padding: 8px 6px; font-size: 12px; }
-  .action-menu-btn { width: 32px; height: 32px; }
+  .action-menu-panel { min-width: 200px; right: 0; }
+  .action-menu-btn { width: 36px; height: 36px; font-size: 24px; }
+
+  .card { overflow-x: visible !important; padding: 8px !important; background: transparent !important; box-shadow: none !important; }
+  .table { display: block; background: transparent; }
+  .table thead { display: none; }
+  .table tbody { display: block; }
+  .table tr {
+    display: block; margin-bottom: 12px; padding: 12px;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+    border: 1px solid #e2e8f0;
+  }
+  .table tr.row-cma-passed { background: #fef3c7; }
+  .table tr.row-cma-ok { background: #f0fdf4; }
+  .table tr.row-cma-warn { background: #fff7ed; }
+  .table td {
+    display: flex; padding: 6px 0 !important; border: 0 !important;
+    align-items: flex-start; gap: 10px;
+    font-size: 13px;
+  }
+  /* label ก่อน content (data-label = ชื่อ column) */
+  .table td::before {
+    content: attr(data-label);
+    flex: 0 0 90px;
+    color: #64748b; font-size: 12px; font-weight: 600;
+  }
+  .table td:first-child { display: none; } /* hide # column บน mobile */
+  .table td:last-child {
+    justify-content: flex-end; margin-top: 8px;
+    padding-top: 8px !important;
+    border-top: 1px solid #f1f5f9 !important;
+  }
+  .table td:last-child::before { display: none; }
+  .table td > * { flex: 1; }
+  /* Wrapping badges/tags */
+  .badge, .cma-badge, .age-badge, .sex-badge, .course-tag { display: inline-flex; }
+  .course-tag { margin: 2px 4px 2px 0; }
 }
 
 /* Delete confirm modal */
