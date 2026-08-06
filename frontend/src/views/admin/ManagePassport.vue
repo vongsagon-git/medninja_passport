@@ -1,12 +1,12 @@
 <template>
   <div class="admin-passport">
     <div class="page-header">
-      <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-        <div>
+      <div class="container passport-header">
+        <div class="passport-header-title">
           <h1>Ninja Passport</h1>
           <p>ระบบลงทะเบียนกลาง — {{ registrations.length }} รายการ</p>
         </div>
-        <div style="display: flex; gap: 12px; align-items: center;">
+        <div class="passport-header-actions">
           <button
             class="btn-kick-all"
             @click="doKickAll"
@@ -18,15 +18,15 @@
             class="btn-sync-cma"
             :disabled="cmaSyncing"
             @click="syncCma"
-            :title="`Sync สถานะ ศรว. — เช็คเฉพาะคนที่ยังไม่เคยสมัคร (${registrations.filter(r => !r.cmaRegistered).length} คน)`"
+            :title="`Sync สถานะ ศรว.`"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
             </svg>
-            <span v-if="cmaSyncing">กำลัง Sync...</span>
-            <span v-else>Sync สมัคร ศรว.</span>
+            <span v-if="cmaSyncing">Sync...</span>
+            <span v-else>Sync ศรว.</span>
           </button>
-          <select v-model="statusFilter" class="form-control" style="width: 160px;">
+          <select v-model="statusFilter" class="form-control passport-filter">
             <option value="">ทุกสถานะ</option>
             <option value="pending">ยังไม่ตรวจ</option>
             <option value="reviewed">ตรวจแล้ว</option>
@@ -34,9 +34,8 @@
           <input
             v-model="search"
             type="text"
-            placeholder="ค้นหาชื่อ / เลขบัตร..."
-            class="form-control"
-            style="width: 220px;"
+            placeholder="ค้นหา..."
+            class="form-control passport-search"
           />
         </div>
       </div>
@@ -1700,145 +1699,124 @@ export default {
 .btn-unban { color: #16a34a; border-color: #16a34a; font-weight: 700; }
 .btn-unban:hover { background: #dcfce7; }
 
-/* ═══ ActionMenu (⋮ dropdown) — mobile-friendly ═══ */
+/* ═══ ActionMenu — Enterprise design (Notion/Linear style) ═══ */
 .action-menu-wrap { position: relative; display: inline-block; }
 .action-menu-btn {
-  width: 34px; height: 34px; border-radius: 8px;
-  border: 1px solid #cbd5e1; background: #fff; color: #475569;
-  font-size: 20px; font-weight: 700; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid transparent; background: transparent;
+  color: #64748b; font-size: 18px; font-weight: 600;
+  cursor: pointer; letter-spacing: -1px;
   display: inline-flex; align-items: center; justify-content: center;
-  transition: all 0.15s;
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.action-menu-btn:hover { background: #f1f5f9; border-color: #94a3b8; color: #1e293b; }
-.action-menu-btn:active { transform: scale(0.95); }
+.action-menu-btn:hover {
+  background: #f1f5f9; color: #0f172a;
+}
+.action-menu-btn:active { background: #e2e8f0; }
 .action-menu-panel {
-  position: absolute; top: 100%; right: 0; margin-top: 4px;
-  background: #fff; border-radius: 10px; z-index: 100;
-  box-shadow: 0 8px 32px rgba(15,23,42,0.15);
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: #fff; border-radius: 12px; z-index: 100;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 12px 40px rgba(15,23,42,0.16);
   border: 1px solid #e2e8f0;
-  min-width: 200px; overflow: hidden;
-  padding: 4px 0;
+  min-width: 220px; overflow: hidden;
+  padding: 6px;
+  animation: menuFadeIn 0.15s ease-out;
+}
+@keyframes menuFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .action-item {
-  display: block; width: 100%;
-  padding: 10px 14px; background: transparent; border: 0;
-  text-align: left; font-size: 14px; color: #1e293b;
-  cursor: pointer; transition: background 0.1s;
+  display: flex; align-items: center; width: 100%;
+  padding: 8px 10px; background: transparent; border: 0;
+  border-radius: 6px;
+  text-align: left; font-size: 13.5px; font-weight: 500;
+  color: #334155; letter-spacing: 0.1px;
+  cursor: pointer; transition: background 0.08s;
   white-space: nowrap;
+  gap: 2px;
 }
-.action-item:hover { background: #f1f5f9; }
-.action-item.green { color: #16a34a; font-weight: 600; }
-.action-item.green:hover { background: #dcfce7; }
+.action-item:hover { background: #f1f5f9; color: #0f172a; }
+.action-item.green { color: #059669; font-weight: 600; }
+.action-item.green:hover { background: #ecfdf5; color: #047857; }
 .action-item.amber { color: #d97706; }
-.action-item.amber:hover { background: #fef3c7; }
+.action-item.amber:hover { background: #fffbeb; color: #b45309; }
 .action-item.red { color: #dc2626; }
-.action-item.red:hover { background: #fee2e2; }
+.action-item.red:hover { background: #fef2f2; color: #b91c1c; }
 .action-item.purple { color: #7c3aed; }
-.action-item.purple:hover { background: #ede9fe; }
-.action-sep { height: 1px; background: #e2e8f0; margin: 4px 0; }
+.action-item.purple:hover { background: #f5f3ff; color: #6d28d9; }
+.action-sep { height: 1px; background: #f1f5f9; margin: 6px -6px; }
 
-/* ═══ Mobile Card Layout (< 768px) — Compact card ═══
-   แนวคิด: แต่ละ tr = card แนวนอน (2 คอลัมน์) แน่น ไม่เปลืองพื้นที่
-   - Row 1: ชื่อ + age + sex + status ── ⋮
-   - Row 2: NID (mono) + มหาลัย
-   - Row 3+: courses/LINE/etc รวมเป็น flex-wrap chips
-*/
+/* ═══ Header responsive (desktop + mobile) ═══ */
+.passport-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.passport-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.passport-filter { width: 140px; }
+.passport-search { width: 200px; }
+
+/* ═══ Mobile — Simple stack, ไม่ overwrite table โครงสร้าง ═══ */
 @media (max-width: 768px) {
+  /* Container padding นิดเดียว */
+  .container { padding-left: 8px !important; padding-right: 8px !important; }
+
+  /* Header stack แนวตั้ง + full width */
+  .passport-header { flex-direction: column; align-items: stretch; }
+  .passport-header-title h1 { font-size: 22px; margin: 0; }
+  .passport-header-title p { font-size: 13px; margin: 4px 0 0; }
+  .passport-header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .passport-header-actions > * { width: 100% !important; min-width: 0; }
+  .passport-filter, .passport-search { width: 100% !important; }
+  .btn-kick-all, .btn-sync-cma {
+    justify-content: center;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+  }
+
+  /* Card wrapper: scroll แนวนอนได้แบบ smooth */
+  .card {
+    padding: 0 !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+  }
+
+  /* Table เดิม + font เล็กลงบนมือถือ */
+  .table { font-size: 12px; min-width: 600px; }
+  .table th, .table td { padding: 10px 8px !important; white-space: nowrap; }
+
+  /* ⋮ menu บนมือถือ */
   .action-menu-panel { min-width: 220px; right: 0; }
   .action-menu-btn {
-    width: 40px; height: 40px; font-size: 24px;
-    background: #f1f5f9; border-color: #cbd5e1;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    width: 34px; height: 34px; font-size: 18px;
+    background: transparent; border: 0; color: #475569;
+    border-radius: 8px;
   }
-  .action-menu-btn:hover { background: #e2e8f0; }
-
-  /* card wrapper */
-  .card { overflow-x: visible !important; padding: 0 !important; background: transparent !important; box-shadow: none !important; border: 0 !important; }
-
-  /* Convert table to card layout */
-  .table { display: block; background: transparent; }
-  .table thead { display: none; }
-  .table tbody { display: flex; flex-direction: column; gap: 10px; }
-  .table tr {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      "name  menu"
-      "info  info"
-      "meta  meta"
-      "extra extra";
-    gap: 6px 10px;
-    padding: 14px 14px 12px;
-    background: #fff; border-radius: 14px;
-    box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04);
-    border: 1px solid #e2e8f0;
-  }
-  .table tr.row-cma-passed { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-color: #fcd34d; }
-  .table tr.row-cma-ok { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #86efac; }
-  .table tr.row-cma-warn { background: linear-gradient(135deg, #fff7ed, #fed7aa); border-color: #fdba74; }
-  .table tr:hover { transform: none; }
-
-  /* All td: no border, tight padding */
-  .table td {
-    padding: 0 !important; border: 0 !important;
-    font-size: 13px; line-height: 1.5;
-    background: transparent !important;
+  .action-menu-btn:hover, .action-menu-btn:active {
+    background: rgba(15,23,42,0.06); color: #0f172a;
   }
 
-  /* Hide # column (idx) + status column (ซ้ำกับที่อื่น) */
-  .table td:first-child { display: none; }
+  /* Header ปรับขนาด */
+  .page-header h1 { font-size: 22px; }
+  .page-header p { font-size: 13px; }
 
-  /* Column 2 = ชื่อ (grid area name) */
-  .table td:nth-child(2) {
-    grid-area: name; align-self: center;
-    font-size: 15px; font-weight: 700; color: #0f172a;
-  }
-  .table td:nth-child(2) > div:first-child {
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  }
-  .table td:nth-child(2) > div:last-child {
-    font-size: 11px; color: #64748b; font-weight: 400; margin-top: 2px;
-  }
-
-  /* Last column = ⋮ menu (grid area menu) */
-  .table td:last-child {
-    grid-area: menu; align-self: start;
-    justify-self: end;
-  }
-
-  /* Middle columns stack together (info area) */
-  .table td:nth-child(n+3):not(:last-child) {
-    grid-area: info;
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    padding: 2px 0 !important;
-  }
-  /* Make consecutive info tds stack in same area */
-  .table td:nth-child(3) { grid-area: info; }
-  .table td:nth-child(4) { grid-area: info; }
-  .table td:nth-child(5) { grid-area: meta; font-size: 12px; color: #64748b; }
-  .table td:nth-child(6) { grid-area: extra; }
-  .table td:nth-child(n+7):not(:last-child) { grid-area: extra; }
-
-  /* NID monospace */
-  .table td[style*="monospace"] {
-    background: #f8fafc; padding: 3px 8px !important;
-    border-radius: 6px; font-size: 12px !important;
-    display: inline-flex; width: fit-content;
-  }
-
-  /* Course tags stack better on mobile */
-  .course-tag {
-    margin: 3px 4px 3px 0;
-    padding: 3px 8px;
-    background: #eff6ff; border-radius: 6px;
-    font-size: 11px;
-  }
-
-  /* Badges compact */
-  .badge, .cma-badge, .age-badge, .sex-badge {
-    font-size: 11px !important;
-    padding: 2px 8px !important;
-  }
+  /* Group header */
+  .group-header { padding: 10px 12px; font-size: 14px; }
 }
 
 /* Delete confirm modal */
