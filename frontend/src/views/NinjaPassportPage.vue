@@ -259,14 +259,22 @@
               <span style="font-size: 36px;">⏳</span>
             </div>
             <h2>ลงทะเบียนสำเร็จ!</h2>
-            <p class="np-done-sub">รอ Admin ตรวจสอบและอนุมัติ (ประมาณ 5–30 นาที)</p>
+            <p class="np-done-sub">อีก 1 ขั้นตอน — <b>แจ้งชื่อให้ admin เพื่ออนุมัติ</b></p>
 
-            <div class="np-email-box" style="background: #fef3c7; border-color: #fcd34d;">
-              <div class="np-email-label" style="color:#78350f">หากรอเกิน 30 นาที</div>
-              <div class="np-email-addr" style="color:#78350f;font-size:16px;line-height:1.6">
-                ทัก LINE <b>@medninja</b> พร้อมแจ้งชื่อ<br>
-                <b>{{ result.firstName }} {{ result.lastName }}</b>
+            <!-- Primary action: ทัก LINE แจ้งชื่อ -->
+            <div class="np-cta-box">
+              <div class="np-cta-title">📱 ทัก LINE @medninja</div>
+              <div class="np-cta-desc">แจ้งชื่อของคุณให้ admin เพื่อขออนุมัติเข้าเรียน</div>
+              <div class="np-cta-name">
+                <span style="font-size:11px;color:#166534;">ชื่อที่ต้องแจ้ง</span>
+                <div style="font-size:18px;color:#166534;font-weight:700;margin-top:2px;">
+                  {{ result.firstName }} {{ result.lastName }}
+                </div>
               </div>
+              <a class="np-cta-btn" href="https://line.me/R/ti/p/@medninja" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2C6.48 2 2 5.66 2 10.17c0 4.05 3.6 7.44 8.46 8.08.33.07.78.22.89.5.1.26.06.66.03.93l-.14.86c-.04.26-.2 1 .88.55 1.09-.46 5.88-3.46 8.02-5.93C21.55 13.63 22 12 22 10.17 22 5.66 17.52 2 12 2z"/></svg>
+                <span>เปิด LINE @medninja</span>
+              </a>
             </div>
 
             <div class="np-result">
@@ -287,7 +295,7 @@
 
             <div class="np-note">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-              <span>จับภาพหน้าจอเก็บไว้ — Login ได้หลัง Admin อนุมัติ</span>
+              <span>จับภาพหน้าจอเก็บไว้ — Login ได้หลัง admin อนุมัติ</span>
             </div>
           </div>
         </template>
@@ -1258,6 +1266,54 @@ export default {
   margin-bottom: 16px;
   text-align: center;
 }
+/* 📱 CTA box สำหรับ ทัก LINE แจ้งชื่อ (post-register) */
+.np-cta-box {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 2px solid #86efac;
+  border-radius: 16px;
+  padding: 20px 16px;
+  margin-bottom: 16px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.12);
+}
+.np-cta-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #166534;
+  margin-bottom: 4px;
+}
+.np-cta-desc {
+  font-size: 13px;
+  color: #166534;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.np-cta-name {
+  background: #fff;
+  border: 1px dashed #86efac;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+.np-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #06c755;
+  color: #fff;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(6, 199, 85, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.np-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(6, 199, 85, 0.45);
+}
+.np-cta-btn:active { transform: translateY(0); }
 .np-email-label {
   font-size: 13px;
   color: #64748b;

@@ -5,33 +5,31 @@
         <div class="icon-clock">⏳</div>
       </div>
 
-      <h1>รอ Admin ตรวจสอบและอนุมัติ</h1>
+      <h1>รอ Admin อนุมัติ</h1>
 
       <p class="lead">
-        ระบบได้รับข้อมูลของคุณเรียบร้อยแล้ว<br>
-        เจ้าหน้าที่กำลังตรวจสอบบัตรประชาชนของคุณ
+        อีก 1 ขั้นตอน<br>
+        <b>ทัก LINE แจ้งชื่อให้ admin อนุมัติ</b>
       </p>
 
-      <div class="time-box">
-        <div class="time-label">คาดว่าใช้เวลา</div>
-        <div class="time-value">5 – 30 นาที</div>
-      </div>
-
-      <div class="name-box" v-if="displayName">
-        <div class="name-label">ชื่อของคุณในระบบ</div>
-        <div class="name-value">{{ displayName }}</div>
-      </div>
-
+      <!-- Primary CTA: ทัก LINE แจ้งชื่อ -->
       <div class="contact-box">
-        <div class="contact-title">หากรอเกิน 30 นาที</div>
+        <div class="contact-title">📱 ทัก LINE @medninja</div>
         <p class="contact-body">
-          กรุณาทัก LINE OA <b>@medninja</b> พร้อมแจ้งชื่อ<br>
-          <span class="name-tag">"{{ displayName || 'ชื่อของคุณ' }}"</span>
+          แจ้งชื่อของคุณให้ admin<br>เพื่อขออนุมัติเข้าเรียน
         </p>
+        <div class="name-tag-wrap">
+          <div class="name-tag-label">ชื่อที่ต้องแจ้ง</div>
+          <div class="name-tag-big">{{ displayName || 'ชื่อของคุณ' }}</div>
+        </div>
         <a class="btn-line" href="https://line.me/R/ti/p/@medninja" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2C6.48 2 2 5.66 2 10.17c0 4.05 3.6 7.44 8.46 8.08.33.07.78.22.89.5.1.26.06.66.03.93l-.14.86c-.04.26-.2 1 .88.55 1.09-.46 5.88-3.46 8.02-5.93C21.55 13.63 22 12 22 10.17 22 5.66 17.52 2 12 2z"/></svg>
           <span>เปิด LINE @medninja</span>
         </a>
+      </div>
+
+      <div class="time-box">
+        ⏱ ระบบอนุมัติภายใน 5–30 นาที หลังทัก LINE
       </div>
 
       <button class="btn-refresh" @click="checkNow" :disabled="checking">
@@ -137,12 +135,11 @@ h1 {
 .time-box {
   background: #fef3c7;
   border: 1px solid #fcd34d;
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
   margin-bottom: 16px;
+  font-size: 13px; color: #78350f; text-align: center;
 }
-.time-label { font-size: 12px; color: #78350f; }
-.time-value { font-size: 20px; color: #78350f; font-weight: 700; margin-top: 4px; }
 .name-box {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
@@ -153,32 +150,36 @@ h1 {
 .name-label { font-size: 12px; color: #1e40af; }
 .name-value { font-size: 18px; color: #1e40af; font-weight: 700; margin-top: 4px; }
 .contact-box {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 12px;
-  padding: 20px 16px;
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 2px solid #86efac;
+  border-radius: 16px;
+  padding: 22px 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.15);
+  text-align: center;
 }
 .contact-title {
-  font-size: 14px;
+  font-size: 17px;
   color: #166534;
-  font-weight: 700;
-  margin-bottom: 8px;
+  font-weight: 800;
+  margin-bottom: 6px;
 }
 .contact-body {
   color: #166534;
-  font-size: 14px;
-  line-height: 1.7;
-  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 14px;
 }
-.name-tag {
-  display: inline-block;
+.name-tag-wrap {
   background: #fff;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-weight: 700;
-  color: #16a34a;
-  margin-top: 4px;
+  border: 1px dashed #86efac;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+.name-tag-label { font-size: 11px; color: #166534; }
+.name-tag-big {
+  font-size: 18px; color: #166534; font-weight: 700; margin-top: 2px;
 }
 .btn-line {
   display: inline-flex; align-items: center; gap: 8px;
