@@ -73,6 +73,20 @@ const userSchema = new mongoose.Schema({
   bannedAt: Date,
   bannedReason: { type: String, default: '' },
 
+  // ─── Admin Approval Gate (2026-08-06) ───
+  // กันคนใช้บัตรคนอื่นสมัคร: user login ได้ทันที แต่ต้องรอ admin approve ก่อนใช้งาน
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+    index: true
+  },
+  approvedBy: { type: String, default: '' },   // ชื่อ admin ที่ approve
+  approvedAt: Date,
+  rejectedBy: { type: String, default: '' },
+  rejectedAt: Date,
+  rejectReason: { type: String, default: '' },
+
   // ─── LINE Link ───
   lineUserId: { type: String, sparse: true, unique: true },
   lineDisplayName: String,

@@ -14,7 +14,9 @@ export const useAuthStore = defineStore('auth', {
     isEmailVerified: (state) => state.user?.emailVerified === true,
     isProfileComplete: (state) => state.user?.profileLocked === true,
     needsVerification: (state) => state.user && !state.user.emailVerified,
-    needsProfile: (state) => state.user && !state.user.profileLocked && state.user.role !== 'admin'
+    needsProfile: (state) => state.user && !state.user.profileLocked && state.user.role !== 'admin',
+    isApprovalPending: (state) => state.user?.approvalStatus === 'pending' && state.user.role !== 'admin' && state.user.role !== 'staff',
+    isApprovalRejected: (state) => state.user?.approvalStatus === 'rejected' && state.user.role !== 'admin' && state.user.role !== 'staff'
   },
 
   actions: {
@@ -56,6 +58,11 @@ export const useAuthStore = defineStore('auth', {
       this.user = data.user
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
+    },
+
+    setUser(user) {
+      this.user = user
+      localStorage.setItem('user', JSON.stringify(user))
     }
   }
 })

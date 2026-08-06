@@ -28,8 +28,20 @@ const preRegistrationSchema = new mongoose.Schema({
   idCardImage: { type: String, required: true },
   idCardType: { type: String, enum: ['national_id', 'passport'], default: 'national_id' },
 
-  // สถานะ (ตรวจสอบข้อมูลเท่านั้น ไม่ใช่การอนุมัติ)
-  status: { type: String, enum: ['pending', 'reviewed'], default: 'pending' },
+  // สถานะ approval — mirror จาก User.approvalStatus (audit)
+  status: { type: String, enum: ['pending_approval', 'approved', 'rejected', 'reviewed'], default: 'pending_approval' },
+  approveToken: { type: String, index: true },    // token สำหรับ LINE flex link (one-time)
+  approveTokenExpires: { type: Date },
+  approvedBy: { type: String, default: '' },
+  approvedAt: { type: Date },
+  rejectedBy: { type: String, default: '' },
+  rejectedAt: { type: Date },
+  rejectReason: { type: String, default: '' },
+
+  // Audit: ไว้ track ผู้ hack (IP + LINE + timestamp)
+  submitIp: { type: String, default: '' },
+  submitUserAgent: { type: String, default: '' },
+  submitLineUserId: { type: String, default: '' }, // LINE UID ที่เปิด LIFF ตอนสมัคร (สำคัญมาก — track spy)
 
   // ข้อมูล OCR ดิบ (debug/audit)
   ocrRawResponse: { type: String },

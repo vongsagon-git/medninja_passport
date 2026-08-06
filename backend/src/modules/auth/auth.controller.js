@@ -64,7 +64,10 @@ function userResponse(user) {
     createdAt: user.createdAt,
     lineUserId: user.lineUserId || null,
     lineDisplayName: user.lineDisplayName || null,
-    linePictureUrl: user.linePictureUrl || null
+    linePictureUrl: user.linePictureUrl || null,
+    approvalStatus: user.approvalStatus || 'approved',   // 'pending' | 'approved' | 'rejected'
+    approvedAt: user.approvedAt || null,
+    rejectReason: user.rejectReason || ''
   }
 }
 

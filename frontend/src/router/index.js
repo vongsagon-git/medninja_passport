@@ -8,6 +8,9 @@ import NotFoundPage from '../views/NotFoundPage.vue'
 // Lazy: auth-gated or infrequent pages — loaded on first navigation
 const NinjaPassportPage = () => import('../views/NinjaPassportPage.vue')
 const CompleteProfilePage = () => import('../views/CompleteProfilePage.vue')
+const AwaitingApprovalPage = () => import('../views/AwaitingApprovalPage.vue')
+const RejectedPage = () => import('../views/RejectedPage.vue')
+const ApproveRegistration = () => import('../views/admin/ApproveRegistration.vue')
 const LineLink = () => import('../views/LineLink.vue')
 const ReplyStudent = () => import('../views/ReplyStudent.vue')
 
@@ -81,6 +84,24 @@ const routes = [
     name: 'CompleteProfile',
     component: CompleteProfilePage,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/awaiting-approval',
+    name: 'AwaitingApproval',
+    component: AwaitingApprovalPage,
+    meta: { requiresAuth: true, immersive: true }
+  },
+  {
+    path: '/rejected',
+    name: 'Rejected',
+    component: RejectedPage,
+    meta: { requiresAuth: true, immersive: true }
+  },
+  {
+    path: '/admin/approve/:token',
+    name: 'AdminApprove',
+    component: ApproveRegistration,
+    meta: { requiresAuth: true, requiresAdmin: true, immersive: true }
   },
   {
     path: '/profile',
@@ -435,6 +456,23 @@ router.beforeEach((to, from, next) => {
   } else if (to.meta.requiresProfile && authStore.needsProfile) {
     // ต้องกรอก profile ก่อนเข้าเรียน
     next({ name: 'CompleteProfile' })
+  } else if (
+    to.meta.requiresProfile &&
+    authStore.isLoggedIn &&
+    authStore.user?.role !== 'admin' &&
+    authStore.user?.role !== 'staff' &&
+    authStore.user?.approvalStatus === 'pending'
+  ) {
+    // Admin approval gate — สมัครแล้วแต่ยังไม่ approve
+    next({ name: 'AwaitingApproval' })
+  } else if (
+    to.meta.requiresProfile &&
+    authStore.isLoggedIn &&
+    authStore.user?.role !== 'admin' &&
+    authStore.user?.role !== 'staff' &&
+    authStore.user?.approvalStatus === 'rejected'
+  ) {
+    next({ name: 'Rejected' })
   } else {
     next()
   }

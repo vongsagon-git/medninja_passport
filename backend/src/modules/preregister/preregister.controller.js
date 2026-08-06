@@ -1,9 +1,14 @@
+const crypto = require('crypto')
 const PreRegistration = require('./PreRegistration.model')
 const User = require('../user/User.model')
 const { validateNationalId } = require('../passport/validation')
 const { generateVerifyToken, sendVerificationEmail } = require('../auth/email.service')
 const Activation = require('../activation/Activation.model')
 const Package = require('../content/Package.model')
+
+function getClientIp(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || req.connection?.remoteAddress || ''
+}
 
 /**
  * POST /api/preregister/submit
@@ -117,6 +122,15 @@ exports.submit = async (req, res, next) => {
     // สร้าง verification token (เผื่อ resend ทีหลัง)
     const { token: verifyToken, expires: verifyExpires } = generateVerifyToken()
 
+    // Admin approval token (สำหรับปุ่มใน LINE flex — one-time use, 7 วัน)
+    const approveToken = crypto.randomBytes(24).toString('hex')
+    const approveTokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+    // Audit: track IP + UA + LINE UID เพื่อสอบสวนกรณี hack
+    const submitIp = getClientIp(req)
+    const submitUserAgent = (req.headers['user-agent'] || '').slice(0, 500)
+    const submitLineUserId = (liffProfile && liffProfile.userId) || ''
+
     // ═══ สร้าง PreRegistration record ═══
     const registration = await PreRegistration.create({
       firstName: finalFirstName,
@@ -131,6 +145,12 @@ exports.submit = async (req, res, next) => {
       university: university ? university.trim().toUpperCase() : undefined,
       idCardImage,
       ocrRawResponse: ocrRaw || '',
+      status: 'pending_approval',
+      approveToken,
+      approveTokenExpires,
+      submitIp,
+      submitUserAgent,
+      submitLineUserId,
       ...cmaData
     })
 
@@ -154,7 +174,9 @@ exports.submit = async (req, res, next) => {
         verifyToken: skipVerifyEmail ? undefined : verifyToken,
         verifyExpires: skipVerifyEmail ? undefined : verifyExpires,
         profileLocked: true,
-        profileCompletedAt: new Date()
+        profileCompletedAt: new Date(),
+        // Admin approval gate — user login ได้แต่โดน gate จนกว่า admin จะ approve
+        approvalStatus: 'pending'
       })
     } catch (userErr) {
       // Rollback: ลบ PreRegistration ที่เพิ่งสร้าง — ป้องกัน orphan
@@ -236,36 +258,9 @@ exports.submit = async (req, res, next) => {
       }
     }
 
-    // ═══ ส่ง verification email (skip ถ้า passedAll) ═══
-    if (!skipVerifyEmail) {
-      sendVerificationEmail(emailClean, fullName, verifyToken).catch(err => {
-        console.error('⚠️  Failed to send verification email:', err.message)
-      })
-    }
-
-    // ═══ Auto-assign VISA ทดลองเรียน (skip ถ้า passedAll) ═══
-    if (!skipVerifyEmail) {
-      ;(async () => {
-        try {
-          const demoPkg = await Package.findOne({ isDemo: true }).lean()
-          if (!demoPkg) return
-          const user = await User.findOne({ nationalId: nidResult.cleaned }).select('_id').lean()
-          if (!user) return
-          const expires = new Date()
-          expires.setDate(expires.getDate() + (demoPkg.durationDays || 30))
-          await Activation.create({
-            userId: user._id,
-            packageId: demoPkg._id,
-            expiresAt: expires,
-            isActive: true,
-            note: 'Auto: VISA ทดลองเรียนฟรี'
-          })
-          console.log(`[Passport] Auto-assign demo VISA → ${emailClean}`)
-        } catch (e) {
-          console.error('[Passport] Auto-assign demo VISA failed:', e.message)
-        }
-      })()
-    }
+    // ═══ ส่ง verification email + Auto-assign VISA ═══
+    // NOTE: ย้ายไปทำตอน admin approve แทน — กันคน hack ใช้บัตรคนอื่นแล้วได้ VISA + email verify ทันที
+    // ดู preregister.admin.routes.js: POST /:id/approve
 
     console.log(`[Passport] สร้าง User → ${emailClean}${skipVerifyEmail ? ' (passedAll — skip verify+demo)' : ' + ส่ง verify email'}`)
 
@@ -283,15 +278,15 @@ exports.submit = async (req, res, next) => {
         // ─── สถานะ ศรว. + สีหัว ───
         let cmaStatusText = 'ยังไม่ตรวจ'
         let cmaStatusColor = '#94a3b8'
-        let headerColor = '#7c3aed'
-        let headerText = 'Ninja Passport — สมัครใหม่'
+        let headerColor = '#f59e0b' // เหลืองส้ม = pending approval
+        let headerText = '⏳ Passport รออนุมัติ — คลิกเพื่อตรวจสอบ'
 
         if (cmaData.cmaSyncedAt) {
           if (cmaData.cmaPassedAll) {
             cmaStatusText = '🎓 สอบครบทุกขั้น (น่าสงสัย)'
             cmaStatusColor = '#dc2626'
             headerColor = '#dc2626'
-            headerText = '⚠ Passport: คนสอบครบสมัครเข้าระบบ'
+            headerText = '⚠ Passport: คนสอบครบสมัคร — รออนุมัติ'
           } else if (cmaData.cmaRegistered) {
             cmaStatusText = '✓ สมัครสอบ ศรว. แล้ว'
             cmaStatusColor = '#16a34a'
@@ -353,8 +348,9 @@ exports.submit = async (req, res, next) => {
                 { type: 'text', text: phone || '-', size: 'sm', weight: 'bold', flex: 5 }
               ]}
             ]},
-            footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
-              { type: 'button', action: { type: 'uri', label: 'ดูใน Passport', uri: 'https://medninja.academy/admin/passport' }, style: 'primary', color: headerColor, height: 'sm' }
+            footer: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '12px', contents: [
+              { type: 'button', action: { type: 'uri', label: '✅ ตรวจสอบและอนุมัติ', uri: `https://passport.medninja.academy/admin/approve/${approveToken}` }, style: 'primary', color: '#16a34a', height: 'sm' },
+              { type: 'button', action: { type: 'uri', label: 'ดูใน Passport Dashboard', uri: 'https://passport.medninja.academy/admin/passport' }, style: 'link', height: 'sm' }
             ]}
           }
         }
@@ -370,9 +366,8 @@ exports.submit = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: skipVerifyEmail
-        ? 'ขอแสดงความยินดี — คุณสอบผ่านครบทุกขั้นตอนแล้ว'
-        : 'ลงทะเบียนสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันตัวตน',
+      message: 'ลงทะเบียนสำเร็จ — รอ admin ตรวจสอบและอนุมัติ (ประมาณ 5–30 นาที)',
+      pendingApproval: true,
       cmaPassedAll: cmaData.cmaPassedAll,
       data: {
         id: registration._id,

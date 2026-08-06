@@ -8,6 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '../../.env') })
 
 const errorHandler = require('./shared/middleware/errorHandler')
 const profileGuard = require('./shared/middleware/profileGuard')
+const approvalGuard = require('./shared/middleware/approvalGuard')
 const auth = require('./shared/middleware/auth')
 const htmlGuard = require('./shared/middleware/htmlGuard')
 const { circuitBreaker } = require('./shared/middleware/circuitBreaker')
@@ -283,11 +284,12 @@ function requireLine(req, res, next) {
   }
   next()
 }
-app.use('/api/my', auth, profileGuard, activationRoutes)
-app.use('/api/my', auth, profileGuard, requireLine, contentRoutes)
-app.use('/api/my', auth, profileGuard, requireLine, require('./modules/selfcheck/selfcheck.routes'))
-app.use('/api/my', auth, profileGuard, requireLine, require('./modules/approach/approach.routes'))
-app.use('/api/my', auth, profileGuard, requireLine, require('./modules/meq/meq.routes'))
+// approvalGuard: บล็อค user ที่ยังไม่ผ่าน admin approve (2026-08-06 anti-hack)
+app.use('/api/my', auth, profileGuard, approvalGuard, activationRoutes)
+app.use('/api/my', auth, profileGuard, approvalGuard, requireLine, contentRoutes)
+app.use('/api/my', auth, profileGuard, approvalGuard, requireLine, require('./modules/selfcheck/selfcheck.routes'))
+app.use('/api/my', auth, profileGuard, approvalGuard, requireLine, require('./modules/approach/approach.routes'))
+app.use('/api/my', auth, profileGuard, approvalGuard, requireLine, require('./modules/meq/meq.routes'))
 // NLEX → ย้ายไป miniapp (nlex.medninja.academy) แล้ว
 // sendBeacon endpoint — ไม่ผ่าน auth (อ่าน JWT จาก body เอง)
 app.post('/api/beacon/heartbeat-clear', require('./modules/content/content.controller').beaconClearHeartbeat)

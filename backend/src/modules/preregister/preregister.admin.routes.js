@@ -668,4 +668,288 @@ router.post('/:id/sync-cma-one', auth, admin, async (req, res) => {
   }
 })
 
+// ═══════════════════════════════════════════════════════════════
+// APPROVAL GATE ENDPOINTS (2026-08-06)
+// user สมัคร → login ได้ แต่โดน gate จนกว่า admin จะ approve
+// admin ได้ LINE flex + link `/admin/approve/:token` → กด Approve/Reject
+// ═══════════════════════════════════════════════════════════════
+
+// GET /api/admin/passport/pending — รายการที่รออนุมัติ
+router.get('/pending/list', auth, admin, async (req, res) => {
+  try {
+    const pending = await PreRegistration
+      .find({ status: 'pending_approval' })
+      .select('-idCardImage -ocrRawResponse -cmaProfileImage -approveToken')
+      .sort({ createdAt: -1 })
+      .lean()
+    res.json({ pending, count: pending.length })
+  } catch (err) {
+    res.status(500).json({ message: 'โหลดไม่สำเร็จ' })
+  }
+})
+
+// GET /api/admin/passport/rejected — รายการที่โดน reject (audit hack)
+router.get('/rejected/list', auth, admin, async (req, res) => {
+  try {
+    const rejected = await PreRegistration
+      .find({ status: 'rejected' })
+      .select('-idCardImage -ocrRawResponse -cmaProfileImage -approveToken')
+      .sort({ rejectedAt: -1 })
+      .limit(200)
+      .lean()
+    res.json({ rejected, count: rejected.length })
+  } catch (err) {
+    res.status(500).json({ message: 'โหลดไม่สำเร็จ' })
+  }
+})
+
+// GET /api/admin/passport/approve/:token — โหลดข้อมูลสำหรับหน้า approve (ต้อง login admin)
+// return: registration เต็ม (มีรูปบัตร + CMA image + IP/UA/LINE)
+router.get('/approve/:token', auth, admin, async (req, res) => {
+  try {
+    const reg = await PreRegistration.findOne({ approveToken: req.params.token }).lean()
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล หรือ token ถูกใช้ไปแล้ว' })
+
+    if (reg.approveTokenExpires && new Date() > new Date(reg.approveTokenExpires)) {
+      return res.status(410).json({ message: 'Token หมดอายุแล้ว (7 วัน) — เข้า dashboard เพื่อจัดการ' })
+    }
+
+    // Enrich: user + line follower info
+    const user = await User.findOne({ nationalId: reg.nationalId })
+      .select('lineUserId lineDisplayName linePictureUrl approvalStatus emailVerified role isBanned')
+      .lean()
+
+    let lineFollower = null
+    if (user?.lineUserId) {
+      lineFollower = await LineFollower.findOne({ lineUserId: user.lineUserId })
+        .select('displayName pictureUrl tag isFollowing inChina isSpy')
+        .lean()
+    }
+
+    // เช็คว่ามีคนอื่นเคยใช้ LINE UID นี้สมัครมั้ย (spy pattern)
+    let otherRegsWithSameLine = []
+    if (reg.submitLineUserId) {
+      otherRegsWithSameLine = await PreRegistration
+        .find({ submitLineUserId: reg.submitLineUserId, _id: { $ne: reg._id } })
+        .select('firstName lastName nationalId status createdAt')
+        .lean()
+    }
+
+    // เช็คว่า IP นี้เคยสมัครกี่ครั้ง (rate abuse pattern)
+    let otherRegsWithSameIp = []
+    if (reg.submitIp) {
+      otherRegsWithSameIp = await PreRegistration
+        .find({ submitIp: reg.submitIp, _id: { $ne: reg._id } })
+        .select('firstName lastName nationalId status createdAt')
+        .limit(20)
+        .lean()
+    }
+
+    res.json({
+      registration: reg,
+      user,
+      lineFollower,
+      audit: {
+        otherRegsWithSameLine,
+        otherRegsWithSameIp
+      }
+    })
+  } catch (err) {
+    console.error('[approve/:token GET] error:', err)
+    res.status(500).json({ message: 'โหลดไม่สำเร็จ' })
+  }
+})
+
+// POST /api/admin/passport/approve/:token — กดอนุมัติ (bypass email verify + auto demo VISA)
+router.post('/approve/:token', auth, admin, async (req, res) => {
+  try {
+    const reg = await PreRegistration.findOne({ approveToken: req.params.token })
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล หรือ token ถูกใช้ไปแล้ว' })
+
+    if (reg.status === 'approved') {
+      return res.status(400).json({ message: `อนุมัติไปแล้วโดย ${reg.approvedBy || 'admin'}`, alreadyApproved: true })
+    }
+    if (reg.status === 'rejected') {
+      return res.status(400).json({ message: 'record นี้ถูก reject ไปแล้ว' })
+    }
+
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    if (!user) return res.status(404).json({ message: 'ไม่พบบัญชี User' })
+
+    const adminName = req.user?.name || req.user?.email || 'admin'
+    const now = new Date()
+
+    // 1) Mark PreReg + User approved
+    reg.status = 'approved'
+    reg.approvedBy = adminName
+    reg.approvedAt = now
+    reg.approveToken = undefined // invalidate token
+    await reg.save()
+
+    user.approvalStatus = 'approved'
+    user.approvedBy = adminName
+    user.approvedAt = now
+    user.emailVerified = true // approve = bypass email verify (admin เห็นบัตรแล้ว)
+    user.verifyToken = undefined
+    user.verifyExpires = undefined
+    await user.save()
+
+    // 2) Auto-assign demo VISA (ย้ายมาจาก submit)
+    ;(async () => {
+      try {
+        const demoPkg = await Package.findOne({ isDemo: true }).lean()
+        if (!demoPkg) return
+        // เช็คว่ามี demo activation อยู่แล้วมั้ย (กัน double assign)
+        const existingDemo = await Activation.findOne({
+          userId: user._id,
+          packageId: demoPkg._id
+        }).lean()
+        if (existingDemo) return
+        const expires = new Date()
+        expires.setDate(expires.getDate() + (demoPkg.durationDays || 30))
+        await Activation.create({
+          userId: user._id,
+          packageId: demoPkg._id,
+          expiresAt: expires,
+          isActive: true,
+          note: `Auto: VISA ทดลองเรียนฟรี (approved by ${adminName})`
+        })
+      } catch (e) {
+        console.error('[approve] demo VISA assign failed:', e.message)
+      }
+    })()
+
+    // 3) แจ้ง user ทาง LINE (ถ้า link แล้ว)
+    if (user.lineUserId) {
+      ;(async () => {
+        try {
+          const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
+          if (!token) return
+          const flex = {
+            type: 'flex',
+            altText: '🎉 Ninja Passport อนุมัติแล้ว',
+            contents: {
+              type: 'bubble',
+              header: { type: 'box', layout: 'vertical', backgroundColor: '#16a34a', paddingAll: '16px', contents: [
+                { type: 'text', text: '🎉 อนุมัติเรียบร้อย', color: '#FFFFFF', size: 'lg', weight: 'bold' }
+              ]},
+              body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '20px', contents: [
+                { type: 'text', text: `สวัสดีคุณ ${reg.firstName} ${reg.lastName}`, size: 'md', weight: 'bold' },
+                { type: 'text', text: 'บัญชี Ninja Passport ของคุณผ่านการตรวจสอบแล้ว เข้าเรียนได้เลย!', size: 'sm', color: '#475569', wrap: true }
+              ]},
+              footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+                { type: 'button', action: { type: 'uri', label: 'เข้าใช้งาน', uri: 'https://passport.medninja.academy/my' }, style: 'primary', color: '#16a34a', height: 'sm' }
+              ]}
+            }
+          }
+          fetch('https://api.line.me/v2/bot/message/push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ to: user.lineUserId, messages: [flex] })
+          }).catch(() => {})
+        } catch (e) { console.error('[approve] LINE notify user failed:', e.message) }
+      })()
+    }
+
+    console.log(`[Passport approve] ${reg.firstName} ${reg.lastName} (${reg.nationalId}) approved by ${adminName}`)
+    res.json({ ok: true, message: `อนุมัติ ${reg.firstName} ${reg.lastName} สำเร็จ`, approvedBy: adminName })
+  } catch (err) {
+    console.error('[approve POST] error:', err)
+    res.status(500).json({ message: 'อนุมัติไม่สำเร็จ: ' + err.message })
+  }
+})
+
+// POST /api/admin/passport/reject/:token — reject (ban user + audit)
+router.post('/reject/:token', auth, admin, async (req, res) => {
+  try {
+    const { reason = '' } = req.body || {}
+    const reg = await PreRegistration.findOne({ approveToken: req.params.token })
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล หรือ token ถูกใช้ไปแล้ว' })
+
+    if (reg.status === 'approved') return res.status(400).json({ message: 'อนุมัติไปแล้ว — reject ไม่ได้' })
+    if (reg.status === 'rejected') return res.status(400).json({ message: 'ถูก reject ไปแล้ว' })
+
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    const adminName = req.user?.name || req.user?.email || 'admin'
+    const now = new Date()
+
+    reg.status = 'rejected'
+    reg.rejectedBy = adminName
+    reg.rejectedAt = now
+    reg.rejectReason = reason.slice(0, 500)
+    reg.approveToken = undefined
+    await reg.save()
+
+    if (user) {
+      user.approvalStatus = 'rejected'
+      user.rejectedBy = adminName
+      user.rejectedAt = now
+      user.rejectReason = reason.slice(0, 500)
+      user.isBanned = true
+      user.bannedAt = now
+      user.bannedReason = `Passport rejected: ${reason || 'no reason given'}`
+      await user.save()
+    }
+
+    console.log(`[Passport reject] ${reg.firstName} ${reg.lastName} (${reg.nationalId}) rejected by ${adminName} — ${reason}`)
+    res.json({ ok: true, message: `ปฏิเสธและ ban ${reg.firstName} ${reg.lastName} เรียบร้อย`, rejectedBy: adminName })
+  } catch (err) {
+    console.error('[reject POST] error:', err)
+    res.status(500).json({ message: 'Reject ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+// POST /api/admin/passport/:id/approve-direct — approve จาก dashboard (ไม่ใช้ token — ใช้ id)
+router.post('/:id/approve-direct', auth, admin, async (req, res) => {
+  try {
+    const reg = await PreRegistration.findById(req.params.id)
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+    if (reg.status === 'approved') return res.status(400).json({ message: 'อนุมัติไปแล้ว', alreadyApproved: true })
+
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    if (!user) return res.status(404).json({ message: 'ไม่พบบัญชี User' })
+
+    const adminName = req.user?.name || req.user?.email || 'admin'
+    const now = new Date()
+
+    reg.status = 'approved'
+    reg.approvedBy = adminName
+    reg.approvedAt = now
+    reg.approveToken = undefined
+    await reg.save()
+
+    user.approvalStatus = 'approved'
+    user.approvedBy = adminName
+    user.approvedAt = now
+    user.emailVerified = true
+    user.verifyToken = undefined
+    user.verifyExpires = undefined
+    await user.save()
+
+    // Auto demo VISA
+    ;(async () => {
+      try {
+        const demoPkg = await Package.findOne({ isDemo: true }).lean()
+        if (!demoPkg) return
+        const existingDemo = await Activation.findOne({ userId: user._id, packageId: demoPkg._id }).lean()
+        if (existingDemo) return
+        const expires = new Date()
+        expires.setDate(expires.getDate() + (demoPkg.durationDays || 30))
+        await Activation.create({
+          userId: user._id,
+          packageId: demoPkg._id,
+          expiresAt: expires,
+          isActive: true,
+          note: `Auto: VISA ทดลองเรียนฟรี (approved by ${adminName})`
+        })
+      } catch (e) { console.error('[approve-direct] demo VISA failed:', e.message) }
+    })()
+
+    console.log(`[Passport approve-direct] ${reg.firstName} ${reg.lastName} approved by ${adminName}`)
+    res.json({ ok: true, message: `อนุมัติ ${reg.firstName} ${reg.lastName} สำเร็จ` })
+  } catch (err) {
+    res.status(500).json({ message: 'อนุมัติไม่สำเร็จ: ' + err.message })
+  }
+})
+
 module.exports = router

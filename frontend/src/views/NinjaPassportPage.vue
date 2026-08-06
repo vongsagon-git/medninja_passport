@@ -252,19 +252,21 @@
           </button>
         </template>
 
-        <!-- ═══ STEP 3: สำเร็จ — ต้องยืนยัน email ═══ -->
+        <!-- ═══ STEP 3: สำเร็จ — รอ admin อนุมัติ ═══ -->
         <template v-else-if="step === 3">
           <div class="np-done">
-            <div class="np-done-icon np-done-email">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" width="36" height="36"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+            <div class="np-done-icon np-done-email" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);">
+              <span style="font-size: 36px;">⏳</span>
             </div>
-            <h2>เกือบเสร็จแล้ว!</h2>
-            <p class="np-done-sub">ลงทะเบียนสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันตัวตน</p>
+            <h2>ลงทะเบียนสำเร็จ!</h2>
+            <p class="np-done-sub">รอ Admin ตรวจสอบและอนุมัติ (ประมาณ 5–30 นาที)</p>
 
-            <div class="np-email-box">
-              <div class="np-email-label">เราส่งลิงก์ยืนยันไปที่</div>
-              <div class="np-email-addr">{{ result.email }}</div>
-              <div class="np-email-hint">กดลิงก์ในอีเมลเพื่อเปิดใช้งานบัญชี</div>
+            <div class="np-email-box" style="background: #fef3c7; border-color: #fcd34d;">
+              <div class="np-email-label" style="color:#78350f">หากรอเกิน 30 นาที</div>
+              <div class="np-email-addr" style="color:#78350f;font-size:16px;line-height:1.6">
+                ทัก LINE <b>@medninja</b> พร้อมแจ้งชื่อ<br>
+                <b>{{ result.firstName }} {{ result.lastName }}</b>
+              </div>
             </div>
 
             <div class="np-result">
@@ -285,7 +287,7 @@
 
             <div class="np-note">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-              <span>กรุณาจับภาพหน้าจอ หรือจดรหัสไว้ เพื่อใช้เข้าระบบ</span>
+              <span>จับภาพหน้าจอเก็บไว้ — Login ได้หลัง Admin อนุมัติ</span>
             </div>
           </div>
         </template>
