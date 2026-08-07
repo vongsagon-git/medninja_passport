@@ -19,16 +19,6 @@ const wd = require('./watch-debug.controller')
 router.get('/watch-debug/sessions', auth, admin, wd.listSessions)
 router.get('/watch-debug/sessions/:sessionId', auth, admin, wd.getSession)
 
-// Admin: VideoContent Library (reusable 4-field video presets)
-const {
-  saveContent, listContents, getTags, deleteContent, getUsage
-} = require('./video-content.controller')
-router.get('/video-contents', auth, admin, listContents)
-router.get('/video-contents/tags', auth, admin, getTags)
-router.get('/video-contents/:id/usage', auth, admin, getUsage)
-router.post('/video-contents', auth, admin, saveContent)
-router.delete('/video-contents/:id', auth, admin, deleteContent)
-
 // Admin: CRUD Sections
 router.get('/sections', auth, admin, getAllSections)
 router.get('/sections/:id', auth, admin, getSection)

@@ -188,14 +188,13 @@
                               <span class="tree-video-num">{{ vid.flatIdx + 1 }}</span>
                               <input v-model="vid.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="vid.ref._locked" />
                               <button v-if="vid.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(vid.ref)" :disabled="vid.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ vid.ref._renaming ? '...' : '✏️' }}</button>
-                              <button type="button" class="btn-load-lib" @click="openLoadContentModal(vid.ref)" title="โหลดจาก Content Library">📚</button>
                               <!-- ⭐ 4 video IDs — 2 labeled rows: GLOBAL / CHINA -->
                               <div class="video-ids-grid-v2">
                                 <div class="platform-row global">
                                   <span class="platform-label">🌐 GLOBAL</span>
                                   <div class="vid-slot">
                                     <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="vid.ref._locked" @input="scheduleVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._verifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._verified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._verified === false" class="verify-status fail">✗</span>
@@ -204,7 +203,7 @@
                                   </div>
                                   <div class="vid-slot">
                                     <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleDrmVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="vid.ref._locked" @input="scheduleDrmVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._drmVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._drmVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -217,7 +216,7 @@
                                   <span class="platform-label">🇨🇳 CHINA</span>
                                   <div class="vid-slot">
                                     <div class="vid-input-wrap">
-                                      <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="vid.ref.contentId || vid.ref._locked" @input="scheduleAliVerify(vid.flatIdx)" />
+                                      <input v-model="vid.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="vid.ref._locked" @input="scheduleAliVerify(vid.flatIdx)" />
                                       <span v-if="vid.ref._aliVerifying" class="verify-status verifying">...</span>
                                       <span v-else-if="vid.ref._aliVerified === true" class="verify-status ok">✓</span>
                                       <span v-else-if="vid.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -225,15 +224,8 @@
                                     <div v-if="vid.ref._aliName" class="bunny-filename" :title="vid.ref._aliName">{{ vid.ref._aliName }}</div>
                                     <div v-if="vid.ref._aliVerifyReason" class="ali-verify-reason" :title="vid.ref._aliVerifyReason">{{ vid.ref._aliVerifyReason }}</div>
                                   </div>
-                                  <!-- ⭐ Save to Library — แสดงเมื่อครบ fields -->
-                                  <div v-if="isFourFieldsComplete(vid.ref)" class="save-to-lib-row">
-                                    <button type="button" class="btn-save-to-lib" @click="openSaveContentModal(vid.ref)" title="บันทึกเข้า Library เพื่อ reuse ในอนาคต">
-                                      💾 บันทึกเข้า Content Library
-                                    </button>
-                                  </div>
                                 </div>
                               </div>
-                              <span v-if="vid.ref.contentId" class="link-badge" :title="'🔗 Link Library: ' + (vid.ref._linkedContentTitle || 'Library content') + ' (คลิกเพื่อ unlink)'" @click="unlinkContent(vid.ref)">🔗 Library</span>
                               <span v-if="vid.ref._locked" class="lock-badge" @click="unlockVideo(vid.flatIdx)">🔒</span>
                               <select v-model.number="vid.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (vid.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                                 <option :value="1">ระดับ 1</option>
@@ -335,13 +327,12 @@
                           <span class="tree-video-num">{{ child.flatIdx + 1 }}</span>
                           <input v-model="child.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="child.ref._locked" />
                           <button v-if="child.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(child.ref)" :disabled="child.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ child.ref._renaming ? '...' : '✏️' }}</button>
-                          <button type="button" class="btn-load-lib" @click="openLoadContentModal(child.ref)" title="โหลดจาก Content Library">📚</button>
                           <div class="video-ids-grid-v2">
                             <div class="platform-row global">
                               <span class="platform-label">🌐 GLOBAL</span>
                               <div class="vid-slot">
                                 <div class="vid-input-wrap">
-                                  <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="child.ref._locked" @input="scheduleVerify(child.flatIdx)" />
                                   <span v-if="child.ref._verifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._verified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._verified === false" class="verify-status fail">✗</span>
@@ -350,7 +341,7 @@
                               </div>
                               <div class="vid-slot">
                                 <div class="vid-input-wrap">
-                                  <input v-model="child.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleDrmVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="child.ref._locked" @input="scheduleDrmVerify(child.flatIdx)" />
                                   <span v-if="child.ref._drmVerifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._drmVerified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -363,7 +354,7 @@
                               <span class="platform-label">🇨🇳 CHINA</span>
                               <div class="vid-slot">
                                 <div class="vid-input-wrap">
-                                  <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="child.ref.contentId || child.ref._locked" @input="scheduleAliVerify(child.flatIdx)" />
+                                  <input v-model="child.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="child.ref._locked" @input="scheduleAliVerify(child.flatIdx)" />
                                   <span v-if="child.ref._aliVerifying" class="verify-status verifying">...</span>
                                   <span v-else-if="child.ref._aliVerified === true" class="verify-status ok">✓</span>
                                   <span v-else-if="child.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -372,13 +363,7 @@
                                 <div v-if="child.ref._aliVerifyReason" class="ali-verify-reason" :title="child.ref._aliVerifyReason">{{ child.ref._aliVerifyReason }}</div>
                               </div>
                             </div>
-                            <div v-if="isFourFieldsComplete(child.ref)" class="save-to-lib-row">
-                              <button type="button" class="btn-save-to-lib" @click="openSaveContentModal(child.ref)" title="บันทึกเข้า Library เพื่อ reuse ในอนาคต">
-                                💾 บันทึกเข้า Content Library
-                              </button>
-                            </div>
                           </div>
-                          <span v-if="child.ref.contentId" class="link-badge" :title="'🔗 Link Library: ' + (child.ref._linkedContentTitle || 'Library content') + ' (คลิกเพื่อ unlink)'" @click="unlinkContent(child.ref)">🔗 Library</span>
                           <span v-if="child.ref._locked" class="lock-badge" @click="unlockVideo(child.flatIdx)">🔒</span>
                           <select v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                             <option :value="1">ระดับ 1</option>
@@ -472,13 +457,12 @@
                     <span class="tree-video-num">{{ node.flatIdx + 1 }}</span>
                     <input v-model="node.ref.title" type="text" class="form-control form-control-sm" placeholder="ชื่อวีดีโอ" style="flex:1;min-width:120px;" :disabled="node.ref._locked" />
                     <button v-if="node.ref.bunnyVideoId" type="button" class="btn-rename" @click="renameAllFiles(node.ref)" :disabled="node.ref._renaming" :title="'ตั้งชื่อไฟล์ (Bunny 2 + Ali 2)'">{{ node.ref._renaming ? '...' : '✏️' }}</button>
-                    <button type="button" class="btn-load-lib" @click="openLoadContentModal(node.ref)" title="โหลดจาก Content Library">📚</button>
                     <div class="video-ids-grid-v2">
                       <div class="platform-row global">
                         <span class="platform-label">🌐 GLOBAL</span>
                         <div class="vid-slot">
                           <div class="vid-input-wrap">
-                            <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
+                            <input v-model="node.ref.bunnyVideoId" type="text" class="form-control form-control-sm" placeholder="NoDRM UUID" :disabled="node.ref._locked" @input="scheduleVerify(node.flatIdx)" />
                             <span v-if="node.ref._verifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._verified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._verified === false" class="verify-status fail">✗</span>
@@ -487,7 +471,7 @@
                         </div>
                         <div class="vid-slot">
                           <div class="vid-input-wrap">
-                            <input v-model="node.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleDrmVerify(node.flatIdx)" />
+                            <input v-model="node.ref.bunnyDrmVideoId" type="text" class="form-control form-control-sm drm-input" placeholder="DRM UUID" :disabled="node.ref._locked" @input="scheduleDrmVerify(node.flatIdx)" />
                             <span v-if="node.ref._drmVerifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._drmVerified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._drmVerified === false" class="verify-status fail">✗</span>
@@ -500,7 +484,7 @@
                         <span class="platform-label">🇨🇳 CHINA</span>
                         <div class="vid-slot">
                           <div class="vid-input-wrap">
-                            <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="node.ref.contentId || node.ref._locked" @input="scheduleAliVerify(node.flatIdx)" />
+                            <input v-model="node.ref.aliVideoId" type="text" class="form-control form-control-sm ali-input" placeholder="Ali VID (dual encryption)" :disabled="node.ref._locked" @input="scheduleAliVerify(node.flatIdx)" />
                             <span v-if="node.ref._aliVerifying" class="verify-status verifying">...</span>
                             <span v-else-if="node.ref._aliVerified === true" class="verify-status ok">✓</span>
                             <span v-else-if="node.ref._aliVerified === false" class="verify-status fail">✗</span>
@@ -509,13 +493,7 @@
                           <div v-if="node.ref._aliVerifyReason" class="ali-verify-reason" :title="node.ref._aliVerifyReason">{{ node.ref._aliVerifyReason }}</div>
                         </div>
                       </div>
-                      <div v-if="isFourFieldsComplete(node.ref)" class="save-to-lib-row">
-                        <button type="button" class="btn-save-to-lib" @click="openSaveContentModal(node.ref)" title="บันทึกเข้า Library เพื่อ reuse ในอนาคต">
-                          💾 บันทึกเข้า Content Library
-                        </button>
-                      </div>
                     </div>
-                    <span v-if="node.ref.contentId" class="link-badge" :title="'🔗 Link Library: ' + (node.ref._linkedContentTitle || 'Library content') + ' (คลิกเพื่อ unlink)'" @click="unlinkContent(node.ref)">🔗 Library</span>
                     <span v-if="node.ref._locked" class="lock-badge" @click="unlockVideo(node.flatIdx)">🔒</span>
                     <select v-model.number="node.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (node.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                       <option :value="1">ระดับ 1</option>
@@ -742,112 +720,6 @@
     <!-- Hidden PDF upload input -->
     <input ref="pdfInput" type="file" accept=".pdf" style="display:none" @change="onPdfSelected">
 
-    <!-- 💾 Save to Content Library Modal -->
-    <div v-if="saveContentModal.show" class="modal-overlay" @click.self="closeSaveContentModal">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>💾 บันทึกเข้า Content Library</h3>
-          <button type="button" class="modal-close" @click="closeSaveContentModal">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <label>ชื่อ Content <span class="required">*</span></label>
-            <input v-model="saveContentModal.title" type="text" class="form-control" placeholder="เช่น B1 Microbiology 8" />
-          </div>
-          <div class="form-row">
-            <label>Tag Lv1 <span class="tag-hint">(หมวดหลัก)</span></label>
-            <input v-model="saveContentModal.tagLv1" type="text" class="form-control" placeholder="เช่น Basic Science" list="lib-tags-lv1" />
-            <datalist id="lib-tags-lv1">
-              <option v-for="t in libTags.tagLv1" :key="t" :value="t"></option>
-            </datalist>
-          </div>
-          <div class="form-row">
-            <label>Tag Lv2 <span class="tag-hint">(หมวดย่อย)</span></label>
-            <input v-model="saveContentModal.tagLv2" type="text" class="form-control" placeholder="เช่น Microbiology" list="lib-tags-lv2" />
-            <datalist id="lib-tags-lv2">
-              <option v-for="t in libTags.tagLv2" :key="t" :value="t"></option>
-            </datalist>
-          </div>
-          <div class="form-row">
-            <label>Tag Lv3 <span class="tag-hint">(หัวข้อย่อย)</span></label>
-            <input v-model="saveContentModal.tagLv3" type="text" class="form-control" placeholder="เช่น Bacteriology" list="lib-tags-lv3" />
-            <datalist id="lib-tags-lv3">
-              <option v-for="t in libTags.tagLv3" :key="t" :value="t"></option>
-            </datalist>
-          </div>
-          <div class="form-row">
-            <label>Notes <span class="tag-hint">(optional)</span></label>
-            <textarea v-model="saveContentModal.notes" class="form-control" rows="2" placeholder="โน้ตช่วยจำ..."></textarea>
-          </div>
-          <div class="preview-4-fields">
-            <div class="preview-title">4 videoIds ที่จะบันทึก:</div>
-            <div class="preview-row"><span>🌐 Bunny NoDRM</span><code>{{ saveContentModal.bunnyVideoId }}</code></div>
-            <div class="preview-row"><span>🌐 Bunny Widevine</span><code>{{ saveContentModal.bunnyDrmVideoId }}</code></div>
-            <div class="preview-row"><span>🇨🇳 Ali (dual encryption)</span><code>{{ saveContentModal.aliVideoId }}</code></div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" @click="closeSaveContentModal" :disabled="saveContentModal.saving">ยกเลิก</button>
-          <button type="button" class="btn btn-primary" @click="submitSaveContent" :disabled="!saveContentModal.title || saveContentModal.saving">
-            {{ saveContentModal.saving ? 'กำลังบันทึก...' : '💾 บันทึก' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 📚 Load from Content Library Modal -->
-    <div v-if="loadContentModal.show" class="modal-overlay" @click.self="closeLoadContentModal">
-      <div class="modal-card modal-card-wide">
-        <div class="modal-header">
-          <h3>📚 โหลดจาก Content Library</h3>
-          <button type="button" class="modal-close" @click="closeLoadContentModal">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="load-filter-bar">
-            <input v-model="loadContentModal.search" type="text" placeholder="🔍 ค้นหาชื่อ" class="form-control" @input="debouncedLoadContents" />
-            <select v-model="loadContentModal.tagLv1" class="form-control" @change="fetchLibContents">
-              <option value="">ทุก Lv1</option>
-              <option v-for="t in libTags.tagLv1" :key="t" :value="t">{{ t }}</option>
-            </select>
-            <select v-model="loadContentModal.tagLv2" class="form-control" @change="fetchLibContents">
-              <option value="">ทุก Lv2</option>
-              <option v-for="t in libTags.tagLv2" :key="t" :value="t">{{ t }}</option>
-            </select>
-            <select v-model="loadContentModal.tagLv3" class="form-control" @change="fetchLibContents">
-              <option value="">ทุก Lv3</option>
-              <option v-for="t in libTags.tagLv3" :key="t" :value="t">{{ t }}</option>
-            </select>
-          </div>
-          <div v-if="loadContentModal.loading" class="load-empty">กำลังโหลด...</div>
-          <div v-else-if="loadContentModal.contents.length === 0" class="load-empty">
-            <div style="font-size:32px;">📭</div>
-            <div>ไม่พบ Content — ลองปรับ filter หรือเพิ่ม content ที่ /admin/content-library</div>
-          </div>
-          <div v-else class="load-list">
-            <div v-for="c in loadContentModal.contents" :key="c._id" class="load-item" @click="selectLibContent(c)">
-              <div class="load-item-main">
-                <div class="load-item-title">{{ c.title }}</div>
-                <div class="load-item-tags">
-                  <span v-if="c.tagLv1" class="tag-chip lv1">{{ c.tagLv1 }}</span>
-                  <span v-if="c.tagLv2" class="tag-chip lv2">{{ c.tagLv2 }}</span>
-                  <span v-if="c.tagLv3" class="tag-chip lv3">{{ c.tagLv3 }}</span>
-                </div>
-                <div v-if="c.notes" class="load-item-notes">{{ c.notes }}</div>
-              </div>
-              <div class="load-item-meta">
-                <div class="load-item-dur">{{ c.duration || '--:--' }}</div>
-                <div class="load-item-check">✓ 4/4</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <div class="load-count">{{ loadContentModal.contents.length }} contents</div>
-          <button type="button" class="btn btn-outline" @click="closeLoadContentModal">ยกเลิก</button>
-        </div>
-      </div>
-    </div>
-
     <!-- ═══ Clone Topic/Subtopic Modal ═══ -->
     <div v-if="cloneModal.open" class="modal-overlay" @click.self="closeCloneModal">
       <div class="modal-card">
@@ -947,29 +819,6 @@ export default {
       pdfLibrary: [], // PDF files from Bunny Storage
       refreshing: false,
       collapsed: {},
-      // 💾 Save to Content Library
-      saveContentModal: {
-        show: false,
-        saving: false,
-        title: '',
-        tagLv1: '',
-        tagLv2: '',
-        tagLv3: '',
-        notes: '',
-        bunnyVideoId: '', bunnyDrmVideoId: '', aliVideoId: '',
-        _videoRef: null
-      },
-      libTags: { tagLv1: [], tagLv2: [], tagLv3: [] },
-      // 📚 Load from Content Library
-      loadContentModal: {
-        show: false,
-        loading: false,
-        search: '',
-        tagLv1: '', tagLv2: '', tagLv3: '',
-        contents: [],
-        _videoRef: null,
-        _debounceTimer: null
-      },
       form: {
         code: '',
         name: '',
@@ -1091,117 +940,10 @@ export default {
     _closeActionMenu() {
       this._openMenuIdx = null
     },
-    // ═══ 💾 Save to Content Library ═══
-    // ⭐ ครบ 4 fields + ยัง"ไม่ได้"ผูก Library อยู่ = แสดงปุ่มบันทึก
-    //    ถ้ามี contentId แล้ว = มาจาก Library อยู่แล้ว → ไม่ต้องบันทึกซ้ำ
-    isFourFieldsComplete(video) {
-      if (video.contentId) return false
-      return !!(video.bunnyVideoId && video.bunnyDrmVideoId && video.aliVideoId)
-    },
-    async openSaveContentModal(video) {
-      // Fetch existing tags for autocomplete
-      try {
-        const res = await api.get('/admin/video-contents/tags')
-        this.libTags = { tagLv1: res.tagLv1 || [], tagLv2: res.tagLv2 || [], tagLv3: res.tagLv3 || [] }
-      } catch (e) {
-        this.libTags = { tagLv1: [], tagLv2: [], tagLv3: [] }
-      }
-      this.saveContentModal = {
-        show: true,
-        saving: false,
-        title: video.title || '',
-        tagLv1: '', tagLv2: '', tagLv3: '',
-        notes: '',
-        bunnyVideoId: video.bunnyVideoId,
-        bunnyDrmVideoId: video.bunnyDrmVideoId,
-        aliVideoId: video.aliVideoId,
-        _videoRef: video
-      }
-    },
-    closeSaveContentModal() {
-      this.saveContentModal.show = false
-    },
-    // ═══ 📚 Load from Content Library ═══
-    async openLoadContentModal(video) {
-      this.loadContentModal = {
-        show: true,
-        loading: false,
-        search: '',
-        tagLv1: '', tagLv2: '', tagLv3: '',
-        contents: [],
-        _videoRef: video,
-        _debounceTimer: null
-      }
-      try {
-        const res = await api.get('/admin/video-contents/tags')
-        this.libTags = { tagLv1: res.tagLv1 || [], tagLv2: res.tagLv2 || [], tagLv3: res.tagLv3 || [] }
-      } catch (e) {}
-      await this.fetchLibContents()
-    },
-    closeLoadContentModal() {
-      this.loadContentModal.show = false
-    },
-    debouncedLoadContents() {
-      clearTimeout(this.loadContentModal._debounceTimer)
-      this.loadContentModal._debounceTimer = setTimeout(() => this.fetchLibContents(), 300)
-    },
-    async fetchLibContents() {
-      this.loadContentModal.loading = true
-      try {
-        const params = {}
-        const m = this.loadContentModal
-        if (m.search) params.search = m.search
-        if (m.tagLv1) params.tagLv1 = m.tagLv1
-        if (m.tagLv2) params.tagLv2 = m.tagLv2
-        if (m.tagLv3) params.tagLv3 = m.tagLv3
-        const res = await api.get('/admin/video-contents', { params })
-        this.loadContentModal.contents = res.contents || []
-      } catch (err) {
-        this.loadContentModal.contents = []
-      } finally {
-        this.loadContentModal.loading = false
-      }
-    },
-    async selectLibContent(content) {
-      const video = this.loadContentModal._videoRef
-      if (!video) return
-      const hasExisting = video.bunnyVideoId || video.bunnyDrmVideoId || video.aliVideoId || video.contentId
-      if (hasExisting) {
-        const proceed = confirm(`⚠️ VDO นี้มีข้อมูลอยู่แล้ว\n\nต้องการเปลี่ยนเป็น "${content.title}"?`)
-        if (!proceed) return
-      }
-      // ⭐ Link mode: save contentId only + snapshot for offline display
-      // Backend จะ override 4 videoIds จาก Library ตอน serve
-      video.contentId = content._id
-      video.title = content.title
-      video.bunnyVideoId = content.bunnyVideoId
-      video.bunnyDrmVideoId = content.bunnyDrmVideoId
-      video.aliVideoId = content.aliVideoId
-      if (content.duration) video.duration = content.duration
-      video._linkedContentTitle = content.title
-      video._verified = true
-      video._drmVerified = true
-      video._aliVerified = true
-      this.$forceUpdate()
-      this.closeLoadContentModal()
-      // ⭐ Auto-save เข้า DB ทันที (มิฉะนั้น refresh หน้าแล้ว link จะหาย)
-      // Tree view = อยู่ใน edit mode เสมอ (v-if="showForm") → save via editingId
-      try {
-        if (this.editingId) {
-          await api.put(`/admin/sections/${this.editingId}`, {
-            videos: this.form.videos.map(v => this._sanitizeVideo(v))
-          })
-          this.successMsg = `🔗 ผูก Library: ${content.title}`
-        }
-      } catch (err) {
-        this.errorMsg = 'บันทึก link ไม่สำเร็จ — refresh หน้าแล้วอาจหาย'
-      }
-    },
     // ⭐ Whitelist fields ที่ schema รู้จัก — ตัด _underscore fields (verified, locked, ฯลฯ) ออก
     // ใช้ที่เดียวกับ handleSubmit payload → maintain ที่เดียว
     _sanitizeVideo(v) {
       return {
-        contentId: v.contentId || null,
         title: (v.title || '').trim(),
         topic: (v.topic || '').trim(),
         subtopic: (v.subtopic || '').trim(),
@@ -1227,40 +969,6 @@ export default {
         bonusDuration: v.bonusDuration || '',
         bonusPdfFile: (v.bonusPdfFile || '').trim(),
         bonusPdfFileName: (v.bonusPdfFileName || '').trim()
-      }
-    },
-    unlinkContent(video) {
-      if (!video.contentId) return
-      const proceed = confirm(`ปลด link จาก Content Library?\n\nID จะยังอยู่ในฟิลด์ แต่จะไม่ sync กับ Library แล้ว\n(ยกเลิกไม่ได้จนกว่าจะ Load ใหม่)`)
-      if (!proceed) return
-      video.contentId = null
-      video._linkedContentTitle = ''
-      this.$forceUpdate()
-    },
-    async submitSaveContent() {
-      const m = this.saveContentModal
-      if (!m.title.trim()) { alert('กรอกชื่อ Content'); return }
-      m.saving = true
-      try {
-        await api.post('/admin/video-contents', {
-          title: m.title.trim(),
-          tagLv1: m.tagLv1.trim(),
-          tagLv2: m.tagLv2.trim(),
-          tagLv3: m.tagLv3.trim(),
-          bunnyVideoId: m.bunnyVideoId,
-          bunnyDrmVideoId: m.bunnyDrmVideoId,
-          aliVideoId: m.aliVideoId,
-          duration: m._videoRef?.duration || '',
-          notes: m.notes.trim()
-        })
-        // Mark video so save button hides
-        if (m._videoRef) m._videoRef._savedToLib = true
-        alert('✅ บันทึกเข้า Library แล้ว')
-        this.closeSaveContentModal()
-      } catch (err) {
-        alert('บันทึกไม่สำเร็จ: ' + (err.response?.data?.error || err.message))
-      } finally {
-        m.saving = false
       }
     },
     // ─── Self Check ───
@@ -2128,9 +1836,6 @@ export default {
         videos: (section.videos || [])
           .sort((a, b) => (a.order || 0) - (b.order || 0))
           .map(v => ({
-            // ⭐ Content Library link — ต้อง preserve ตอน load ไม่งั้น badge/lock หายทุกครั้ง edit
-            contentId: v.contentId || null,
-            _linkedContentTitle: v.contentId ? (v.title || 'Library content') : '',
             title: v.title || '',
             topic: v.topic || '',
             subtopic: v.subtopic || '',
@@ -2611,8 +2316,7 @@ export default {
         '_aliVerifying', '_aliVerified', '_aliName', '_aliVerifyReason',
         '_renaming', '_locked', '_bonusExpanded', '_bonusLocked',
         '_bonusVerifying', '_bonusVerified', '_bonusBunnyName',
-        '_bonusDrmVerifying', '_bonusDrmVerified', '_bonusDrmName',
-        '_linkedContentTitle']
+        '_bonusDrmVerifying', '_bonusDrmVerified', '_bonusDrmName']
       for (const k of stripKeys) delete cloned[k]
       cloned.topic = newTopic || ''
       cloned.subtopic = newSubtopic || ''
@@ -3269,32 +2973,6 @@ export default {
   outline: 2px solid rgba(220, 38, 38, 0.2);
 }
 
-/* ═══ 💾 Save to Content Library ═══ */
-.save-to-lib-row {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 6px;
-  border-top: 1px dashed #c7d2fe;
-  margin-top: 4px;
-}
-.btn-save-to-lib {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  border: none;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.25);
-  transition: all 0.2s;
-}
-.btn-save-to-lib:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
-}
-
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -3363,154 +3041,6 @@ export default {
   font-weight: 600;
   color: #374151;
   margin-bottom: 4px;
-}
-.form-row .required { color: #ef4444; }
-.form-row .tag-hint { font-weight: 400; color: #9ca3af; font-size: 11px; }
-.preview-4-fields {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 11px;
-}
-.preview-title {
-  font-weight: 600;
-  color: #0369a1;
-  margin-bottom: 6px;
-}
-.preview-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 3px 0;
-}
-.preview-row code {
-  background: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'SF Mono', Menlo, monospace;
-  font-size: 10px;
-  color: #0c4a6e;
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ═══ 📚 Load from Content Library ═══ */
-.btn-load-lib {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  color: white;
-  border: none;
-  padding: 2px 8px;
-  border-radius: 5px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.3);
-}
-.btn-load-lib:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 6px rgba(245, 158, 11, 0.4);
-}
-.link-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 8px;
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 5px;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.35);
-  margin-left: 4px;
-}
-.link-badge:hover {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-}
-.modal-card-wide {
-  max-width: 780px;
-}
-.load-filter-bar {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.load-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: #94a3b8;
-  font-size: 13px;
-}
-.load-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 50vh;
-  overflow-y: auto;
-  padding: 2px;
-}
-.load-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.load-item:hover {
-  border-color: #f59e0b;
-  background: #fffbeb;
-  transform: translateX(2px);
-}
-.load-item-main { flex: 1; min-width: 0; }
-.load-item-title {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 13px;
-  margin-bottom: 4px;
-}
-.load-item-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 2px; }
-.tag-chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
-}
-.tag-chip.lv1 { background: #dbeafe; color: #1e40af; }
-.tag-chip.lv2 { background: #ede9fe; color: #6d28d9; }
-.tag-chip.lv3 { background: #fce7f3; color: #be185d; }
-.load-item-notes {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 2px;
-}
-.load-item-meta {
-  text-align: right;
-  padding-left: 12px;
-}
-.load-item-dur {
-  font-family: 'SF Mono', Menlo, monospace;
-  font-size: 12px;
-  color: #64748b;
-}
-.load-item-check {
-  font-size: 10px;
-  color: #10b981;
-  font-weight: 700;
-  margin-top: 2px;
-}
-.load-count {
-  flex: 1;
-  font-size: 11px;
-  color: #94a3b8;
 }
 
 /* ═══ Clone Topic/Subtopic Modal ═══ */

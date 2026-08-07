@@ -35,7 +35,6 @@ const MeqCase = () => import('../views/MeqCase.vue')
 const AdminDashboard = () => import('../views/admin/AdminDashboard.vue')
 const ChinaLeadsAdmin = () => import('../views/admin/ChinaLeads.vue')
 const ManageSections = () => import('../views/admin/ManageSections.vue')
-const ContentLibrary = () => import('../views/admin/ContentLibrary.vue')
 const WatchDebug = () => import('../views/admin/WatchDebug.vue')
 const SystemCircuit = () => import('../views/admin/SystemCircuit.vue')
 const ManagePackages = () => import('../views/admin/ManagePackages.vue')
@@ -215,12 +214,6 @@ const routes = [
     path: '/admin/sections',
     name: 'ManageSections',
     component: ManageSections,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/content-library',
-    name: 'ContentLibrary',
-    component: ContentLibrary,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {

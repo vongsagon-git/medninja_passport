@@ -8,7 +8,6 @@ const ConsentLog = require('../activation/ConsentLog.model')
 const { CURRENT_TERMS_VERSION } = require('../activation/activation.controller')
 const Package = require('./Package.model')
 const { getSignedEmbedUrl, getDemoEmbedUrl } = require('../../shared/config/bunny')
-const { resolveVideos } = require('./video-content.resolver')
 const ClientLog = require('./ClientLog.model')
 const ActiveViewer = require('./ActiveViewer.model')
 const ViewerTab = require('./ViewerTab.model')
@@ -25,8 +24,6 @@ exports.getSection = async (req, res, next) => {
     if (!section) {
       return res.status(404).json({ message: 'ไม่พบ Section' })
     }
-    // Override videos[i] fields from Content Library if contentId is set
-    await resolveVideos(section.videos)
 
     // Admin ก็ถูก gate เสมอ — ต้องมี activation เหมือนนักเรียน
     const now = new Date()
@@ -221,8 +218,6 @@ exports.getVideo = async (req, res, next) => {
     if (!section) {
       return res.status(404).json({ message: 'ไม่พบ Section' })
     }
-    // Override videos[i] fields from Content Library if contentId is set
-    await resolveVideos(section.videos)
 
     // ตรวจสิทธิ์ — Manual lookup ข้าม DB (admin ก็ถูก gate)
     const now = new Date()

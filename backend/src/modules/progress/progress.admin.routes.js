@@ -27,11 +27,11 @@ function extractSlots(section) {
   const slots = []
   const videos = section.videos || []
   videos.forEach((v, idx) => {
-    const hasMain = !!(v.bunnyVideoId || v.bunnyDrmVideoId || v.aliVideoId || v.contentId)
+    const hasMain = !!(v.bunnyVideoId || v.bunnyDrmVideoId || v.aliVideoId)
     if (hasMain) {
       slots.push({ videoIndex: idx, isBonus: false, topic: v.topic || '', subtopic: v.subtopic || '' })
     }
-    const hasBonus = !!(v.bonusBunnyVideoId || v.bonusBunnyDrmVideoId || v.bonusAliVideoId || v.bonusContentId)
+    const hasBonus = !!(v.bonusBunnyVideoId || v.bonusBunnyDrmVideoId || v.bonusAliVideoId)
     if (hasBonus) {
       slots.push({ videoIndex: idx, isBonus: true, topic: v.topic || '', subtopic: v.subtopic || '' })
     }
