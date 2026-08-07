@@ -108,6 +108,7 @@
                         <button type="button" class="btn btn-sm btn-outline" style="font-size:11px;border-color:#10b981;color:#10b981;" @click="insertTopicBefore(node.name)" title="แทรก Topic ข้างบน">+ Topic</button>
                         <button type="button" class="btn-move" :disabled="tIdx === 0 || treeStructure[tIdx-1].type !== 'topic'" @click="moveTopicUp(node.name)" title="ขึ้น">↑</button>
                         <button type="button" class="btn-move" :disabled="isLastTopic(tIdx)" @click="moveTopicDown(node.name)" title="ลง">↓</button>
+                        <button type="button" class="btn btn-sm btn-outline" style="font-size:11px;border-color:#0ea5e9;color:#0ea5e9;" @click="openCloneModal('topic', node.name)" title="Clone Topic ไป Section อื่น">📋 Clone</button>
                         <button type="button" class="btn btn-sm btn-danger" style="font-size:11px;" @click="removeTopic(node.name)">ลบ Topic</button>
                       </div>
                     </div>
@@ -151,6 +152,7 @@
                               <button type="button" class="btn btn-sm btn-outline" style="font-size:10px;border-color:#a855f7;color:#a855f7;" @click="insertSubtopicBefore(node.name, child.name)" title="แทรก Subtopic ข้างบน">+ Sub</button>
                               <button type="button" class="btn-move btn-move-sm" :disabled="sIdx === 0" @click="moveSubtopicUp(node.name, child.name)" title="ขึ้น">↑</button>
                               <button type="button" class="btn-move btn-move-sm" :disabled="sIdx === node.children.length - 1" @click="moveSubtopicDown(node.name, child.name)" title="ลง">↓</button>
+                              <button type="button" class="btn btn-sm btn-outline" style="font-size:10px;border-color:#0ea5e9;color:#0ea5e9;" @click="openCloneModal('subtopic', node.name, child.name)" title="Clone Subtopic ไป Section อื่น">📋 Clone</button>
                               <button type="button" class="btn btn-sm btn-danger" style="font-size:10px;" @click="removeSubtopic(node.name, child.name)">ลบ</button>
                             </div>
                           </div>
@@ -845,6 +847,82 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══ Clone Topic/Subtopic Modal ═══ -->
+    <div v-if="cloneModal.open" class="modal-overlay" @click.self="closeCloneModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>📋 Clone {{ cloneModal.type === 'topic' ? 'Topic' : 'Subtopic' }}</h3>
+          <button type="button" class="modal-close" @click="closeCloneModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="clone-src">
+            <span class="clone-src-label">ต้นทาง:</span>
+            <span class="clone-src-value">{{ cloneModal.sectionCode }} → {{ cloneModal.sourceLabel }}</span>
+            <span class="clone-src-count">{{ cloneModal.videoCount }} รายการ</span>
+          </div>
+
+          <div class="form-row">
+            <label>Section ปลายทาง</label>
+            <select v-model="cloneModal.destSectionId" class="form-control" @change="onCloneDestSectionChange">
+              <option value="">— เลือก Section —</option>
+              <option v-for="s in cloneDestSections" :key="s._id" :value="s._id">
+                {{ s.code }} — {{ s.name }}
+              </option>
+            </select>
+            <small v-if="cloneDestSections.length === 0" class="clone-hint clone-hint-warn">
+              ไม่มี Section อื่นให้เลือก (ต้องมีอย่างน้อย 2 sections)
+            </small>
+          </div>
+
+          <div v-if="cloneModal.destSectionId" class="form-row">
+            <label>ตำแหน่งที่จะแทรก</label>
+            <select v-model="cloneModal.destPosition" class="form-control">
+              <option value="end">→ ท้ายสุดของ Section</option>
+              <option value="start">→ ต้น Section (บนสุด)</option>
+              <template v-if="cloneModal.type === 'topic'">
+                <option v-for="t in cloneDestTopics" :key="'before-'+t.name" :value="'before-topic:'+t.name">
+                  ↑ ก่อน Topic: {{ t.name }}
+                </option>
+                <option v-for="t in cloneDestTopics" :key="'after-'+t.name" :value="'after-topic:'+t.name">
+                  ↓ หลัง Topic: {{ t.name }}
+                </option>
+              </template>
+              <template v-else>
+                <optgroup v-for="t in cloneDestTopics" :key="'grp-'+t.name" :label="'Topic: '+t.name">
+                  <option :value="'append-topic:'+t.name">→ ต่อท้าย Topic นี้</option>
+                  <option v-for="s in t.subs" :key="'bs-'+t.name+'|'+s" :value="'before-sub:'+t.name+'|'+s">
+                    ↑ ก่อน Sub: {{ s }}
+                  </option>
+                  <option v-for="s in t.subs" :key="'as-'+t.name+'|'+s" :value="'after-sub:'+t.name+'|'+s">
+                    ↓ หลัง Sub: {{ s }}
+                  </option>
+                </optgroup>
+              </template>
+            </select>
+            <small class="clone-hint">
+              {{ cloneModal.type === 'topic'
+                ? 'Topic ถูก clone เป็น block เดียว ย้ายไปตำแหน่งที่เลือก'
+                : 'Subtopic + วีดีโอทั้งหมดจะถูกวางในตำแหน่งที่เลือก (จะอยู่ภายใต้ Topic ปลายทาง)' }}
+            </small>
+          </div>
+
+          <div v-if="cloneModal.destSectionId && cloneModal.type === 'subtopic'" class="form-row">
+            <label>Topic ที่จะอยู่ใน Section ปลายทาง</label>
+            <input v-model="cloneModal.destTopicName" type="text" class="form-control" placeholder="เช่น อายุรศาสตร์ทั่วไป" />
+            <small class="clone-hint">
+              ถ้าเลือกตำแหน่ง "ต่อท้าย Topic" หรือ "ก่อน/หลัง Sub ของ Topic นั้น" ระบบใช้ชื่อ Topic นั้นให้อัตโนมัติ — ที่กรอกจะถูก override
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" @click="closeCloneModal" :disabled="cloneModal.saving">ยกเลิก</button>
+          <button type="button" class="btn btn-primary" @click="doClone" :disabled="!canClone || cloneModal.saving">
+            {{ cloneModal.saving ? 'กำลัง Clone...' : '📋 Clone ไปยัง Section ปลายทาง' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -901,7 +979,23 @@ export default {
       },
       // ─── Self Check ───
       selfCheckTemplates: [],
-      selfCheckBindings: {}    // key: "scope:refId" → binding doc
+      selfCheckBindings: {},   // key: "scope:refId" → binding doc
+      // ─── Clone Topic/Subtopic Modal ───
+      cloneModal: {
+        open: false,
+        type: '',              // 'topic' | 'subtopic'
+        sectionId: '',
+        sectionCode: '',
+        topicName: '',
+        subtopicName: '',
+        sourceLabel: '',
+        videoCount: 0,
+        destSectionId: '',
+        destPosition: 'end',
+        destTopicName: '',
+        destSectionDetail: null,
+        saving: false
+      }
     }
   },
   computed: {
@@ -953,6 +1047,29 @@ export default {
         }
       }
       return tree
+    },
+    // Sections ที่เลือกเป็นปลายทางได้ (ไม่ใช่ section ต้นทาง)
+    cloneDestSections() {
+      return this.sortedSections.filter(s => s._id !== this.cloneModal.sectionId)
+    },
+    cloneDestTopics() {
+      const sec = this.cloneModal.destSectionDetail
+      if (!sec || !sec.videos) return []
+      const map = new Map()
+      for (const v of sec.videos) {
+        const t = (v.topic || '').trim()
+        if (!t) continue
+        if (!map.has(t)) map.set(t, new Set())
+        const s = (v.subtopic || '').trim()
+        if (s) map.get(t).add(s)
+      }
+      return [...map.entries()].map(([name, subSet]) => ({ name, subs: [...subSet] }))
+    },
+    canClone() {
+      const m = this.cloneModal
+      if (!m.destSectionId) return false
+      if (!m.destPosition) return false
+      return true
     }
   },
   async mounted() {
@@ -2433,6 +2550,153 @@ export default {
         this.error = err.response?.data?.message || 'ลบข้อมูลล้มเหลว'
       }
     },
+    // ═══ Clone Topic / Subtopic ═══
+    openCloneModal(type, topicName, subtopicName = '') {
+      if (!this.editingId) {
+        alert('ต้องกด "แก้ไข" Section ก่อน จึงจะ Clone Topic/Subtopic ได้')
+        return
+      }
+      const sec = this.sections.find(s => s._id === this.editingId)
+      if (!sec) return
+      let sourceVids
+      let label
+      if (type === 'topic') {
+        sourceVids = this.form.videos.filter(v => v.topic === topicName)
+        label = `Topic: ${topicName}`
+      } else {
+        sourceVids = this.form.videos.filter(v => v.topic === topicName && v.subtopic === subtopicName)
+        label = `Topic: ${topicName} → Sub: ${subtopicName}`
+      }
+      if (sourceVids.length === 0) {
+        alert('ไม่มีรายการให้ clone')
+        return
+      }
+      this.cloneModal = {
+        open: true,
+        type,
+        sectionId: this.editingId,
+        sectionCode: sec.code,
+        topicName,
+        subtopicName,
+        sourceLabel: label,
+        videoCount: sourceVids.length,
+        destSectionId: '',
+        destPosition: 'end',
+        destTopicName: type === 'subtopic' ? topicName : '',
+        destSectionDetail: null,
+        saving: false
+      }
+    },
+    closeCloneModal() {
+      this.cloneModal.open = false
+      this.cloneModal.saving = false
+    },
+    async onCloneDestSectionChange() {
+      const id = this.cloneModal.destSectionId
+      if (!id) { this.cloneModal.destSectionDetail = null; return }
+      try {
+        const res = await api.get(`/admin/sections/${id}`)
+        this.cloneModal.destSectionDetail = res.section || res
+        this.cloneModal.destPosition = 'end'
+      } catch (err) {
+        alert('โหลด Section ปลายทางไม่สำเร็จ: ' + (err?.response?.data?.message || err.message))
+        this.cloneModal.destSectionId = ''
+      }
+    },
+    _cloneVideoRow(src, newTopic, newSubtopic) {
+      const cloned = JSON.parse(JSON.stringify(src))
+      const stripKeys = ['_id', 'topicId', 'subtopicId',
+        '_verifying', '_verified', '_verifyTimer', '_bunnyName',
+        '_drmVerifying', '_drmVerified', '_drmDuration', '_drmName', '_durationMismatch',
+        '_aliVerifying', '_aliVerified', '_aliName', '_aliVerifyReason',
+        '_renaming', '_locked', '_bonusExpanded', '_bonusLocked',
+        '_bonusVerifying', '_bonusVerified', '_bonusBunnyName',
+        '_bonusDrmVerifying', '_bonusDrmVerified', '_bonusDrmName',
+        '_linkedContentTitle']
+      for (const k of stripKeys) delete cloned[k]
+      cloned.topic = newTopic || ''
+      cloned.subtopic = newSubtopic || ''
+      return cloned
+    },
+    async doClone() {
+      const m = this.cloneModal
+      if (!this.canClone) return
+      const dest = m.destSectionDetail
+      if (!dest) return
+      m.saving = true
+      try {
+        let sourceVids
+        if (m.type === 'topic') {
+          sourceVids = this.form.videos.filter(v => v.topic === m.topicName)
+        } else {
+          sourceVids = this.form.videos.filter(v => v.topic === m.topicName && v.subtopic === m.subtopicName)
+        }
+
+        let destTopicForSub = m.destTopicName || m.topicName
+        const posParts = m.destPosition.split(':')
+        const posType = posParts[0]
+        const posArg = posParts.slice(1).join(':')
+        if (m.type === 'subtopic') {
+          if (posType === 'append-topic' || posType === 'before-sub' || posType === 'after-sub') {
+            destTopicForSub = posType === 'append-topic' ? posArg : posArg.split('|')[0]
+          }
+        }
+
+        const cloned = sourceVids.map(v => {
+          if (m.type === 'topic') {
+            return this._cloneVideoRow(v, m.topicName, v.subtopic || '')
+          } else {
+            return this._cloneVideoRow(v, destTopicForSub, m.subtopicName)
+          }
+        })
+
+        const destVideos = [...(dest.videos || [])].sort((a, b) => (a.order || 0) - (b.order || 0))
+        let insertAt = destVideos.length
+
+        if (m.destPosition === 'end') {
+          insertAt = destVideos.length
+        } else if (m.destPosition === 'start') {
+          insertAt = 0
+        } else if (posType === 'before-topic') {
+          const idx = destVideos.findIndex(v => v.topic === posArg)
+          if (idx >= 0) insertAt = idx
+        } else if (posType === 'after-topic') {
+          let last = -1
+          destVideos.forEach((v, i) => { if (v.topic === posArg) last = i })
+          if (last >= 0) insertAt = last + 1
+        } else if (posType === 'append-topic') {
+          let last = -1
+          destVideos.forEach((v, i) => { if (v.topic === posArg) last = i })
+          if (last >= 0) insertAt = last + 1
+          else insertAt = destVideos.length
+        } else if (posType === 'before-sub') {
+          const [t, s] = posArg.split('|')
+          const idx = destVideos.findIndex(v => v.topic === t && v.subtopic === s)
+          if (idx >= 0) insertAt = idx
+        } else if (posType === 'after-sub') {
+          const [t, s] = posArg.split('|')
+          let last = -1
+          destVideos.forEach((v, i) => { if (v.topic === t && v.subtopic === s) last = i })
+          if (last >= 0) insertAt = last + 1
+        }
+
+        const merged = [...destVideos]
+        merged.splice(insertAt, 0, ...cloned)
+        merged.forEach((v, i) => { v.order = i })
+
+        await api.put(`/admin/sections/${dest._id}`, { videos: merged })
+
+        this.successMsg = `Clone เสร็จ — ${cloned.length} รายการ → ${dest.code}`
+        setTimeout(() => { this.successMsg = '' }, 5000)
+        this.closeCloneModal()
+        await this.fetchSections()
+      } catch (err) {
+        alert('Clone ไม่สำเร็จ: ' + (err?.response?.data?.message || err.message))
+      } finally {
+        m.saving = false
+      }
+    },
+
     async cloneSection(section) {
       const newCode = prompt(`Clone "${section.code}" → ใส่ code ใหม่ (ตัวพิมพ์ใหญ่):`, section.code + '_COPY')
       if (!newCode || !newCode.trim()) return
@@ -3248,5 +3512,20 @@ export default {
   font-size: 11px;
   color: #94a3b8;
 }
+
+/* ═══ Clone Topic/Subtopic Modal ═══ */
+.clone-src {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 12px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.clone-src-label { font-size: 11px; color: #64748b; font-weight: 700; letter-spacing: 0.04em; }
+.clone-src-value { font-size: 13px; color: #1e293b; font-weight: 700; flex: 1; min-width: 200px; }
+.clone-src-count {
+  font-size: 11px; padding: 3px 10px; background: #dbeafe; color: #1e40af;
+  border-radius: 999px; font-weight: 700;
+}
+.clone-hint { font-size: 11px; color: #64748b; line-height: 1.5; display: block; margin-top: 4px; }
+.clone-hint-warn { color: #b45309; font-weight: 600; }
 
 </style>
