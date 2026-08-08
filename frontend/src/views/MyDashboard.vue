@@ -271,7 +271,8 @@ const MINIAPPS = [
   { key: 'ddx',     emoji: '🔍', name: 'DDx' },
   { key: 'osce',    emoji: '🩺', name: 'OSCE' },
   { key: 'skill15', emoji: '🔧', name: '15xSKILL' },
-  { key: 'longex',  emoji: '📖', name: 'LongEx' }
+  { key: 'longex',  emoji: '📖', name: 'LongEx' },
+  { key: 'ix',      emoji: '🩻', name: 'IX' }
 ]
 
 export default {
@@ -326,6 +327,7 @@ export default {
         if (a.osceEnabled)    keys.add('osce')
         if (a.skill15Enabled) keys.add('skill15')
         if (a.longexEnabled)  keys.add('longex')
+        if (a.ixEnabled)      keys.add('ix')
       }
       return MINIAPPS.filter(m => keys.has(m.key))
     },

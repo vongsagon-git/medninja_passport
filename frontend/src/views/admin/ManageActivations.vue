@@ -168,6 +168,10 @@
                       <input type="checkbox" :checked="act.skill15Enabled" :disabled="getStatus(act) === 'revoked'" @change="toggleFeature(act._id, 'skill15Enabled', $event.target.checked)">
                       <span>15-SKILL</span>
                     </label>
+                    <label class="feat-toggle" :class="{ on: act.ixEnabled }">
+                      <input type="checkbox" :checked="act.ixEnabled" :disabled="getStatus(act) === 'revoked'" @change="toggleFeature(act._id, 'ixEnabled', $event.target.checked)">
+                      <span>IX</span>
+                    </label>
                   </div>
                 </td>
                 <td>
@@ -298,6 +302,10 @@
                   <label class="feat-toggle" :class="{ on: act.skill15Enabled }">
                     <input type="checkbox" :checked="act.skill15Enabled" :disabled="getStatus(act) === 'revoked'" @change="toggleFeature(act._id, 'skill15Enabled', $event.target.checked)">
                     <span>15-SKILL</span>
+                  </label>
+                  <label class="feat-toggle" :class="{ on: act.ixEnabled }">
+                    <input type="checkbox" :checked="act.ixEnabled" :disabled="getStatus(act) === 'revoked'" @change="toggleFeature(act._id, 'ixEnabled', $event.target.checked)">
+                    <span>IX</span>
                   </label>
                 </div>
               </td>
