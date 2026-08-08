@@ -84,6 +84,7 @@ exports.getMyActivations = async (req, res, next) => {
         atlasEnabled: a.atlasEnabled || false,
         longexEnabled: a.longexEnabled || false,
         skill15Enabled: a.skill15Enabled || false,
+        ixEnabled: a.ixEnabled || false,
         liveEnabled: a.liveEnabled || false,
         qaEnabled: a.qaEnabled || false,
         tier: a.tier || 6,

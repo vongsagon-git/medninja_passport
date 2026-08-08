@@ -50,11 +50,12 @@ router.patch('/:id/feature', auth, admin, async (req, res, next) => {
     if (req.body.atlasEnabled !== undefined) updates.atlasEnabled = !!req.body.atlasEnabled
     if (req.body.longexEnabled !== undefined) updates.longexEnabled = !!req.body.longexEnabled
     if (req.body.skill15Enabled !== undefined) updates.skill15Enabled = !!req.body.skill15Enabled
+    if (req.body.ixEnabled !== undefined) updates.ixEnabled = !!req.body.ixEnabled
     if (req.body.liveEnabled !== undefined) updates.liveEnabled = !!req.body.liveEnabled
     if (req.body.qaEnabled !== undefined) updates.qaEnabled = !!req.body.qaEnabled
     const act = await Activation.findByIdAndUpdate(req.params.id, updates, { new: true })
     if (!act) return res.status(404).json({ message: 'ไม่พบ Activation' })
-    res.json({ ok: true, synapseEnabled: act.synapseEnabled, ddxEnabled: act.ddxEnabled, nlexEnabled: act.nlexEnabled, osceEnabled: act.osceEnabled, meqexEnabled: act.meqexEnabled, atlasEnabled: act.atlasEnabled, longexEnabled: act.longexEnabled, skill15Enabled: act.skill15Enabled, liveEnabled: act.liveEnabled, qaEnabled: act.qaEnabled })
+    res.json({ ok: true, synapseEnabled: act.synapseEnabled, ddxEnabled: act.ddxEnabled, nlexEnabled: act.nlexEnabled, osceEnabled: act.osceEnabled, meqexEnabled: act.meqexEnabled, atlasEnabled: act.atlasEnabled, longexEnabled: act.longexEnabled, skill15Enabled: act.skill15Enabled, ixEnabled: act.ixEnabled, liveEnabled: act.liveEnabled, qaEnabled: act.qaEnabled })
   } catch (error) { next(error) }
 })
 
