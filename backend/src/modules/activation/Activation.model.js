@@ -80,6 +80,10 @@ const activationSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  ixEnabled: {
+    type: Boolean,
+    default: false
+  },
   liveEnabled: {
     type: Boolean,
     default: false

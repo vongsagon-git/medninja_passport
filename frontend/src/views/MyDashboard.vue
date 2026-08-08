@@ -360,7 +360,8 @@ export default {
         meqex: import.meta.env.VITE_MEQEX_URL || 'https://meqex.medninja.academy',
         atlas: import.meta.env.VITE_ATLAS_URL || 'https://atlas.medninja.academy',
         longex: import.meta.env.VITE_LONGEX_URL || 'https://longex.medninja.academy',
-        skill15: import.meta.env.VITE_SKILL15_URL || 'https://15xskill.medninja.academy'
+        skill15: import.meta.env.VITE_SKILL15_URL || 'https://15xskill.medninja.academy',
+        ix: import.meta.env.VITE_IX_URL || 'https://ix.medninja.academy'
       }
       const base = urls[target]
       if (!base) return
