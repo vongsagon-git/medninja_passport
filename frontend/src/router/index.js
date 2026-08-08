@@ -39,6 +39,7 @@ const WatchDebug = () => import('../views/admin/WatchDebug.vue')
 const SystemCircuit = () => import('../views/admin/SystemCircuit.vue')
 const ManagePackages = () => import('../views/admin/ManagePackages.vue')
 const ManageActivations = () => import('../views/admin/ManageActivations.vue')
+const InspectPage = () => import('../views/admin/InspectPage.vue')
 const ManagePassport = () => import('../views/admin/ManagePassport.vue')
 const AdminProgress = () => import('../views/admin/AdminProgress.vue')
 const AdminReceipts = () => import('../views/admin/AdminReceipts.vue')
@@ -238,6 +239,12 @@ const routes = [
     path: '/admin/activations',
     name: 'ManageActivations',
     component: ManageActivations,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/inspect',
+    name: 'InspectPage',
+    component: InspectPage,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {

@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MedNinja Video Check</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 700px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+      padding: 24px 16px;
+    }
+    .brand {
+      font-size: 36px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+    .brand-sub {
+      font-size: 15px;
+      color: #93c5fd;
+      opacity: 0.9;
+    }
+    .brand-badge {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    /* Start button */
+    .start-panel {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 32px 24px;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      margin-bottom: 20px;
+    }
+    .start-panel h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .start-panel p {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 320px;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(33, 150, 243, 0.5); }
+    .btn-primary:disabled { opacity: 0.6; cursor: wait; transform: none; }
+
+    /* Test items */
+    .tests { display: none; }
+    .tests.active { display: block; }
+    .test-item {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      backdrop-filter: blur(20px);
+      transition: all 0.3s;
+    }
+    .test-item.pass { border-color: rgba(76, 175, 80, 0.5); background: rgba(76, 175, 80, 0.08); }
+    .test-item.fail { border-color: rgba(244, 67, 54, 0.5); background: rgba(244, 67, 54, 0.08); }
+    .test-item.running { border-color: rgba(33, 150, 243, 0.5); background: rgba(33, 150, 243, 0.08); }
+    .test-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .test-icon.pending { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+    .test-icon.running { background: #2196F3; color: white; animation: spin 1s linear infinite; }
+    .test-icon.pass { background: #4CAF50; color: white; }
+    .test-icon.fail { background: #F44336; color: white; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .test-body { flex: 1; min-width: 0; }
+    .test-title { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .test-detail {
+      font-size: 12px;
+      color: #94a3b8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .test-detail.error { color: #fca5a5; }
+    .test-detail.success { color: #86efac; }
+
+    /* Summary */
+    .summary-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 20px;
+      margin: 20px 0;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      display: none;
+    }
+    .summary-card.active { display: block; }
+    .summary-card.pass { border-color: rgba(76, 175, 80, 0.5); }
+    .summary-card.fail { border-color: rgba(244, 67, 54, 0.5); }
+    .summary-icon { font-size: 48px; margin-bottom: 12px; }
+    .summary-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .summary-msg { font-size: 14px; color: #cbd5e1; margin-bottom: 20px; line-height: 1.6; }
+    .summary-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+    .btn-copy { background: #2196F3; color: white; }
+    .btn-copy:hover { background: #1976D2; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 24px 0;
+      color: rgba(255,255,255,0.4);
+      font-size: 12px;
+    }
+
+    /* Hidden video sample */
+    .hidden-frame { position: absolute; top: -9999px; left: -9999px; width: 320px; height: 180px; opacity: 0; pointer-events: none; }
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .brand { font-size: 28px; }
+      .start-panel { padding: 24px 16px; }
+      .test-item { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">MedNinja</div>
+      <div class="brand-sub">Video Check   -   ทดสอบระบบดูวิดีโอ</div>
+      <div class="brand-badge">v1.0</div>
+    </div>
+
+    <!-- Initial state -->
+    <div class="start-panel" id="startPanel">
+      <h2>ทดสอบระบบดูวิดีโอ</h2>
+      <p>ระบบจะทดสอบว่าเบราว์เซอร์ของคุณสามารถดูวิดีโอที่มีระบบป้องกันได้หรือไม่<br>ใช้เวลาประมาณ 30 วินาที</p>
+      <button class="btn-primary" id="btnStart">เริ่มทดสอบ</button>
+    </div>
+
+    <!-- Test list -->
+    <div class="tests" id="testList">
+      <div class="test-item" id="t1">
+        <div class="test-icon pending">1</div>
+        <div class="test-body">
+          <div class="test-title">เบราว์เซอร์รองรับระบบป้องกันวิดีโอ</div>
+          <div class="test-detail">รอทดสอบ...</div>
+        </div>
+      </div>
+      <div class="test-item" id="t2">
+        <div class="test-icon pending">2</div>
+        <div class="test-body">
+          <div class="test-title">ระดับการป้องกันที่รองรับ</div>
+          <div class="test-detail">รอทดสอบ...</div>
+        </div>
+      </div>
+      <div class="test-item" id="t3">
+        <div class="test-icon pending">3</div>
+        <div class="test-body">
+          <div class="test-title">ขอใบอนุญาตวิดีโอ</div>
+          <div class="test-detail">รอทดสอบ...</div>
+        </div>
+      </div>
+      <div class="test-item" id="t4">
+        <div class="test-icon pending">4</div>
+        <div class="test-body">
+          <div class="test-title">โหลดวิดีโอตัวอย่าง</div>
+          <div class="test-detail">รอทดสอบ...</div>
+        </div>
+      </div>
+      <div class="test-item" id="t5">
+        <div class="test-icon pending">5</div>
+        <div class="test-body">
+          <div class="test-title">เล่นวิดีโอตัวอย่างได้จริง</div>
+          <div class="test-detail">รอทดสอบ...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-card" id="summary">
+      <div class="summary-icon" id="sumIcon">✅</div>
+      <div class="summary-title" id="sumTitle">-</div>
+      <div class="summary-msg" id="sumMsg">-</div>
+      <div class="summary-actions">
+        <button class="btn btn-copy" onclick="copyReport()">คัดลอกผลตรวจ</button>
+        <button class="btn btn-secondary" onclick="location.reload()">ทดสอบใหม่</button>
+      </div>
+    </div>
+
+    <div class="footer">
+      © MedNinja Academy   -   เครื่องมือช่วยเหลือนักเรียน
+    </div>
+  </div>
+
+  <!-- Hidden iframe for video sample test -->
+  <iframe id="testFrame" class="hidden-frame" allow="autoplay; encrypted-media"></iframe>
+
+  <script>
+    'use strict';
+
+    // ==== Test state ====
+    var results = {
+      t1: { name: 'เบราว์เซอร์รองรับระบบป้องกัน', status: 'pending', detail: '' },
+      t2: { name: 'ระดับการป้องกัน', status: 'pending', detail: '' },
+      t3: { name: 'ขอใบอนุญาต', status: 'pending', detail: '' },
+      t4: { name: 'โหลดวิดีโอตัวอย่าง', status: 'pending', detail: '' },
+      t5: { name: 'เล่นวิดีโอ', status: 'pending', detail: '' }
+    };
+    var deviceInfo = {};
+    var startTime = 0;
+
+    // ==== UI helpers ====
+    function setTest(id, status, detail) {
+      results[id].status = status;
+      results[id].detail = detail;
+      var item = document.getElementById(id);
+      var icon = item.querySelector('.test-icon');
+      var det = item.querySelector('.test-detail');
+      item.className = 'test-item ' + status;
+      icon.className = 'test-icon ' + status;
+      det.className = 'test-detail ' + (status === 'fail' ? 'error' : (status === 'pass' ? 'success' : ''));
+      det.textContent = detail;
+      if (status === 'pass') icon.textContent = '✓';
+      else if (status === 'fail') icon.textContent = '✕';
+      else if (status === 'running') icon.textContent = '';
+      else icon.textContent = id.replace('t','');
+    }
+
+    function delay(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+    // ==== Test 1: EME (Widevine) support ====
+    async function test1_EME() {
+      setTest('t1', 'running', 'กำลังตรวจสอบ...');
+      await delay(400);
+      if (!window.navigator.requestMediaKeySystemAccess) {
+        setTest('t1', 'fail', 'เบราว์เซอร์นี้ไม่รองรับระบบป้องกันวิดีโอ');
+        return false;
+      }
+      try {
+        var config = [{
+          initDataTypes: ['cenc'],
+          audioCapabilities: [{ contentType: 'audio/mp4; codecs="mp4a.40.2"' }],
+          videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"' }]
+        }];
+        var access = await navigator.requestMediaKeySystemAccess('com.widevine.alpha', config);
+        setTest('t1', 'pass', 'รองรับการป้องกันวิดีโอมาตรฐาน');
+        deviceInfo.keySystem = access.keySystem;
+        return access;
+      } catch (e) {
+        setTest('t1', 'fail', 'เบราว์เซอร์นี้ไม่รองรับ (' + (e.name || 'error') + ')');
+        return false;
+      }
+    }
+
+    // ==== Test 2: Security level (L1/L3) ====
+    async function test2_Level(access) {
+      setTest('t2', 'running', 'กำลังตรวจสอบ...');
+      await delay(400);
+      if (!access) {
+        setTest('t2', 'fail', 'ข้ามเพราะข้อ 1 ไม่ผ่าน');
+        return null;
+      }
+      try {
+        var mediaKeys = await access.createMediaKeys();
+        // ลอง detect L1 vs L3 ผ่าน getConfiguration
+        var cfg = access.getConfiguration();
+        var level = 'ไม่ทราบ';
+        // Widevine L1 มักจะรองรับ HD, L3 = SD only
+        try {
+          var hdConfig = [{
+            initDataTypes: ['cenc'],
+            videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.640028"', robustness: 'HW_SECURE_ALL' }]
+          }];
+          await navigator.requestMediaKeySystemAccess('com.widevine.alpha', hdConfig);
+          level = 'ระดับสูง (L1) - รองรับ HD';
+        } catch (e) {
+          try {
+            var swConfig = [{
+              initDataTypes: ['cenc'],
+              videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.42E01E"', robustness: 'SW_SECURE_CRYPTO' }]
+            }];
+            await navigator.requestMediaKeySystemAccess('com.widevine.alpha', swConfig);
+            level = 'ระดับพื้นฐาน (L3) - รองรับ SD';
+          } catch (e2) {
+            level = 'ไม่พบระดับที่รองรับ';
+          }
+        }
+        deviceInfo.securityLevel = level;
+        setTest('t2', 'pass', level);
+        return mediaKeys;
+      } catch (e) {
+        setTest('t2', 'fail', 'ไม่สามารถสร้าง media keys');
+        return null;
+      }
+    }
+
+    // ==== Test 3: License request via video sample (uses browser CDM) ====
+    // Test 4 & 5 combined: load + play sample encrypted video
+    async function test345_Playback(mediaKeys) {
+      setTest('t3', 'running', 'กำลังทดสอบ...');
+      setTest('t4', 'running', 'รอทดสอบ...');
+      setTest('t5', 'running', 'รอทดสอบ...');
+
+      if (!mediaKeys) {
+        setTest('t3', 'fail', 'ข้ามเพราะข้อก่อนหน้าไม่ผ่าน');
+        setTest('t4', 'fail', 'ข้าม');
+        setTest('t5', 'fail', 'ข้าม');
+        return;
+      }
+
+      // ใช้ Bunny iframe player (ระบบขอ license เอง) — ถ้า iframe load = network ok, ถ้า play = DRM ok
+      var frame = document.getElementById('testFrame');
+      var sampleUrl = '/api/drm-check/sample';  // backend proxy - ถ้ายังไม่มีให้ fallback
+
+      // แทน: ใช้ Bunny embed direct
+      // library 626874 + sample video id
+      // เนื่องจากเราไม่รู้ว่ามี test video ที่ public + DRM-enabled มั้ย
+      // ใช้ Google Shaka test video แทน (public + Widevine DRM sample)
+      var shakaTest = 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine/dash.mpd';
+
+      // สร้าง video element
+      var video = document.createElement('video');
+      video.style.cssText = 'position:absolute;top:-9999px;width:320px;height:180px;';
+      video.muted = true;
+      video.playsInline = true;
+      document.body.appendChild(video);
+
+      try {
+        await video.setMediaKeys(mediaKeys);
+      } catch (e) {
+        setTest('t3', 'fail', 'ไม่สามารถผูก media keys');
+        setTest('t4', 'fail', 'ข้าม');
+        setTest('t5', 'fail', 'ข้าม');
+        video.remove();
+        return;
+      }
+
+      var licenseRequested = false;
+      var licenseSucceeded = false;
+      var licenseError = null;
+
+      // Listen for license request
+      video.addEventListener('encrypted', async function(event) {
+        licenseRequested = true;
+        setTest('t3', 'pass', 'ระบบเริ่มขอใบอนุญาต');
+        try {
+          var session = mediaKeys.createSession();
+          session.addEventListener('message', async function(msgEvent) {
+            try {
+              var response = await fetch('https://cwip-shaka-proxy.appspot.com/no_auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/octet-stream' },
+                body: msgEvent.message
+              });
+              if (!response.ok) {
+                licenseError = 'HTTP ' + response.status;
+                setTest('t3', 'fail', 'ไม่ได้รับใบอนุญาต (' + licenseError + ')');
+                return;
+              }
+              var licenseBuffer = await response.arrayBuffer();
+              await session.update(licenseBuffer);
+              licenseSucceeded = true;
+              setTest('t3', 'pass', 'ได้รับใบอนุญาตสำเร็จ');
+            } catch (e) {
+              licenseError = e.message;
+              setTest('t3', 'fail', 'ขอใบอนุญาตล้มเหลว');
+            }
+          });
+          await session.generateRequest(event.initDataType, event.initData);
+        } catch (e) {
+          setTest('t3', 'fail', 'ขอใบอนุญาตล้มเหลว: ' + e.message);
+        }
+      });
+
+      // Load Shaka Player (small lib) for DASH support
+      if (!window.shaka) {
+        await new Promise(function(resolve, reject) {
+          var s = document.createElement('script');
+          s.src = 'https://ajax.googleapis.com/ajax/libs/shaka-player/4.7.0/shaka-player.compiled.js';
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+          setTimeout(reject, 10000);
+        }).catch(function() {
+          setTest('t4', 'fail', 'ไม่สามารถโหลด player');
+        });
+      }
+
+      if (!window.shaka) {
+        setTest('t4', 'fail', 'ไม่สามารถโหลด player');
+        setTest('t5', 'fail', 'ข้าม');
+        video.remove();
+        return;
+      }
+
+      try {
+        shaka.polyfill.installAll();
+        var player = new shaka.Player(video);
+        player.configure({
+          drm: {
+            servers: {
+              'com.widevine.alpha': 'https://cwip-shaka-proxy.appspot.com/no_auth'
+            }
+          }
+        });
+
+        setTest('t4', 'running', 'กำลังโหลด...');
+        await player.load(shakaTest);
+        setTest('t4', 'pass', 'โหลดวิดีโอสำเร็จ');
+
+        setTest('t5', 'running', 'กำลังเล่น...');
+
+        var playPromise = video.play();
+        if (playPromise) {
+          await playPromise;
+        }
+        await delay(2000);
+
+        if (video.currentTime > 0.1) {
+          setTest('t5', 'pass', 'เล่นได้ (' + video.currentTime.toFixed(1) + 's)');
+          if (!licenseRequested) {
+            setTest('t3', 'pass', 'ระบบไม่ต้องขอใบอนุญาตแยก');
+          }
+        } else {
+          setTest('t5', 'fail', 'เล่นไม่ได้ (currentTime = 0)');
+          if (!licenseSucceeded && licenseRequested) {
+            setTest('t3', 'fail', 'ขอใบอนุญาตล้มเหลว');
+          }
+        }
+      } catch (e) {
+        var errMsg = (e.message || e.code || String(e)).substring(0, 60);
+        setTest('t4', 'fail', 'โหลดล้มเหลว: ' + errMsg);
+        setTest('t5', 'fail', 'ข้าม');
+        if (!licenseSucceeded && licenseRequested) {
+          setTest('t3', 'fail', 'ใบอนุญาตล้มเหลว');
+        } else if (!licenseRequested) {
+          setTest('t3', 'fail', 'ไม่มีการขอใบอนุญาต');
+        }
+      }
+
+      video.pause();
+      video.remove();
+    }
+
+    // ==== Summary ====
+    function showSummary() {
+      var s = document.getElementById('summary');
+      var icon = document.getElementById('sumIcon');
+      var title = document.getElementById('sumTitle');
+      var msg = document.getElementById('sumMsg');
+
+      var passed = Object.values(results).filter(function(r) { return r.status === 'pass'; }).length;
+      var failed = Object.values(results).filter(function(r) { return r.status === 'fail'; }).length;
+
+      s.classList.add('active');
+      if (failed === 0) {
+        s.classList.add('pass');
+        icon.textContent = '✅';
+        title.textContent = 'เครื่องของคุณพร้อมดูวิดีโอ';
+        msg.innerHTML = 'ผ่านการทดสอบ ' + passed + '/5 รายการ<br>ถ้ายังดูวิดีโอไม่ได้ ให้ส่งผลตรวจให้ admin';
+      } else if (passed >= 3) {
+        s.classList.add('fail');
+        icon.textContent = '⚠️';
+        title.textContent = 'พบปัญหาบางส่วน';
+        msg.innerHTML = 'ผ่าน ' + passed + '/5 รายการ<br>แนะนำให้ส่งผลตรวจให้ admin ตรวจสอบ';
+      } else {
+        s.classList.add('fail');
+        icon.textContent = '❌';
+        title.textContent = 'เบราว์เซอร์นี้ยังใช้ไม่ได้';
+        msg.innerHTML = 'ผ่านแค่ ' + passed + '/5 รายการ<br>ลองใช้ Chrome เวอร์ชันล่าสุด หรือส่งผลตรวจให้ admin';
+      }
+    }
+
+    // ==== Copy report ====
+    function copyReport() {
+      var ua = navigator.userAgent;
+      var lines = [];
+      lines.push('==========================================');
+      lines.push('  MedNinja Video Check Report');
+      lines.push('  ' + new Date().toLocaleString('th-TH'));
+      lines.push('==========================================');
+      lines.push('');
+      lines.push('Browser: ' + ua);
+      lines.push('Key System: ' + (deviceInfo.keySystem || '-'));
+      lines.push('Security Level: ' + (deviceInfo.securityLevel || '-'));
+      lines.push('Duration: ' + Math.round((Date.now() - startTime) / 1000) + 's');
+      lines.push('');
+      lines.push('Results');
+      Object.keys(results).forEach(function(id) {
+        var r = results[id];
+        var mark = r.status === 'pass' ? '[+]' : (r.status === 'fail' ? '[X]' : '[-]');
+        lines.push('  ' + mark + ' ' + r.name);
+        lines.push('      ' + (r.detail || '-'));
+      });
+      lines.push('');
+      lines.push('==========================================');
+
+      var report = lines.join('\n');
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(report).then(function() {
+          alert('คัดลอกเรียบร้อย เปิด LINE แล้ว Paste (Ctrl+V) ส่งให้ admin');
+        }).catch(function() {
+          fallbackCopy(report);
+        });
+      } else {
+        fallbackCopy(report);
+      }
+    }
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        alert('คัดลอกเรียบร้อย เปิด LINE แล้ว Paste ส่งให้ admin');
+      } catch (e) {
+        alert('คัดลอกไม่สำเร็จ ลอง copy จากในหน้าเอง');
+      }
+      ta.remove();
+    }
+
+    // ==== Main flow ====
+    document.getElementById('btnStart').addEventListener('click', async function() {
+      startTime = Date.now();
+      var btn = this;
+      btn.disabled = true;
+      document.getElementById('startPanel').style.display = 'none';
+      document.getElementById('testList').classList.add('active');
+
+      try {
+        var access = await test1_EME();
+        var mediaKeys = await test2_Level(access);
+        await test345_Playback(mediaKeys);
+      } catch (e) {
+        console.error(e);
+      }
+
+      await delay(500);
+      showSummary();
+    });
+  </script>
+</body>
+</html>

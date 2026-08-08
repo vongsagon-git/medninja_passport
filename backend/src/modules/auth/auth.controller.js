@@ -4,11 +4,14 @@ const { createSession, removeSession } = require('./session.service')
 const { generateVerifyToken, sendVerificationEmail } = require('./email.service')
 const { logActivity, getIp, parseUA } = require('../activity/activity.service')
 const totpService = require('./totp.service')
+const { signJwt } = require('../../shared/observability/jwtHelper')
 
-function generateToken(id, sessionId) {
+function generateToken(id, sessionId, source = 'login') {
   const payload = { id }
   if (sessionId) payload.sid = sessionId
-  return jwt.sign(payload, process.env.JWT_SECRET, {
+  return signJwt(payload, {
+    iss: 'passport',
+    src: source,
     expiresIn: process.env.JWT_EXPIRE || '7d'
   })
 }

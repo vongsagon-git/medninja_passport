@@ -1,4 +1,6 @@
 // deploy trigger 2026-08-06 (TOTP admin gate)
+process.env.APP_ID = process.env.APP_ID || 'passport'
+
 const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
@@ -6,6 +8,8 @@ const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
 const path = require('path')
 require('dotenv').config({ path: path.join(__dirname, '../../.env') })
+
+const obs = require('./shared/observability')
 
 const errorHandler = require('./shared/middleware/errorHandler')
 const profileGuard = require('./shared/middleware/profileGuard')
@@ -32,6 +36,10 @@ const app = express()
 // Trust one hop of reverse proxy (DigitalOcean load balancer)
 // Required for correct req.ip / rate limiting behind DO App Platform
 app.set('trust proxy', 1)
+
+// ─── Observability: request ID + metrics ───
+app.use(obs.requestId)
+app.use(obs.metricsMiddleware)
 
 // ─── Version check (bypass Helmet — fast, no CSP needed) ───
 const BUILD_VERSION = Date.now().toString()
@@ -491,6 +499,17 @@ if (process.env.NODE_ENV === 'production') {
 
 // DDx/Arena/Flashcard seed — ปิดแล้ว ย้ายไป ddx.medninja.academy
 
+// ─── Observability routes ───
+try {
+  const { passportConn, lmsConn } = require('./shared/config/db')
+  app.use('/api/observability', obs.observabilityRoutes({
+    appId: 'passport',
+    lmsConn,
+    dbConns: { passport: passportConn, lms: lmsConn }
+  }))
+} catch (err) {
+  console.warn('[Observability] routes not mounted:', err.message)
+}
 
 // Error handler
 app.use(errorHandler)

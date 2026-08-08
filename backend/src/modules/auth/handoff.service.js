@@ -60,7 +60,19 @@ async function exchangeCode(code) {
     const tokenPayload = { id: data.userId }
     if (data.sessionId) tokenPayload.sid = data.sessionId
 
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '7d' })
+    // Observability: sign JWT with metadata (iss=passport, aud=target, src=handoff)
+    let token
+    try {
+      const { signJwt } = require('../../shared/observability/jwtHelper')
+      token = signJwt(tokenPayload, {
+        iss: 'passport',
+        aud: data.target,
+        src: 'handoff',
+        expiresIn: '7d'
+      })
+    } catch {
+      token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '7d' })
+    }
 
     return { token, userId: data.userId, target: data.target }
   } catch (err) {

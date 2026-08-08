@@ -37,6 +37,11 @@ api.interceptors.request.use((config) => {
   // X-MN-Device: บอก backend ว่าเป็น device ประเภทไหน
   // จำเป็นสำหรับ iPad iOS 13+ ที่ UA ส่งเป็น Mac → backend ตรวจไม่ได้ถ้าไม่มี hint
   try { config.headers['X-MN-Device'] = getDeviceHint() } catch {}
+  // Observability: request ID สำหรับ cross-app tracking
+  try {
+    config.headers['x-request-id'] = crypto.randomUUID?.()
+      || (Date.now().toString(36) + Math.random().toString(36).slice(2, 10))
+  } catch {}
   return config
 })
 
