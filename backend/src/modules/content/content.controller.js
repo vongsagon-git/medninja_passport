@@ -60,8 +60,13 @@ exports.getSection = async (req, res, next) => {
       return res.status(404).json({ message: 'ไม่พบ Section' })
     }
 
-    // ⭐ Consent check — skip ถ้า trial virtual activation
-    if (!matchingActivation.__trial) {
+    // ⭐ ถ้า matching activation เป็น demo package → treat as trial (skip consent)
+    // เหตุ: demo package = open access ทั้ง LMS + Passport ไม่ต้อง consent (Vasita 2026-08-15)
+    const matchPkg = pkgMap.get(matchingActivation.packageId?.toString?.())
+    const isDemoActivation = !!(matchPkg?.isDemo)
+
+    // ⭐ Consent check — skip ถ้า trial virtual OR demo activation
+    if (!matchingActivation.__trial && !isDemoActivation) {
       const consent = await ConsentLog.findOne({
         activationId: matchingActivation._id,
         termsVersion: CURRENT_TERMS_VERSION
@@ -261,8 +266,12 @@ exports.getVideo = async (req, res, next) => {
       return res.status(404).json({ message: 'ไม่พบ Section' })
     }
 
-    // Consent check — skip trial virtual
-    if (!matchingActivation.__trial) {
+    // ⭐ Demo activation = skip consent (Vasita 2026-08-15)
+    const matchPkg = pkgMap.get(matchingActivation.packageId?.toString?.())
+    const isDemoActivation = !!(matchPkg?.isDemo)
+
+    // Consent check — skip trial virtual OR demo activation
+    if (!matchingActivation.__trial && !isDemoActivation) {
       const consent = await ConsentLog.findOne({
         activationId: matchingActivation._id,
         termsVersion: CURRENT_TERMS_VERSION
