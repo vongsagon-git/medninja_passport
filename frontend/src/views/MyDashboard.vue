@@ -106,7 +106,15 @@
       <div class="skeleton" style="height: 200px; border-radius: 8px;"></div>
     </div>
 
-    <!-- Empty -->
+    <!-- Demo Expired (user เคยมี demo แต่หมด + ไม่มี paid) -->
+    <div v-else-if="!activationStore.activations.length && activationStore.hasExpiredDemo" class="demo-expired-state">
+      <div class="de-icon">⏰</div>
+      <h2 class="de-title">ทดลองเรียนหมดอายุแล้ว</h2>
+      <p class="de-sub">คุณได้ทดลองเรียนของ MedNinja ครบแล้ว<br>สมัครคอร์สจริงเพื่อปลดล็อกทุกเนื้อหา</p>
+      <a href="https://line.me/R/ti/p/@medninja" target="_blank" class="btn btn-cta de-btn">💎 ติดต่อสมัคร ทัก LINE</a>
+    </div>
+
+    <!-- Empty (ไม่เคยมี activation เลย) -->
     <div v-else-if="!activationStore.activations.length" class="empty-state">
       <p>ยังไม่มี Visa คอร์สเรียน</p>
       <p class="empty-sub">ติดต่อสมัครได้ที่ LINE @medninja</p>
@@ -806,6 +814,17 @@ export default {
 }
 .empty-state p { font-size: 15px; font-weight: 600; color: var(--ink-500); margin-bottom: 4px; }
 .empty-sub { font-size: 13px !important; font-weight: 400 !important; color: var(--ink-400) !important; margin-bottom: 16px !important; }
+/* Demo Expired state */
+.demo-expired-state {
+  text-align: center; padding: 40px 20px; margin-top: 12px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border-radius: 12px; border: 1px solid #fbbf24;
+}
+.de-icon { font-size: 48px; margin-bottom: 8px; }
+.de-title { font-size: 20px; font-weight: 700; color: #78350f; margin: 8px 0; }
+.de-sub { font-size: 14px; color: #92400e; line-height: 1.6; margin-bottom: 20px; }
+.de-btn { background: #d97706 !important; color: #fff !important; padding: 12px 24px !important; font-size: 15px !important; font-weight: 700 !important; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25); }
+.de-btn:hover { background: #b45309 !important; }
 .loading-state .skeleton {
   background: linear-gradient(90deg, var(--ink-100) 25%, var(--ink-50) 50%, var(--ink-100) 75%);
   background-size: 200% 100%; animation: shimmer 1.5s infinite;

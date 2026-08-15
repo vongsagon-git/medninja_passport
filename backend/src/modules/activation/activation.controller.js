@@ -46,13 +46,19 @@ exports.getMyActivations = async (req, res, next) => {
 
     // ⭐ 2026-08-15 (Vasita): hide demo activation ที่หมดอายุ (ไม่แสดงใน dashboard)
     // demo คอร์สหมดแล้วแอบซ่อน — เหลือแค่ paid course ที่ยัง valid หรือ demo ที่ยัง active
+    let hadDemoExpired = false
     const filtered = activations.filter(a => {
       const pkg = pkgMap.get(a.packageId?.toString())
       const isExpired = new Date(a.expiresAt) < now
-      // demo + expired → hide
-      if (pkg?.isDemo && isExpired) return false
+      // demo + expired → hide + mark flag
+      if (pkg?.isDemo && isExpired) {
+        hadDemoExpired = true
+        return false
+      }
       return true
     })
+    // flag สำหรับ frontend: user เคยมี demo แต่หมด + ไม่มี activation อื่นเหลือ → แสดง Demo Expired screen
+    const hasExpiredDemo = hadDemoExpired && filtered.length === 0
 
     // 3. จัดรูป response
     const result = filtered.map(a => {
@@ -102,7 +108,7 @@ exports.getMyActivations = async (req, res, next) => {
       }
     })
 
-    res.json({ activations: result })
+    res.json({ activations: result, hasExpiredDemo })
   } catch (error) {
     next(error)
   }

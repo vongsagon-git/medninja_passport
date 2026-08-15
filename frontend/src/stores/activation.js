@@ -4,6 +4,7 @@ import activationService from '../services/activationService'
 export const useActivationStore = defineStore('activation', {
   state: () => ({
     activations: [],
+    hasExpiredDemo: false,   // ⭐ demo หมด + ไม่มี paid → show Demo Expired screen
     currentSection: null,
     currentVideo: null,
     loading: false,
@@ -86,6 +87,7 @@ export const useActivationStore = defineStore('activation', {
       try {
         const data = await activationService.getMyActivations()
         this.activations = data.activations
+        this.hasExpiredDemo = !!data.hasExpiredDemo
       } catch (err) {
         this.error = err.response?.data?.message || 'เกิดข้อผิดพลาด'
       } finally {
