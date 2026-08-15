@@ -1,63 +1,55 @@
 /**
- * User State Derivation (Passport) — SIMPLE VERSION
- * 2026-08-15 (Vasita: "เอาวันสมัครเป็นเกณฑ์เลยก็ได้ ง่ายดี")
+ * User State Derivation (Passport)
+ * 2026-08-15 — flag-based state machine
+ *
+ * State derived from PreRegistration + User + Activations
+ * ไม่เก็บ 'demo'/'demo_expired'/'student' ใน DB (compute ทุกครั้ง)
  *
  * States:
- *   - banned    : status='banned' หรือ user.isBanned=true
- *   - student   : มี paid activation (non-demo) active
- *   - demo      : preReg.createdAt + 7 วัน > now (trial ยังไม่หมด)
- *   - demo_expired : preReg.createdAt + 7 วัน <= now (trial หมด)
- *   - pending_approval : edge case (user ไม่มี preReg — สร้างตรง)
- *
- * Source of truth = **preReg.createdAt** (วันสมัคร) — ไม่ใช้ demo activation อีก
+ *   - pending_approval : สมัครใหม่ รอ admin triage
+ *   - demo             : approved + demoExpiresAt > now
+ *   - demo_expired     : approved + demoExpiresAt <= now
+ *   - student          : มี paid activation (non-demo package) active
+ *   - banned           : status='banned' หรือ user.isBanned=true
  */
-const DEFAULT_TRIAL_DAYS = 7
 
+/**
+ * @param {Object} reg - PreRegistration doc (or lean object)
+ * @param {Object|null} user - User doc (or lean object, may be null)
+ * @param {Array} activations - Activation docs (isActive:true, expiresAt>now) — filtered by caller
+ * @param {Set<string>} demoPackageIds - Set of demo package IDs (as strings) — from LMS DB (isDemo:true)
+ * @returns {string} one of: pending_approval | demo | demo_expired | student | banned
+ */
 function computeUserState(reg, user, activations, demoPackageIds) {
-  const now = new Date()
-
   // 1. banned (highest priority)
   if (user?.isBanned || reg?.status === 'banned') return 'banned'
 
-  // 2. student = มี paid activation (non-demo) active
-  const acts = Array.isArray(activations) ? activations : []
-  const paidActive = acts.some(a => {
-    if (!a.isActive) return false
-    if (a.expiresAt && new Date(a.expiresAt) <= now) return false
-    const pkgId = a.packageId?.toString?.() || String(a.packageId)
-    return !demoPackageIds.has(pkgId)
-  })
-  if (paidActive) return 'student'
-
-  // 3. demo / demo_expired = ตามวันสมัคร (createdAt + 7d)
-  if (reg?.createdAt) {
-    const trialEnd = new Date(new Date(reg.createdAt).getTime() + DEFAULT_TRIAL_DAYS * 86400000)
-    return now < trialEnd ? 'demo' : 'demo_expired'
+  // 2. student = มี paid activation active
+  if (activations && activations.length > 0) {
+    const hasPaid = activations.some(a => {
+      if (!a.isActive) return false
+      if (a.expiresAt && new Date(a.expiresAt) <= new Date()) return false
+      const pkgId = a.packageId?.toString?.() || String(a.packageId)
+      return !demoPackageIds.has(pkgId)
+    })
+    if (hasPaid) return 'student'
   }
 
-  // 4. ไม่มี preReg เลย (edge case) → pending_approval
-  return 'pending_approval'
-}
+  // 3. pending_approval — ยังไม่ตัดสิน หรือ approved แต่ไม่มี demoExpiresAt (data error)
+  if (!reg || reg.status === 'pending_approval') return 'pending_approval'
+  if (!reg.demoExpiresAt) return 'pending_approval'
 
-/**
- * Compute demo expiresAt — SIMPLE: preReg.createdAt + 7 วัน
- * Vasita: "เอาวันสมัครเป็นเกณฑ์เลยก็ได้ ง่ายดี"
- */
-function resolveDemoExpiresAt(reg /*, activations, demoPackageIds — kept for signature compat but unused */) {
-  if (reg?.createdAt) {
-    return new Date(new Date(reg.createdAt).getTime() + DEFAULT_TRIAL_DAYS * 86400000)
-  }
-  return null
+  // 4. demo vs demo_expired — คำนวณจาก demoExpiresAt
+  const now = new Date()
+  const expiresAt = new Date(reg.demoExpiresAt)
+  if (now < expiresAt) return 'demo'
+  return 'demo_expired'
 }
 
 /**
  * Convenience: return frontend-ready state object
- * @param {string} state
- * @param {Object} reg
- * @param {Object|null} user
- * @param {Date|null} demoExpiresAt - resolved จาก resolveDemoExpiresAt()
  */
-function buildStateResponse(state, reg, user, demoExpiresAt = null) {
+function buildStateResponse(state, reg, user) {
   const contactLineUrl = buildContactLineUrl(reg, state)
   const base = {
     state,
@@ -70,13 +62,13 @@ function buildStateResponse(state, reg, user, demoExpiresAt = null) {
       return { ...base, aud: 'none', apiBase: null, redirectTo: '/awaiting-activation' }
 
     case 'demo': {
-      const remainingMs = demoExpiresAt ? demoExpiresAt - Date.now() : 0
+      const remainingMs = reg.demoExpiresAt ? new Date(reg.demoExpiresAt) - Date.now() : 0
       return {
         ...base,
         aud: 'trial',
         apiBase: '/api/trial',
         redirectTo: '/my-trial',
-        demoExpiresAt,
+        demoExpiresAt: reg.demoExpiresAt,
         demoRemainingMs: Math.max(0, remainingMs),
         demoRemainingDays: Math.floor(remainingMs / 86400000),
         demoRemainingHours: Math.floor((remainingMs % 86400000) / 3600000)
@@ -84,14 +76,14 @@ function buildStateResponse(state, reg, user, demoExpiresAt = null) {
     }
 
     case 'demo_expired': {
-      const expiredMs = demoExpiresAt ? Date.now() - demoExpiresAt : 0
+      const expiredMs = Date.now() - new Date(reg.demoExpiresAt)
       return {
         ...base,
         aud: 'trial',
         apiBase: '/api/trial',
         redirectTo: '/demo-expired',
-        demoExpiresAt,
-        demoExpiredDaysAgo: Math.max(0, Math.floor(expiredMs / 86400000))
+        demoExpiresAt: reg.demoExpiresAt,
+        demoExpiredDaysAgo: Math.floor(expiredMs / 86400000)
       }
     }
 
@@ -133,4 +125,4 @@ function buildContactLineUrl(reg, state) {
   return `https://line.me/R/ti/p/${LINE_ID}?msg=${msg}`
 }
 
-module.exports = { computeUserState, buildStateResponse, buildContactLineUrl, resolveDemoExpiresAt, DEFAULT_TRIAL_DAYS }
+module.exports = { computeUserState, buildStateResponse, buildContactLineUrl }
