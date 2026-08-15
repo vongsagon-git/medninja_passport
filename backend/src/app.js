@@ -283,10 +283,11 @@ app.use('/api/interest', interestRoutes)
 // v2: Content + Activation (Learning System)
 // profileGuard: ต้องกรอกข้อมูลครบก่อนเข้าเรียน
 // requireLine: ต้องเชื่อม LINE ก่อนทำอะไร
-//   ⭐ 2026-08-15 Vasita: ทุกคนต้องเชื่อม LINE (รวม CN — ไม่มี geo bypass)
-//   Bypass: admin/staff เท่านั้น
+//   Bypass: admin, CN users (จีนใช้ LINE ไม่ได้)
 function requireLine(req, res, next) {
-  if (req.user.role === 'admin' || req.user.role === 'staff') return next()
+  if (req.user.role === 'admin') return next()
+  // ⭐ CN user bypass — จีน block LINE, ไม่บังคับเชื่อม
+  if (req.geo?.isChina) return next()
   if (!req.user.lineUserId) {
     return res.status(403).json({ message: 'LINE_REQUIRED', detail: 'กรุณาเชื่อม LINE ก่อนเข้าใช้งาน' })
   }
