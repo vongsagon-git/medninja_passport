@@ -25,9 +25,14 @@ const WatchProgress = require('./WatchProgress.model')
 const Activation = require('../activation/Activation.model')
 const Package = require('./Package.model')
 
-// helper: เช็คว่า user มีสิทธิ์เข้า section นี้ (admin bypass)
-async function hasAccessToSection(user, sectionId) {
-  if (user.role === 'admin') return true
+// helper: เช็คว่า user มีสิทธิ์เข้า section นี้ (admin + trial bypass)
+async function hasAccessToSection(user, sectionId, req) {
+  if (user.role === 'admin' || user.role === 'staff') return true
+  // ⭐ Trial: ถ้า section อยู่ใน demo package + user state='demo' → ผ่าน
+  if (req?.isTrial) {
+    const demoSectionIds = req.trialContext?.demoSectionIds || []
+    if (demoSectionIds.includes(sectionId?.toString())) return true
+  }
   const activations = await Activation.find({
     userId: user._id, isActive: true, expiresAt: { $gt: new Date() }
   }).select('packageId').lean()
@@ -46,7 +51,7 @@ router.post('/watch-progress', async (req, res) => {
     if (!sectionId || videoIndex === undefined) return res.status(400).json({ message: 'missing fields' })
 
     // ตรวจสิทธิ์ — ต้องมี activation สำหรับ section นี้
-    if (!(await hasAccessToSection(req.user, sectionId))) {
+    if (!(await hasAccessToSection(req.user, sectionId, req))) {
       return res.status(404).json({ message: 'ไม่พบ' })
     }
 
@@ -70,7 +75,7 @@ router.post('/watch-progress', async (req, res) => {
 router.get('/watch-progress/:sectionId', async (req, res) => {
   try {
     // ตรวจสิทธิ์
-    if (!(await hasAccessToSection(req.user, req.params.sectionId))) {
+    if (!(await hasAccessToSection(req.user, req.params.sectionId, req))) {
       return res.status(404).json({ message: 'ไม่พบ' })
     }
 
