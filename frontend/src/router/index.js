@@ -571,14 +571,12 @@ router.beforeResolve(async (to, from, next) => {
       const stateResp = await getUserState()
       if (stateResp) {
         const target = targetRouteForState(stateResp)
-        if (target && target !== to.path) {
-          // Don't loop: if we're already on target, or target is the from path (back nav), skip
-          if (target === from.path && from.path !== to.path) {
-            // user navigated FROM target — allow (user probably clicked link out)
-          } else {
-            console.log(`[StateGate] state=${stateResp.state} needsLine=${stateResp.needsLineLink} → redirect ${to.path} → ${target}`)
-            return next(target)
-          }
+        // ⭐ Allow sub-paths of target (e.g. state='demo' → allow /my-trial + /my-trial/section/* + /my-trial/watch/*)
+        // Bug ก่อน 2026-08-15: click /my-trial/section → redirect /my-trial ตลอด
+        const isOnTargetTree = target && (to.path === target || to.path.startsWith(target + '/'))
+        if (target && !isOnTargetTree) {
+          console.log(`[StateGate] state=${stateResp.state} needsLine=${stateResp.needsLineLink} → redirect ${to.path} → ${target}`)
+          return next(target)
         }
       }
     } catch (err) {
