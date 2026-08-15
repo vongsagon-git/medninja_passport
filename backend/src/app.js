@@ -294,8 +294,6 @@ function requireLine(req, res, next) {
 }
 // State endpoint — auth only (no approvalGuard, ทุก state ต้องเรียกได้เพื่อ redirect)
 app.use('/api/me', auth, require('./modules/me/state.routes'))
-// Trial content — auth only (self-check state ใน handler)
-app.use('/api/me', auth, require('./modules/me/trial.routes'))
 
 // approvalGuard: บล็อค user ที่ยังไม่ผ่าน admin approve (2026-08-06 anti-hack)
 app.use('/api/my', auth, profileGuard, approvalGuard, activationRoutes)
