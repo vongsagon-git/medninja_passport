@@ -523,7 +523,7 @@
 </template>
 
 <script>
-import { useTrialActivationStore } from '../stores/trialActivation'
+import { useActivationStore } from '../stores/activation'
 import api from '../services/api'
 import SelfCheckModal from '../components/SelfCheckModal.vue'
 import { useCountryGuard } from '../composables/useCountryGuard'
@@ -547,7 +547,7 @@ export default {
     }
   },
   setup() {
-    const activationStore = useTrialActivationStore()
+    const activationStore = useActivationStore()
     // ⭐ TH guard — logout ถ้า IP เปลี่ยนไป CN
     useCountryGuard('TH')
     return { activationStore }
@@ -766,7 +766,7 @@ export default {
     },
     async _fetchProgress(sectionId) {
       try {
-        const res = await api.get(`/trial/watch-progress/${sectionId}`)
+        const res = await api.get(`/my/watch-progress/${sectionId}`)
         const map = {}
         for (const p of (res.progress || [])) {
           const key = p.isBonus ? `bonus_${p.videoIndex}` : p.videoIndex
@@ -819,7 +819,7 @@ export default {
         const bonusQuery = isBonus ? '?bonus=1' : ''
 
         this.pdfLoadingMsg = 'กำลังเข้าคิว...'
-        const startRes = await fetch(`/api/trial/sections/${sectionId}/videos/${videoIdx}/pdf-start${bonusQuery}`, {
+        const startRes = await fetch(`/api/my/sections/${sectionId}/videos/${videoIdx}/pdf-start${bonusQuery}`, {
           method: 'POST', headers
         })
         if (!startRes.ok) {
@@ -834,7 +834,7 @@ export default {
         const result = await new Promise((resolve, reject) => {
           const poll = setInterval(async () => {
             try {
-              const sr = await fetch(`/api/trial/pdf-job/${jobId}/status`, { headers: { 'Authorization': `Bearer ${token}` } })
+              const sr = await fetch(`/api/my/pdf-job/${jobId}/status`, { headers: { 'Authorization': `Bearer ${token}` } })
               const sd = await sr.json()
               this.pdfLoadingMsg = `${sd.statusText || 'กำลังทำ...'} ${sd.percent || 0}%`
               this.pdfProgress = sd.percent || 0
@@ -846,7 +846,7 @@ export default {
         })
 
         this.pdfLoadingMsg = 'กำลังดาวน์โหลด...'
-        const dlRes = await fetch(`/api/trial/pdf-job/${result}/download`, {
+        const dlRes = await fetch(`/api/my/pdf-job/${result}/download`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (!dlRes.ok) { throw new Error('ดาวน์โหลดไม่สำเร็จ') }
@@ -892,7 +892,7 @@ export default {
         const pdfType = type === 'topic' ? 'topic' : 'subtopic'
 
         this.pdfLoadingMsg = 'กำลังเข้าคิว...'
-        const startRes = await fetch(`/api/trial/sections/${sectionId}/group-pdf-start/${pdfType}/${encodeURIComponent(name)}`, {
+        const startRes = await fetch(`/api/my/sections/${sectionId}/group-pdf-start/${pdfType}/${encodeURIComponent(name)}`, {
           method: 'POST', headers
         })
         if (!startRes.ok) {
@@ -907,7 +907,7 @@ export default {
         const result = await new Promise((resolve, reject) => {
           const poll = setInterval(async () => {
             try {
-              const sr = await fetch(`/api/trial/pdf-job/${jobId}/status`, { headers: { 'Authorization': `Bearer ${token}` } })
+              const sr = await fetch(`/api/my/pdf-job/${jobId}/status`, { headers: { 'Authorization': `Bearer ${token}` } })
               const sd = await sr.json()
               this.pdfLoadingMsg = `${sd.statusText || 'กำลังทำ...'} ${sd.percent || 0}%`
               this.pdfProgress = sd.percent || 0
@@ -919,7 +919,7 @@ export default {
         })
 
         this.pdfLoadingMsg = 'กำลังดาวน์โหลด...'
-        const dlRes = await fetch(`/api/trial/pdf-job/${result}/download`, { headers: { 'Authorization': `Bearer ${token}` } })
+        const dlRes = await fetch(`/api/my/pdf-job/${result}/download`, { headers: { 'Authorization': `Bearer ${token}` } })
         if (!dlRes.ok) throw new Error('ดาวน์โหลดไม่สำเร็จ')
 
         const blob = await dlRes.blob()
