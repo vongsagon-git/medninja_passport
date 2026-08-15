@@ -45,18 +45,22 @@ export function clearUserStateCache() {
 /**
  * Given state response, return route.path to redirect to (or null if current is OK)
  * Precedence:
- *   1. banned              → /banned
- *   2. pending_approval    → /awaiting-approval
- *   3. needsLineLink       → /linelink
+ *   1. needsLineLink       → /linelink   ⭐ BEFORE EVERYTHING (Vasita 2026-08-15)
+ *   2. banned              → /banned
+ *   3. pending_approval    → /awaiting-approval
  *   4. demo_expired        → /demo-expired
  *   5. demo                → /my-trial
  *   6. student             → /my (or /my-cn if CN — handled by existing country guard)
+ *
+ * Rule: ไม่มี LINE = redirect /linelink เสมอ (ไม่ว่า state อะไร)
+ *       เชื่อม LINE เสร็จ → refresh state → routing ปกติ
  */
 export function targetRouteForState(stateResp) {
   if (!stateResp) return null
+  // ⭐ LINE gate เป็น first-class check — ต้องเชื่อม LINE ก่อนทำอะไรทั้งสิ้น
+  if (stateResp.needsLineLink) return '/linelink'
   if (stateResp.state === 'banned') return '/banned'
   if (stateResp.state === 'pending_approval') return '/awaiting-approval'
-  if (stateResp.needsLineLink) return '/linelink'
   if (stateResp.state === 'demo_expired') return '/demo-expired'
   if (stateResp.state === 'demo') return '/my-trial'
   if (stateResp.state === 'student') return '/my'

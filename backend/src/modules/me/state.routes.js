@@ -49,18 +49,16 @@ router.get('/state', async (req, res) => {
     const state = computeUserState(reg, user, activations, demoIds)
     const response = buildStateResponse(state, reg, user)
 
-    // ⭐ LINE requirement — บังคับเชื่อม LINE ทุก state (bypass CN + admin)
-    // ตาม pattern requireLine middleware ใน app.js
+    // ⭐ LINE requirement — บังคับเชื่อม LINE 100% ทุกคน ทุก state (2026-08-15)
+    // Vasita: "ไม่ว่าจะใครก็ตาม ต้องเชื่อมไลน์ ไม่งั้นเข้าหน้าเชื่อมไลน์จนกว่าจะเชื่อม"
+    // NO BYPASS — admin/staff (early return ด้านบน) เท่านั้นที่ไม่โดน
     const isChina = req.geo?.isChina || false
-    const needsLineLink = !user.lineUserId && !isChina && user.role !== 'admin' && user.role !== 'staff'
+    const needsLineLink = !user.lineUserId
 
-    // LINE gate อยู่ก่อน demo/student routing (แต่หลัง banned/pending)
-    // ถ้า needsLineLink + state ที่ต้องดู content → redirect /linelink ก่อน
-    if (needsLineLink && (state === 'demo' || state === 'demo_expired' || state === 'student')) {
+    // LINE gate มาก่อน state ใดๆ ทั้งหมด (banned/pending/demo/expired/student)
+    if (needsLineLink) {
       response.needsLineLink = true
       response.redirectTo = '/linelink'
-    } else {
-      response.needsLineLink = needsLineLink
     }
 
     response.hasLine = !!user.lineUserId
