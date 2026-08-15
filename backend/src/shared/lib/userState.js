@@ -133,21 +133,4 @@ function buildContactLineUrl(reg, state) {
   return `https://line.me/R/ti/p/${LINE_ID}?msg=${msg}`
 }
 
-// ⭐ Opaque ID helpers — hide real ObjectId in URL (hacker เห็น URL แล้วเดา DB structure ไม่ได้)
-const crypto = require('crypto')
-const SLUG_SECRET = process.env.TRIAL_SLUG_SECRET || process.env.JWT_SECRET || 'medninja-slug-fallback'
-
-function encodeSlug(objectIdStr) {
-  const hmac = crypto.createHmac('sha256', SLUG_SECRET).update(String(objectIdStr)).digest('base64')
-  return hmac.replace(/[+/=]/g, '').slice(0, 8)   // 8-char opaque slug
-}
-
-// Resolve slug → real id โดยเทียบ candidate ids ทั้งหมด (caller ส่ง list)
-function resolveSlug(slug, candidateIds) {
-  for (const id of candidateIds) {
-    if (encodeSlug(id) === slug) return id
-  }
-  return null
-}
-
-module.exports = { computeUserState, buildStateResponse, buildContactLineUrl, resolveDemoExpiresAt, DEFAULT_TRIAL_DAYS, encodeSlug, resolveSlug }
+module.exports = { computeUserState, buildStateResponse, buildContactLineUrl, resolveDemoExpiresAt, DEFAULT_TRIAL_DAYS }

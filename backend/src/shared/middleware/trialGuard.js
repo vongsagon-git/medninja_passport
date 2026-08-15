@@ -16,7 +16,7 @@ const User = require('../../modules/user/User.model')
 const PreRegistration = require('../../modules/preregister/PreRegistration.model')
 const Activation = require('../../modules/activation/Activation.model')
 const Package = require('../../modules/content/Package.model')
-const { computeUserState, resolveSlug } = require('../lib/userState')
+const { computeUserState } = require('../lib/userState')
 
 async function trialGuard(req, res, next) {
   try {
@@ -60,37 +60,10 @@ async function trialGuard(req, res, next) {
 
     // inject context
     const demoPkg = demoPkgs[0]  // เอาตัวแรก (มีเดียวในระบบ)
-    const demoSectionIds = (demoPkg?.sections || []).map(s => s.toString())
-    req.isTrial = true   // ⭐ content controller เช็คตัวนี้ → skip activation/consent check
     req.trialContext = {
       demoPackageId: demoPkg?._id?.toString() || null,
-      demoSectionIds,
+      demoSectionIds: (demoPkg?.sections || []).map(s => s.toString()),
       state: 'demo'
-    }
-
-    // ⭐ Resolve slug in URL → real ObjectId (rewrite req.url before downstream)
-    // patterns:
-    //   /sections/{slug}/...       → /sections/{realId}/...
-    //   /watch-progress/{slug}     → /watch-progress/{realId}
-    //   /watch-progress body.sectionId (POST) — resolve ที่ body ด้วย
-    const patterns = [
-      /\/sections\/([A-Za-z0-9_-]{4,16})(\/|$|\?)/,
-      /\/watch-progress\/([A-Za-z0-9_-]{4,16})($|\?)/
-    ]
-    for (const re of patterns) {
-      const m = req.url.match(re)
-      if (m && m[1].length < 24) {
-        const real = resolveSlug(m[1], demoSectionIds)
-        if (real) {
-          req.url = req.url.replace(re, (match, _slug, tail) => match.replace(_slug, real))
-        }
-      }
-    }
-
-    // body.sectionId (POST /watch-progress) — resolve เช่นกัน
-    if (req.body?.sectionId && String(req.body.sectionId).length < 24) {
-      const real = resolveSlug(req.body.sectionId, demoSectionIds)
-      if (real) req.body.sectionId = real
     }
 
     next()

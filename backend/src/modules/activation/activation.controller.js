@@ -104,14 +104,6 @@ exports.getMyActivations = async (req, res, next) => {
  */
 exports.getConsentStatus = async (req, res, next) => {
   try {
-    // ⭐ Trial user: auto-approved (frontend fake activation ใช้ id ที่ไม่มีใน DB)
-    // return array ว่าง = frontend จะ "isConsentAccepted" false → แต่ trial dashboard
-    // set consentAcceptedIds เอง (ดู MyTrialDashboard._loadTrialContent) ก็ยัง OK
-    // ที่นี่คืน all-accepted flag เพื่อ trial ผ่าน check ไม่ต้องรอ POST
-    if (req.isTrial) {
-      return res.json({ acceptedActivationIds: [], currentVersion: CURRENT_TERMS_VERSION, autoAccepted: true })
-    }
-
     const logs = await ConsentLog.find({
       userId: req.user._id,
       termsVersion: CURRENT_TERMS_VERSION

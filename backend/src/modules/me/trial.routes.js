@@ -18,7 +18,7 @@ const PreRegistration = require('../preregister/PreRegistration.model')
 const Activation = require('../activation/Activation.model')
 const Package = require('../content/Package.model')
 const Section = require('../content/Section.model')
-const { computeUserState, encodeSlug } = require('../../shared/lib/userState')
+const { computeUserState } = require('../../shared/lib/userState')
 
 router.get('/trial-content', async (req, res) => {
   try {
@@ -60,7 +60,7 @@ router.get('/trial-content', async (req, res) => {
     // ⭐ Strip sensitive fields (ห้าม leak Bunny library ID / drm video id ใน list)
     // frontend ใช้แค่ index → เรียก /demo/watch/:videoIndex
     const cleanSections = sections.map(s => ({
-      _id: encodeSlug(s._id.toString()),   // ⭐ opaque slug (ไม่ leak real ObjectId)
+      _id: s._id.toString(),   // ⭐ real section _id (frontend ใช้ link ไป /my-trial/section/:id)
       code: s.code,
       name: s.name,
       description: s.description || '',
@@ -81,8 +81,9 @@ router.get('/trial-content', async (req, res) => {
       title: pkg.title,
       description: pkg.description || '',
       sections: cleanSections,
-      // opaque slug ของ section ตัวแรก
-      primarySectionId: sections[0]?._id ? encodeSlug(sections[0]._id.toString()) : null
+      // ⭐ real section _id ตัวแรก (สำหรับ frontend resolve sectionId → เรียก /api/trial/sections/:id)
+      // Trial มี section เดียวเสมอ (DEMO-TRIAL) → return _id ให้ตรง ๆ
+      primarySectionId: sections[0]?._id?.toString?.() || null
     })
   } catch (err) {
     console.error('[GET /api/me/trial-content]', err)
