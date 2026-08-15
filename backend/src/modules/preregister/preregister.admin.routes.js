@@ -1052,6 +1052,13 @@ router.post('/:id/ban', auth, admin, async (req, res) => {
     user.bannedBy = adminName
     user.bannedReason = String(reason).slice(0, 500)
     await user.save()
+
+    // sync preReg.status → 'banned' (state machine)
+    await PreRegistration.updateOne(
+      { _id: reg._id },
+      { $set: { status: 'banned', bannedAt: new Date(), bannedBy: adminName, banReason: String(reason).slice(0, 500) } }
+    )
+
     await removeAllSessions(user._id.toString())
     console.log(`[BAN] ${user.email} banned by ${adminName} — ${reason}`)
     res.json({ ok: true, message: `แบนและ kick ${user.firstName || user.name} แล้ว`, isBanned: true, bannedBy: adminName })
@@ -1069,10 +1076,153 @@ router.post('/:id/unban', auth, admin, async (req, res) => {
     user.isBanned = false
     user.bannedReason = ''
     await user.save()
+
+    // sync preReg.status → กลับ pending_approval (admin triage อีกรอบ)
+    // ถ้ามี demoExpiresAt เดิม ก็คงไว้ (history)
+    await PreRegistration.updateOne(
+      { _id: reg._id },
+      { $set: { status: 'pending_approval' }, $unset: { bannedAt: 1, bannedBy: 1, banReason: 1 } }
+    )
+
     console.log(`[UNBAN] ${user.email} unbanned by ${req.user?.name || 'admin'}`)
     res.json({ ok: true, message: `ปลด ban ${user.firstName || user.name} แล้ว`, isBanned: false })
   } catch (err) {
     res.status(500).json({ message: 'Unban ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+// ═════════════════════════════════════════════════════════════
+// Flag-based State Machine Endpoints (2026-08-15)
+// ═════════════════════════════════════════════════════════════
+
+// POST /:id/approve-trial — อนุมัติเป็น trial (demo N วัน) — flag-only, ไม่ create activation
+router.post('/:id/approve-trial', auth, admin, async (req, res) => {
+  try {
+    const days = Math.max(1, Math.min(90, parseInt(req.body?.days) || 7))
+    const reg = await PreRegistration.findById(req.params.id)
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + days * 86400000)
+    const adminName = req.user?.name || req.user?.email || 'admin'
+
+    reg.status = 'approved'
+    reg.approveMode = 'trial'
+    reg.demoExpiresAt = expiresAt
+    reg.approvedAt = now
+    reg.approvedBy = adminName
+    await reg.save()
+
+    console.log(`[APPROVE_TRIAL] ${reg.firstName} ${reg.lastName} → demo ${days}d by ${adminName}`)
+    res.json({ ok: true, message: `อนุมัติทดลอง ${days} วัน สำเร็จ`, demoExpiresAt: expiresAt, days })
+  } catch (err) {
+    console.error('[approve-trial]', err)
+    res.status(500).json({ message: 'อนุมัติ trial ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+// POST /:id/approve-student — อนุมัติเป็นนักเรียน + activate paid course เลย
+router.post('/:id/approve-student', auth, admin, async (req, res) => {
+  try {
+    const { packageId, days = 365, tier = 6, note = '' } = req.body || {}
+    if (!packageId) return res.status(400).json({ message: 'ต้องระบุ packageId' })
+    const daysN = Math.max(1, Math.min(3650, parseInt(days) || 365))
+    const tierN = [1, 2, 3, 4, 5, 6].includes(parseInt(tier)) ? parseInt(tier) : 6
+
+    const reg = await PreRegistration.findById(req.params.id)
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+    const user = await User.findOne({ nationalId: reg.nationalId })
+    if (!user) return res.status(404).json({ message: 'ไม่พบบัญชีผู้ใช้' })
+
+    const pkg = await Package.findById(packageId).lean()
+    if (!pkg) return res.status(404).json({ message: 'ไม่พบ package' })
+    if (pkg.isDemo) return res.status(400).json({ message: 'ห้ามใช้ demo package กับ approve-student' })
+
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + daysN * 86400000)
+    const adminName = req.user?.name || req.user?.email || 'admin'
+
+    // update prereg (demoExpiresAt คงเดิมเป็น history — helper จะ return student อยู่ดี)
+    reg.status = 'approved'
+    reg.approveMode = 'student'
+    reg.approvedAt = now
+    reg.approvedBy = adminName
+    await reg.save()
+
+    // create paid activation
+    const activation = await Activation.create({
+      userId: user._id,
+      packageId: pkg._id,
+      activatedAt: now,
+      expiresAt,
+      isActive: true,
+      activatedBy: req.user?._id || user._id,
+      note: `Activated via approve-student by ${adminName}${note ? ' | ' + note : ''}`,
+      tier: tierN
+    })
+
+    // ปิด demo activation ที่ยัง active (student ไม่ใช้ demo)
+    const demoPkgs = await Package.find({ isDemo: true }).select('_id').lean()
+    const demoPkgIds = demoPkgs.map(d => d._id)
+    if (demoPkgIds.length) {
+      await Activation.updateMany(
+        { userId: user._id, packageId: { $in: demoPkgIds }, isActive: true },
+        { $set: { isActive: false, note: 'closed by approve-student' } }
+      )
+    }
+
+    console.log(`[APPROVE_STUDENT] ${reg.firstName} ${reg.lastName} → ${pkg.title} tier${tierN} ${daysN}d by ${adminName}`)
+    res.json({
+      ok: true,
+      message: `อนุมัติ + activate ${pkg.title} (${daysN} วัน) สำเร็จ`,
+      activationId: activation._id,
+      packageTitle: pkg.title,
+      expiresAt,
+      tier: tierN
+    })
+  } catch (err) {
+    console.error('[approve-student]', err)
+    res.status(500).json({ message: 'อนุมัติ student ไม่สำเร็จ: ' + err.message })
+  }
+})
+
+// POST /:id/extend-demo — ต่ออายุ demo N วัน
+router.post('/:id/extend-demo', auth, admin, async (req, res) => {
+  try {
+    const days = Math.max(1, Math.min(90, parseInt(req.body?.days) || 7))
+    const reg = await PreRegistration.findById(req.params.id)
+    if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
+
+    const now = new Date()
+    // ถ้ายังไม่หมด → บวกจาก demoExpiresAt เดิม, ถ้าหมดแล้ว → เริ่มจาก now
+    const base = reg.demoExpiresAt && new Date(reg.demoExpiresAt) > now
+      ? new Date(reg.demoExpiresAt)
+      : now
+    const newExpires = new Date(base.getTime() + days * 86400000)
+    const adminName = req.user?.name || req.user?.email || 'admin'
+
+    reg.demoExpiresAt = newExpires
+    reg.demoExtendCount = (reg.demoExtendCount || 0) + 1
+    reg.demoExtendedAt = now
+    reg.demoExtendedBy = adminName
+    if (reg.status === 'pending_approval') {
+      reg.status = 'approved'
+      reg.approveMode = 'trial'
+      reg.approvedAt = now
+      reg.approvedBy = adminName
+    }
+    await reg.save()
+
+    console.log(`[EXTEND_DEMO] ${reg.firstName} ${reg.lastName} +${days}d by ${adminName} (count=${reg.demoExtendCount})`)
+    res.json({
+      ok: true,
+      message: `ต่ออายุ demo ${days} วัน สำเร็จ`,
+      demoExpiresAt: newExpires,
+      extendCount: reg.demoExtendCount
+    })
+  } catch (err) {
+    console.error('[extend-demo]', err)
+    res.status(500).json({ message: 'ต่ออายุ demo ไม่สำเร็จ: ' + err.message })
   }
 })
 
