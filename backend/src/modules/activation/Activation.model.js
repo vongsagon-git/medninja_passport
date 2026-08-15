@@ -134,4 +134,24 @@ const activationSchema = new mongoose.Schema({
 activationSchema.index({ userId: 1, isActive: 1 })
 activationSchema.index({ expiresAt: 1 })
 
+// ⭐ 2026-08-15 Rule (Vasita): สมัครใหม่ = toggle ทุกตัว false
+// admin ต้องเปิดเอง หลัง create (ไม่ยอมให้ frontend/script hardcode true ตอน create)
+// เหตุ: 2026-08-14 มี auto-enable IX ให้ 154 users → คู่แข่งเห็น content unreleased
+const FORCE_FALSE_ON_CREATE = [
+  'synapseEnabled', 'ddxEnabled', 'ddxExtraEnabled', 'nlexEnabled',
+  'osceEnabled', 'meqexEnabled', 'atlasEnabled', 'longexEnabled',
+  'skill15Enabled', 'ixEnabled', 'liveEnabled', 'qaEnabled'
+]
+activationSchema.pre('save', function(next) {
+  if (this.isNew) {
+    for (const flag of FORCE_FALSE_ON_CREATE) {
+      if (this[flag] === true) {
+        console.warn(`[Activation] pre-save: force ${flag}=false (create new activation - admin ต้องเปิดเอง)`)
+        this[flag] = false
+      }
+    }
+  }
+  next()
+})
+
 module.exports = passportConn.model('Activation', activationSchema)
