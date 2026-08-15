@@ -29,26 +29,14 @@ const preRegistrationSchema = new mongoose.Schema({
   idCardType: { type: String, enum: ['national_id', 'passport'], default: 'national_id' },
 
   // สถานะ approval — mirror จาก User.approvalStatus (audit)
-  // NOTE: 'banned' เพิ่ม 2026-08-15 — flag-based state machine ใหม่ (demo/demo_expired คำนวณจาก demoExpiresAt)
-  status: { type: String, enum: ['pending_approval', 'approved', 'rejected', 'reviewed', 'banned'], default: 'pending_approval' },
+  status: { type: String, enum: ['pending_approval', 'approved', 'rejected', 'reviewed'], default: 'pending_approval' },
   approveToken: { type: String, index: true },    // token สำหรับ LINE flex link (one-time)
   approveTokenExpires: { type: Date },
   approvedBy: { type: String, default: '' },
   approvedAt: { type: Date },
-  approveMode: { type: String, enum: ['', 'trial', 'student'], default: '' }, // audit: approve แบบไหน
   rejectedBy: { type: String, default: '' },
   rejectedAt: { type: Date },
   rejectReason: { type: String, default: '' },
-
-  // ─── Trial (Demo) Flag-based State ───
-  // 2026-08-15 — flag แทน demo activation (state = derive จากค่านี้ + activation)
-  demoExpiresAt: { type: Date, default: null },       // now < demoExpiresAt = demo, else demo_expired
-  demoExtendCount: { type: Number, default: 0 },      // นับกี่ครั้งเคย + วัน
-  demoExtendedAt: { type: Date, default: null },
-  demoExtendedBy: { type: String, default: '' },      // admin email
-  banReason: { type: String, default: '' },
-  bannedAt: { type: Date, default: null },
-  bannedBy: { type: String, default: '' },
 
   // Audit: ไว้ track ผู้ hack (IP + LINE + timestamp)
   submitIp: { type: String, default: '' },
