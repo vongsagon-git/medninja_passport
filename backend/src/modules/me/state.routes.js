@@ -16,7 +16,7 @@ const User = require('../user/User.model')
 const PreRegistration = require('../preregister/PreRegistration.model')
 const Activation = require('../activation/Activation.model')
 const Package = require('../content/Package.model')
-const { computeUserState, buildStateResponse } = require('../../shared/lib/userState')
+const { computeUserState, buildStateResponse, resolveDemoExpiresAt } = require('../../shared/lib/userState')
 
 router.get('/state', async (req, res) => {
   try {
@@ -47,7 +47,8 @@ router.get('/state', async (req, res) => {
 
     const demoIds = new Set(demoPkgs.map(d => d._id.toString()))
     const state = computeUserState(reg, user, activations, demoIds)
-    const response = buildStateResponse(state, reg, user)
+    const demoExpiresAt = resolveDemoExpiresAt(reg)
+    const response = buildStateResponse(state, reg, user, demoExpiresAt)
 
     // ⭐ LINE requirement — บังคับเชื่อม LINE 100% ทุกคน ทุก state (2026-08-15)
     // Vasita: "ไม่ว่าจะใครก็ตาม ต้องเชื่อมไลน์ ไม่งั้นเข้าหน้าเชื่อมไลน์จนกว่าจะเชื่อม"
