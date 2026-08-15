@@ -20,6 +20,7 @@ const ReplyStudent = () => import('../views/ReplyStudent.vue')
 const MyDashboard = () => import('../views/MyDashboard.vue')
 // Phase 2: state machine trial pages (2026-08-15)
 const MyTrialDashboard = () => import('../views/MyTrialDashboard.vue')
+const UniversalWatchTrial = () => import('../views/watch/UniversalWatchTrial.vue')
 const DemoExpiredPage = () => import('../views/DemoExpiredPage.vue')
 const BannedPage = () => import('../views/BannedPage.vue')
 const SectionPage = () => import('../views/SectionPage.vue')
@@ -133,12 +134,24 @@ const routes = [
     component: UniversalWatch,
     meta: { demo: true, immersive: true, region: 'global' }
   },
-  // Phase 2: Trial pages (state machine)
+  // Phase 2: Trial pages (state machine) — clone จาก MyDashboard / UniversalWatch
   {
     path: '/my-trial',
     name: 'MyTrialDashboard',
     component: MyTrialDashboard,
     meta: { requiresAuth: true, requiresProfile: true, trialAllowed: true }
+  },
+  {
+    path: '/my-trial/section/:id',
+    name: 'SectionPageTrial',
+    component: SectionPage,  // reuse ก่อน (clone ทีหลังถ้าจำเป็น)
+    meta: { requiresAuth: true, requiresProfile: true, trialAllowed: true }
+  },
+  {
+    path: '/my-trial/watch/:sectionId/:videoIndex',
+    name: 'WatchPageTrial',
+    component: UniversalWatchTrial,
+    meta: { requiresAuth: true, requiresProfile: true, trialAllowed: true, immersive: true, region: 'global' }
   },
   {
     path: '/demo-expired',
