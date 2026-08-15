@@ -294,8 +294,16 @@ function requireLine(req, res, next) {
 }
 // State endpoint — auth only (no approvalGuard, ทุก state ต้องเรียกได้เพื่อ redirect)
 app.use('/api/me', auth, require('./modules/me/state.routes'))
-// Trial content — auth only (self-check state ใน handler)
+// Trial content list — auth only (self-check state ใน handler)
 app.use('/api/me', auth, require('./modules/me/trial.routes'))
+
+// ⭐ Phase 3: Trial-only API endpoints — physical separation จาก /api/my/*
+// ใช้ trialGuard middleware บังคับ state='demo' + inject demoPackage context
+// Reuse controllers เดิม (share logic) แต่ mount path ต่างกัน → hacker probe /api/trial
+// จะไม่เห็น paid endpoint pattern
+const trialGuard = require('./shared/middleware/trialGuard')
+app.use('/api/trial', auth, profileGuard, trialGuard, activationRoutes)
+app.use('/api/trial', auth, profileGuard, trialGuard, contentRoutes)
 
 // approvalGuard: บล็อค user ที่ยังไม่ผ่าน admin approve (2026-08-06 anti-hack)
 app.use('/api/my', auth, profileGuard, approvalGuard, activationRoutes)

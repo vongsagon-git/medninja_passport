@@ -258,7 +258,7 @@
 
 <script>
 import { useAuthStore } from '../stores/auth'
-import { useActivationStore } from '../stores/activation'
+import { useTrialActivationStore } from '../stores/trialActivation'
 import api from '../services/api'
 import { useCountryGuard } from '../composables/useCountryGuard'
 import OrientModal from '../components/OrientModal.vue'
@@ -288,7 +288,7 @@ export default {
   },
   setup() {
     const authStore = useAuthStore()
-    const activationStore = useActivationStore()
+    const activationStore = useTrialActivationStore()
     // ⭐ TH guard — logout ถ้า IP เปลี่ยนไป CN
     useCountryGuard('TH')
     return { authStore, activationStore }

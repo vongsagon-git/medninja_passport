@@ -744,7 +744,7 @@ import { io } from 'socket.io-client'
 import { useRoute } from 'vue-router'
 import { WS_URL } from '../../utils/shadowSocket'
 import api from '../../services/api'
-import { useActivationStore } from '../../stores/activation'
+import { useTrialActivationStore } from '../../stores/trialActivation'
 import { useAuthStore } from '../../stores/auth'
 import { checkBrowserSupport, getDeviceInfo, isExceptionPath } from '../../utils/browserCheck'
 import { isIOS as detectIOS, isMacSafari as detectMacSafari, getOS as detectOS, getBrowser as detectBrowser, isRealMobile, isDevToolOpen } from '../../utils/deviceDetect'
@@ -776,7 +776,7 @@ export default {
     //    uiRegion   = จาก circuit (admin toggle ได้ — override ไป UI ไหนก็ได้)
     //    default: uiRegion = routeRegion (จะถูก override หลัง fetch circuit)
     const routeRegion = route.meta?.region === 'cn' ? 'cn' : 'global'
-    const activationStore = useActivationStore()
+    const activationStore = useTrialActivationStore()
     const authStore = useAuthStore()
     const browserCheck = checkBrowserSupport()
     // Country guard ยังทำงานตาม route (business logic ไม่เปลี่ยน)
@@ -919,9 +919,8 @@ export default {
     backUrl() {
       if (this.isDemo) return '/demo'
       if (this.isAdminPreview) return '/admin/sections'
-      // ⭐ ใช้ routeRegion (จาก path) ไม่ใช่ region (uiMode) — กัน redirect loop
-      const prefix = this.routeRegion === 'cn' ? '/my-cn/section/' : '/my/section/'
-      return `${prefix}${this.sectionId}`
+      // ⭐ Trial version: กลับ /my-trial/section
+      return `/my-trial/section/${this.sectionId}`
     },
     // ⭐ Dashboard path ตาม routeRegion (path) ไม่ใช่ uiMode
     routeDashboardPath() {
@@ -1224,7 +1223,7 @@ export default {
     if (!this.isDemo && !this._resumeFetched) {
       this._resumeFetched = true
       try {
-        const res = await api.get(`/my/watch-progress/${this.sectionId}`)
+        const res = await api.get(`/trial/watch-progress/${this.sectionId}`)
         const prog = (res.progress || []).find(pr => pr.videoIndex === this.videoIndex)
         if (prog && prog.currentTime > 10) this.resumeSeek = prog.currentTime
       } catch { /* silent */ }
@@ -1550,7 +1549,7 @@ export default {
       if (!this.isDemo && !this._resumeFetched) {
         this._resumeFetched = true
         try {
-          const res = await api.get(`/my/watch-progress/${this.sectionId}`)
+          const res = await api.get(`/trial/watch-progress/${this.sectionId}`)
           const prog = (res.progress || []).find(pr => pr.videoIndex === this.videoIndex)
           if (prog && prog.currentTime > 10) this.resumeSeek = prog.currentTime
         } catch { /* silent */ }
@@ -1676,7 +1675,7 @@ url:           ${window.location.href}`
       try {
         const ctx = getDeviceContext()
         const isFirst = !this._heartbeatSent
-        const data = await api.post('/my/heartbeat', {
+        const data = await api.post('/trial/heartbeat', {
           firstBeat: isFirst || undefined,
           oldTabId: window.name || undefined,
           sectionId: this.sectionId,
@@ -1710,7 +1709,7 @@ url:           ${window.location.href}`
         }
         // บันทึก watch progress ทุก heartbeat (fire-and-forget)
         if (!this.isDemo && this._currentTime > 0) {
-          api.post('/my/watch-progress', {
+          api.post('/trial/watch-progress', {
             sectionId: this.sectionId,
             videoIndex: this.videoIndex,
             currentTime: Math.round(this._currentTime || 0),
@@ -1752,7 +1751,7 @@ url:           ${window.location.href}`
       // กดลองใหม่ → ส่ง heartbeat ดูว่า tab อื่นปิดแล้วหรือยัง
       try {
         const ctx = getDeviceContext()
-        const data = await api.post('/my/heartbeat', {
+        const data = await api.post('/trial/heartbeat', {
           sectionId: this.sectionId,
           videoIndex: this.videoIndex,
           sectionName: this.section?.name || '',
@@ -2186,7 +2185,7 @@ url:           ${window.location.href}`
       saveWatchedMap(this.watchedMap)
       // บันทึกไป server ด้วย (fire-and-forget)
       if (!this.isDemo) {
-        api.post('/my/watch-progress', {
+        api.post('/trial/watch-progress', {
           sectionId: this.sectionId,
           videoIndex: idx,
           watched: this.watchedMap[key].includes(idx)
