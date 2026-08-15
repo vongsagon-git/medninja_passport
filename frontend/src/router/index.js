@@ -18,6 +18,10 @@ const ReplyStudent = () => import('../views/ReplyStudent.vue')
 
 // v2: Section-based student pages
 const MyDashboard = () => import('../views/MyDashboard.vue')
+// Phase 2: state machine trial pages (2026-08-15)
+const MyTrialDashboard = () => import('../views/MyTrialDashboard.vue')
+const DemoExpiredPage = () => import('../views/DemoExpiredPage.vue')
+const BannedPage = () => import('../views/BannedPage.vue')
 const SectionPage = () => import('../views/SectionPage.vue')
 // ⭐ Watch = one UniversalWatch component for BOTH /my/watch (Global) + /my-cn/watch (CN)
 //   Region is chosen via route meta.region ('global' | 'cn')
@@ -128,6 +132,25 @@ const routes = [
     name: 'DemoWatch',
     component: UniversalWatch,
     meta: { demo: true, immersive: true, region: 'global' }
+  },
+  // Phase 2: Trial pages (state machine)
+  {
+    path: '/my-trial',
+    name: 'MyTrialDashboard',
+    component: MyTrialDashboard,
+    meta: { requiresAuth: true, requiresProfile: true, trialAllowed: true }
+  },
+  {
+    path: '/demo-expired',
+    name: 'DemoExpired',
+    component: DemoExpiredPage,
+    meta: { requiresAuth: true, requiresProfile: true, trialAllowed: true, immersive: true }
+  },
+  {
+    path: '/banned',
+    name: 'Banned',
+    component: BannedPage,
+    meta: { requiresAuth: true, immersive: true }
   },
   // v2: Section-based student routes (ต้องกรอก profile ก่อน)
   {
@@ -494,6 +517,8 @@ router.beforeEach((to, from, next) => {
 
 // Version check — ถ้ามี pending reload + ออกจากหน้า watch → reload
 import { checkPendingReload, getVersion } from '../services/versionCheck'
+// Phase 2: state machine (2026-08-15)
+import { getUserState, targetRouteForState } from '../services/userState'
 
 // ⭐ Skip version reload สำหรับ path ที่ดู VDO อยู่ (versionCheck.js จะ toast แทน)
 const SKIP_RELOAD_PATHS = ['/my/watch/', '/my-cn/watch/']
@@ -508,10 +533,49 @@ const getPathBucket = (p) => {
   if (isBucketPath(p)) return 'GLOBAL'
   return null
 }
+// Phase 2 (2026-08-15): state gate — page-path ↔ user state routing
+// Paths ที่ต้องเช็ค state ก่อน enter (paid content pages)
+const STATE_GATED_PREFIXES = ['/my', '/my-cn', '/section', '/watch', '/doctor', '/my-trial', '/demo-expired', '/banned']
+const STATE_TARGET_PAGES = new Set(['MyDashboard', 'MyTrialDashboard', 'DemoExpired', 'Banned', 'AwaitingApproval', 'LineLink'])
+const isStateGated = (to) => {
+  if (STATE_TARGET_PAGES.has(to.name)) return true
+  return STATE_GATED_PREFIXES.some(p => to.path === p || to.path.startsWith(p + '/'))
+}
+
 router.beforeResolve(async (to, from, next) => {
+  const authStore = useAuthStore()
+
+  // ⭐ Phase 2 state gate — check user state and redirect if page doesn't match state
+  // Only for authenticated non-admin users on state-gated paths
+  if (
+    authStore.isLoggedIn &&
+    authStore.user?.role !== 'admin' &&
+    authStore.user?.role !== 'staff' &&
+    isStateGated(to)
+  ) {
+    try {
+      const stateResp = await getUserState()
+      if (stateResp) {
+        const target = targetRouteForState(stateResp)
+        if (target && target !== to.path) {
+          // Don't loop: if we're already on target, or target is the from path (back nav), skip
+          if (target === from.path && from.path !== to.path) {
+            // user navigated FROM target — allow (user probably clicked link out)
+          } else {
+            console.log(`[StateGate] state=${stateResp.state} needsLine=${stateResp.needsLineLink} → redirect ${to.path} → ${target}`)
+            return next(target)
+          }
+        }
+      }
+    } catch (err) {
+      // state fetch fail — let user through (backend will 401/403 anyway)
+      console.warn('[StateGate] fetch failed:', err.message)
+    }
+  }
+
   // ⭐ Country guard ก่อน version check — user อาจสลับ VPN ระหว่าง navigation
   // ตรวจทุกครั้ง: เปลี่ยนคลิป, refresh, navigate — mismatch = redirect ทันที
-  const authStore = useAuthStore()
+  // (authStore already declared above)
   const pathBucket = getPathBucket(to.path)
   if (pathBucket && authStore.isLoggedIn) {
     try {
