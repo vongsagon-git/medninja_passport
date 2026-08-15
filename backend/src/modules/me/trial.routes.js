@@ -60,7 +60,6 @@ router.get('/trial-content', async (req, res) => {
     // ⭐ Strip sensitive fields (ห้าม leak Bunny library ID / drm video id ใน list)
     // frontend ใช้แค่ index → เรียก /demo/watch/:videoIndex
     const cleanSections = sections.map(s => ({
-      _id: s._id.toString(),   // ⭐ real section _id (frontend ใช้ link ไป /my-trial/section/:id)
       code: s.code,
       name: s.name,
       description: s.description || '',
@@ -80,10 +79,7 @@ router.get('/trial-content', async (req, res) => {
     return res.json({
       title: pkg.title,
       description: pkg.description || '',
-      sections: cleanSections,
-      // ⭐ real section _id ตัวแรก (สำหรับ frontend resolve sectionId → เรียก /api/trial/sections/:id)
-      // Trial มี section เดียวเสมอ (DEMO-TRIAL) → return _id ให้ตรง ๆ
-      primarySectionId: sections[0]?._id?.toString?.() || null
+      sections: cleanSections
     })
   } catch (err) {
     console.error('[GET /api/me/trial-content]', err)

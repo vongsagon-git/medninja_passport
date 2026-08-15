@@ -187,7 +187,7 @@
               <span class="course-sec-code">{{ sec.name || sec.code }}</span>
               <span class="course-sec-count">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
-                {{ sec.videos?.length ?? 0 }} VDO
+                {{ sec.videoCount ?? sec.videos?.length ?? 0 }} VDO
               </span>
             </router-link>
           </div>
@@ -473,8 +473,8 @@ export default {
             _id: 'trial-pkg',
             title: content.title || 'ทดลองเรียนฟรี 7 วัน',
             description: content.description || '',
-            sections: content.sections.map(s => ({
-              _id: s._id,   // ⭐ real ObjectId จาก backend (ไม่ใช่ dummy)
+            sections: content.sections.map((s, idx) => ({
+              _id: 'trial-sec-' + idx,
               code: s.code,
               name: s.name,
               videos: s.videos
