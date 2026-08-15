@@ -496,7 +496,66 @@
           </div>
         </div>
 
-        <div v-if="!groupPendingApproval.length && !groupAdmin.length && !groupStaff.length && !groupEnrolled.length && !groupNoCourse.length" class="card" style="text-align: center; color: var(--gray); padding: 32px;">
+        <!-- 🚫 ถูกแบน Section -->
+        <div v-if="groupBanned.length" class="group-section">
+          <div class="group-header" style="background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff">
+            <span class="group-icon">🚫</span>
+            <span class="group-title">ถูกแบน</span>
+            <span class="group-count">{{ groupBanned.length }} คน</span>
+          </div>
+          <div class="card" style="overflow-x: auto;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ชื่อ-นามสกุล</th>
+                  <th>เลขบัตร</th>
+                  <th>เพศ</th>
+                  <th>มหาวิทยาลัย</th>
+                  <th>LINE</th>
+                  <th>เหตุผล</th>
+                  <th>วันที่สมัคร</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(reg, idx) in groupBanned" :key="reg._id" class="row-clickable" @click="viewDetail(reg._id)">
+                  <td>{{ idx + 1 }}</td>
+                  <td>
+                    <div class="fw-600" v-if="reg.firstName || reg.lastName">{{ reg.firstName }} {{ reg.lastName }}</div>
+                    <div v-if="calculateAge(reg.dateOfBirth)" style="font-size: 11px; color: #64748b;">{{ calculateAge(reg.dateOfBirth) }} ปี</div>
+                    <div v-if="reg.firstNameEn || reg.lastNameEn" style="font-size: 12px; color: #94a3b8;">{{ reg.firstNameEn }} {{ reg.lastNameEn }}</div>
+                  </td>
+                  <td class="mono">{{ formatNationalId(reg.nationalId) }}</td>
+                  <td>
+                    <span v-if="reg.sex === 'M'" style="color:#3b82f6">♂ ชาย</span>
+                    <span v-else-if="reg.sex === 'F'" style="color:#ec4899">♀ หญิง</span>
+                    <span v-else style="color:#94a3b8">-</span>
+                  </td>
+                  <td>{{ reg.university || '-' }}</td>
+                  <td @click.stop>
+                    <div v-if="reg.lineUserId" style="display:flex;align-items:center;gap:6px">
+                      <img v-if="reg.linePictureUrl" :src="reg.linePictureUrl" style="width:24px;height:24px;border-radius:50%">
+                      <span style="font-size:12px">{{ reg.lineDisplayName || 'LINE' }}</span>
+                    </div>
+                    <span v-else style="color:#cbd5e1;font-size:12px">-</span>
+                  </td>
+                  <td style="font-size:12px;color:#991b1b;max-width:200px;">{{ reg.bannedReason || '-' }}</td>
+                  <td style="font-size: 12px; color: #64748b;">{{ formatDate(reg.createdAt) }}</td>
+                  <td @click.stop>
+                    <ActionMenu :reg="reg"
+                      @approve="doApprove" @change-status="changeStatus"
+                      @view-detail="viewDetail" @edit="openEditModal"
+                      @kick="doKick" @lock="doLock" @unlock="doUnlock"
+                      @ban="doBan" @unban="doUnban" @delete="openDeleteModal" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div v-if="!groupPendingApproval.length && !groupAdmin.length && !groupStaff.length && !groupEnrolled.length && !groupNoCourse.length && !groupBanned.length" class="card" style="text-align: center; color: var(--gray); padding: 32px;">
           {{ search || statusFilter ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีผู้ลงทะเบียน' }}
         </div>
       </template>
@@ -1028,6 +1087,7 @@ export default {
       const list = this.filteredRegistrations.filter(r =>
         r.role !== 'admin' && r.role !== 'staff' &&
         r.status !== 'pending_approval' &&
+        !r.isBanned &&
         r.activations && r.activations.length > 0
       )
       return this.sortByCmaAndAge(list)
@@ -1036,7 +1096,15 @@ export default {
       const list = this.filteredRegistrations.filter(r =>
         r.role !== 'admin' && r.role !== 'staff' &&
         r.status !== 'pending_approval' &&
+        !r.isBanned &&
         (!r.activations || r.activations.length === 0)
+      )
+      return this.sortByCmaAndAge(list)
+    },
+    // 🚫 ถูกแบน — แยก group ต่างหาก (2026-08-15)
+    groupBanned() {
+      const list = this.filteredRegistrations.filter(r =>
+        r.role !== 'admin' && r.role !== 'staff' && r.isBanned
       )
       return this.sortByCmaAndAge(list)
     },
