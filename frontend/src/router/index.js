@@ -20,6 +20,7 @@ const ReplyStudent = () => import('../views/ReplyStudent.vue')
 const MyDashboard = () => import('../views/MyDashboard.vue')
 // Phase 2: state machine trial pages (2026-08-15)
 const MyTrialDashboard = () => import('../views/MyTrialDashboard.vue')
+const SectionPageTrial = () => import('../views/SectionPageTrial.vue')
 const UniversalWatchTrial = () => import('../views/watch/UniversalWatchTrial.vue')
 const DemoExpiredPage = () => import('../views/DemoExpiredPage.vue')
 const BannedPage = () => import('../views/BannedPage.vue')
@@ -144,7 +145,7 @@ const routes = [
   {
     path: '/my-trial/section/:id',
     name: 'SectionPageTrial',
-    component: SectionPage,  // reuse ก่อน (clone ทีหลังถ้าจำเป็น)
+    component: SectionPageTrial,
     meta: { requiresAuth: true, requiresProfile: true, trialAllowed: true }
   },
   {
