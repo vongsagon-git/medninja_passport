@@ -25,42 +25,57 @@ exports.getSection = async (req, res, next) => {
       return res.status(404).json({ message: 'ไม่พบ Section' })
     }
 
-    // Admin ก็ถูก gate เสมอ — ต้องมี activation เหมือนนักเรียน
-    const now = new Date()
-    const activations = await Activation.find({
-      userId: req.user._id,
-      isActive: true,
-      expiresAt: { $gt: now }
-    }).lean()
+    // ⭐ TRIAL bypass — trialGuard set req.isTrial=true + req.trialContext.demoSectionIds
+    // trial user ไม่มี activation จริง แต่ต้องเข้า demo section ได้
+    let matchingActivation
+    let userTier
+    if (req.isTrial) {
+      const demoSectionIds = req.trialContext?.demoSectionIds || []
+      if (!demoSectionIds.includes(section._id.toString())) {
+        return res.status(404).json({ message: 'ไม่พบ Section' })  // stealth
+      }
+      // fake activation-like context สำหรับ downstream logic
+      matchingActivation = { _id: 'trial-virtual', tier: 6 }
+      userTier = 6
+      // skip consent check (trial ไม่มี consent flow)
+    } else {
+      // Admin ก็ถูก gate เสมอ — ต้องมี activation เหมือนนักเรียน
+      const now = new Date()
+      const activations = await Activation.find({
+        userId: req.user._id,
+        isActive: true,
+        expiresAt: { $gt: now }
+      }).lean()
 
-    const pkgIds = [...new Set(activations.map(a => a.packageId?.toString()).filter(Boolean))]
-    const packages = pkgIds.length > 0
-      ? await Package.find({ _id: { $in: pkgIds } }).select('sections').lean()
-      : []
-    const pkgMap = new Map(packages.map(p => [p._id.toString(), p]))
+      const pkgIds = [...new Set(activations.map(a => a.packageId?.toString()).filter(Boolean))]
+      const packages = pkgIds.length > 0
+        ? await Package.find({ _id: { $in: pkgIds } }).select('sections').lean()
+        : []
+      const pkgMap = new Map(packages.map(p => [p._id.toString(), p]))
 
-    const matchingActivation = activations.find(a => {
-      const pkg = pkgMap.get(a.packageId?.toString())
-      return pkg && pkg.sections.some(s => s.toString() === section._id.toString())
-    })
+      matchingActivation = activations.find(a => {
+        const pkg = pkgMap.get(a.packageId?.toString())
+        return pkg && pkg.sections.some(s => s.toString() === section._id.toString())
+      })
 
-    if (!matchingActivation) {
-      // Stealth 404 — ไม่บอกว่า section มีจริง (กัน metadata leak / probing)
-      return res.status(404).json({ message: 'ไม่พบ Section' })
+      if (!matchingActivation) {
+        // Stealth 404 — ไม่บอกว่า section มีจริง (กัน metadata leak / probing)
+        return res.status(404).json({ message: 'ไม่พบ Section' })
+      }
+
+      // เช็ค consent — ต้องยอมรับข้อตกลงก่อนเข้าเรียน (ทั้ง admin + นักเรียน)
+      const consent = await ConsentLog.findOne({
+        activationId: matchingActivation._id,
+        termsVersion: CURRENT_TERMS_VERSION
+      }).lean()
+      if (!consent) {
+        return res.status(403).json({ message: 'ต้องยอมรับข้อตกลงก่อนเข้าเรียน', code: 'CONSENT_REQUIRED' })
+      }
+
+      // ═══ Tier gate ═══
+      // admin ก็ถูก gate เหมือนนักเรียน เพื่อให้ตรวจสอบ tier ของตัวเองได้
+      userTier = matchingActivation.tier || 6
     }
-
-    // เช็ค consent — ต้องยอมรับข้อตกลงก่อนเข้าเรียน (ทั้ง admin + นักเรียน)
-    const consent = await ConsentLog.findOne({
-      activationId: matchingActivation._id,
-      termsVersion: CURRENT_TERMS_VERSION
-    }).lean()
-    if (!consent) {
-      return res.status(403).json({ message: 'ต้องยอมรับข้อตกลงก่อนเข้าเรียน', code: 'CONSENT_REQUIRED' })
-    }
-
-    // ═══ Tier gate ═══
-    // admin ก็ถูก gate เหมือนนักเรียน เพื่อให้ตรวจสอบ tier ของตัวเองได้
-    const userTier = matchingActivation.tier || 6
 
     // bonus lock = tier 6 ตายตัว (bonus เป็น premium เสมอ)
     const videos = section.videos
@@ -219,37 +234,46 @@ exports.getVideo = async (req, res, next) => {
       return res.status(404).json({ message: 'ไม่พบ Section' })
     }
 
-    // ตรวจสิทธิ์ — Manual lookup ข้าม DB (admin ก็ถูก gate)
-    const now = new Date()
-    const activations = await Activation.find({
-      userId: req.user._id,
-      isActive: true,
-      expiresAt: { $gt: now }
-    }).lean()
+    // ⭐ TRIAL bypass — skip activation/consent, ตรวจแค่ว่า section อยู่ใน demo package
+    let matchingActivation
+    if (req.isTrial) {
+      const demoSectionIds = req.trialContext?.demoSectionIds || []
+      if (!demoSectionIds.includes(section._id.toString())) {
+        return res.status(404).json({ message: 'ไม่พบ Section' })
+      }
+      matchingActivation = { _id: 'trial-virtual', tier: 6 }
+    } else {
+      // ตรวจสิทธิ์ — Manual lookup ข้าม DB (admin ก็ถูก gate)
+      const now = new Date()
+      const activations = await Activation.find({
+        userId: req.user._id,
+        isActive: true,
+        expiresAt: { $gt: now }
+      }).lean()
 
-    const pkgIds = [...new Set(activations.map(a => a.packageId?.toString()).filter(Boolean))]
-    const packages = pkgIds.length > 0
-      ? await Package.find({ _id: { $in: pkgIds } }).select('sections').lean()
-      : []
-    const pkgMap = new Map(packages.map(p => [p._id.toString(), p]))
+      const pkgIds = [...new Set(activations.map(a => a.packageId?.toString()).filter(Boolean))]
+      const packages = pkgIds.length > 0
+        ? await Package.find({ _id: { $in: pkgIds } }).select('sections').lean()
+        : []
+      const pkgMap = new Map(packages.map(p => [p._id.toString(), p]))
 
-    const matchingActivation = activations.find(a => {
-      const pkg = pkgMap.get(a.packageId?.toString())
-      return pkg && pkg.sections.some(s => s.toString() === section._id.toString())
-    })
+      matchingActivation = activations.find(a => {
+        const pkg = pkgMap.get(a.packageId?.toString())
+        return pkg && pkg.sections.some(s => s.toString() === section._id.toString())
+      })
 
-    if (!matchingActivation) {
-      // Stealth 404 — ไม่บอกว่า section มีจริง (กัน metadata leak / probing)
-      return res.status(404).json({ message: 'ไม่พบ Section' })
-    }
+      if (!matchingActivation) {
+        return res.status(404).json({ message: 'ไม่พบ Section' })
+      }
 
-    // เช็ค consent
-    const consent = await ConsentLog.findOne({
-      activationId: matchingActivation._id,
-      termsVersion: CURRENT_TERMS_VERSION
-    }).lean()
-    if (!consent) {
-      return res.status(403).json({ message: 'ต้องยอมรับข้อตกลงก่อนเข้าเรียน', code: 'CONSENT_REQUIRED' })
+      // เช็ค consent
+      const consent = await ConsentLog.findOne({
+        activationId: matchingActivation._id,
+        termsVersion: CURRENT_TERMS_VERSION
+      }).lean()
+      if (!consent) {
+        return res.status(403).json({ message: 'ต้องยอมรับข้อตกลงก่อนเข้าเรียน', code: 'CONSENT_REQUIRED' })
+      }
     }
 
     // เรียงวีดีโอตาม order แล้วดึงตาม index
