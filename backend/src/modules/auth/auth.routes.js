@@ -2,8 +2,8 @@ const express = require('express')
 const router = express.Router()
 const rateLimit = require('express-rate-limit')
 const {
-  register, login, getMe, changePassword, logout,
-  googleLogin, verifyEmail, resendVerify, resendVerifyPublic,
+  login, getMe, changePassword, logout,
+  verifyEmail, resendVerify, resendVerifyPublic,
   verifyTotpLogin
 } = require('./auth.controller')
 const { lineLink, lineUnlink } = require('./line.controller')
@@ -18,11 +18,13 @@ const authLimiter = rateLimit({
   legacyHeaders: false
 })
 
-router.post('/register', authLimiter, register)
+// ⛔ 2026-08-18 — ปิด public self-register + Google login
+// Login = NID + DOB เท่านั้น. บัญชีสร้างผ่าน admin (manual-passport-register) หรือ Ninja Passport OCR
+// email verify + approval gate ยังต้องผ่านทั้งคู่ (2-gate)
 router.post('/login', authLimiter, login)
-router.post('/google', authLimiter, googleLogin)
 // 🔐 Admin TOTP verify — ต้องผ่านเพื่อออก JWT (2026-08-06 anti-hack)
 router.post('/verify-totp-login', authLimiter, verifyTotpLogin)
+// Email verify (ยังเปิด — user ต้องยืนยัน email ก่อน login)
 router.get('/verify-email', verifyEmail)
 router.post('/resend-verify', auth, resendVerify)
 router.post('/resend-verify-public', authLimiter, resendVerifyPublic)

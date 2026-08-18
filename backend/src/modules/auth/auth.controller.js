@@ -120,19 +120,22 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { email, password, nationalId } = req.body
-    const identifier = email || nationalId
+    // 🔐 NID + DOB only (2026-08-18) — เลิกรับ email/password login แล้ว
+    // legacy body รับได้ทั้ง { nationalId, password } หรือ { nationalId, dob }
+    // (frontend ปัจจุบันส่ง password field แต่ค่าคือวันเกิด DDMMYYYY พ.ศ.)
+    const { nationalId, dob, password } = req.body
+    const dobInput = dob || password
 
-    if (!identifier || !password) {
+    if (!nationalId || !dobInput) {
       return res.status(400).json({ message: 'กรุณากรอกข้อมูลเข้าสู่ระบบ' })
     }
 
-    // รองรับ login ด้วย email หรือ nationalId (เลข 13 หลัก)
-    const cleanId = (identifier || '').replace(/\D/g, '')
-    const isNidLogin = /^\d{13}$/.test(cleanId)
-    const query = isNidLogin ? { nationalId: cleanId } : { email: identifier }
+    const cleanNid = String(nationalId).replace(/\D/g, '')
+    if (!/^\d{13}$/.test(cleanNid)) {
+      return res.status(400).json({ message: 'เลขบัตรประชาชนต้องเป็นเลข 13 หลัก' })
+    }
 
-    const user = await User.findOne(query)
+    const user = await User.findOne({ nationalId: cleanNid })
     if (!user) {
       return res.status(401).json({ message: 'ข้อมูลเข้าสู่ระบบไม่ถูกต้อง' })
     }
@@ -142,13 +145,10 @@ exports.login = async (req, res, next) => {
       return res.status(403).json({ message: 'บัญชีถูกระงับ กรุณาติดต่อ admin', code: 'BANNED' })
     }
 
-    // Google-only accounts ไม่มี password
-    if (user.authProvider === 'google' && !user.password) {
-      return res.status(401).json({ message: 'กรุณาใช้ Google เข้าสู่ระบบ' })
-    }
-
-    const isMatch = await user.comparePassword(password)
-    if (!isMatch) {
+    // เทียบวันเกิด: normalize ทั้งฝั่ง input (DDMMYYYY 8 digits) + DB (DD/MM/YYYY)
+    const cleanDobInput = String(dobInput).replace(/\D/g, '')
+    const cleanDobStored = String(user.dateOfBirth || '').replace(/\D/g, '')
+    if (!cleanDobStored || cleanDobInput !== cleanDobStored) {
       return res.status(401).json({ message: 'ข้อมูลเข้าสู่ระบบไม่ถูกต้อง' })
     }
 
@@ -217,7 +217,7 @@ exports.login = async (req, res, next) => {
     setSessionCookie(res, sessionId)
 
     const ua = parseUA(req.headers['user-agent'])
-    logActivity({ userId: user._id, userName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.name, userEmail: user.email, action: 'login', detail: isNidLogin ? 'login ด้วยเลขบัตร' : 'login ด้วย email', ip: getIp(req), ...ua, userAgent: req.headers['user-agent'] || '' })
+    logActivity({ userId: user._id, userName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.name, userEmail: user.email, action: 'login', detail: 'login ด้วยเลขบัตร+วันเกิด', ip: getIp(req), ...ua, userAgent: req.headers['user-agent'] || '' })
 
     res.json({ token, user: userResponse(user) })
   } catch (error) {
