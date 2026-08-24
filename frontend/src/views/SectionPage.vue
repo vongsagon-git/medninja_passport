@@ -527,6 +527,7 @@ import { useActivationStore } from '../stores/activation'
 import api from '../services/api'
 import SelfCheckModal from '../components/SelfCheckModal.vue'
 import { useCountryGuard } from '../composables/useCountryGuard'
+import { mergeServerProgress, getProgressMap, onChange as _wsOnChange } from '../services/watchedStore'
 
 export default {
   name: 'SectionPage',
@@ -665,12 +666,12 @@ export default {
     } else {
       const sectionId = this.$route.params.id
       this.activationStore.fetchSection(sectionId)
+      this._hydrateFromStore(sectionId)
       this._fetchProgress(sectionId)
     }
   },
   async mounted() {
     // ⭐ Fetch active serve ตาม IP BASE Circuit ก่อน (A/B)
-    //   ถ้า video ขาด serve ที่ active → placeholder (คลิกไม่ได้)
     await this._loadActiveServe()
     // refresh progress when user navigates back to page (e.g. from watch page) — gives ✓ ติดเลย
     this._visHandler = () => {
@@ -680,14 +681,22 @@ export default {
     }
     document.addEventListener('visibilitychange', this._visHandler)
     window.addEventListener('focus', this._visHandler)
+    // subscribe watchedStore — sync ทันทีเมื่อ WatchPage เขียน localStorage (ทุก view sync กัน)
+    this._wsOff = _wsOnChange(() => {
+      if (!this.isDemo) this._hydrateFromStore(this.$route.params.id)
+    })
   },
   beforeUnmount() {
     document.removeEventListener('visibilitychange', this._visHandler)
     window.removeEventListener('focus', this._visHandler)
+    if (this._wsOff) this._wsOff()
   },
   watch: {
     '$route.params.id'(newId) {
-      if (newId && !this.isDemo) this._fetchProgress(newId)
+      if (newId && !this.isDemo) {
+        this._hydrateFromStore(newId)
+        this._fetchProgress(newId)
+      }
     }
   },
   methods: {
@@ -767,13 +776,14 @@ export default {
     async _fetchProgress(sectionId) {
       try {
         const res = await api.get(`/my/watch-progress/${sectionId}`)
-        const map = {}
-        for (const p of (res.progress || [])) {
-          const key = p.isBonus ? `bonus_${p.videoIndex}` : p.videoIndex
-          map[key] = { currentTime: p.currentTime, watched: p.watched }
-        }
-        this.progressMap = map
+        // merge เข้า watchedStore → broadcast ให้ทุก view เห็นตรงกัน
+        mergeServerProgress(sectionId, res.progress || [])
+        this._hydrateFromStore(sectionId)
       } catch { /* ignore */ }
+    },
+    _hydrateFromStore(sectionId) {
+      const pm = getProgressMap()
+      this.progressMap = pm[sectionId] || {}
     },
     isWatched(idx) {
       return this.progressMap[idx]?.watched === true

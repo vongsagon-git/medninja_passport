@@ -451,6 +451,7 @@ import { useActivationStore } from '../stores/activation'
 import { useCountryGuard } from '../composables/useCountryGuard'
 import api from '../services/api'
 import SelfCheckModal from '../components/SelfCheckModal.vue'
+import { mergeServerProgress, getProgressMap, onChange as _wsOnChange } from '../services/watchedStore'
 
 export default {
   name: 'SectionCnPage',
@@ -586,6 +587,7 @@ export default {
     } else {
       const sectionId = this.$route.params.id
       this.activationStore.fetchSection(sectionId)
+      this._hydrateFromStore(sectionId)
       this._fetchProgress(sectionId)
     }
   },
@@ -598,14 +600,21 @@ export default {
     }
     document.addEventListener('visibilitychange', this._visHandler)
     window.addEventListener('focus', this._visHandler)
+    this._wsOff = _wsOnChange(() => {
+      if (!this.isDemo) this._hydrateFromStore(this.$route.params.id)
+    })
   },
   beforeUnmount() {
     document.removeEventListener('visibilitychange', this._visHandler)
     window.removeEventListener('focus', this._visHandler)
+    if (this._wsOff) this._wsOff()
   },
   watch: {
     '$route.params.id'(newId) {
-      if (newId && !this.isDemo) this._fetchProgress(newId)
+      if (newId && !this.isDemo) {
+        this._hydrateFromStore(newId)
+        this._fetchProgress(newId)
+      }
     }
   },
   methods: {
@@ -665,13 +674,13 @@ export default {
     async _fetchProgress(sectionId) {
       try {
         const res = await api.get(`/my/watch-progress/${sectionId}`)
-        const map = {}
-        for (const p of (res.progress || [])) {
-          const key = p.isBonus ? `bonus_${p.videoIndex}` : p.videoIndex
-          map[key] = { currentTime: p.currentTime, watched: p.watched }
-        }
-        this.progressMap = map
+        mergeServerProgress(sectionId, res.progress || [])
+        this._hydrateFromStore(sectionId)
       } catch { /* ignore */ }
+    },
+    _hydrateFromStore(sectionId) {
+      const pm = getProgressMap()
+      this.progressMap = pm[sectionId] || {}
     },
     isWatched(idx) {
       return this.progressMap[idx]?.watched === true

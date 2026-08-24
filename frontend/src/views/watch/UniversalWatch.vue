@@ -477,6 +477,10 @@
                   <span class="w-pl-title">{{ item.vid.title }}</span>
                   <span v-if="item.vid && item.vid.locked" class="w-pl-tier-badge">ระดับ {{ item.vid.requiredTier }}</span>
                   <span v-else class="w-pl-duration">{{ item.vid.duration }}</span>
+                  <!-- Per-video progress bar (แสดง "ดูถึงไหน") -->
+                  <div v-if="!(item.vid && item.vid.locked) && !isWatched(item.idx) && itemPct(item.idx) > 0" class="w-pl-bar">
+                    <div class="w-pl-bar-fill" :style="{ width: itemPct(item.idx) + '%' }"></div>
+                  </div>
                 </div>
                 <div v-if="item.idx === videoIndex && !isBonus" class="w-pl-playing">
                   <span class="w-pl-bars">
@@ -750,6 +754,7 @@ import { checkBrowserSupport, getDeviceInfo, isExceptionPath } from '../../utils
 import { isIOS as detectIOS, isMacSafari as detectMacSafari, getOS as detectOS, getBrowser as detectBrowser, isRealMobile, isDevToolOpen } from '../../utils/deviceDetect'
 import { startDevToolTrap, stopDevToolTrap } from '../../utils/devToolTrap'
 import { getDeviceContext, sendLog, watchDevTools, watchRecorderExtensions, probeRecorderExtensions } from '../../services/clientLogger'
+import { getWatchedMap as _wsGetWatchedMap, saveWatchedMap as _wsSaveWatchedMap, setProgress as _wsSetProgress, onChange as _wsOnChange } from '../../services/watchedStore'
 import { getVersion as _getAppVersion } from '../../services/versionCheck'
 import { useCountryGuard } from '../../composables/useCountryGuard'
 import BunnyPlayer from './BunnyPlayer.vue'
@@ -758,14 +763,9 @@ import globalRegion from './regions/global.js'
 import cnRegion from './regions/cn.js'
 
 const REGION_MAP = { global: globalRegion, cn: cnRegion }
-const WATCHED_KEY = '__medninja_watched__'
-
-function getWatchedMap() {
-  try { return JSON.parse(localStorage.getItem(WATCHED_KEY) || '{}') } catch { return {} }
-}
-function saveWatchedMap(map) {
-  localStorage.setItem(WATCHED_KEY, JSON.stringify(map))
-}
+// watchedStore: shared source of truth ระหว่าง UniversalWatch / SectionPage / MyDashboard
+const getWatchedMap = _wsGetWatchedMap
+const saveWatchedMap = _wsSaveWatchedMap
 
 export default {
   name: 'UniversalWatch',
@@ -824,6 +824,8 @@ export default {
       _wmTick: 0,
       _wmWidth: window.innerWidth,
       watchedMap: getWatchedMap(),
+      // reactive mirror ของ localStorage.__medninja_progress__ สำหรับ playlist progress bar
+      progressCache: {},
       isFullscreen: false,
       showRotateFsPrompt: false,
       orientationLandscape: false,
@@ -1155,6 +1157,9 @@ export default {
   },
   async mounted() {
     this._mountedAt = Date.now()
+    // watchedStore: hydrate + subscribe → playlist progress bar + ✓ sync ทันทีทุกจุด
+    this._refreshProgressCache()
+    this._wsOff = _wsOnChange(() => this._refreshProgressCache())
     // ⭐ Anti-hack — browser ที่ไม่อยู่ใน fallback list = HARD STOP ทันที
     //   ไม่ยิง /api/system/video-mode, /api/geo/whoami, activationStore ใด ๆ
     //   ไม่ mount player, ไม่โหลด serve/token/aliVideoId/embedUrl อะไรทั้งสิ้น
@@ -1483,6 +1488,7 @@ export default {
     this._detectDrm()
   },
   beforeUnmount() {
+    if (this._wsOff) this._wsOff()
     // ⭐ Player adapters (Bunny/Ali) dispose themselves via their own beforeUnmount
     stopDevToolTrap(this._devToolHandle)
     if (this._lineLinkPoll) clearInterval(this._lineLinkPoll)
@@ -1848,6 +1854,18 @@ url:           ${window.location.href}`
     isWatched(idx) {
       const list = this.watchedMap[this.sectionId] || []
       return list.includes(idx)
+    },
+    itemPct(idx) {
+      const p = this.progressCache?.[this.sectionId]?.[idx]
+      if (!p || !p.currentTime || !p.duration) return 0
+      return Math.min(100, Math.round((p.currentTime / p.duration) * 100))
+    },
+    _refreshProgressCache() {
+      try {
+        const raw = localStorage.getItem('__medninja_progress__')
+        this.progressCache = raw ? JSON.parse(raw) : {}
+      } catch { this.progressCache = {} }
+      this.watchedMap = getWatchedMap()
     },
     async _detectDrm() {
       if (!navigator.requestMediaKeySystemAccess) { this.drmType = 'none'; return }
@@ -2673,6 +2691,16 @@ url:           ${window.location.href}`
       this._currentTime = currentTime
       if (duration && duration > 0) this._videoDuration = duration
       if (typeof isPlaying === 'boolean') this.isPlaying = isPlaying
+      // Broadcast progress ให้ SectionPage playlist เห็น "ดูถึงไหน" — throttle 5s
+      const nowMs = Date.now()
+      if (!this._lastLocalProgress || nowMs - this._lastLocalProgress > 5000) {
+        this._lastLocalProgress = nowMs
+        try { _wsSetProgress(this.sectionId, this.videoIndex, {
+          currentTime: Math.round(currentTime || 0),
+          duration: Math.round(this._videoDuration || 0),
+          isBonus: this.isBonus
+        }) } catch {}
+      }
       // Fallback: mark watched at 80% (รองรับ end credits + กัน case ที่ 'ended' ไม่ trigger)
       if (!this.isDemo && this._videoDuration > 0 &&
           currentTime >= this._videoDuration * 0.8 && !this.isWatched(this.videoIndex)) {
@@ -3837,6 +3865,20 @@ kbd {
 .w-pl-duration {
   font-size: 11px;
   color: #71717a;
+}
+/* Per-video progress bar (แสดง "ดูถึงไหน") */
+.w-pl-bar {
+  margin-top: 6px;
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.w-pl-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
 /* Playing animation bars */
