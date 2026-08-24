@@ -2184,13 +2184,33 @@ url:           ${window.location.href}`
         this.watchedMap[key].push(idx)
       }
       saveWatchedMap(this.watchedMap)
-      // บันทึกไป server ด้วย (fire-and-forget)
+      // บันทึกไป server ด้วย — retry 2x + log fail ให้ admin เห็น (silent, ไม่แสดง toast นักเรียน)
       if (!this.isDemo) {
-        api.post('/my/watch-progress', {
+        this._saveWatchProgress(idx, this.watchedMap[key].includes(idx))
+      }
+    },
+    async _saveWatchProgress(idx, watched, attempt = 0) {
+      try {
+        const res = await api.post('/my/watch-progress', {
           sectionId: this.sectionId,
           videoIndex: idx,
-          watched: this.watchedMap[key].includes(idx)
-        }).catch(() => {})
+          watched
+        })
+        if (res && res.ok === false) {
+          throw new Error(`server ok=false code=${res.code || '?'} msg=${res.message || '?'}`)
+        }
+      } catch (e) {
+        const status = e?.response?.status || 0
+        const body = e?.response?.data || {}
+        if (attempt < 2) {
+          setTimeout(() => this._saveWatchProgress(idx, watched, attempt + 1), 1000 * (attempt + 1))
+          return
+        }
+        try {
+          this._diagLog('watch_progress_fail', `save fail after 3 tries`, {
+            detail: `idx=${idx} watched=${watched} status=${status} code=${body.code || ''} msg=${(body.message || e?.message || '').slice(0, 200)}`
+          })
+        } catch {}
       }
     },
     // ══════════════════════════════════════
@@ -2653,9 +2673,9 @@ url:           ${window.location.href}`
       this._currentTime = currentTime
       if (duration && duration > 0) this._videoDuration = duration
       if (typeof isPlaying === 'boolean') this.isPlaying = isPlaying
-      // Fallback: mark watched at 90%
+      // Fallback: mark watched at 80% (รองรับ end credits + กัน case ที่ 'ended' ไม่ trigger)
       if (!this.isDemo && this._videoDuration > 0 &&
-          currentTime >= this._videoDuration * 0.9 && !this.isWatched(this.videoIndex)) {
+          currentTime >= this._videoDuration * 0.8 && !this.isWatched(this.videoIndex)) {
         this.toggleWatched(this.videoIndex)
       }
       // Socket state every 3s

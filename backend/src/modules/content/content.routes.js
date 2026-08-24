@@ -47,7 +47,8 @@ router.post('/watch-progress', async (req, res) => {
 
     // ตรวจสิทธิ์ — ต้องมี activation สำหรับ section นี้
     if (!(await hasAccessToSection(req.user, sectionId))) {
-      return res.status(404).json({ message: 'ไม่พบ' })
+      console.error(`[watch-progress] access denied user=${req.user?._id} section=${sectionId} watched=${watched}`)
+      return res.status(403).json({ ok: false, code: 'ACCESS_DENIED', message: 'ไม่มีสิทธิ์' })
     }
 
     const update = {}
@@ -61,8 +62,8 @@ router.post('/watch-progress', async (req, res) => {
     )
     res.json({ ok: true })
   } catch (err) {
-    console.error('watch-progress save error:', err.message)
-    res.json({ ok: false })
+    console.error(`[watch-progress] save error user=${req.user?._id} section=${req.body?.sectionId} err=${err.message}`)
+    res.status(500).json({ ok: false, code: 'SAVE_ERROR', message: err.message })
   }
 })
 
