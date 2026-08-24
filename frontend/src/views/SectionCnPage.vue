@@ -451,7 +451,7 @@ import { useActivationStore } from '../stores/activation'
 import { useCountryGuard } from '../composables/useCountryGuard'
 import api from '../services/api'
 import SelfCheckModal from '../components/SelfCheckModal.vue'
-import { mergeServerProgress, getProgressMap, onChange as _wsOnChange } from '../services/watchedStore'
+import { mergeServerProgress, getProgressMap, getWatchedMap, onChange as _wsOnChange } from '../services/watchedStore'
 
 export default {
   name: 'SectionCnPage',
@@ -459,6 +459,7 @@ export default {
   data() {
     return {
       progressMap: {},
+      watchedList: [],  // index[] ของ video ที่ mark ดูแล้ว (จาก watchedStore)
       pdfLoading: null,
       pdfModalIdx: null,
       pdfLoadingMsg: '',
@@ -680,10 +681,13 @@ export default {
     },
     _hydrateFromStore(sectionId) {
       const pm = getProgressMap()
+      const wm = getWatchedMap()
       this.progressMap = pm[sectionId] || {}
+      this.watchedList = wm[sectionId] || []
     },
     isWatched(idx) {
-      return this.progressMap[idx]?.watched === true
+      // ✓ เขียว = mark ผ่าน WatchPage (watchedList) OR server-confirmed watched (progressMap)
+      return this.watchedList.includes(idx) || this.progressMap[idx]?.watched === true
     },
     isBonusWatched(idx) {
       return this.progressMap[`bonus_${idx}`]?.watched === true
