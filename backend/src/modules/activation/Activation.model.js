@@ -125,6 +125,14 @@ const activationSchema = new mongoose.Schema({
   orientLastResetAt: {
     type: Date,
     default: null
+  },
+  // ═════ DEMO ACCESS TAGS ═════
+  // ใช้เฉพาะ activation ที่ชี้ Demo package (คนที่ยังไม่ลงคอร์สจริง)
+  // ค่า = code ของ DemoTag collection (admin แปะให้)
+  // paid activation → ปล่อยว่าง ไม่มีผลใดๆ
+  demoAccessTags: {
+    type: [String],
+    default: []
   }
 }, {
   timestamps: true

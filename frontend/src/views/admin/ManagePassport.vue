@@ -452,11 +452,20 @@
                       <button class="sex-btn sex-btn-f" :disabled="sexBusyId === reg._id" @click="setSex(reg._id, 'F')" title="หญิง">♀</button>
                     </span>
                   </td>
-                  <td>
+                  <td @click.stop>
                     <template v-if="reg.demoActivations && reg.demoActivations.length">
-                      <div v-for="demo in reg.demoActivations" :key="demo.packageName" class="demo-tag">
-                        <span v-if="demo.expired" class="demo-expired">หมดอายุ</span>
-                        <span v-else class="demo-active">เหลือ {{ demo.daysLeft }} วัน</span>
+                      <div v-for="demo in reg.demoActivations" :key="demo.activationId || demo.packageName" class="demo-tag-cell">
+                        <div class="demo-tag-status">
+                          <span v-if="demo.expired" class="demo-expired">หมดอายุ</span>
+                          <span v-else class="demo-active">เหลือ {{ demo.daysLeft }} วัน</span>
+                        </div>
+                        <div v-if="demo.activationId && !demo.expired" class="demo-tag-chips">
+                          <span v-for="tg in (demo.demoAccessTags || [])" :key="tg" class="demo-mini-chip" :style="{background: demoTagColor(tg)}">
+                            {{ demoTagLabel(tg) }}
+                            <button class="demo-mini-x" @click.stop="removeDemoTagFromActivation(demo.activationId, tg, reg._id)" title="ลบ">✕</button>
+                          </span>
+                          <button class="demo-mini-add" @click.stop="openTagPicker(demo.activationId, reg._id, $event)">+ tag</button>
+                        </div>
                       </div>
                     </template>
                     <span v-else style="font-size:12px;color:#cbd5e1;">ยังไม่เคยทดลอง</span>
@@ -912,6 +921,27 @@
         </div>
       </div>
     </div>
+
+    <!-- ═════ Floating Demo Tag Picker (Phase B) ═════ -->
+    <div
+      v-if="tagPickerOpen"
+      class="demo-tag-float-picker"
+      :style="{ left: tagPickerOpen.x + 'px', top: tagPickerOpen.y + 'px' }"
+      @click.stop
+    >
+      <div class="dtfp-title">แปะ demo tag</div>
+      <label v-for="opt in demoTagOptions" :key="opt.code" class="dtfp-opt">
+        <input
+          type="checkbox"
+          :checked="isTagOnActivation(tagPickerOpen.activationId, tagPickerOpen.regId, opt.code)"
+          :disabled="tagPickerBusy"
+          @change="toggleDemoTagOnActivation(tagPickerOpen.activationId, tagPickerOpen.regId, opt.code)"
+        />
+        <span class="dtfp-chip" :style="{background: opt.color}">{{ opt.label }}</span>
+      </label>
+      <div v-if="!demoTagOptions.length" class="dtfp-empty">ยังไม่มี tag ในระบบ</div>
+      <button class="dtfp-close" @click="tagPickerOpen = null">ปิด</button>
+    </div>
   </div>
 </template>
 
@@ -1046,7 +1076,11 @@ export default {
       cmaSyncing: false,
       cmaSyncProgress: null,   // { total, done, registered, notRegistered, errors, currentName }
       cmaSyncResult: null,     // ผลรวมหลัง sync เสร็จ
-      cmaSyncOneBusy: false    // sync เฉพาะคน (ใน modal)
+      cmaSyncOneBusy: false,   // sync เฉพาะคน (ใน modal)
+      // ─── Demo Tag Picker (2026-09-22 Phase B) ───
+      demoTagOptions: [],
+      tagPickerOpen: null,
+      tagPickerBusy: false
     }
   },
   computed: {
@@ -1139,16 +1173,82 @@ export default {
     }
   },
   async mounted() {
-    await Promise.all([this.fetchRegistrations(), this.fetchLineCandidates()])
+    await Promise.all([this.fetchRegistrations(), this.fetchLineCandidates(), this.fetchDemoTags()])
     document.addEventListener('click', this._closePicker = () => {
       this.linePickerOpenId = null
       this.linePickerSearch = ''
+      this.tagPickerOpen = null
     })
   },
   beforeUnmount() {
     document.removeEventListener('click', this._closePicker)
   },
   methods: {
+    // ═════ Demo Tag helpers (Phase B) ═════
+    async fetchDemoTags() {
+      try {
+        const data = await api.get('/admin/demo-tags')
+        this.demoTagOptions = data.tags || []
+      } catch (e) { /* fallback */ }
+    },
+    demoTagLabel(code) {
+      const t = this.demoTagOptions.find(o => o.code === code)
+      return t ? t.label : code
+    },
+    demoTagColor(code) {
+      const t = this.demoTagOptions.find(o => o.code === code)
+      return t ? t.color : '#64748b'
+    },
+    openTagPicker(activationId, regId, evt) {
+      const rect = evt.target.getBoundingClientRect()
+      this.tagPickerOpen = { activationId, regId, x: rect.left, y: rect.bottom + 4 }
+    },
+    async toggleDemoTagOnActivation(activationId, regId, tag) {
+      const reg = this.registrations.find(r => r._id === regId)
+      if (!reg) return
+      const demo = (reg.demoActivations || []).find(d => String(d.activationId) === String(activationId))
+      if (!demo) return
+      const current = new Set(demo.demoAccessTags || [])
+      if (current.has(tag)) {
+        current.delete(tag)
+      } else {
+        if (tag === 'all') {
+          current.clear()
+          current.add('all')
+        } else {
+          current.delete('all')
+          current.add(tag)
+        }
+      }
+      await this._saveDemoTags(activationId, regId, Array.from(current))
+    },
+    async removeDemoTagFromActivation(activationId, tag, regId) {
+      const reg = this.registrations.find(r => r._id === regId)
+      const demo = reg?.demoActivations?.find(d => String(d.activationId) === String(activationId))
+      const newTags = (demo?.demoAccessTags || []).filter(t => t !== tag)
+      await this._saveDemoTags(activationId, regId, newTags)
+    },
+    async _saveDemoTags(activationId, regId, newTags) {
+      if (this.tagPickerBusy) return
+      this.tagPickerBusy = true
+      try {
+        await api.patch(`/admin/passport/activations/${activationId}/demo-tags`, { tags: newTags })
+        const reg = this.registrations.find(r => r._id === regId)
+        if (reg) {
+          const demo = (reg.demoActivations || []).find(d => String(d.activationId) === String(activationId))
+          if (demo) demo.demoAccessTags = newTags
+        }
+      } catch (e) {
+        alert(e.response?.data?.message || 'แปะ tag ไม่สำเร็จ')
+      } finally {
+        this.tagPickerBusy = false
+      }
+    },
+    isTagOnActivation(activationId, regId, code) {
+      const reg = this.registrations.find(r => r._id === regId)
+      const demo = reg?.demoActivations?.find(d => String(d.activationId) === String(activationId))
+      return (demo?.demoAccessTags || []).includes(code)
+    },
     async fetchRegistrations() {
       this.loading = true
       this.error = null
@@ -2582,4 +2682,45 @@ export default {
 }
 .sync-list-item:last-child { border-bottom: none; }
 .sync-list-name { color: #1e293b; }
+
+/* ═════ Demo Tag Chips + Floating Picker (Phase B) ═════ */
+.demo-tag-cell { display: flex; flex-direction: column; gap: 3px; }
+.demo-tag-status { font-size: 11px; }
+.demo-tag-chips { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+.demo-mini-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 6px; border-radius: 999px; color: #fff;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.2px;
+}
+.demo-mini-x {
+  border: 0; background: rgba(255,255,255,0.3); color: #fff;
+  border-radius: 999px; width: 12px; height: 12px; padding: 0;
+  line-height: 1; font-size: 9px; cursor: pointer;
+}
+.demo-mini-x:hover { background: rgba(255,255,255,0.55); }
+.demo-mini-add {
+  border: 1px dashed #94a3b8; background: #fff; color: #475569;
+  border-radius: 999px; padding: 1px 6px; font-size: 10px;
+  font-weight: 700; cursor: pointer;
+}
+.demo-mini-add:hover { background: #f1f5f9; border-color: #3b82f6; color: #3b82f6; }
+
+.demo-tag-float-picker {
+  position: fixed; z-index: 9999;
+  background: #fff; border: 1px solid #cbd5e1; border-radius: 10px;
+  padding: 10px 12px; min-width: 200px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.2);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.dtfp-title { font-size: 11px; color: #64748b; font-weight: 700; margin-bottom: 4px; }
+.dtfp-opt { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; }
+.dtfp-opt input[type="checkbox"]:disabled { cursor: wait; }
+.dtfp-chip { color: #fff; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.dtfp-empty { font-size: 11px; color: #94a3b8; }
+.dtfp-close {
+  margin-top: 4px; border: 0; background: #f1f5f9; color: #475569;
+  padding: 4px 10px; border-radius: 6px; font-size: 11px;
+  font-weight: 700; cursor: pointer;
+}
+.dtfp-close:hover { background: #e2e8f0; }
 </style>

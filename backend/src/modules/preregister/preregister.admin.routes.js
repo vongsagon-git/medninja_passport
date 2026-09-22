@@ -43,10 +43,12 @@ router.get('/', auth, admin, async (req, res) => {
       const uid = act.userId.toString()
       const pkg = pkgMap.get(act.packageId.toString())
       const entry = {
+        activationId: act._id,
         packageName: pkg?.title || 'ไม่ทราบ',
         expiresAt: act.expiresAt,
         daysLeft: Math.ceil((act.expiresAt - new Date()) / 86400000),
-        isDemo: pkg?.isDemo || false
+        isDemo: pkg?.isDemo || false,
+        demoAccessTags: Array.isArray(act.demoAccessTags) ? act.demoAccessTags : []
       }
       if (pkg?.isDemo) {
         if (!demoMap.has(uid)) demoMap.set(uid, [])
@@ -71,11 +73,13 @@ router.get('/', auth, admin, async (req, res) => {
         const pkg = pkgMap.get(act.packageId.toString())
         if (!demoMap.has(uid)) demoMap.set(uid, [])
         demoMap.get(uid).push({
+          activationId: act._id,
           packageName: pkg?.title || 'ไม่ทราบ',
           expiresAt: act.expiresAt,
           daysLeft: Math.ceil((act.expiresAt - new Date()) / 86400000),
           isDemo: true,
-          expired: true
+          expired: true,
+          demoAccessTags: Array.isArray(act.demoAccessTags) ? act.demoAccessTags : []
         })
       }
     }
@@ -955,6 +959,42 @@ router.post('/:id/approve-direct', auth, admin, async (req, res) => {
     res.json({ ok: true, message: `อนุมัติ ${reg.firstName} ${reg.lastName} สำเร็จ` })
   } catch (err) {
     res.status(500).json({ message: 'อนุมัติไม่สำเร็จ: ' + err.message })
+  }
+})
+
+// ═══════════════════════════════════════════════════════════════
+// DEMO TAGS — admin แปะ tag ให้ user ที่ยังไม่ลงคอร์สจริง (2026-09-22)
+// ═══════════════════════════════════════════════════════════════
+
+router.patch('/activations/:activationId/demo-tags', auth, admin, async (req, res) => {
+  try {
+    const { tags } = req.body || {}
+    if (!Array.isArray(tags)) return res.status(400).json({ message: 'tags ต้องเป็น array' })
+
+    const activation = await Activation.findById(req.params.activationId)
+    if (!activation) return res.status(404).json({ message: 'ไม่พบ activation' })
+
+    const pkg = await Package.findById(activation.packageId).select('isDemo').lean()
+    if (!pkg?.isDemo) return res.status(400).json({ message: '❌ Activation นี้ไม่ใช่ demo — แปะ tag ไม่ได้' })
+
+    let validCodes = new Set()
+    try {
+      const DemoTag = require('../content/DemoTag.model')
+      const allTags = await DemoTag.find().select('code').lean()
+      validCodes = new Set(allTags.map(t => t.code))
+    } catch (e) { /* keep empty */ }
+
+    const cleaned = tags.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim())
+    const invalid = cleaned.filter(t => !validCodes.has(t))
+    if (invalid.length) return res.status(400).json({ message: `มี tag ที่ไม่มีในระบบ: ${invalid.join(', ')}` })
+
+    activation.demoAccessTags = cleaned
+    await activation.save()
+
+    res.json({ ok: true, demoAccessTags: activation.demoAccessTags })
+  } catch (err) {
+    console.error('[demo-tags PATCH] error:', err)
+    res.status(500).json({ message: err.message })
   }
 })
 
