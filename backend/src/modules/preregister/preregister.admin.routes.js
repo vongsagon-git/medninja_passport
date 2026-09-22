@@ -966,6 +966,11 @@ router.post('/:id/approve-direct', auth, admin, async (req, res) => {
 // DEMO TAGS — admin แปะ tag ให้ user ที่ยังไม่ลงคอร์สจริง (2026-09-22)
 // ═══════════════════════════════════════════════════════════════
 
+// Rules:
+//   - activation ต้องชี้ Demo package
+//   - ต้องเลือกอย่างน้อย 1 tag (บังคับ)
+//   - ห้ามใช้ 'all' ฝั่ง user activation ('all' เป็น video-side เท่านั้น)
+//   - tag code ทุกตัวต้องมีใน DemoTag collection
 router.patch('/activations/:activationId/demo-tags', auth, admin, async (req, res) => {
   try {
     const { tags } = req.body || {}
@@ -985,6 +990,14 @@ router.patch('/activations/:activationId/demo-tags', auth, admin, async (req, re
     } catch (e) { /* keep empty */ }
 
     const cleaned = tags.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim())
+
+    if (cleaned.includes('all')) {
+      return res.status(400).json({ message: '❌ ห้ามแปะ tag "ALL" ให้ user — ALL ใช้ที่ video เท่านั้น' })
+    }
+    if (cleaned.length === 0) {
+      return res.status(400).json({ message: '❌ ต้องเลือกอย่างน้อย 1 tag' })
+    }
+
     const invalid = cleaned.filter(t => !validCodes.has(t))
     if (invalid.length) return res.status(400).json({ message: `มี tag ที่ไม่มีในระบบ: ${invalid.join(', ')}` })
 
@@ -994,6 +1007,55 @@ router.patch('/activations/:activationId/demo-tags', auth, admin, async (req, re
     res.json({ ok: true, demoAccessTags: activation.demoAccessTags })
   } catch (err) {
     console.error('[demo-tags PATCH] error:', err)
+    res.status(500).json({ message: err.message })
+  }
+})
+
+// POST /api/admin/passport/activations/:activationId/extend-demo
+// body: { days: number }
+// ⚠ ต่ออายุ demo + auto-unlock user (ทางเดียวปลด auto-lock)
+router.post('/activations/:activationId/extend-demo', auth, admin, async (req, res) => {
+  try {
+    const days = parseInt(req.body?.days, 10)
+    if (!days || days <= 0 || days > 365) {
+      return res.status(400).json({ message: 'ระบุจำนวนวัน (1–365)' })
+    }
+
+    const activation = await Activation.findById(req.params.activationId)
+    if (!activation) return res.status(404).json({ message: 'ไม่พบ activation' })
+
+    const pkg = await Package.findById(activation.packageId).select('isDemo').lean()
+    if (!pkg?.isDemo) return res.status(400).json({ message: '❌ ต่ออายุได้เฉพาะ demo package' })
+
+    const now = new Date()
+    const currentExpiry = new Date(activation.expiresAt)
+    const baseDate = currentExpiry < now ? now : currentExpiry
+    baseDate.setDate(baseDate.getDate() + days)
+    activation.expiresAt = baseDate
+    activation.extendedDays = (activation.extendedDays || 0) + days
+    await activation.save()
+
+    const adminName = req.user?.name || req.user?.email || 'admin'
+    const user = await User.findById(activation.userId)
+    let unlocked = false
+    if (user && user.isLocked && user.lockedBy === 'AUTO_DEMO_EXPIRED') {
+      user.isLocked = false
+      user.lockedAt = null
+      user.lockedBy = ''
+      user.lockedReason = ''
+      await user.save()
+      unlocked = true
+      console.log(`[extend-demo] auto-unlocked ${user.email} by ${adminName} (+${days} วัน)`)
+    }
+
+    res.json({
+      ok: true,
+      message: `ต่ออายุ demo +${days} วัน (หมดใหม่: ${activation.expiresAt.toLocaleDateString('th-TH')})`,
+      newExpiresAt: activation.expiresAt,
+      unlocked
+    })
+  } catch (err) {
+    console.error('[extend-demo] error:', err)
     res.status(500).json({ message: err.message })
   }
 })

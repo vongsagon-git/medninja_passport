@@ -152,14 +152,55 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ message: 'ข้อมูลเข้าสู่ระบบไม่ถูกต้อง' })
     }
 
+    // ═══ 🎁 AUTO-LOCK: demo หมด + ไม่เคยลง paid course (2026-09-22) ═══
+    // ⚠ กฎเหล็ก: ทางเดียวปลด = admin ต่ออายุ demo (extend expiresAt)
+    if (user.role !== 'admin' && user.role !== 'staff' && !user.isLocked) {
+      try {
+        const Activation = require('../activation/Activation.model')
+        const Package = require('../content/Package.model')
+        const now = new Date()
+
+        const allActs = await Activation.find({ userId: user._id, isActive: true }).select('packageId expiresAt').lean()
+        if (allActs.length > 0) {
+          const pkgIds = [...new Set(allActs.map(a => a.packageId?.toString()).filter(Boolean))]
+          const packages = await Package.find({ _id: { $in: pkgIds } }).select('isDemo').lean()
+          const pkgMap = new Map(packages.map(p => [p._id.toString(), p]))
+
+          const everHadPaid = allActs.some(a => {
+            const pkg = pkgMap.get(a.packageId?.toString())
+            return pkg && !pkg.isDemo
+          })
+
+          if (!everHadPaid) {
+            const hasActiveDemo = allActs.some(a => {
+              const pkg = pkgMap.get(a.packageId?.toString())
+              return pkg?.isDemo && new Date(a.expiresAt) > now
+            })
+            if (!hasActiveDemo) {
+              await require('../user/User.model').findByIdAndUpdate(user._id, {
+                isLocked: true,
+                lockedAt: now,
+                lockedBy: 'AUTO_DEMO_EXPIRED',
+                lockedReason: 'ทดลองเรียนหมดอายุ กรุณาติดต่อ admin เพื่อสมัครคอร์ส'
+              })
+              user.isLocked = true
+              user.lockedReason = 'ทดลองเรียนหมดอายุ กรุณาติดต่อ admin เพื่อสมัครคอร์ส'
+              console.log(`[AUTO-LOCK demo-expired] ${user.email} (${user.nationalId})`)
+            }
+          }
+        }
+      } catch (e) { console.error('[AUTO-LOCK check] error:', e.message) }
+    }
+
     // ═══ 🔒 Lock check (temporary) — 2026-08-06 anti-hack ═══
     if (user.isLocked) {
       const contactName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name
       console.log(`[LOCK] blocked login: ${user.email} (${user.nationalId})`)
       return res.status(403).json({
-        message: 'กรุณาติดต่อ admin ที่ LINE @medninja',
+        message: user.lockedReason || 'กรุณาติดต่อ admin ที่ LINE @medninja',
         code: 'LOCKED',
-        contactName
+        contactName,
+        lockedReason: user.lockedReason || ''
       })
     }
 

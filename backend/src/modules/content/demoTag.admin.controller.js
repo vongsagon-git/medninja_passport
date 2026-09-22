@@ -5,9 +5,11 @@ const DemoTag = require('./DemoTag.model')
 const Section = require('./Section.model')
 const Package = require('./Package.model')
 
-// ─── Default seed (system tag) ───
+// ─── Default seed ───
+// 'all' = ฝั่ง VIDEO เท่านั้น (video ที่ tag ALL = user ทุก track เห็นได้)
+// ฝั่ง user activation ห้ามแปะ 'all' — admin ต้องเลือก track เฉพาะ
 const DEFAULT_TAGS = [
-  { code: 'all',       label: 'ALL',       color: '#0ea5e9', order: 0, isSystem: true,  description: 'ทุก demo user เห็น (คลิปแนะนำระบบ)' },
+  { code: 'all',       label: 'ALL',       color: '#0ea5e9', order: 0, isSystem: true,  description: 'ใช้ที่ VIDEO เท่านั้น — video ที่ tag ALL จะโชว์ให้ user ทุก track' },
   { code: 'nl12',      label: 'NL1+2',     color: '#3b82f6', order: 1, isSystem: false, description: '' },
   { code: 'nl2',       label: 'NL2',       color: '#6366f1', order: 2, isSystem: false, description: '' },
   { code: 'meq',       label: 'MEQ',       color: '#a855f7', order: 3, isSystem: false, description: '' },

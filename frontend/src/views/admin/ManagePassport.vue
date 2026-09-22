@@ -406,11 +406,12 @@
         </div>
 
         <!-- ยังไม่ลงคอร์ส Section -->
-        <div v-if="groupNoCourse.length" class="group-section">
-          <div class="group-header group-header-gray">
-            <span class="group-icon">👤</span>
-            <span class="group-title">ยังไม่เคยลงคอร์ส</span>
-            <span class="group-count">{{ groupNoCourse.length }} คน</span>
+        <!-- 🎁 กำลังทดลองเรียน (มี demo active, ยังไม่ลงคอร์ส) -->
+        <div v-if="groupDemoActive.length" class="group-section">
+          <div class="group-header" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff">
+            <span class="group-icon">🎁</span>
+            <span class="group-title">กำลังทดลองเรียน</span>
+            <span class="group-count">{{ groupDemoActive.length }} คน</span>
           </div>
           <div class="card" style="overflow-x: auto;">
             <table class="table">
@@ -505,6 +506,131 @@
           </div>
         </div>
 
+        <!-- ⏰ ทดลองหมดอายุ (ไม่มี paid — auto-locked ตอน login) -->
+        <div v-if="groupDemoExpired.length" class="group-section">
+          <div class="group-header" style="background:linear-gradient(135deg,#64748b,#475569);color:#fff">
+            <span class="group-icon">⏰</span>
+            <span class="group-title">ทดลองเรียนหมดอายุ (auto-locked)</span>
+            <span class="group-count">{{ groupDemoExpired.length }} คน</span>
+          </div>
+          <div class="card" style="overflow-x: auto;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ชื่อ-นามสกุล</th>
+                  <th>เลขบัตร</th>
+                  <th>สถานะ Lock</th>
+                  <th>ทดลองเรียน</th>
+                  <th>เบอร์โทร</th>
+                  <th>LINE</th>
+                  <th>วันที่สมัคร</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(reg, idx) in groupDemoExpired" :key="reg._id" class="row-clickable" :class="cmaRowClass(reg)" @click="viewDetail(reg._id)">
+                  <td style="color: var(--gray); font-size: 13px;">{{ idx + 1 }}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                      <span style="font-weight: 600;">{{ reg.firstName }} {{ reg.lastName }}</span>
+                      <span v-if="reg.isLocked" title="Auto-lock (demo หมดอายุ ยังไม่ลงคอร์ส)" style="font-size:16px;">🔒</span>
+                      <span v-if="computeAge(reg.dateOfBirth) != null" class="age-badge" :class="ageColor(computeAge(reg.dateOfBirth))">{{ computeAge(reg.dateOfBirth) }} ปี</span>
+                    </div>
+                  </td>
+                  <td style="font-family: monospace; font-size: 13px;">{{ formatNid(reg.nationalId) }}</td>
+                  <td>
+                    <span v-if="reg.isLocked" style="font-size:11px;font-weight:700;color:#dc2626;">🔒 Locked</span>
+                    <span v-else style="font-size:11px;color:#94a3b8;">ยังไม่ lock</span>
+                  </td>
+                  <td @click.stop>
+                    <div v-for="demo in reg.demoActivations" :key="demo.activationId" class="demo-tag-cell">
+                      <span class="demo-expired">หมด {{ formatDate(demo.expiresAt) }}</span>
+                      <button class="btn-extend-demo" @click.stop="doExtendDemo(demo.activationId, reg._id)">+ ต่ออายุ</button>
+                    </div>
+                  </td>
+                  <td>{{ reg.phone || '-' }}</td>
+                  <td @click.stop>
+                    <div v-if="reg.lineUserId" style="display:flex;align-items:center;gap:4px;">
+                      <img v-if="reg.linePictureUrl" :src="reg.linePictureUrl" style="width:20px;height:20px;border-radius:50%;" />
+                      <span style="font-size:11px;color:#06c755;font-weight:600;">{{ reg.lineDisplayName || 'เชื่อมแล้ว' }}</span>
+                    </div>
+                    <span v-else style="font-size:11px;color:#cbd5e1;">-</span>
+                  </td>
+                  <td style="font-size: 13px; color: var(--gray);">{{ formatDate(reg.createdAt) }}</td>
+                  <td @click.stop>
+                    <ActionMenu :reg="reg"
+                      @view-detail="(id) => viewDetail(id)" @edit="(id) => viewDetail(id, true)"
+                      @approve="doApprove" @change-status="changeStatus"
+                      @bypass-email="doBypassEmail" @resend-verify="doResendVerify"
+                      @kick="doKick" @lock="doLock" @unlock="doUnlock"
+                      @ban="doBan" @unban="doUnban" @delete="openDeleteModal" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 👤 ยังไม่เคยลงคอร์ส (ไม่มี demo เลย) -->
+        <div v-if="groupNoCourse.length" class="group-section">
+          <div class="group-header group-header-gray">
+            <span class="group-icon">👤</span>
+            <span class="group-title">ยังไม่เคยลงคอร์ส</span>
+            <span class="group-count">{{ groupNoCourse.length }} คน</span>
+          </div>
+          <div class="card" style="overflow-x: auto;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ชื่อ-นามสกุล</th>
+                  <th>เลขบัตร</th>
+                  <th>เบอร์โทร</th>
+                  <th>มหาวิทยาลัย</th>
+                  <th>LINE</th>
+                  <th>สถานะ</th>
+                  <th>วันที่สมัคร</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(reg, idx) in groupNoCourse" :key="reg._id" class="row-clickable" :class="cmaRowClass(reg)" @click="viewDetail(reg._id)">
+                  <td style="color: var(--gray); font-size: 13px;">{{ idx + 1 }}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                      <span style="font-weight: 600;">{{ reg.firstName }} {{ reg.lastName }}</span>
+                      <span v-if="computeAge(reg.dateOfBirth) != null" class="age-badge" :class="ageColor(computeAge(reg.dateOfBirth))">{{ computeAge(reg.dateOfBirth) }} ปี</span>
+                    </div>
+                  </td>
+                  <td style="font-family: monospace; font-size: 13px;">{{ formatNid(reg.nationalId) }}</td>
+                  <td>{{ reg.phone || '-' }}</td>
+                  <td style="font-size: 13px; color: var(--gray);">{{ reg.university || '-' }}</td>
+                  <td @click.stop>
+                    <div v-if="reg.lineUserId" style="display:flex;align-items:center;gap:4px;">
+                      <img v-if="reg.linePictureUrl" :src="reg.linePictureUrl" style="width:20px;height:20px;border-radius:50%;" />
+                      <span style="font-size:11px;color:#06c755;font-weight:600;">{{ reg.lineDisplayName || 'เชื่อมแล้ว' }}</span>
+                    </div>
+                    <span v-else style="font-size:11px;color:#cbd5e1;">-</span>
+                  </td>
+                  <td>
+                    <span class="badge" :class="statusBadge(reg.status)">{{ statusText(reg.status) }}</span>
+                  </td>
+                  <td style="font-size: 13px; color: var(--gray);">{{ formatDate(reg.createdAt) }}</td>
+                  <td @click.stop>
+                    <ActionMenu :reg="reg"
+                      @view-detail="(id) => viewDetail(id)" @edit="(id) => viewDetail(id, true)"
+                      @approve="doApprove" @change-status="changeStatus"
+                      @bypass-email="doBypassEmail" @resend-verify="doResendVerify"
+                      @kick="doKick" @lock="doLock" @unlock="doUnlock"
+                      @ban="doBan" @unban="doUnban" @delete="openDeleteModal" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- 🚫 ถูกแบน Section -->
         <div v-if="groupBanned.length" class="group-section">
           <div class="group-header" style="background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff">
@@ -564,7 +690,7 @@
           </div>
         </div>
 
-        <div v-if="!groupPendingApproval.length && !groupAdmin.length && !groupStaff.length && !groupEnrolled.length && !groupNoCourse.length && !groupBanned.length" class="card" style="text-align: center; color: var(--gray); padding: 32px;">
+        <div v-if="!groupPendingApproval.length && !groupAdmin.length && !groupStaff.length && !groupEnrolled.length && !groupDemoActive.length && !groupDemoExpired.length && !groupNoCourse.length && !groupBanned.length" class="card" style="text-align: center; color: var(--gray); padding: 32px;">
           {{ search || statusFilter ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีผู้ลงทะเบียน' }}
         </div>
       </template>
@@ -930,7 +1056,7 @@
       @click.stop
     >
       <div class="dtfp-title">แปะ demo tag</div>
-      <label v-for="opt in demoTagOptions" :key="opt.code" class="dtfp-opt">
+      <label v-for="opt in userTagOptions" :key="opt.code" class="dtfp-opt">
         <input
           type="checkbox"
           :checked="isTagOnActivation(tagPickerOpen.activationId, tagPickerOpen.regId, opt.code)"
@@ -939,7 +1065,7 @@
         />
         <span class="dtfp-chip" :style="{background: opt.color}">{{ opt.label }}</span>
       </label>
-      <div v-if="!demoTagOptions.length" class="dtfp-empty">ยังไม่มี tag ในระบบ</div>
+      <div v-if="!userTagOptions.length" class="dtfp-empty">ยังไม่มี tag ในระบบ</div>
       <button class="dtfp-close" @click="tagPickerOpen = null">ปิด</button>
     </div>
   </div>
@@ -1084,6 +1210,9 @@ export default {
     }
   },
   computed: {
+    userTagOptions() {
+      return this.demoTagOptions.filter(t => t.code !== 'all')
+    },
     filteredRegistrations() {
       let list = this.registrations
       if (this.statusFilter) {
@@ -1126,12 +1255,30 @@ export default {
       )
       return this.sortByCmaAndAge(list)
     },
-    groupNoCourse() {
-      const list = this.filteredRegistrations.filter(r =>
+    _noPaidBase() {
+      return this.filteredRegistrations.filter(r =>
         r.role !== 'admin' && r.role !== 'staff' &&
         r.status !== 'pending_approval' &&
         !r.isBanned &&
         (!r.activations || r.activations.length === 0)
+      )
+    },
+    groupDemoActive() {
+      const list = this._noPaidBase.filter(r =>
+        (r.demoActivations || []).some(d => !d.expired)
+      )
+      return this.sortByCmaAndAge(list)
+    },
+    groupDemoExpired() {
+      const list = this._noPaidBase.filter(r => {
+        const demos = r.demoActivations || []
+        return demos.length > 0 && demos.every(d => d.expired)
+      })
+      return this.sortByCmaAndAge(list)
+    },
+    groupNoCourse() {
+      const list = this._noPaidBase.filter(r =>
+        !r.demoActivations || r.demoActivations.length === 0
       )
       return this.sortByCmaAndAge(list)
     },
@@ -1204,29 +1351,40 @@ export default {
       this.tagPickerOpen = { activationId, regId, x: rect.left, y: rect.bottom + 4 }
     },
     async toggleDemoTagOnActivation(activationId, regId, tag) {
+      if (tag === 'all') return   // ห้าม 'all' ฝั่ง user
       const reg = this.registrations.find(r => r._id === regId)
       if (!reg) return
       const demo = (reg.demoActivations || []).find(d => String(d.activationId) === String(activationId))
       if (!demo) return
       const current = new Set(demo.demoAccessTags || [])
       if (current.has(tag)) {
+        if (current.size <= 1) { alert('ต้องเลือกอย่างน้อย 1 tag'); return }
         current.delete(tag)
       } else {
-        if (tag === 'all') {
-          current.clear()
-          current.add('all')
-        } else {
-          current.delete('all')
-          current.add(tag)
-        }
+        current.add(tag)
       }
       await this._saveDemoTags(activationId, regId, Array.from(current))
     },
     async removeDemoTagFromActivation(activationId, tag, regId) {
       const reg = this.registrations.find(r => r._id === regId)
       const demo = reg?.demoActivations?.find(d => String(d.activationId) === String(activationId))
-      const newTags = (demo?.demoAccessTags || []).filter(t => t !== tag)
+      const currentTags = demo?.demoAccessTags || []
+      if (currentTags.length <= 1) { alert('ต้องมีอย่างน้อย 1 tag'); return }
+      const newTags = currentTags.filter(t => t !== tag)
       await this._saveDemoTags(activationId, regId, newTags)
+    },
+    async doExtendDemo(activationId, regId) {
+      const daysStr = prompt('ต่ออายุ demo กี่วัน? (1–365)', '7')
+      if (!daysStr) return
+      const days = parseInt(daysStr, 10)
+      if (!days || days <= 0 || days > 365) { alert('ระบุจำนวนวัน 1–365'); return }
+      try {
+        const resp = await api.post(`/admin/passport/activations/${activationId}/extend-demo`, { days })
+        alert(`✓ ${resp.message || 'ต่ออายุสำเร็จ'}${resp.unlocked ? '\n🔓 ปลด lock user แล้ว' : ''}`)
+        await this.fetchRegistrations()
+      } catch (e) {
+        alert(e.response?.data?.message || 'ต่ออายุไม่สำเร็จ')
+      }
     },
     async _saveDemoTags(activationId, regId, newTags) {
       if (this.tagPickerBusy) return
@@ -2704,6 +2862,13 @@ export default {
   font-weight: 700; cursor: pointer;
 }
 .demo-mini-add:hover { background: #f1f5f9; border-color: #3b82f6; color: #3b82f6; }
+.btn-extend-demo {
+  margin-top: 3px;
+  border: 1px solid #16a34a; background: #f0fdf4; color: #166534;
+  border-radius: 6px; padding: 3px 8px;
+  font-size: 11px; font-weight: 700; cursor: pointer;
+}
+.btn-extend-demo:hover { background: #dcfce7; }
 
 .demo-tag-float-picker {
   position: fixed; z-index: 9999;
