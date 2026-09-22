@@ -38,7 +38,7 @@ exports.getMyActivations = async (req, res, next) => {
             path: 'sections',
             select: 'code name description order videos'
           })
-          .select('title description sections durationDays order liveEnabled orientBunnyDrmVideoId orientBunnyNoDrmVideoId orientAliVideoId')
+          .select('title description sections durationDays order liveEnabled isDemo orientBunnyDrmVideoId orientBunnyNoDrmVideoId orientAliVideoId')
           .lean()
       : []
 
@@ -85,6 +85,7 @@ exports.getMyActivations = async (req, res, next) => {
           order: pkg.order,
           sections: pkgSections,
           liveEnabled: pkg.liveEnabled || false,
+          isDemo: pkg.isDemo || false,
           hasOrientVideo: !!(pkg.orientBunnyDrmVideoId || pkg.orientBunnyNoDrmVideoId || pkg.orientAliVideoId)
         } : null,
         packageId: a.packageId,

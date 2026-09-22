@@ -123,7 +123,7 @@
 
     <div v-else class="courses">
       <article
-        v-for="act in activationStore.activations"
+        v-for="act in visibleActivations"
         :key="act._id"
         class="course"
         :class="{ expired: isExpired(act) }"
@@ -315,6 +315,14 @@ export default {
       return this.activationStore.activations.filter(a => !this.isExpired(a))
     },
     activeCount() { return this.activeList.length },
+    // ⭐ Hide demo expired จาก dashboard list (belt+suspenders)
+    visibleActivations() {
+      return this.activationStore.activations.filter(a => {
+        const isDemo = a.package?.isDemo || a.package?.title?.includes('ทดลอง')
+        if (isDemo && this.isExpired(a)) return false
+        return true
+      })
+    },
     overallProgress() {
       if (!this.activeList.length) return 0
       const sum = this.activeList.reduce((s, a) => s + this.progressPct(a), 0)
