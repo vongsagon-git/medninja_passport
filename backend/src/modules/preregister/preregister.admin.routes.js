@@ -1124,12 +1124,13 @@ router.post('/batch-lock-demo-expired', auth, admin, async (req, res) => {
       return res.json({ ok: true, lockedCount: 0, message: 'ไม่มีคนที่ต้อง lock ใหม่' })
     }
 
+    // ⚠ ใช้ $ne: true เพื่อ match ทั้ง false และ undefined (field ที่ยังไม่มี)
     const result = await User.updateMany(
       {
         _id: { $in: toLockIds },
         role: { $nin: ['admin', 'staff'] },
-        isLocked: false,
-        isBanned: false
+        isLocked: { $ne: true },
+        isBanned: { $ne: true }
       },
       {
         isLocked: true,
