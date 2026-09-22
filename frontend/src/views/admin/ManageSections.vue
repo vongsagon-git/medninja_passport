@@ -252,17 +252,9 @@
                                   {{ demoTagLabel(tg) }}
                                   <button type="button" @click.stop="removeDemoTag(vid.ref, tg)" class="demo-tag-x">✕</button>
                                 </span>
-                                <button type="button" class="demo-tag-add" :class="{'is-empty': !(vid.ref.demoTags && vid.ref.demoTags.length)}" @click.stop="toggleTagPicker(vid.flatIdx)">
+                                <button type="button" class="demo-tag-add" :class="{'is-empty': !(vid.ref.demoTags && vid.ref.demoTags.length)}" @click.stop="toggleTagPicker(vid.flatIdx, $event); tagPickerVideo = vid.ref">
                                   {{ (vid.ref.demoTags && vid.ref.demoTags.length) ? '+' : '⚠ เลือก tag' }}
                                 </button>
-                                <div v-if="openTagPickerIdx === vid.flatIdx" class="demo-tag-picker" @click.stop>
-                                  <div class="demo-tag-picker-title">เลือก demo tag (บังคับ ≥1)</div>
-                                  <label v-for="opt in DEMO_TAG_OPTIONS" :key="opt.code" class="demo-tag-opt">
-                                    <input type="checkbox" :checked="(vid.ref.demoTags || []).includes(opt.code)" @change="toggleDemoTag(vid.ref, opt.code)" />
-                                    <span class="demo-tag-opt-chip" :style="{background: opt.color}">{{ opt.label }}</span>
-                                  </label>
-                                  <button type="button" class="demo-tag-close" @click="openTagPickerIdx = null">ปิด</button>
-                                </div>
                               </div>
                               <span class="tree-video-dur">{{ vid.ref.duration && vid.ref.duration !== '--:--' ? vid.ref.duration : '--:--' }}</span>
                               <div class="tree-video-actions actions-clean">
@@ -408,17 +400,9 @@
                               {{ demoTagLabel(tg) }}
                               <button type="button" @click.stop="removeDemoTag(child.ref, tg)" class="demo-tag-x">✕</button>
                             </span>
-                            <button type="button" class="demo-tag-add" :class="{'is-empty': !(child.ref.demoTags && child.ref.demoTags.length)}" @click.stop="toggleTagPicker(child.flatIdx)">
+                            <button type="button" class="demo-tag-add" :class="{'is-empty': !(child.ref.demoTags && child.ref.demoTags.length)}" @click.stop="toggleTagPicker(child.flatIdx, $event); tagPickerVideo = child.ref">
                               {{ (child.ref.demoTags && child.ref.demoTags.length) ? '+' : '⚠ เลือก tag' }}
                             </button>
-                            <div v-if="openTagPickerIdx === child.flatIdx" class="demo-tag-picker" @click.stop>
-                              <div class="demo-tag-picker-title">เลือก demo tag (บังคับ ≥1)</div>
-                              <label v-for="opt in DEMO_TAG_OPTIONS" :key="opt.code" class="demo-tag-opt">
-                                <input type="checkbox" :checked="(child.ref.demoTags || []).includes(opt.code)" @change="toggleDemoTag(child.ref, opt.code)" />
-                                <span class="demo-tag-opt-chip" :style="{background: opt.color}">{{ opt.label }}</span>
-                              </label>
-                              <button type="button" class="demo-tag-close" @click="openTagPickerIdx = null">ปิด</button>
-                            </div>
                           </div>
                           <span class="tree-video-dur">{{ child.ref.duration && child.ref.duration !== '--:--' ? child.ref.duration : '--:--' }}</span>
                           <div class="tree-video-actions actions-clean">
@@ -556,17 +540,9 @@
                         {{ demoTagLabel(tg) }}
                         <button type="button" @click.stop="removeDemoTag(node.ref, tg)" class="demo-tag-x">✕</button>
                       </span>
-                      <button type="button" class="demo-tag-add" :class="{'is-empty': !(node.ref.demoTags && node.ref.demoTags.length)}" @click.stop="toggleTagPicker(node.flatIdx)">
+                      <button type="button" class="demo-tag-add" :class="{'is-empty': !(node.ref.demoTags && node.ref.demoTags.length)}" @click.stop="toggleTagPicker(node.flatIdx, $event); tagPickerVideo = node.ref">
                         {{ (node.ref.demoTags && node.ref.demoTags.length) ? '+' : '⚠ เลือก tag' }}
                       </button>
-                      <div v-if="openTagPickerIdx === node.flatIdx" class="demo-tag-picker" @click.stop>
-                        <div class="demo-tag-picker-title">เลือก demo tag (บังคับ ≥1)</div>
-                        <label v-for="opt in DEMO_TAG_OPTIONS" :key="opt.code" class="demo-tag-opt">
-                          <input type="checkbox" :checked="(node.ref.demoTags || []).includes(opt.code)" @change="toggleDemoTag(node.ref, opt.code)" />
-                          <span class="demo-tag-opt-chip" :style="{background: opt.color}">{{ opt.label }}</span>
-                        </label>
-                        <button type="button" class="demo-tag-close" @click="openTagPickerIdx = null">ปิด</button>
-                      </div>
                     </div>
                     <span class="tree-video-dur">{{ node.ref.duration && node.ref.duration !== '--:--' ? node.ref.duration : '--:--' }}</span>
                     <div class="tree-video-actions actions-clean">
@@ -861,6 +837,21 @@
         </div>
       </div>
     </div>
+
+    <!-- ═════ Floating Demo Tag Picker (Fixed portal — ไม่ตกขอบ) ═════ -->
+    <div
+      v-if="openTagPickerIdx !== null && tagPickerVideo"
+      class="demo-tag-float-picker"
+      :style="tagPickerFloatStyle"
+      @click.stop
+    >
+      <div class="demo-tag-picker-title">เลือก demo tag (บังคับ ≥1)</div>
+      <label v-for="opt in DEMO_TAG_OPTIONS" :key="opt.code" class="demo-tag-opt">
+        <input type="checkbox" :checked="(tagPickerVideo.demoTags || []).includes(opt.code)" @change="toggleDemoTag(tagPickerVideo, opt.code)" />
+        <span class="demo-tag-opt-chip" :style="{background: opt.color}">{{ opt.label }}</span>
+      </label>
+      <button type="button" class="demo-tag-close" @click="openTagPickerIdx = null; tagPickerVideo = null">ปิด</button>
+    </div>
   </div>
 </template>
 
@@ -906,6 +897,8 @@ export default {
         { code: 'preclinic', label: 'PRECLINIC', color: '#10b981' }
       ],
       openTagPickerIdx: null,
+      tagPickerPos: { x: 0, y: 0, above: false },
+      tagPickerVideo: null,
       // ─── Self Check ───
       selfCheckTemplates: [],
       selfCheckBindings: {},   // key: "scope:refId" → binding doc
@@ -928,6 +921,14 @@ export default {
     }
   },
   computed: {
+    tagPickerFloatStyle() {
+      const p = this.tagPickerPos
+      return {
+        left: p.x + 'px',
+        top: p.y + 'px',
+        transform: p.above ? 'translateY(-100%)' : 'none'
+      }
+    },
     sortedSections() {
       return [...this.sections].sort((a, b) => (a.order || 0) - (b.order || 0))
     },
@@ -2619,8 +2620,22 @@ export default {
       const t = this.DEMO_TAG_OPTIONS.find(o => o.code === code)
       return t ? t.color : '#64748b'
     },
-    toggleTagPicker(flatIdx) {
-      this.openTagPickerIdx = (this.openTagPickerIdx === flatIdx) ? null : flatIdx
+    toggleTagPicker(flatIdx, evt) {
+      if (this.openTagPickerIdx === flatIdx) {
+        this.openTagPickerIdx = null
+        return
+      }
+      if (evt && evt.target) {
+        const rect = evt.target.getBoundingClientRect()
+        const spaceBelow = window.innerHeight - rect.bottom
+        const openAbove = spaceBelow < 260
+        this.tagPickerPos = {
+          x: Math.min(rect.left, window.innerWidth - 240),
+          y: openAbove ? rect.top - 6 : rect.bottom + 6,
+          above: openAbove
+        }
+      }
+      this.openTagPickerIdx = flatIdx
     },
     toggleDemoTag(video, tag) {
       const tags = Array.isArray(video.demoTags) ? [...video.demoTags] : []
@@ -3280,5 +3295,15 @@ export default {
   font-weight: 700; cursor: pointer;
 }
 .demo-tag-close:hover { background: #e2e8f0; }
+
+/* Floating tag picker — fixed portal (ไม่โดน overflow ตัด) */
+.demo-tag-float-picker {
+  position: fixed; z-index: 9999;
+  background: #fff; border: 1px solid #cbd5e1; border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+  min-width: 200px; max-width: 240px;
+  display: flex; flex-direction: column; gap: 6px;
+}
 
 </style>
