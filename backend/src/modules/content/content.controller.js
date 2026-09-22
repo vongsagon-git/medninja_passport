@@ -35,7 +35,7 @@ exports.getSection = async (req, res, next) => {
 
     const pkgIds = [...new Set(activations.map(a => a.packageId?.toString()).filter(Boolean))]
     const packages = pkgIds.length > 0
-      ? await Package.find({ _id: { $in: pkgIds } }).select('sections').lean()
+      ? await Package.find({ _id: { $in: pkgIds } }).select('sections isDemo').lean()
       : []
     const pkgMap = new Map(packages.map(p => [p._id.toString(), p]))
 
@@ -62,8 +62,22 @@ exports.getSection = async (req, res, next) => {
     // admin ก็ถูก gate เหมือนนักเรียน เพื่อให้ตรวจสอบ tier ของตัวเองได้
     const userTier = matchingActivation.tier || 6
 
+    // ═══ Demo Tag Filter (2026-09-22 Phase C) ═══
+    const matchingPkg = pkgMap.get(matchingActivation.packageId?.toString())
+    const isDemoContext = !!matchingPkg?.isDemo
+    let filteredVideos = section.videos
+    if (isDemoContext) {
+      const userTags = new Set(matchingActivation.demoAccessTags || [])
+      filteredVideos = section.videos.filter(v => {
+        const tags = Array.isArray(v.demoTags) ? v.demoTags : []
+        if (tags.length === 0) return false
+        if (tags.includes('all')) return true
+        return tags.some(t => userTags.has(t))
+      })
+    }
+
     // bonus lock = tier 6 ตายตัว (bonus เป็น premium เสมอ)
-    const videos = section.videos
+    const videos = filteredVideos
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map((v, idx) => {
         const required = v.requiredTier || 6
@@ -229,7 +243,7 @@ exports.getVideo = async (req, res, next) => {
 
     const pkgIds = [...new Set(activations.map(a => a.packageId?.toString()).filter(Boolean))]
     const packages = pkgIds.length > 0
-      ? await Package.find({ _id: { $in: pkgIds } }).select('sections').lean()
+      ? await Package.find({ _id: { $in: pkgIds } }).select('sections isDemo').lean()
       : []
     const pkgMap = new Map(packages.map(p => [p._id.toString(), p]))
 
@@ -252,8 +266,22 @@ exports.getVideo = async (req, res, next) => {
       return res.status(403).json({ message: 'ต้องยอมรับข้อตกลงก่อนเข้าเรียน', code: 'CONSENT_REQUIRED' })
     }
 
+    // ═══ Demo Tag Filter (Phase C) ═══
+    const matchingPkg2 = pkgMap.get(matchingActivation.packageId?.toString())
+    const isDemoContext2 = !!matchingPkg2?.isDemo
+    let sourceVideos = section.videos
+    if (isDemoContext2) {
+      const userTags = new Set(matchingActivation.demoAccessTags || [])
+      sourceVideos = section.videos.filter(v => {
+        const tags = Array.isArray(v.demoTags) ? v.demoTags : []
+        if (tags.length === 0) return false
+        if (tags.includes('all')) return true
+        return tags.some(t => userTags.has(t))
+      })
+    }
+
     // เรียงวีดีโอตาม order แล้วดึงตาม index
-    const sortedVideos = [...section.videos].sort((a, b) => (a.order || 0) - (b.order || 0))
+    const sortedVideos = [...sourceVideos].sort((a, b) => (a.order || 0) - (b.order || 0))
     const idx = parseInt(req.params.idx, 10)
 
     if (isNaN(idx) || idx < 0 || idx >= sortedVideos.length) {
