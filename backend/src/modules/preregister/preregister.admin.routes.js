@@ -1060,6 +1060,65 @@ router.post('/activations/:activationId/extend-demo', auth, admin, async (req, r
   }
 })
 
+// POST /api/admin/passport/batch-lock-demo-expired
+// ⚠ scan ทุก user → auto-lock คนที่ demo หมด + never paid
+router.post('/batch-lock-demo-expired', auth, admin, async (req, res) => {
+  try {
+    const now = new Date()
+    const demoPkgs = await Package.find({ isDemo: true }).select('_id').lean()
+    const demoPkgIds = new Set(demoPkgs.map(p => p._id.toString()))
+
+    const allActs = await Activation.find({ isActive: true }).select('userId packageId expiresAt').lean()
+
+    const userActsMap = new Map()
+    for (const act of allActs) {
+      const uid = act.userId.toString()
+      if (!userActsMap.has(uid)) userActsMap.set(uid, [])
+      userActsMap.get(uid).push(act)
+    }
+
+    const toLockIds = []
+    for (const [uid, acts] of userActsMap.entries()) {
+      const everHadPaid = acts.some(a => !demoPkgIds.has(a.packageId.toString()))
+      if (everHadPaid) continue
+      const hasActiveDemo = acts.some(a =>
+        demoPkgIds.has(a.packageId.toString()) && new Date(a.expiresAt) > now
+      )
+      if (!hasActiveDemo) toLockIds.push(uid)
+    }
+
+    if (toLockIds.length === 0) {
+      return res.json({ ok: true, lockedCount: 0, message: 'ไม่มีคนที่ต้อง lock ใหม่' })
+    }
+
+    const result = await User.updateMany(
+      {
+        _id: { $in: toLockIds },
+        role: { $nin: ['admin', 'staff'] },
+        isLocked: false,
+        isBanned: false
+      },
+      {
+        isLocked: true,
+        lockedAt: now,
+        lockedBy: 'AUTO_DEMO_EXPIRED',
+        lockedReason: 'ทดลองเรียนหมดอายุ กรุณาติดต่อ admin เพื่อสมัครคอร์ส'
+      }
+    )
+
+    console.log(`[batch-lock-demo-expired] locked ${result.modifiedCount}/${toLockIds.length} users`)
+    res.json({
+      ok: true,
+      lockedCount: result.modifiedCount,
+      scanned: toLockIds.length,
+      message: `Lock ${result.modifiedCount} คนสำเร็จ (จาก ${toLockIds.length} คนที่ตรงเงื่อนไข)`
+    })
+  } catch (err) {
+    console.error('[batch-lock-demo-expired] error:', err)
+    res.status(500).json({ message: err.message })
+  }
+})
+
 // ═══════════════════════════════════════════════════════════════
 // LOCK / BAN / KICK ENDPOINTS (2026-08-06 anti-hack)
 // ═══════════════════════════════════════════════════════════════

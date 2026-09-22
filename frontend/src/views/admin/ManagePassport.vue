@@ -26,6 +26,16 @@
             <span v-if="cmaSyncing">Sync...</span>
             <span v-else>Sync ศรว.</span>
           </button>
+          <button
+            class="btn-sync-cma"
+            :disabled="batchLocking"
+            @click="doBatchLockDemoExpired"
+            title="Auto-lock user ที่ demo หมดอายุ + ไม่เคยลงคอร์ส"
+            style="background:#dc2626;color:#fff;border-color:#dc2626"
+          >
+            <span v-if="batchLocking">🔒 Lock...</span>
+            <span v-else>🔒 Lock Demo หมด</span>
+          </button>
           <select v-model="statusFilter" class="form-control passport-filter">
             <option value="">ทุกสถานะ</option>
             <option value="pending">ยังไม่ตรวจ</option>
@@ -430,7 +440,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(reg, idx) in groupNoCourse" :key="reg._id" class="row-clickable" :class="cmaRowClass(reg)" @click="viewDetail(reg._id)">
+                <tr v-for="(reg, idx) in groupDemoActive" :key="reg._id" class="row-clickable" :class="cmaRowClass(reg)" @click="viewDetail(reg._id)">
                   <td style="color: var(--gray); font-size: 13px;">{{ idx + 1 }}</td>
                   <td>
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -1206,7 +1216,8 @@ export default {
       // ─── Demo Tag Picker (2026-09-22 Phase B) ───
       demoTagOptions: [],
       tagPickerOpen: null,
-      tagPickerBusy: false
+      tagPickerBusy: false,
+      batchLocking: false
     }
   },
   computed: {
@@ -1372,6 +1383,18 @@ export default {
       if (currentTags.length <= 1) { alert('ต้องมีอย่างน้อย 1 tag'); return }
       const newTags = currentTags.filter(t => t !== tag)
       await this._saveDemoTags(activationId, regId, newTags)
+    },
+    async doBatchLockDemoExpired() {
+      if (this.batchLocking) return
+      if (!confirm('ล็อก user ที่ demo หมด + ไม่เคยลงคอร์สทั้งหมด?\n(user เหล่านี้จะ login ไม่ได้จนกว่า admin จะต่ออายุ demo)')) return
+      this.batchLocking = true
+      try {
+        const resp = await api.post('/admin/passport/batch-lock-demo-expired')
+        alert(`✓ ${resp.message}`)
+        await this.fetchRegistrations()
+      } catch (e) {
+        alert(e.response?.data?.message || 'Batch lock ไม่สำเร็จ')
+      } finally { this.batchLocking = false }
     },
     async doExtendDemo(activationId, regId) {
       const daysStr = prompt('ต่ออายุ demo กี่วัน? (1–365)', '7')
