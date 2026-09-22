@@ -1060,6 +1060,39 @@ router.post('/activations/:activationId/extend-demo', auth, admin, async (req, r
   }
 })
 
+// GET /api/admin/passport/orphan-locked-users
+// หา user ที่ AUTO-lock แล้ว แต่ไม่มี PreRegistration record (orphan)
+router.get('/orphan-locked-users', auth, admin, async (req, res) => {
+  try {
+    const autoLocked = await User.find({
+      isLocked: true,
+      lockedBy: 'AUTO_DEMO_EXPIRED'
+    }).select('firstName lastName email nationalId createdAt lockedAt').lean()
+
+    const preRegs = await PreRegistration.find().select('nationalId').lean()
+    const preRegNids = new Set(preRegs.map(p => p.nationalId))
+
+    const orphans = autoLocked.filter(u => !preRegNids.has(u.nationalId))
+
+    res.json({
+      totalAutoLocked: autoLocked.length,
+      totalPreRegs: preRegs.length,
+      orphanCount: orphans.length,
+      orphans: orphans.map(u => ({
+        _id: u._id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        email: u.email,
+        nationalId: u.nationalId,
+        createdAt: u.createdAt,
+        lockedAt: u.lockedAt
+      }))
+    })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
+
 // POST /api/admin/passport/batch-lock-demo-expired
 // ⚠ scan ทุก user → auto-lock คนที่ demo หมด + never paid
 router.post('/batch-lock-demo-expired', auth, admin, async (req, res) => {
