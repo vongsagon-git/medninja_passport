@@ -93,12 +93,25 @@
         </div>
       </div>
 
+      <div v-if="reg.status === 'pending_approval'" class="info-block">
+        <div class="section-label">🏷 เลือก demo tag (บังคับ ≥1)</div>
+        <div class="tag-picker-grid">
+          <label v-for="opt in userTagOptions" :key="opt.code" class="tag-picker-item">
+            <input type="checkbox" :checked="selectedTags.includes(opt.code)" @change="toggleTag(opt.code)" />
+            <span class="tag-chip" :style="{background: opt.color}">{{ opt.label }}</span>
+          </label>
+        </div>
+        <div v-if="!userTagOptions.length" class="tag-picker-empty">
+          ⚠ ยังไม่มี tag ในระบบ — <router-link to="/admin/demo-tags">สร้าง tag ก่อน</router-link>
+        </div>
+      </div>
+
       <div v-if="reg.status === 'pending_approval'" class="actions">
         <button class="btn-reject" @click="showRejectDialog = true" :disabled="busy">
           ❌ ปฏิเสธ (ban ทันที)
         </button>
-        <button class="btn-approve" @click="doApprove" :disabled="busy">
-          {{ busy ? 'กำลังอนุมัติ...' : '✅ อนุมัติ (bypass email + demo VISA)' }}
+        <button class="btn-approve" @click="doApprove" :disabled="busy || !selectedTags.length">
+          {{ busy ? 'กำลังอนุมัติ...' : `✅ อนุมัติ (${selectedTags.length} tags)` }}
         </button>
       </div>
 
@@ -150,6 +163,20 @@ const lineFollower = ref(null)
 const audit = ref({ otherRegsWithSameLine: [], otherRegsWithSameIp: [] })
 
 const showRejectDialog = ref(false)
+const demoTagOptions = ref([])
+const selectedTags = ref([])
+const userTagOptions = computed(() => demoTagOptions.value.filter(t => t.code !== 'all'))
+function toggleTag(code) {
+  const i = selectedTags.value.indexOf(code)
+  if (i >= 0) selectedTags.value.splice(i, 1)
+  else selectedTags.value.push(code)
+}
+async function loadDemoTags() {
+  try {
+    const data = await api.get('/admin/demo-tags')
+    demoTagOptions.value = data.tags || []
+  } catch { /* skip */ }
+}
 const rejectReason = ref('')
 const zoomedImage = ref(null)
 
@@ -179,10 +206,11 @@ async function load() {
 
 async function doApprove() {
   if (busy.value) return
-  if (!confirm(`ยืนยันการอนุมัติ ${reg.value.firstName} ${reg.value.lastName}?`)) return
+  if (!selectedTags.value.length) { alert('⚠ ต้องเลือก demo tag อย่างน้อย 1 tag'); return }
+  if (!confirm(`ยืนยันการอนุมัติ ${reg.value.firstName} ${reg.value.lastName}?\n\ntags: ${selectedTags.value.join(', ')}`)) return
   busy.value = true
   try {
-    await api.post(`/admin/passport/approve/${route.params.token}`)
+    await api.post(`/admin/passport/approve/${route.params.token}`, { demoTags: selectedTags.value })
     alert('อนุมัติสำเร็จ')
     await load()
   } catch (e) {
@@ -212,7 +240,9 @@ function formatDate(d) {
   return dt.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-onMounted(load)
+onMounted(async () => {
+  await Promise.all([load(), loadDemoTags()])
+})
 </script>
 
 <style scoped>
@@ -322,4 +352,17 @@ onMounted(load)
   z-index: 200; padding: 20px; cursor: zoom-out;
 }
 .zoom-mask img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+
+/* ─── Demo tag picker ─── */
+.tag-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+.tag-picker-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 8px;
+  cursor: pointer; font-size: 13px;
+}
+.tag-picker-item:hover { background: #f8fafc; }
+.tag-chip { color: #fff; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
+.tag-picker-empty { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+.tag-picker-empty a { color: #3b82f6; text-decoration: underline; }
+.btn-approve:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

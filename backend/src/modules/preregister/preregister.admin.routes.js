@@ -10,6 +10,22 @@ const { generateVerifyToken, sendVerificationEmail } = require('../auth/email.se
 const LineFollower = require('../line/LineFollower.model')
 const cmaService = require('./cma.service')
 
+// Helper: validate demoTags (approve endpoints)
+async function validateDemoTags(rawTags) {
+  if (!Array.isArray(rawTags)) return { ok: false, message: '❌ demoTags ต้องเป็น array' }
+  const cleaned = rawTags.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim())
+  if (cleaned.length === 0) return { ok: false, message: '❌ ต้องเลือก demo tag อย่างน้อย 1 tag ก่อน approve' }
+  if (cleaned.includes('all')) return { ok: false, message: '❌ ห้ามแปะ tag "ALL" ให้ user — ALL ใช้ที่ video เท่านั้น' }
+  try {
+    const DemoTag = require('../content/DemoTag.model')
+    const allTags = await DemoTag.find().select('code').lean()
+    const valid = new Set(allTags.map(t => t.code))
+    const invalid = cleaned.filter(t => !valid.has(t))
+    if (invalid.length) return { ok: false, message: `มี tag ที่ไม่มีในระบบ: ${invalid.join(', ')}` }
+  } catch { /* skip */ }
+  return { ok: true, tags: cleaned }
+}
+
 // GET /api/admin/passport — ดึงรายการ preregistration ทั้งหมด
 router.get('/', auth, admin, async (req, res) => {
   try {
@@ -773,6 +789,11 @@ router.get('/approve/:token', auth, admin, async (req, res) => {
 // POST /api/admin/passport/approve/:token — กดอนุมัติ (bypass email verify + auto demo VISA)
 router.post('/approve/:token', auth, admin, async (req, res) => {
   try {
+    // ⭐ Validate demoTags ก่อน (บังคับ ≥1 tag)
+    const tagCheck = await validateDemoTags(req.body?.demoTags)
+    if (!tagCheck.ok) return res.status(400).json({ message: tagCheck.message })
+    const demoTags = tagCheck.tags
+
     const reg = await PreRegistration.findOne({ approveToken: req.params.token })
     if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล หรือ token ถูกใช้ไปแล้ว' })
 
@@ -822,7 +843,8 @@ router.post('/approve/:token', auth, admin, async (req, res) => {
           packageId: demoPkg._id,
           expiresAt: expires,
           isActive: true,
-          note: `Auto: VISA ทดลองเรียนฟรี (approved by ${adminName})`
+          demoAccessTags: demoTags,
+          note: `Auto: VISA ทดลองเรียนฟรี (approved by ${adminName}) tags=[${demoTags.join(',')}]`
         })
       } catch (e) {
         console.error('[approve] demo VISA assign failed:', e.message)
@@ -912,6 +934,11 @@ router.post('/reject/:token', auth, admin, async (req, res) => {
 // POST /api/admin/passport/:id/approve-direct — approve จาก dashboard (ไม่ใช้ token — ใช้ id)
 router.post('/:id/approve-direct', auth, admin, async (req, res) => {
   try {
+    // ⭐ Validate demoTags ก่อน (บังคับ ≥1 tag)
+    const tagCheck = await validateDemoTags(req.body?.demoTags)
+    if (!tagCheck.ok) return res.status(400).json({ message: tagCheck.message })
+    const demoTags = tagCheck.tags
+
     const reg = await PreRegistration.findById(req.params.id)
     if (!reg) return res.status(404).json({ message: 'ไม่พบข้อมูล' })
     if (reg.status === 'approved') return res.status(400).json({ message: 'อนุมัติไปแล้ว', alreadyApproved: true })
@@ -950,13 +977,14 @@ router.post('/:id/approve-direct', auth, admin, async (req, res) => {
           packageId: demoPkg._id,
           expiresAt: expires,
           isActive: true,
-          note: `Auto: VISA ทดลองเรียนฟรี (approved by ${adminName})`
+          demoAccessTags: demoTags,
+          note: `Auto: VISA ทดลองเรียนฟรี (approved by ${adminName}) tags=[${demoTags.join(',')}]`
         })
       } catch (e) { console.error('[approve-direct] demo VISA failed:', e.message) }
     })()
 
-    console.log(`[Passport approve-direct] ${reg.firstName} ${reg.lastName} approved by ${adminName}`)
-    res.json({ ok: true, message: `อนุมัติ ${reg.firstName} ${reg.lastName} สำเร็จ` })
+    console.log(`[Passport approve-direct] ${reg.firstName} ${reg.lastName} approved by ${adminName} tags=[${demoTags.join(',')}]`)
+    res.json({ ok: true, message: `อนุมัติ ${reg.firstName} ${reg.lastName} สำเร็จ`, demoTags })
   } catch (err) {
     res.status(500).json({ message: 'อนุมัติไม่สำเร็จ: ' + err.message })
   }

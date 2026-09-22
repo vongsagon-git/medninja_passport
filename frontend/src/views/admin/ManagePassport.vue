@@ -1058,6 +1058,36 @@
       </div>
     </div>
 
+    <!-- ═════ Approve Modal (เลือก tag ตอน approve) ═════ -->
+    <div v-if="approveModal.open" class="modal-overlay" @click.self="closeApproveModal">
+      <div class="modal-body approve-modal">
+        <h3>✅ อนุมัติ {{ approveModal.reg?.firstName }} {{ approveModal.reg?.lastName }}</h3>
+        <p class="approve-modal-sub">
+          ระบบจะ:
+          <br>1. เปลี่ยน approvalStatus → approved
+          <br>2. Bypass email verify
+          <br>3. Auto assign VISA ทดลอง + ติด tag ที่เลือก
+          <br>4. แจ้ง user ทาง LINE (ถ้าเชื่อมแล้ว)
+        </p>
+        <div class="approve-tag-label">🏷 เลือก demo tag (บังคับ ≥1):</div>
+        <div class="approve-tag-grid">
+          <label v-for="opt in userTagOptions" :key="opt.code" class="approve-tag-item">
+            <input type="checkbox" :checked="approveModal.selectedTags.includes(opt.code)" @change="approveTagToggle(opt.code)" />
+            <span class="dtfp-chip" :style="{background: opt.color}">{{ opt.label }}</span>
+          </label>
+        </div>
+        <div v-if="!userTagOptions.length" class="dtfp-empty">
+          ⚠ ยังไม่มี tag ในระบบ — ไปสร้างที่ /admin/demo-tags ก่อน
+        </div>
+        <div class="approve-modal-actions">
+          <button class="btn btn-outline" @click="closeApproveModal" :disabled="approveModal.busy">ยกเลิก</button>
+          <button class="btn btn-primary" @click="confirmApprove" :disabled="approveModal.busy || !approveModal.selectedTags.length">
+            {{ approveModal.busy ? 'กำลังอนุมัติ...' : `✅ Approve (${approveModal.selectedTags.length} tags)` }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ═════ Floating Demo Tag Picker (Phase B) ═════ -->
     <div
       v-if="tagPickerOpen"
@@ -1217,7 +1247,9 @@ export default {
       demoTagOptions: [],
       tagPickerOpen: null,
       tagPickerBusy: false,
-      batchLocking: false
+      batchLocking: false,
+      // ─── Approve Modal (2026-09-22) ───
+      approveModal: { open: false, reg: null, selectedTags: [], busy: false }
     }
   },
   computed: {
@@ -1482,17 +1514,35 @@ export default {
       }
     },
 
-    // ═══ ✅ Approve (สมัครใหม่ pending) — approve-direct จาก dashboard ═══
-    async doApprove(reg) {
-      const name = `${reg.firstName || ''} ${reg.lastName || ''}`.trim()
-      if (!confirm(`✅ อนุมัติ "${name}"?\n\nระบบจะ:\n1. เปลี่ยน approvalStatus → approved\n2. Bypass email verify\n3. Auto assign VISA ทดลอง 30 วัน\n4. แจ้ง user ทาง LINE`)) return
+    // ═══ ✅ Approve — เปิด modal เลือก tag ก่อน POST ═══
+    doApprove(reg) {
+      this.approveModal = { open: true, reg, selectedTags: [], busy: false }
+    },
+    approveTagToggle(code) {
+      const cur = new Set(this.approveModal.selectedTags)
+      if (cur.has(code)) cur.delete(code)
+      else cur.add(code)
+      this.approveModal.selectedTags = Array.from(cur)
+    },
+    async confirmApprove() {
+      const m = this.approveModal
+      if (!m.reg || m.busy) return
+      if (!m.selectedTags.length) { alert('⚠ ต้องเลือก demo tag อย่างน้อย 1 tag'); return }
+      m.busy = true
       try {
-        const data = await api.post(`/admin/passport/${reg._id}/approve-direct`)
-        this._updateRegLockStatus(reg._id, { status: 'approved' })
+        const data = await api.post(`/admin/passport/${m.reg._id}/approve-direct`, { demoTags: m.selectedTags })
+        this._updateRegLockStatus(m.reg._id, { status: 'approved' })
         alert('✅ ' + data.message)
+        this.approveModal.open = false
+        this.approveModal.reg = null
       } catch (err) {
         alert('❌ ' + (err.response?.data?.message || 'Approve ไม่สำเร็จ'))
-      }
+      } finally { m.busy = false }
+    },
+    closeApproveModal() {
+      this.approveModal.open = false
+      this.approveModal.reg = null
+      this.approveModal.selectedTags = []
     },
 
     // ═══ ✉️ Bypass Email Verify (admin verify email ให้) ═══
@@ -2911,4 +2961,27 @@ export default {
   font-weight: 700; cursor: pointer;
 }
 .dtfp-close:hover { background: #e2e8f0; }
+
+/* ═════ Approve Modal ═════ */
+.approve-modal { max-width: 480px; width: 90%; }
+.approve-modal h3 { margin: 0 0 12px; font-size: 18px; color: #1e293b; }
+.approve-modal-sub {
+  font-size: 13px; color: #64748b; line-height: 1.7;
+  background: #f8fafc; border-radius: 8px; padding: 10px 14px; margin: 0 0 16px;
+}
+.approve-tag-label { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 10px; }
+.approve-tag-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px;
+}
+.approve-tag-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 8px;
+  cursor: pointer; font-size: 13px;
+}
+.approve-tag-item:hover { background: #f8fafc; }
+.approve-modal-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding-top: 8px; border-top: 1px solid #e2e8f0;
+}
+.approve-modal-actions .btn { padding: 8px 16px; font-size: 13px; font-weight: 700; }
 </style>
