@@ -76,6 +76,9 @@ exports.getSection = async (req, res, next) => {
     if (!section) {
       return res.status(404).json({ message: 'ไม่พบ Section' })
     }
+    // ═════ ตรวจว่า section นี้อยู่ใน Demo package (ให้ frontend รู้เพื่อโชว์ tag UI + block PDF) ═════
+    const demoPkg = await Package.findOne({ isDemo: true }).select('sections').lean()
+    section.isDemoContext = !!(demoPkg && demoPkg.sections?.some(sid => sid.toString() === section._id.toString()))
     res.json({ section })
   } catch (error) {
     next(error)
@@ -94,6 +97,42 @@ exports.createSection = async (req, res, next) => {
 
 exports.updateSection = async (req, res, next) => {
   try {
+    // ═════ DEMO SECTION SANITIZE ═════
+    const demoPkgForCheck = await Package.findOne({ isDemo: true }).select('sections').lean()
+    const isDemoCtx = !!(demoPkgForCheck && demoPkgForCheck.sections?.some(sid => sid.toString() === req.params.id.toString()))
+
+    if (isDemoCtx) {
+      if (req.body.code && req.body.code !== 'DEMO-TRIAL') {
+        return res.status(400).json({ message: '🔒 ไม่สามารถเปลี่ยน code ของ Demo section ได้ (ต้องเป็น DEMO-TRIAL)' })
+      }
+      if (Array.isArray(req.body.videos)) {
+        for (const v of req.body.videos) {
+          if (v.docOnly) {
+            return res.status(400).json({ message: '🔒 Demo section ห้ามมี row เอกสารล้วน (VDO only)' })
+          }
+          const tags = Array.isArray(v.demoTags) ? v.demoTags.filter(Boolean) : []
+          if (tags.length === 0) {
+            return res.status(400).json({ message: `🔒 Video "${v.title || '(ไม่ระบุชื่อ)'}" ต้องเลือก demo tag อย่างน้อย 1 tag` })
+          }
+          v.demoTags = tags
+          v.pdfFileUrl = ''
+          v.pdfFileName = ''
+          v.pdfFile = ''
+          v.pdfEnabled = false
+          v.bonusLabel = ''
+          v.bonusTitle = ''
+          v.bonusBunnyVideoId = ''
+          v.bonusBunnyDrmVideoId = ''
+          v.bonusDuration = ''
+          v.bonusPdfFile = ''
+          v.bonusPdfFileName = ''
+          v.requiredTier = 6
+        }
+      }
+      req.body.topicPdfMap = {}
+      req.body.subtopicPdfMap = {}
+    }
+
     // รักษา fields สำคัญจาก video เดิม (PDF + DRM) + assign stable topicId/subtopicId
     if (req.body.videos) {
       const existing = await Section.findById(req.params.id).lean()
@@ -211,6 +250,11 @@ exports.cloneSection = async (req, res, next) => {
 
 exports.deleteSection = async (req, res, next) => {
   try {
+    // ═════ ป้องกันลบ DEMO-TRIAL section ═════
+    const pre = await Section.findById(req.params.id).select('code').lean()
+    if (pre?.code === 'DEMO-TRIAL') {
+      return res.status(403).json({ message: '🔒 ไม่สามารถลบ Demo section (DEMO-TRIAL) ได้', code: 'DEMO_SECTION_UNDELETABLE' })
+    }
     const section = await Section.findByIdAndDelete(req.params.id)
     if (!section) {
       return res.status(404).json({ message: 'ไม่พบ Section' })
@@ -322,6 +366,20 @@ exports.getPackage = async (req, res, next) => {
 
 exports.createPackage = async (req, res, next) => {
   try {
+    // ═════ ป้องกันสร้าง Demo package ที่ 2 (singleton) ═════
+    if (req.body.isDemo) {
+      const existing = await Package.findOne({ isDemo: true }).select('_id title').lean()
+      if (existing) {
+        return res.status(400).json({ message: `🔒 มี Demo package อยู่แล้ว: "${existing.title}" — ระบบอนุญาต Demo ได้แค่ 1 ตัว` })
+      }
+      req.body.durationDays = 7
+      req.body.liveEnabled = false
+      req.body.aiEnabled = false
+      req.body.aiInfo = ''
+      req.body.orientBunnyDrmVideoId = ''
+      req.body.orientBunnyNoDrmVideoId = ''
+      req.body.orientAliVideoId = ''
+    }
     const pkg = await Package.create(req.body)
     res.status(201).json({ package: pkg })
   } catch (error) {
@@ -331,6 +389,47 @@ exports.createPackage = async (req, res, next) => {
 
 exports.updatePackage = async (req, res, next) => {
   try {
+    // ═════ DEMO PACKAGE GUARDS ═════
+    const currentPkg = await Package.findById(req.params.id).select('isDemo').lean()
+    if (!currentPkg) return res.status(404).json({ message: 'ไม่พบ Package' })
+
+    if (currentPkg.isDemo && req.body.isDemo === false) {
+      return res.status(403).json({ message: '🔒 ไม่สามารถยกเลิกสถานะ Demo ของ package นี้ได้' })
+    }
+
+    if (currentPkg.isDemo || req.body.isDemo === true) {
+      req.body.durationDays = 7
+      req.body.liveEnabled = false
+      req.body.aiEnabled = false
+      req.body.aiInfo = ''
+      req.body.orientBunnyDrmVideoId = ''
+      req.body.orientBunnyNoDrmVideoId = ''
+      req.body.orientAliVideoId = ''
+    }
+
+    if (!currentPkg.isDemo && req.body.isDemo === true) {
+      const existing = await Package.findOne({
+        isDemo: true,
+        _id: { $ne: req.params.id }
+      }).select('_id title').lean()
+      if (existing) {
+        return res.status(400).json({ message: `🔒 มี Demo package อยู่แล้ว: "${existing.title}"` })
+      }
+    }
+
+    if (Array.isArray(req.body.sections)) {
+      const demoSec = await Section.findOne({ code: 'DEMO-TRIAL' }).select('_id').lean()
+      if (demoSec) {
+        const includesDemoSec = req.body.sections.some(id => id?.toString() === demoSec._id.toString())
+        if (currentPkg.isDemo && !includesDemoSec) {
+          return res.status(400).json({ message: '🔒 Demo package ต้องมี DEMO-TRIAL section' })
+        }
+        if (!currentPkg.isDemo && includesDemoSec) {
+          return res.status(400).json({ message: '🔒 DEMO-TRIAL section ใช้ได้เฉพาะ Demo package เท่านั้น' })
+        }
+      }
+    }
+
     const pkg = await Package.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true

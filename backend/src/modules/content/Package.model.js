@@ -60,12 +60,43 @@ const packageSchema = new mongoose.Schema({
   timestamps: true
 })
 
-packageSchema.pre('save', function(next) {
+packageSchema.pre('save', async function(next) {
   const hasDrm = !!(this.orientBunnyDrmVideoId && this.orientBunnyDrmVideoId.trim())
   const hasNoDrm = !!(this.orientBunnyNoDrmVideoId && this.orientBunnyNoDrmVideoId.trim())
   if (hasDrm !== hasNoDrm) {
     return next(new Error('Bunny orient video ต้องใส่ครบคู่ (DRM + No-DRM) หรือเว้นทั้งคู่'))
   }
+
+  // ═════ DEMO SINGLETON GUARD ═════
+  if (this.isDemo) {
+    try {
+      const existing = await this.constructor.findOne({
+        isDemo: true,
+        _id: { $ne: this._id }
+      }).select('_id title')
+      if (existing) {
+        return next(new Error(`มี Demo package อยู่แล้ว: "${existing.title}" — ระบบอนุญาต Demo package ได้แค่ 1 ตัวเท่านั้น`))
+      }
+    } catch (e) { /* ignore */ }
+
+    this.durationDays = 7
+    this.liveEnabled = false
+    this.aiEnabled = false
+    this.aiInfo = ''
+    this.orientBunnyDrmVideoId = ''
+    this.orientBunnyNoDrmVideoId = ''
+    this.orientAliVideoId = ''
+  }
+
+  if (!this.isNew && this.isModified && this.isModified('isDemo') && !this.isDemo) {
+    try {
+      const prev = await this.constructor.findById(this._id).select('isDemo')
+      if (prev?.isDemo) {
+        return next(new Error('ไม่สามารถยกเลิกสถานะ Demo ของ package นี้ได้'))
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   next()
 })
 

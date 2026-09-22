@@ -206,7 +206,8 @@
                 <template v-else>
                   <button class="btn btn-sm btn-outline" @click="editPackage(pkg)">แก้ไข</button>
                   <button v-if="!pkg.isDemo && !pkg.hasActiveUsers" class="btn btn-sm btn-danger" style="margin-left: 4px;" @click="deletingId = pkg._id">ลบ</button>
-                  <span v-if="pkg.hasActiveUsers" style="font-size:11px;color:#f59e0b;margin-left:6px;" title="มีนักเรียน active อยู่">🔒</span>
+                  <span v-if="pkg.isDemo" style="font-size:11px;color:#2563eb;margin-left:6px;" title="Demo package ห้ามลบ">🔒 DEMO</span>
+                  <span v-else-if="pkg.hasActiveUsers" style="font-size:11px;color:#f59e0b;margin-left:6px;" title="มีนักเรียน active อยู่">🔒</span>
                 </template>
               </td>
             </tr>

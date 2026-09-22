@@ -57,6 +57,16 @@
               <textarea v-model="form.description" class="form-control" rows="3" placeholder="อธิบายเนื้อหาโดยย่อ..."></textarea>
             </div>
 
+            <!-- ⭐ DEMO SECTION BANNER -->
+            <div v-if="form.isDemoContext" class="demo-banner">
+              <div class="demo-banner-header">🎁 DEMO SECTION — VDO ONLY</div>
+              <div class="demo-banner-body">
+                <span>• ทุก video ต้องแปะ <b>demo tag</b> อย่างน้อย 1 tag (บังคับ)</span>
+                <span>• ไม่มี PDF · ไม่มี Bonus · ไม่มี Doc-only · Tier lock ปิดถาวร</span>
+                <span>• Section นี้ (DEMO-TRIAL) และ Package "ทดลองเรียนฟรี 7 วัน" ห้ามลบ</span>
+              </div>
+            </div>
+
             <!-- Videos Sub-form (3-level tree: Topic → Subtopic → VDO) -->
             <div class="form-group">
               <label style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
@@ -64,7 +74,7 @@
                 <div style="display:flex;gap:6px;">
                   <button type="button" class="btn btn-sm btn-outline" @click="addTopicRow" style="border-color:#a855f7;color:#a855f7;">+ เพิ่ม Topic</button>
                   <button type="button" class="btn btn-sm btn-outline" @click="addVideo">+ เพิ่มวีดีโอ (ไม่มี Topic)</button>
-                  <button type="button" class="btn btn-sm btn-outline" @click="addDocRow" style="border-color:#0ea5e9;color:#0ea5e9;">+ เพิ่มเอกสาร (ไม่มี Topic)</button>
+                  <button v-if="!form.isDemoContext" type="button" class="btn btn-sm btn-outline" @click="addDocRow" style="border-color:#0ea5e9;color:#0ea5e9;">+ เพิ่มเอกสาร (ไม่มี Topic)</button>
                 </div>
               </label>
 
@@ -227,7 +237,7 @@
                                 </div>
                               </div>
                               <span v-if="vid.ref._locked" class="lock-badge" @click="unlockVideo(vid.flatIdx)">🔒</span>
-                              <select v-model.number="vid.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (vid.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
+                              <select v-if="!form.isDemoContext" v-model.number="vid.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (vid.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                                 <option :value="1">ระดับ 1</option>
                                 <option :value="2">ระดับ 2</option>
                                 <option :value="3">ระดับ 3</option>
@@ -235,10 +245,28 @@
                                 <option :value="5">ระดับ 5</option>
                                 <option :value="6">ระดับ 6</option>
                               </select>
+                              <!-- Demo Tags -->
+                              <div v-if="form.isDemoContext" class="demo-tag-cell">
+                                <span v-for="tg in (vid.ref.demoTags || [])" :key="tg" class="demo-tag-chip" :style="{background: demoTagColor(tg)}">
+                                  {{ demoTagLabel(tg) }}
+                                  <button type="button" @click.stop="removeDemoTag(vid.ref, tg)" class="demo-tag-x">✕</button>
+                                </span>
+                                <button type="button" class="demo-tag-add" :class="{'is-empty': !(vid.ref.demoTags && vid.ref.demoTags.length)}" @click.stop="toggleTagPicker(vid.flatIdx)">
+                                  {{ (vid.ref.demoTags && vid.ref.demoTags.length) ? '+' : '⚠ เลือก tag' }}
+                                </button>
+                                <div v-if="openTagPickerIdx === vid.flatIdx" class="demo-tag-picker" @click.stop>
+                                  <div class="demo-tag-picker-title">เลือก demo tag (บังคับ ≥1)</div>
+                                  <label v-for="opt in DEMO_TAG_OPTIONS" :key="opt.code" class="demo-tag-opt">
+                                    <input type="checkbox" :checked="(vid.ref.demoTags || []).includes(opt.code)" @change="toggleDemoTag(vid.ref, opt.code)" />
+                                    <span class="demo-tag-opt-chip" :style="{background: opt.color}">{{ opt.label }}</span>
+                                  </label>
+                                  <button type="button" class="demo-tag-close" @click="openTagPickerIdx = null">ปิด</button>
+                                </div>
+                              </div>
                               <span class="tree-video-dur">{{ vid.ref.duration && vid.ref.duration !== '--:--' ? vid.ref.duration : '--:--' }}</span>
                               <div class="tree-video-actions actions-clean">
                                 <!-- ⭐ ปุ่ม bonus (ใช้บ่อย — เห็นตลอด) -->
-                                <button type="button" class="action-btn bonus" @click="toggleBonus(vid.flatIdx)" :title="vid.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ vid.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                                <button v-if="!form.isDemoContext" type="button" class="action-btn bonus" @click="toggleBonus(vid.flatIdx)" :title="vid.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ vid.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
                                 <!-- ⋯ menu: จัดเรียง, ย้าย, ลบ -->
                                 <div class="action-menu-wrap">
                                   <button type="button" class="action-btn menu-toggle" @click.stop="toggleActionMenu(vid.flatIdx)" title="เมนู">⋯</button>
@@ -365,7 +393,7 @@
                             </div>
                           </div>
                           <span v-if="child.ref._locked" class="lock-badge" @click="unlockVideo(child.flatIdx)">🔒</span>
-                          <select v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
+                          <select v-if="!form.isDemoContext" v-model.number="child.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (child.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                             <option :value="1">ระดับ 1</option>
                             <option :value="2">ระดับ 2</option>
                             <option :value="3">ระดับ 3</option>
@@ -373,9 +401,27 @@
                             <option :value="5">ระดับ 5</option>
                             <option :value="6">ระดับ 6</option>
                           </select>
+                          <!-- Demo Tags -->
+                          <div v-if="form.isDemoContext" class="demo-tag-cell">
+                            <span v-for="tg in (child.ref.demoTags || [])" :key="tg" class="demo-tag-chip" :style="{background: demoTagColor(tg)}">
+                              {{ demoTagLabel(tg) }}
+                              <button type="button" @click.stop="removeDemoTag(child.ref, tg)" class="demo-tag-x">✕</button>
+                            </span>
+                            <button type="button" class="demo-tag-add" :class="{'is-empty': !(child.ref.demoTags && child.ref.demoTags.length)}" @click.stop="toggleTagPicker(child.flatIdx)">
+                              {{ (child.ref.demoTags && child.ref.demoTags.length) ? '+' : '⚠ เลือก tag' }}
+                            </button>
+                            <div v-if="openTagPickerIdx === child.flatIdx" class="demo-tag-picker" @click.stop>
+                              <div class="demo-tag-picker-title">เลือก demo tag (บังคับ ≥1)</div>
+                              <label v-for="opt in DEMO_TAG_OPTIONS" :key="opt.code" class="demo-tag-opt">
+                                <input type="checkbox" :checked="(child.ref.demoTags || []).includes(opt.code)" @change="toggleDemoTag(child.ref, opt.code)" />
+                                <span class="demo-tag-opt-chip" :style="{background: opt.color}">{{ opt.label }}</span>
+                              </label>
+                              <button type="button" class="demo-tag-close" @click="openTagPickerIdx = null">ปิด</button>
+                            </div>
+                          </div>
                           <span class="tree-video-dur">{{ child.ref.duration && child.ref.duration !== '--:--' ? child.ref.duration : '--:--' }}</span>
                           <div class="tree-video-actions actions-clean">
-                            <button type="button" class="action-btn bonus" @click="toggleBonus(child.flatIdx)" :title="child.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ child.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                            <button v-if="!form.isDemoContext" type="button" class="action-btn bonus" @click="toggleBonus(child.flatIdx)" :title="child.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ child.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
                             <div class="action-menu-wrap">
                               <button type="button" class="action-btn menu-toggle" @click.stop="toggleActionMenu(child.flatIdx)" title="เมนู">⋯</button>
                               <div v-if="_openMenuIdx === child.flatIdx" class="action-menu" @click.stop>
@@ -495,7 +541,7 @@
                       </div>
                     </div>
                     <span v-if="node.ref._locked" class="lock-badge" @click="unlockVideo(node.flatIdx)">🔒</span>
-                    <select v-model.number="node.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (node.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
+                    <select v-if="!form.isDemoContext" v-model.number="node.ref.requiredTier" class="tier-select" :class="'tier-bg-' + (node.ref.requiredTier || 6)" :title="'ระดับขั้นต่ำที่จะดูได้'">
                       <option :value="1">ระดับ 1</option>
                       <option :value="2">ระดับ 2</option>
                       <option :value="3">ระดับ 3</option>
@@ -503,9 +549,27 @@
                       <option :value="5">ระดับ 5</option>
                       <option :value="6">ระดับ 6</option>
                     </select>
+                    <!-- Demo Tags -->
+                    <div v-if="form.isDemoContext" class="demo-tag-cell">
+                      <span v-for="tg in (node.ref.demoTags || [])" :key="tg" class="demo-tag-chip" :style="{background: demoTagColor(tg)}">
+                        {{ demoTagLabel(tg) }}
+                        <button type="button" @click.stop="removeDemoTag(node.ref, tg)" class="demo-tag-x">✕</button>
+                      </span>
+                      <button type="button" class="demo-tag-add" :class="{'is-empty': !(node.ref.demoTags && node.ref.demoTags.length)}" @click.stop="toggleTagPicker(node.flatIdx)">
+                        {{ (node.ref.demoTags && node.ref.demoTags.length) ? '+' : '⚠ เลือก tag' }}
+                      </button>
+                      <div v-if="openTagPickerIdx === node.flatIdx" class="demo-tag-picker" @click.stop>
+                        <div class="demo-tag-picker-title">เลือก demo tag (บังคับ ≥1)</div>
+                        <label v-for="opt in DEMO_TAG_OPTIONS" :key="opt.code" class="demo-tag-opt">
+                          <input type="checkbox" :checked="(node.ref.demoTags || []).includes(opt.code)" @change="toggleDemoTag(node.ref, opt.code)" />
+                          <span class="demo-tag-opt-chip" :style="{background: opt.color}">{{ opt.label }}</span>
+                        </label>
+                        <button type="button" class="demo-tag-close" @click="openTagPickerIdx = null">ปิด</button>
+                      </div>
+                    </div>
                     <span class="tree-video-dur">{{ node.ref.duration && node.ref.duration !== '--:--' ? node.ref.duration : '--:--' }}</span>
                     <div class="tree-video-actions actions-clean">
-                      <button type="button" class="action-btn bonus" @click="toggleBonus(node.flatIdx)" :title="node.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ node.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
+                      <button v-if="!form.isDemoContext" type="button" class="action-btn bonus" @click="toggleBonus(node.flatIdx)" :title="node.ref._bonusExpanded ? 'ซ่อน VDO เสริม' : 'VDO เสริม'">{{ node.ref.bonusBunnyVideoId ? '⭐' : '☆' }}</button>
                       <div class="action-menu-wrap">
                         <button type="button" class="action-btn menu-toggle" @click.stop="toggleActionMenu(node.flatIdx)" title="เมนู">⋯</button>
                         <div v-if="_openMenuIdx === node.flatIdx" class="action-menu" @click.stop>
@@ -615,9 +679,10 @@
                 </template>
                 <template v-else>
                   <button class="btn btn-sm btn-outline" @click="editSection(section)">แก้ไข</button>
-                  <button class="btn btn-sm btn-outline" style="margin-left: 4px;" @click="togglePdfPanel(section._id)">📄 PDF</button>
-                  <button class="btn btn-sm btn-outline" style="margin-left: 4px; border-color:#0ea5e9; color:#0ea5e9;" @click="cloneSection(section)" :disabled="cloningId === section._id">{{ cloningId === section._id ? '...' : '📋 Clone' }}</button>
-                  <button class="btn btn-sm btn-danger" style="margin-left: 4px;" @click="deletingId = section._id">ลบ</button>
+                  <button v-if="section.code !== 'DEMO-TRIAL'" class="btn btn-sm btn-outline" style="margin-left: 4px;" @click="togglePdfPanel(section._id)">📄 PDF</button>
+                  <button v-if="section.code !== 'DEMO-TRIAL'" class="btn btn-sm btn-outline" style="margin-left: 4px; border-color:#0ea5e9; color:#0ea5e9;" @click="cloneSection(section)" :disabled="cloningId === section._id">{{ cloningId === section._id ? '...' : '📋 Clone' }}</button>
+                  <button v-if="section.code !== 'DEMO-TRIAL'" class="btn btn-sm btn-danger" style="margin-left: 4px;" @click="deletingId = section._id">ลบ</button>
+                  <span v-if="section.code === 'DEMO-TRIAL'" style="font-size:11px;color:#2563eb;margin-left:6px;" title="Demo section ห้ามลบ">🔒 DEMO</span>
                 </template>
               </td>
             </tr>
@@ -824,8 +889,21 @@ export default {
         name: '',
         description: '',
         order: 0,
-        videos: []
+        videos: [],
+        // ⭐ flag: section นี้อยู่ใน Demo package หรือไม่
+        isDemoContext: false
       },
+      // Demo tag choices (constant)
+      DEMO_TAG_OPTIONS: [
+        { code: 'all', label: 'ALL', color: '#0ea5e9' },
+        { code: 'nl12', label: 'NL1+2', color: '#3b82f6' },
+        { code: 'nl2', label: 'NL2', color: '#6366f1' },
+        { code: 'meq', label: 'MEQ', color: '#a855f7' },
+        { code: 'osce', label: 'OSCE', color: '#ec4899' },
+        { code: 'longcase', label: 'LONGCASE', color: '#f59e0b' },
+        { code: 'preclinic', label: 'PRECLINIC', color: '#10b981' }
+      ],
+      openTagPickerIdx: null,
       // ─── Self Check ───
       selfCheckTemplates: [],
       selfCheckBindings: {},   // key: "scope:refId" → binding doc
@@ -956,6 +1034,8 @@ export default {
         duration: v.duration || '',
         order: v.order || 0,
         requiredTier: [1, 2, 3, 4, 5, 6].includes(v.requiredTier) ? v.requiredTier : 6,
+        // Demo tags — ส่งเฉพาะที่มีค่า (paid section = [])
+        demoTags: Array.isArray(v.demoTags) ? v.demoTags.filter(Boolean) : [],
         docOnly: v.docOnly === true,
         pdfFile: v.pdfFile || '',
         pdfFileName: v.pdfFileName || '',
@@ -1061,6 +1141,8 @@ export default {
         duration: '--:--',
         order: 0,
         requiredTier: 6,
+        // Demo tags — เห็นเฉพาะ demo section context
+        demoTags: [],
         _verified: null,
         _verifying: false,
         _bunnyName: '',
@@ -1825,14 +1907,24 @@ export default {
       this.form.videos.forEach((v, i) => { v.order = i })
     },
 
-    editSection(section) {
+    async editSection(section) {
       this.editingId = section._id
       this.loadSelfCheckBindings(section._id)   // ─── โหลด Self Check bindings ของ section นี้ ───
+      // ⭐ fetch section แบบเต็ม เพื่อได้ isDemoContext + demoTags ของ videos
+      let isDemoContext = !!section.isDemoContext
+      try {
+        const { section: sec } = await api.get(`/admin/sections/${section._id}`)
+        if (sec) {
+          isDemoContext = !!sec.isDemoContext
+          section = sec
+        }
+      } catch { /* fall back */ }
       this.form = {
         code: section.code || '',
         name: section.name || '',
         description: section.description || '',
         order: section.order || 0,
+        isDemoContext,
         videos: (section.videos || [])
           .sort((a, b) => (a.order || 0) - (b.order || 0))
           .map(v => ({
@@ -1848,6 +1940,7 @@ export default {
             duration: v.duration || '--:--',
             order: v.order || 0,
             requiredTier: v.requiredTier || 6,
+            demoTags: Array.isArray(v.demoTags) ? [...v.demoTags] : [],
             // PDF fields (doc-only row + attached PDF)
             docOnly: v.docOnly === true || (!(v.bunnyVideoId || '').trim() && !(v.bunnyDrmVideoId || '').trim() && !(v.aliVideoId || '').trim() && !!(v.pdfFile || '').trim()),
             pdfFile: v.pdfFile || '',
@@ -2059,6 +2152,22 @@ export default {
         const validVideos = this.form.videos.filter(v =>
           (v.title || '').trim() || (v.bunnyVideoId || '').trim() || (v.topic || '').trim() || (v.pdfFile || '').trim()
         )
+
+        // ⭐ Demo section: บังคับให้ทุก video มี demoTags ≥1
+        if (this.form.isDemoContext) {
+          const missingTag = validVideos.find(v => !Array.isArray(v.demoTags) || v.demoTags.length === 0)
+          if (missingTag) {
+            this.error = `🔒 Demo section — video "${missingTag.title || '(ไม่ระบุชื่อ)'}" ยังไม่ได้เลือก tag (บังคับอย่างน้อย 1 tag)`
+            this.saving = false
+            return
+          }
+          const docRow = validVideos.find(v => v.docOnly === true)
+          if (docRow) {
+            this.error = '🔒 Demo section ห้ามมี row เอกสารล้วน (VDO only)'
+            this.saving = false
+            return
+          }
+        }
 
         const payload = {
           code: this.form.code.trim().toUpperCase(),
@@ -2482,13 +2591,49 @@ export default {
     resetForm() {
       this.editingId = null
       this.collapsed = {}
+      this.openTagPickerIdx = null
       this.form = {
         code: '',
         name: '',
         description: '',
         order: 0,
-        videos: []
+        videos: [],
+        isDemoContext: false
       }
+    },
+    // ═════ Demo Tag Helpers ═════
+    demoTagLabel(code) {
+      const t = this.DEMO_TAG_OPTIONS.find(o => o.code === code)
+      return t ? t.label : code
+    },
+    demoTagColor(code) {
+      const t = this.DEMO_TAG_OPTIONS.find(o => o.code === code)
+      return t ? t.color : '#64748b'
+    },
+    toggleTagPicker(flatIdx) {
+      this.openTagPickerIdx = (this.openTagPickerIdx === flatIdx) ? null : flatIdx
+    },
+    toggleDemoTag(video, tag) {
+      const tags = Array.isArray(video.demoTags) ? [...video.demoTags] : []
+      const i = tags.indexOf(tag)
+      if (i >= 0) {
+        tags.splice(i, 1)
+      } else {
+        if (tag === 'all') {
+          video.demoTags = ['all']
+          return
+        }
+        const allIdx = tags.indexOf('all')
+        if (allIdx >= 0) tags.splice(allIdx, 1)
+        tags.push(tag)
+      }
+      video.demoTags = tags
+    },
+    removeDemoTag(video, tag) {
+      const tags = Array.isArray(video.demoTags) ? [...video.demoTags] : []
+      const i = tags.indexOf(tag)
+      if (i >= 0) tags.splice(i, 1)
+      video.demoTags = tags
     },
     loadSections() {
       return this.fetchSections()
@@ -3057,5 +3202,71 @@ export default {
 }
 .clone-hint { font-size: 11px; color: #64748b; line-height: 1.5; display: block; margin-top: 4px; }
 .clone-hint-warn { color: #b45309; font-weight: 600; }
+
+/* ═════ DEMO SECTION BANNER + TAG CHIPS ═════ */
+.demo-banner {
+  background: linear-gradient(135deg, #ecfeff, #e0f2fe);
+  border: 1px solid #7dd3fc;
+  border-left: 4px solid #0ea5e9;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08);
+}
+.demo-banner-header {
+  font-weight: 800; color: #0369a1; font-size: 13px;
+  letter-spacing: 0.3px; margin-bottom: 4px;
+}
+.demo-banner-body {
+  font-size: 12px; color: #075985; line-height: 1.6;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.demo-tag-cell {
+  position: relative; display: flex; gap: 4px; align-items: center;
+  flex-wrap: wrap; min-width: 140px; max-width: 260px;
+}
+.demo-tag-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px; color: #fff;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+}
+.demo-tag-x {
+  border: 0; background: rgba(255,255,255,0.3); color: #fff;
+  border-radius: 999px; width: 16px; height: 16px; padding: 0;
+  line-height: 1; font-size: 10px; cursor: pointer;
+}
+.demo-tag-x:hover { background: rgba(255,255,255,0.5); }
+.demo-tag-add {
+  border: 1px dashed #94a3b8; background: #fff; color: #475569;
+  border-radius: 999px; padding: 2px 10px; font-size: 11px;
+  font-weight: 700; cursor: pointer;
+}
+.demo-tag-add:hover { background: #f1f5f9; }
+.demo-tag-add.is-empty {
+  border-color: #ef4444; color: #b91c1c; background: #fef2f2;
+}
+.demo-tag-picker {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 30;
+  background: #fff; border: 1px solid #cbd5e1; border-radius: 10px;
+  padding: 10px 12px; box-shadow: 0 6px 20px rgba(15,23,42,0.15);
+  min-width: 200px; display: flex; flex-direction: column; gap: 6px;
+}
+.demo-tag-picker-title {
+  font-size: 11px; color: #64748b; font-weight: 700; margin-bottom: 4px;
+}
+.demo-tag-opt {
+  display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;
+}
+.demo-tag-opt input[type="checkbox"] { cursor: pointer; }
+.demo-tag-opt-chip {
+  color: #fff; padding: 1px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 700;
+}
+.demo-tag-close {
+  margin-top: 4px; border: 0; background: #f1f5f9; color: #475569;
+  padding: 4px 10px; border-radius: 6px; font-size: 11px;
+  font-weight: 700; cursor: pointer;
+}
+.demo-tag-close:hover { background: #e2e8f0; }
 
 </style>
