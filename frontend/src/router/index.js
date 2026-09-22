@@ -38,6 +38,7 @@ const ManageSections = () => import('../views/admin/ManageSections.vue')
 const WatchDebug = () => import('../views/admin/WatchDebug.vue')
 const SystemCircuit = () => import('../views/admin/SystemCircuit.vue')
 const ManagePackages = () => import('../views/admin/ManagePackages.vue')
+const ManageDemoTags = () => import('../views/admin/ManageDemoTags.vue')
 const ManageActivations = () => import('../views/admin/ManageActivations.vue')
 const InspectPage = () => import('../views/admin/InspectPage.vue')
 const ManagePassport = () => import('../views/admin/ManagePassport.vue')
@@ -233,6 +234,12 @@ const routes = [
     path: '/admin/packages',
     name: 'ManagePackages',
     component: ManagePackages,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/demo-tags',
+    name: 'ManageDemoTags',
+    component: ManageDemoTags,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {

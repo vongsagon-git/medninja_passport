@@ -31,12 +31,11 @@ const videoSchema = new mongoose.Schema({
   bonusPdfFileName: { type: String, default: '' },
   requiredTier: { type: Number, enum: [1, 2, 3, 4, 5, 6], default: 6 },
   // ═════ DEMO TAGS ═════
-  // ใช้เฉพาะ video ใน section ของ Demo package (code=DEMO-TRIAL)
-  // ค่า enum: all/nl12/nl2/meq/osce/longcase/preclinic
+  // ใช้เฉพาะ video ใน section ของ Demo package
+  // ค่า = code ของ DemoTag collection (admin จัดการเอง)
   // paid section = ปล่อยว่าง (default) ไม่มีผลใดๆ
   demoTags: {
     type: [String],
-    enum: ['all', 'nl12', 'nl2', 'meq', 'osce', 'longcase', 'preclinic'],
     default: []
   }
 }, { _id: false })

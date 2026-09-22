@@ -110,6 +110,13 @@ router.post('/packages', auth, admin, createPackage)
 router.put('/packages/:id', auth, admin, updatePackage)
 router.delete('/packages/:id', auth, admin, deletePackage)
 
+// Admin: Demo Tags CRUD (Phase A extended — admin-managed tags)
+const demoTagCtrl = require('./demoTag.admin.controller')
+router.get('/demo-tags', auth, admin, demoTagCtrl.listTags)
+router.post('/demo-tags', auth, admin, demoTagCtrl.createTag)
+router.put('/demo-tags/:id', auth, admin, demoTagCtrl.updateTag)
+router.delete('/demo-tags/:id', auth, admin, demoTagCtrl.deleteTag)
+
 // Admin: Bunny Video Utils
 router.get('/bunny/video-names', auth, admin, getBunnyVideoNames)
 router.put('/bunny/video/:videoId/rename', auth, admin, renameBunnyVideo)

@@ -7,6 +7,7 @@
           <p>เพิ่ม แก้ไข ลบเนื้อหาการเรียน (Sections)</p>
         </div>
         <div style="display:flex;gap:8px;">
+          <router-link to="/admin/demo-tags" class="btn btn-outline" style="text-decoration:none;">🏷 จัดการ Tags</router-link>
           <button class="btn btn-outline" @click="refreshDurations" :disabled="refreshing">
             {{ refreshing ? 'กำลังดึง...' : 'Sync เวลา VDO' }}
           </button>
@@ -893,7 +894,8 @@ export default {
         // ⭐ flag: section นี้อยู่ใน Demo package หรือไม่
         isDemoContext: false
       },
-      // Demo tag choices (constant)
+      // Demo tag choices — โหลดจาก backend (admin จัดการเอง)
+      // fallback 7 ตัวเริ่มต้น (กรณี backend ยังไม่พร้อม / ก่อน seed เสร็จ)
       DEMO_TAG_OPTIONS: [
         { code: 'all', label: 'ALL', color: '#0ea5e9' },
         { code: 'nl12', label: 'NL1+2', color: '#3b82f6' },
@@ -1910,13 +1912,20 @@ export default {
     async editSection(section) {
       this.editingId = section._id
       this.loadSelfCheckBindings(section._id)   // ─── โหลด Self Check bindings ของ section นี้ ───
-      // ⭐ fetch section แบบเต็ม เพื่อได้ isDemoContext + demoTags ของ videos
+      // ⭐ fetch section แบบเต็ม + tag list จาก backend
       let isDemoContext = !!section.isDemoContext
       try {
-        const { section: sec } = await api.get(`/admin/sections/${section._id}`)
-        if (sec) {
-          isDemoContext = !!sec.isDemoContext
-          section = sec
+        const resp = await api.get(`/admin/sections/${section._id}`)
+        if (resp.section) {
+          isDemoContext = !!resp.section.isDemoContext
+          section = resp.section
+        }
+        if (Array.isArray(resp.availableDemoTags) && resp.availableDemoTags.length) {
+          this.DEMO_TAG_OPTIONS = resp.availableDemoTags.map(t => ({
+            code: t.code,
+            label: t.label,
+            color: t.color || '#0ea5e9'
+          }))
         }
       } catch { /* fall back */ }
       this.form = {

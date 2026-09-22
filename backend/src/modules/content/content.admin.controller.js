@@ -79,7 +79,14 @@ exports.getSection = async (req, res, next) => {
     // ═════ ตรวจว่า section นี้อยู่ใน Demo package (ให้ frontend รู้เพื่อโชว์ tag UI + block PDF) ═════
     const demoPkg = await Package.findOne({ isDemo: true }).select('sections').lean()
     section.isDemoContext = !!(demoPkg && demoPkg.sections?.some(sid => sid.toString() === section._id.toString()))
-    res.json({ section })
+    let availableDemoTags = []
+    if (section.isDemoContext) {
+      try {
+        const DemoTag = require('./DemoTag.model')
+        availableDemoTags = await DemoTag.find().sort('order code').lean()
+      } catch (e) { /* if model not loaded yet, ship empty */ }
+    }
+    res.json({ section, availableDemoTags })
   } catch (error) {
     next(error)
   }
@@ -105,6 +112,14 @@ exports.updateSection = async (req, res, next) => {
       if (req.body.code && req.body.code !== 'DEMO-TRIAL') {
         return res.status(400).json({ message: '🔒 ไม่สามารถเปลี่ยน code ของ Demo section ได้ (ต้องเป็น DEMO-TRIAL)' })
       }
+      // Load valid tag codes from DB (admin-managed)
+      let validTagCodes = new Set()
+      try {
+        const DemoTag = require('./DemoTag.model')
+        const allTags = await DemoTag.find().select('code').lean()
+        validTagCodes = new Set(allTags.map(t => t.code))
+      } catch (e) { /* keep empty */ }
+
       if (Array.isArray(req.body.videos)) {
         for (const v of req.body.videos) {
           if (v.docOnly) {
@@ -113,6 +128,10 @@ exports.updateSection = async (req, res, next) => {
           const tags = Array.isArray(v.demoTags) ? v.demoTags.filter(Boolean) : []
           if (tags.length === 0) {
             return res.status(400).json({ message: `🔒 Video "${v.title || '(ไม่ระบุชื่อ)'}" ต้องเลือก demo tag อย่างน้อย 1 tag` })
+          }
+          const invalid = tags.filter(t => !validTagCodes.has(t))
+          if (invalid.length) {
+            return res.status(400).json({ message: `🔒 Video "${v.title || '(ไม่ระบุชื่อ)'}" มี tag ที่ไม่มีอยู่ในระบบ: ${invalid.join(', ')}` })
           }
           v.demoTags = tags
           v.pdfFileUrl = ''
