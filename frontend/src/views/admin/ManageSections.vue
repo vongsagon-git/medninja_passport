@@ -2750,7 +2750,7 @@ export default {
 .tree-wrap {
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .tree-topic {
@@ -3255,11 +3255,14 @@ export default {
   border-color: #ef4444; color: #b91c1c; background: #fef2f2;
 }
 .demo-tag-picker {
-  position: absolute; top: calc(100% + 4px); right: 0; z-index: 30;
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 1000;
   background: #fff; border: 1px solid #cbd5e1; border-radius: 10px;
-  padding: 10px 12px; box-shadow: 0 6px 20px rgba(15,23,42,0.15);
-  min-width: 200px; display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; box-shadow: 0 8px 24px rgba(15,23,42,0.2);
+  min-width: 180px; max-width: 220px;
+  display: flex; flex-direction: column; gap: 6px;
 }
+.demo-tag-cell { position: relative; z-index: 5; }
+.demo-tag-cell:has(.demo-tag-picker) { z-index: 1000; }
 .demo-tag-picker-title {
   font-size: 11px; color: #64748b; font-weight: 700; margin-bottom: 4px;
 }
